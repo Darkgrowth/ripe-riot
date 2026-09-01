@@ -46,7 +46,7 @@ class SpeciesBatch {
       color: 0xffffff, vertexColors: true, roughness: 0.55, metalness: 0.02,
     });
     mat.name = `fruit:${this.species}`;
-    mat.envMapIntensity = 0.7;
+    mat.envMapIntensity = 0.5;
     mat.onBeforeCompile = (shader) => {
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>', `#include <common>\n${EMISSIVE_PATCH_VERT_DECL}`)

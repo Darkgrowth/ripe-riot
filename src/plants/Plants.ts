@@ -93,7 +93,7 @@ export class PlantSystem {
       side: type === 'bananaPlant' || type === 'melonVine' ? THREE.DoubleSide : THREE.FrontSide,
     });
     mat.name = `plant:${type}`;
-    mat.envMapIntensity = 0.6;
+    mat.envMapIntensity = 0.4;
     const u = this.uniforms;
     mat.onBeforeCompile = (shader) => {
       shader.uniforms.uTime = u.uTime;

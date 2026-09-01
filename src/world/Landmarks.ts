@@ -28,6 +28,7 @@ export const KING_MELON_RADIUS = 5.6;
 
 export interface BuiltLandmarks {
   mesh: THREE.Mesh;
+  waterfall: THREE.Mesh;
   signs: THREE.Mesh[];
   /** World-space centre of the sell pad. */
   sellPad: THREE.Vector3;
@@ -262,8 +263,49 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   const kingMelon = buildKingMelon(kingMelonPos);
   scene.add(kingMelon);
 
+  // A rock outcrop under every anchor. Without one the vines read as four
+  // whiskers disappearing into an empty sky, and the whole thing stops looking
+  // like it is attached to the island at all.
+  for (const anchor of kingMelonAnchors) {
+    const groundHere = ground(anchor.x, anchor.z);
+    const stackHeight = Math.max(1.2, anchor.y - groundHere);
+    b.reset().translate(anchor.x, groundHere, anchor.z);
+    let y = 0;
+    // Deliberately modest. A first attempt scaled the boulders with the anchor
+    // height and produced grey towers that dwarfed the legendary fruit and
+    // showed up on the skyline from the dock.
+    let radius = 1.9;
+    while (y < stackHeight && radius > 0.5) {
+      const step = radius * 1.05;
+      b.push().translate(rng.range(-0.5, 0.5), y + step * 0.5, rng.range(-0.5, 0.5))
+        .rotateY(rng.range(0, 6.28)).scale(1, 0.75, 1);
+      b.sphere(radius, 0, STONE, radius > 1.0);
+      b.pop();
+      y += step;
+      radius *= 0.86;
+    }
+  }
+
   // The vines themselves belong to LegendaryHarvestSystem: they are real rope
   // constraints that can be cut, not decoration, so they are not baked in here.
+
+  // ---- THE WATERFALL ------------------------------------------------------
+  // The basin is named for it, so it had better have one.
+  // Falls from the basin rim down to the pool. The length is the DROP, not an
+  // absolute height — conflating the two buried the whole sheet underground.
+  // Find the steepest point on the knoll's south face and fall from there.
+  const fallX = 34;
+  let fallZ = -26.5;
+  let steepest = 0;
+  for (let z2 = -30; z2 <= -21; z2 += 0.5) {
+    const drop = ground(fallX, z2) - ground(fallX, z2 + 2);
+    if (drop > steepest) { steepest = drop; fallZ = z2 + 0.5; }
+  }
+  const fallTop = ground(fallX, fallZ);
+  const poolLevel = 0.4;
+  // Nudged out from the face so the sheet hangs clear instead of z-fighting it.
+  const waterfall = buildWaterfall(fallX, fallZ + 1.8, poolLevel, Math.max(5, fallTop - poolLevel));
+  scene.add(waterfall);
 
   const merged = b.finish()!;
   const mat = new THREE.MeshStandardMaterial({
@@ -280,7 +322,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   for (const s of signs) scene.add(s);
 
   return {
-    mesh, signs, sellPad, sellRadius: 3.2, shopCounter,
+    mesh, waterfall, signs, sellPad, sellRadius: 3.2, shopCounter,
     kingMelon, kingMelonPos, kingMelonAnchors,
   };
 }
@@ -327,5 +369,88 @@ function buildKingMelon(pos: THREE.Vector3): THREE.Mesh {
   mesh.name = 'KingMelon';
   mesh.castShadow = true;
   mesh.receiveShadow = true;
+  return mesh;
+}
+
+const FALL_VERT = /* glsl */`
+varying vec2 vUv;
+varying float vDepth;
+void main() {
+  vUv = uv;
+  vDepth = position.y;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}`;
+
+const FALL_FRAG = /* glsl */`
+precision highp float;
+uniform float uTime;
+uniform vec3 uWater;
+uniform vec3 uFoam;
+varying vec2 vUv;
+varying float vDepth;
+
+float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+float noise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+
+void main() {
+  // Two streaks scrolling down at different rates reads as falling water far
+  // better than one, and costs nothing extra.
+  float t = uTime * 1.7;
+  float s1 = noise(vec2(vUv.x * 9.0, vUv.y * 3.2 - t));
+  float s2 = noise(vec2(vUv.x * 17.0 + 4.0, vUv.y * 6.0 - t * 1.6));
+  float streak = s1 * 0.6 + s2 * 0.4;
+
+  vec3 col = mix(uWater, uFoam, smoothstep(0.35, 0.85, streak));
+  // Foam builds toward the bottom, where it is hitting something.
+  float base = 1.0 - smoothstep(0.0, 0.42, vUv.y);
+  col = mix(col, uFoam, base * 0.75);
+
+  float alpha = 0.42 + streak * 0.4 + base * 0.25;
+  // Fade the very top so the sheet does not end in a hard line.
+  alpha *= smoothstep(1.0, 0.86, vUv.y);
+  gl_FragColor = vec4(col, clamp(alpha, 0.0, 0.95));
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+}`;
+
+/**
+ * A falling sheet of water with a foaming base, built from one plane.
+ * `baseY` is where it lands; `drop` is how far it falls.
+ */
+function buildWaterfall(x: number, z: number, baseY: number, drop: number): THREE.Mesh {
+  const width = 7.5;
+  const geo = new THREE.PlaneGeometry(width, drop, 6, 12);
+  // Bow the sheet slightly so it is not a flat card, and flare it at the base.
+  const pos = geo.getAttribute('position') as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    const u = (pos.getX(i) / width) * 2;
+    const v = pos.getY(i) / drop + 0.5;
+    pos.setZ(i, -Math.cos(u * 1.2) * 1.1);
+    pos.setX(i, pos.getX(i) * (1 + (1 - v) * 0.22));
+  }
+  geo.translate(0, drop / 2, 0);
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+
+  const uniforms = {
+    uTime: { value: 0 },
+    uWater: { value: new THREE.Color().setHex(0x8fd6ea, THREE.SRGBColorSpace) },
+    uFoam: { value: new THREE.Color().setHex(0xf2fdff, THREE.SRGBColorSpace) },
+  };
+  const mat = new THREE.ShaderMaterial({
+    uniforms, vertexShader: FALL_VERT, fragmentShader: FALL_FRAG,
+    transparent: true, side: THREE.DoubleSide, depthWrite: false,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, baseY, z);
+  mesh.rotation.y = Math.PI;
+  mesh.name = 'Waterfall';
+  mesh.userData.uniforms = uniforms;
+  mesh.renderOrder = 4;
   return mesh;
 }

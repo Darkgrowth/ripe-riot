@@ -55,17 +55,24 @@ export class Terrain {
     const rav = trench(x, z, -30, -66, 46, -58, 11);
     h -= rav * 26;
 
-    // Waterfall basin: a bowl that catches the fall and holds a pool.
+    // Waterfall basin: a bowl that catches the fall and holds a pool...
     const bowl = gauss(x, z, 34, -14, 15, 15);
-    h -= bowl * 13;
+    h -= bowl * 10;
+    // ...and a tight, steep knoll on its northern rim to fall OFF. Without a
+    // real cliff the waterfall lay flat against a grassy slope and read as a
+    // white smear rather than falling water.
+    h += gauss(x, z, 34, -31, 12, 6.5) * 13;
 
     // Cliff band on the north-west coast, for verticality near the sea.
     h += Math.max(0, fbm2(x * 0.03 + 11, z * 0.03, 2, this.seed + 5)) *
       smoothstep(40, 78, Math.hypot(x + 60, z + 40)) * 0;
 
-    // Medium and fine detail.
-    h += fbm2(x * 0.028, z * 0.028, 3, this.seed + 91) * 3.2 * land;
-    h += fbm2(x * 0.09, z * 0.09, 2, this.seed + 7) * 0.9 * land;
+    // Medium and fine detail. The finest band is deliberately just above the
+    // 1.5 m grid so it adds crunch at walking distance without aliasing into
+    // noise at range.
+    h += fbm2(x * 0.028, z * 0.028, 3, this.seed + 91) * 3.4 * land;
+    h += fbm2(x * 0.09, z * 0.09, 2, this.seed + 7) * 1.1 * land;
+    h += fbm2(x * 0.31, z * 0.31, 2, this.seed + 55) * 0.34 * land;
 
     // Authored pads.
     for (const f of this.flattens) {
@@ -154,6 +161,11 @@ export class Terrain {
 
     // Index only the triangles that have any part above the seabed cutoff, so
     // we do not pay for a huge submerged skirt we never see or touch.
+    //
+    // The cutoff is deliberately well below anything walkable. At -7.5 it once
+    // clipped the floor of the waterfall basin, leaving a hole in the collider
+    // that swallowed the player — the kind of bug that is invisible until
+    // someone walks to exactly that spot.
     const idx: number[] = [];
     for (let j = 0; j < n; j++) {
       for (let i = 0; i < n; i++) {
@@ -162,7 +174,7 @@ export class Terrain {
         const c = a + vertsPerSide;
         const d = c + 1;
         const maxH = Math.max(heights[a], heights[b], heights[c], heights[d]);
-        if (maxH < -7.5) continue;
+        if (maxH < -16) continue;
         idx.push(a, c, b, b, c, d);
       }
     }

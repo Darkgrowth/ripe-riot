@@ -8,15 +8,15 @@ import path from 'node:path';
 
 const SHOTS = [
   // label,           camera pos,             look-at target
-  ['dock',            [72, 12, 82],           [52, 2, 56]],
-  ['orchard',         [-6, 20, 44],           [-26, 7, 20]],
-  ['palm-beach',      [-40, 16, 78],          [-60, 3, 56]],
-  ['hill-farm',       [-16, 34, -8],          [-38, 20, -30]],
-  ['waterfall-basin', [56, 22, 6],            [34, 4, -14]],
-  ['ravine-ridge',    [30, 44, -30],          [4, 22, -66]],
-  ['cave-orchard',    [82, 18, 12],           [62, 4, -8]],
-  ['island-wide',     [150, 95, 165],         [-8, 6, -10]],
-  ['sea-level',       [96, 3.2, 96],          [20, 10, 10]],
+  ['arrival-dock',    [70, 8, 88],            [50, 3, 58]],
+  ['shop-shed',       [54, 8, 62],            [45, 3, 52]],
+  ['orchard',         [-6, 16, 42],           [-26, 7, 20]],
+  ['orchard-eye',     [-14, 9.4, 30],         [-28, 8, 18]],
+  ['palm-beach',      [-40, 14, 76],          [-60, 3, 56]],
+  ['hill-farm',       [-16, 32, -8],          [-38, 20, -30]],
+  ['waterfall',       [34, 10, -6],           [34, 6, -26]],
+  ['king-melon',      [46, 44, -30],          [8, 36, -62]],
+  ['king-melon-below',[16, 14, -44],          [8, 38, -62]],
 ];
 
 const results = await withGame(async (g) => {

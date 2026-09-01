@@ -83,9 +83,13 @@ export class Sunpatch implements System {
   }
 
   frameUpdate(_dt: number, _alpha: number): void {
-    // Ocean animation is driven from the render clock so it keeps moving while
-    // the simulation is paused for a screenshot.
-    this.ocean.update(performance.now() / 1000);
+    // Water is driven from the render clock so it keeps moving while the
+    // simulation is paused for a screenshot.
+    const t = performance.now() / 1000;
+    this.ocean.update(t);
+    const fall = this.built?.waterfall?.userData?.uniforms as
+      { uTime: { value: number } } | undefined;
+    if (fall) fall.uTime.value = t;
   }
 }
 

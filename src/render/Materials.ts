@@ -49,7 +49,7 @@ export function mat(name: string, o: MatOpts): THREE.MeshStandardMaterial {
     emissiveIntensity: o.emissiveIntensity ?? 1,
   });
   m.name = name;
-  m.envMapIntensity = 0.65;
+  m.envMapIntensity = 0.42;
   cache.set(k, m);
   return m;
 }

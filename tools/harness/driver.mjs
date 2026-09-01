@@ -114,6 +114,8 @@ async function attachPage(browser, ctx, quiet) {
     pause: (on = true) => page.evaluate((o) => window.__RIPE.pause(o), on),
     advance: (n) => page.evaluate((n) => window.__RIPE.advance(n), n),
     probeLook: (d) => page.evaluate((d) => window.__RIPE.probeLook(d), d),
+    setShadows: (on) => page.evaluate((o) => window.__RIPE.setShadows(o), on),
+    shadowInfo: () => page.evaluate(() => window.__RIPE.shadowInfo()),
     explode: (x, y, z, r, s) => page.evaluate(
       ([x, y, z, r, s]) => window.__RIPE.explode(x, y, z, r, s), [x, y, z, r, s]),
     overlap: (x, y, z, r) => page.evaluate(

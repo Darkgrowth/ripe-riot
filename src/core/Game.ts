@@ -108,7 +108,14 @@ export class Game {
     this.playerCamera.update(this.player, frameDt);
     for (const s of this.systems) s.lateUpdate?.(frameDt);
     this.renderer.updateCameraFov(frameDt);
-    this.renderer.updateSunFollow(this.player.position, this.player.forward(_f));
+    // Centre the shadow frustum on the CAMERA, not the player. They are the
+    // same thing in first person, but a free or spectator camera would
+    // otherwise look at a world with no shadows in it at all.
+    const cam = this.renderer.camera;
+    cam.getWorldDirection(_f);
+    _f.y = 0;
+    if (_f.lengthSq() < 1e-6) _f.set(0, 0, -1); else _f.normalize();
+    this.renderer.updateSunFollow(cam.position, _f);
     const t3 = performance.now();
     this.renderer.render();
     const t4 = performance.now();

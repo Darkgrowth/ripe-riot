@@ -150,6 +150,31 @@ export class DebugAPI {
     this.freeCam(pos.x, pos.y, pos.z, tx, ty, tz);
   }
 
+  /** Toggle sun shadows, so a test can A/B the same frame with and without. */
+  setShadows(on: boolean): boolean {
+    this.g.renderer.sun.castShadow = on;
+    this.g.renderer.renderer.shadowMap.enabled = on;
+    this.g.renderer.renderer.shadowMap.needsUpdate = true;
+    return on;
+  }
+
+  /** What the renderer thinks its shadow setup is. */
+  shadowInfo(): Record<string, unknown> {
+    const r = this.g.renderer;
+    const cam = r.sun.shadow.camera;
+    return {
+      enabled: r.renderer.shadowMap.enabled,
+      type: r.renderer.shadowMap.type,
+      castShadow: r.sun.castShadow,
+      mapSize: [r.sun.shadow.mapSize.x, r.sun.shadow.mapSize.y],
+      lightPos: [+r.sun.position.x.toFixed(1), +r.sun.position.y.toFixed(1), +r.sun.position.z.toFixed(1)],
+      target: [+r.sun.target.position.x.toFixed(1), +r.sun.target.position.y.toFixed(1),
+        +r.sun.target.position.z.toFixed(1)],
+      frustum: [cam.left, cam.right, cam.top, cam.bottom, cam.near, cam.far],
+      intensity: r.sun.intensity,
+    };
+  }
+
   setPixelRatio(v: number): void { this.g.renderer.setPixelRatioCap(v); }
   resize(w: number, h: number): void { this.g.renderer.resize(w, h); }
 

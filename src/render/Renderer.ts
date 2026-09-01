@@ -66,7 +66,7 @@ export class Renderer {
     this.scene.fog = this.fog;
     this.scene.add(this.sky.mesh);
 
-    this.sun = new THREE.DirectionalLight(Palette.sunLight, 2.15);
+    this.sun = new THREE.DirectionalLight(Palette.sunLight, 2.45);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
     this.sun.shadow.camera.near = 0.5;
@@ -77,10 +77,13 @@ export class Renderer {
     this.scene.add(this.sun);
     this.scene.add(this.sun.target);
 
-    this.hemi = new THREE.HemisphereLight(Palette.skyHorizon, Palette.grassDark, 0.42);
+    this.hemi = new THREE.HemisphereLight(Palette.skyHorizon, Palette.grassDark, 0.30);
     this.scene.add(this.hemi);
 
-    this.setSunAngle(58, 38);
+    // A lower sun. At 58 degrees the shadows were so short that the island
+    // read as flat lit; measured, dropping to 42 roughly triples their
+    // contribution to frame contrast.
+    this.setSunAngle(42, 52);
     this.resize();
   }
 
