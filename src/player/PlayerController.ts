@@ -80,6 +80,8 @@ export class PlayerController implements PhysicsOwner {
   private lastFallSpeed = 0;
   /** Extra mass being hauled, in kg. Slows movement and adds sway. */
   carryLoad = 0;
+  /** Load in kg at which movement is fully penalised. Raised by the harness. */
+  carryTolerance = 260;
   /** Set by tools/effects; multiplies max speed (e.g. mud, ice, vacuum recoil). */
   speedMul = 1;
   /** Non-null while standing inside a ladder volume. Set by the ladder tool. */
@@ -154,7 +156,7 @@ export class PlayerController implements PhysicsOwner {
     if (Math.abs(newH - this.height) > 1e-4) this.setHeight(newH);
 
     // --- desired horizontal velocity
-    const load = clamp(1 - this.carryLoad / 260, 0.45, 1);
+    const load = clamp(1 - this.carryLoad / this.carryTolerance, 0.45, 1);
     let maxSpeed = (this.wantCrouch ? this.tuning.crouch
       : input.sprint && input.moveZ > 0 ? this.tuning.sprint : this.tuning.walk) * load * this.speedMul;
 

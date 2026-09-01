@@ -400,7 +400,12 @@ export class FruitSystem implements System {
     return dropped;
   }
 
-  /** Spawn a free fruit in mid-air — used by the shop, tests and debug tools. */
+  /**
+   * Spawn a fruit already loose in the world — used by events, tests and debug
+   * tools. Detach traits fire, because a free fruit is by definition one that
+   * has come off its plant: a Puff Melon spawned in mid-air should be inflating
+   * on the way down, not sitting there like an apple.
+   */
   spawnFree(speciesId: string, pos: THREE.Vector3, variantId: string | null = null,
     vel?: THREE.Vector3, sizeRoll = 0.5): Fruit {
     const f = new Fruit(this.g.physics, this.g.newId(), speciesId, variantId, sizeRoll);
@@ -410,6 +415,7 @@ export class FruitSystem implements System {
     f.detachedAt = this.g.clock.elapsed;
     f.detachPosition.copy(pos);
     this.fruits.set(f.id, f);
+    for (const trait of f.traits) trait.onDetach?.(f, this.ctx);
     this.g.bus.emit('fruit:spawned', { fruitId: f.id, species: speciesId });
     return f;
   }

@@ -9,6 +9,9 @@ import { PlayerRagdoll } from '@/player/PlayerRagdoll';
 import { RopeSystem } from '@/systems/RopeSystem';
 import { HarvestScoring } from '@/systems/HarvestScoring';
 import { ToolInventory } from '@/tools/ToolInventory';
+import { Shop } from '@/systems/Shop';
+import { HarvestBook } from '@/systems/HarvestBook';
+import { AudioManager } from '@/audio/AudioManager';
 import { DebugAPI } from '@/debug/DebugAPI';
 
 const boot = document.getElementById('boot')!;
@@ -56,6 +59,9 @@ async function main(): Promise<void> {
   game.add(new RopeSystem());
   game.add(new HarvestScoring());
   game.add(new ToolInventory());
+  game.add(new Shop());
+  game.add(new HarvestBook());
+  game.add(new AudioManager());
   game.add(new UIManager());
 
   progress(52, 'planting');

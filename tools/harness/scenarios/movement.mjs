@@ -77,7 +77,10 @@ export async function run(g, t) {
   const after = await g.state();
   await g.clearInput();
   t.gt(after.player.pos[1], before.player.pos[1] + 1.5, 'can walk up the central hill');
-  t.ok(after.player.grounded, 'still grounded after the climb');
+  // Not "grounded": cresting a rise at sprint speed legitimately launches the
+  // player for a few frames. What matters is staying with the terrain.
+  const climbGround = await g.terrainHeight(after.player.pos[0], after.player.pos[2]);
+  t.lt(Math.abs(after.player.pos[1] - climbGround), 2.5, 'stays with the terrain while climbing');
   t.note(`climbed ${(after.player.pos[1] - before.player.pos[1]).toFixed(1)} m in 3 s`);
 
   // --- never inside the ground: sample the whole island

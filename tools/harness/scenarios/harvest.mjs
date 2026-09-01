@@ -61,19 +61,13 @@ export async function run(g, t) {
     + (state.interaction.carrying ? 1 : 0) * 12;
 
   await g.call('economy.set', 0);
-  await g.standAt(45, 52, 0, 1.0);
-  // The pad sits a few metres in front of the shed counter.
-  const padInfo = await g.probeLook(6);
-  t.note(`sell pad probe: ${JSON.stringify(padInfo).slice(0, 90)}`);
+  const world = await g.call('world.info');
+  const [padX, , padZ] = world.sellPad;
+  t.note(`sell pad at ${world.sellPad.join(', ')} radius ${world.sellRadius}`);
 
-  // Walk onto the pad from a few directions until the prompt appears.
-  let onPad = false;
-  for (const [dx, dz] of [[0, 0], [2, 3], [-2, 3], [3, -2], [-3, -2], [4, 4], [0, 5], [5, 0]]) {
-    await g.standAt(45 + dx, 52 + dz, 0, 0.8);
-    await g.wait(0.35);
-    const s2 = await g.state();
-    if (s2.interaction.nearSellPad) { onPad = true; break; }
-  }
+  await g.standAt(padX, padZ, 0, 0.8);
+  await g.wait(0.4);
+  let onPad = (await g.state()).interaction.nearSellPad;
   t.ok(onPad, 'the sell pad can be stood on');
 
   const beforeSale = await g.state();
@@ -88,17 +82,18 @@ export async function run(g, t) {
   t.note(`sold for $${afterSale.economy.money} (basket was worth ~$${basketValue})`);
   void moneyBefore;
 
-  // --- throwing fruit onto the pad should sell it without pressing anything
+  // --- fruit that lands on the pad should sell itself, so that firing produce
+  //     at the shop from a hilltop is a legitimate way to play
   await g.call('economy.set', 0);
-  const thrownId = await g.call('fruit.spawn', 'apple', 45, 8, 57, null, 0.5);
-  await g.wait(0.15);
-  // Drop it straight down onto the pad area.
-  const padState = await g.state();
-  void padState;
-  await g.wait(3.0);
-  const delivered = await g.state();
-  t.note(`auto-delivery money: $${delivered.economy.money}`);
-  const stillThere = await g.call('fruit.info', thrownId);
-  t.ok(delivered.economy.money > 0 || stillThere === null || stillThere.state === 'free',
-    'fruit left on the pad is either sold or still lying there (not lost)');
+  await g.call('fruit.despawnAllFree');
+  await g.call('fruit.spawn', 'apple', world.sellPad[0], world.sellPad[1] + 4, world.sellPad[2]);
+  let delivered = 0;
+  for (let i = 0; i < 60; i++) {
+    await g.wait(0.05);
+    delivered = (await g.state()).economy.money;
+    if (delivered > 0) break;
+  }
+  t.gt(delivered, 0, 'an apple dropped on the pad sells itself');
+  t.note(`auto-delivery paid $${delivered}`);
+  await g.call('fruit.despawnAllFree');
 }
