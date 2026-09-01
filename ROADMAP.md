@@ -7,7 +7,7 @@ end: arrive, pick, sell, buy, escalate, and take down the King Melon.
 
 **Foundation** — fixed-timestep loop, typed event bus, seeded RNG, system
 registry, profiling, debug API, Playwright harness with numeric frame triage,
-contact sheets, geometry validation, 7 gameplay scenarios (157 checks) and a
+contact sheets, geometry validation, 7 gameplay scenarios (158 checks) and a
 two-client multiplayer test (11 checks).
 
 **Player** — first-person controller (walk/sprint/crouch/jump/coyote/buffer/
