@@ -106,8 +106,10 @@ export async function run(g, t) {
     await g.wait(0.12);
     const launched = await g.call('fruit.info', vb.id);
     t.ok(launched, 'the vinebomb exists after release');
-    t.gt(launched.speed, 8, 'releasing a vinebomb launches it hard');
-    t.note(`vinebomb left at ${launched.speed} m/s`);
+    // Peak speed since detaching, not current speed: a harness round-trip is
+    // long enough for gravity to have taken several m/s off the reading.
+    t.gt(launched.peakSpeed, 11, 'releasing a vinebomb launches it hard');
+    t.note(`vinebomb peaked at ${launched.peakSpeed} m/s`);
     await g.wait(4.0);
     const landed = await g.call('fruit.info', vb.id);
     if (landed) {

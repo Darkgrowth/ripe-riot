@@ -38,6 +38,10 @@ export class Renderer {
   private shadowTarget = new THREE.Vector3();
   private baseFov = 76;
   private fovOffset = 0;
+  /** Separate scene for first-person tool models; see enableViewmodel(). */
+  viewScene = new THREE.Scene();
+  viewCamera = new THREE.PerspectiveCamera(58, 16 / 9, 0.01, 6);
+  private viewmodelOn = false;
   private statsTarget: THREE.WebGLRenderTarget | null = null;
   private statsBuf: Uint8Array | null = null;
   readonly canvas: HTMLCanvasElement;
@@ -137,12 +141,50 @@ export class Renderer {
     this.resize();
   }
 
+  /**
+   * Give the viewmodel its own scene and lights. Rendering it as a second pass
+   * with the depth buffer cleared is what lets a tool sit 40 cm from the eye
+   * without ever poking through a wall.
+   */
+  enableViewmodel(): void {
+    if (this.viewmodelOn) return;
+    this.viewmodelOn = true;
+    this.viewScene.name = 'Viewmodel';
+    const key = new THREE.DirectionalLight(Palette.sunLight, 2.2);
+    key.position.set(0.4, 1.0, 0.8);
+    const fill = new THREE.HemisphereLight(Palette.skyHorizon, Palette.grassDark, 0.9);
+    this.viewScene.add(key, fill);
+  }
+
   render(): void {
+    // Manual reset so the two passes accumulate into one frame's totals; with
+    // autoReset on, `info` reported only the viewmodel pass — one draw call and
+    // seventy triangles, which looks like a spectacular optimisation and is in
+    // fact a broken measurement.
+    this.renderer.info.autoReset = false;
+    this.renderer.info.reset();
+
     // Keep the sky sphere centred on the camera and large enough to enclose it.
     this.sky.mesh.position.copy(this.camera.position);
     this.sky.mesh.scale.setScalar(this.camera.far * 0.5);
     this.renderer.render(this.scene, this.camera);
+    if (this.viewmodelOn && this.viewScene.children.length > 2) {
+      this.renderer.clearDepth();
+      this.viewCamera.aspect = this.camera.aspect;
+      this.viewCamera.fov = this.camera.fov * 0.86;
+      this.viewCamera.updateProjectionMatrix();
+      this.renderer.render(this.viewScene, this.viewCamera);
+    }
+    // Snapshot before anything else (frameStats, for one) touches the counters.
+    const i = this.renderer.info;
+    this.frameInfo.drawCalls = i.render.calls;
+    this.frameInfo.triangles = i.render.triangles;
+    this.frameInfo.geometries = i.memory.geometries;
+    this.frameInfo.textures = i.memory.textures;
+    this.frameInfo.programs = i.programs?.length ?? 0;
   }
+
+  private frameInfo = { drawCalls: 0, triangles: 0, geometries: 0, textures: 0, programs: 0 };
 
   refreshEnvironment(force = false): void {
     this.sky.updateEnvironment(this.renderer, this.scene, force);
@@ -217,14 +259,6 @@ export class Renderer {
     };
   }
 
-  get info() {
-    const i = this.renderer.info;
-    return {
-      drawCalls: i.render.calls,
-      triangles: i.render.triangles,
-      geometries: i.memory.geometries,
-      textures: i.memory.textures,
-      programs: i.programs?.length ?? 0,
-    };
-  }
+  /** Totals for the last completed frame, across every render pass. */
+  get info() { return { ...this.frameInfo }; }
 }

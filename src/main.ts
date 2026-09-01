@@ -6,6 +6,7 @@ import { Economy } from '@/systems/Economy';
 import { InteractionSystem } from '@/interaction/InteractionSystem';
 import { UIManager } from '@/ui/UIManager';
 import { PlayerRagdoll } from '@/player/PlayerRagdoll';
+import { ViewmodelSystem } from '@/player/ViewmodelSystem';
 import { RopeSystem } from '@/systems/RopeSystem';
 import { HarvestScoring } from '@/systems/HarvestScoring';
 import { ToolInventory } from '@/tools/ToolInventory';
@@ -62,6 +63,7 @@ async function main(): Promise<void> {
   game.add(new RopeSystem());
   game.add(new HarvestScoring());
   game.add(new ToolInventory());
+  game.add(new ViewmodelSystem());
   game.add(new Shop());
   game.add(new HarvestBook());
   game.add(new LegendaryHarvest());

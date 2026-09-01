@@ -15,6 +15,8 @@ node tools/harness/run-tests.mjs     # all gameplay scenarios (~4 min)
 node tools/harness/run-tests.mjs ropes legendary    # by name
 node tools/harness/multiplayer.mjs   # two real clients over a real transport
 node tools/harness/tour.mjs          # one contact sheet of every landmark
+node tools/harness/shadow-check.mjs  # A/B the frame with shadows on and off
+node tools/harness/perf-check.mjs    # attribute draw calls between passes
 ```
 
 `RIPE_VERBOSE=1` prints passing checks too.
@@ -65,7 +67,8 @@ leave the context they enter. So:
 | `progression` | discovery, records, rare variants, shop purchase and tier gating, Puff Melon inflation and drift, Vinebomb launch |
 | `legendary-king-melon` | four vines hold it still, gating on the rope gun, tethering, each cut, the 20 m drop, recovery to the pad, payout, and resetting for another attempt |
 
-Current status: **7/7 scenarios, 157 checks** plus **11/11 multiplayer checks**.
+Current status: **7/7 scenarios, 158 checks** plus **11/11 multiplayer checks**.
+Typecheck and production build are clean.
 
 ## Writing a scenario
 
@@ -79,7 +82,9 @@ Two traps worth knowing, both of which produced confidently wrong results here:
 round-trip is not instant, so reading the player's velocity *after* releasing
 the input always returns zero. The air-cannon recoil test looked like a
 completely broken tool until it started asserting on the value the tool records
-at the instant of the impulse.
+at the instant of the impulse. The same trap made the Vinebomb launch look weak
+until it asserted on peak speed since detach rather than current speed. Where a
+quantity is transient, record it in the game and assert on the record.
 
 **Scenarios share one game.** The runner fully resets player state, ragdoll,
 carried fruit, loose fruit, basket, economy, camera and wind between runs. It

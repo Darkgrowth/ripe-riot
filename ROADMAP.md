@@ -42,6 +42,10 @@ stunt scoring (13 stunts) read off the physical record.
 
 **Legendary** — the King Melon, six phases, playable and tested.
 
+**Viewmodel** — procedural first-person models for all seven tools, rendered in
+their own scene with a cleared depth buffer; sway, bob, recoil, charge pull-back
+and stow/draw transitions.
+
 **Audio** — fully synthesised: 24 sound generators, distance attenuation, stereo
 panning, a limiter, and layered surf/wind ambience that responds to altitude.
 
@@ -56,21 +60,19 @@ rigs, fruit replication, shared economy, client intents.
 1. **Feel pass on what exists.** The systems are verified; the *tuning* is not.
    Play an hour, adjust throw arcs, net radius, cannon recoil, damage
    thresholds, prices and regrowth timers against how it actually plays.
-2. **Viewmodel and first-person hands.** Tools currently have no on-screen
-   presence. This is the biggest gap between "works" and "feels good".
-3. **Particles and impact VFX** — splat, dust, leaf burst, water spray, rope
+2. **Particles and impact VFX** — splat, dust, leaf burst, water spray, rope
    dust. Pooled, instanced.
-4. **Music** — light exploration bed, discovery sting, legendary escalation.
-   The sting/stinger hooks already exist as events.
-5. **WebRTC transport** — the interface is done; this is signalling plus ICE.
-6. **Prediction and reconciliation** for client-side fruit interaction. Clients
+3. **Music** — light exploration bed, discovery sting, legendary escalation.
+   The sting hooks already exist as events.
+4. **WebRTC transport** — the interface is done; this is signalling plus ICE.
+5. **Prediction and reconciliation** for client-side fruit interaction. Clients
    currently see a round-trip delay on their own picks.
-7. **Save/load round-trip test** through a real page reload.
-8. **Mid-tier tools** — harpoon, portable winch, sticky anchor, bounce charge,
+6. **Save/load round-trip test** through a real page reload.
+7. **Mid-tier tools** — harpoon, portable winch, sticky anchor, bounce charge,
    large catch net. All are compositions of existing systems.
-9. **Full Sunpatch content** — cave orchard interior, secret spawns, the rest of
+8. **Full Sunpatch content** — cave orchard interior, secret spawns, the rest of
    the landmark dressing.
-10. **Weather and time** — day/night, wind events, rain surfaces. `TimeSystem`
+9. **Weather and time** — day/night, wind events, rain surfaces. `TimeSystem`
     and `WeatherSystem` are named in the brief and not yet written; wind is
     currently a vector on `FruitSystem`.
 
@@ -92,7 +94,9 @@ solo path that widens the margin rather than changing the script.
 ## Known gaps and honest caveats
 
 - **Frame rate is unmeasured on real hardware.** The harness runs under software
-  rendering; its timings are only good for relative CPU cost.
+  rendering; its timings are only good for relative CPU cost. Draw call and
+  triangle counts ARE accurate: ~75 draws and ~535k triangles per frame, of
+  which the shadow pass is 34 draws and 203k triangles.
 - **Ragdoll shadows do not sway with the wind shader.** The depth material has
   no sway patch, so plant shadows are static while foliage moves. Not noticeable
   at this scale; would need a `customDepthMaterial`.
@@ -100,5 +104,5 @@ solo path that widens the margin rather than changing the script.
   needs pooling before there are dozens.
 - **CPU/GPU sway must be kept in step by hand.** The shader and
   `PlantSystem.swayOffset` implement the same curve twice, by necessity.
-- **No prediction on client fruit interaction** (see item 6).
+- **No prediction on client fruit interaction** (see item 5).
 - **Boat is scenery.** It sells the arrival; it does not yet sail or upgrade.

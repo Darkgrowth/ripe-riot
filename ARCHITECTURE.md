@@ -99,6 +99,11 @@ adding mass separately gives the right kilograms with a near-zero inertia
 tensor. A lone fruit survives that; a jointed ragdoll diverges to 1.7e6 m, and a
 2.6 tonne melon that weighs nothing ignores its vines.
 
+**The viewmodel gets its own scene and camera.** Tools are rendered as a second
+pass with the depth buffer cleared, so a tool can sit 40 cm from the eye without
+ever poking through a wall — the usual failure of parenting a viewmodel straight
+to the camera. It is purely cosmetic and never feeds back into simulation.
+
 ## Multiplayer
 
 `net/Transport.ts` abstracts the wire. `BroadcastTransport` (same-machine, real
@@ -129,8 +134,23 @@ an image.
 
 ## Performance posture
 
-Measured on the current build: 38 draw calls, ~307k triangles, ~154 physics
-bodies with the island fully populated (113 plants, 458 fruit).
+Measured on the current build with the island fully populated (113 plants, 458
+fruit, ~154 physics bodies), attributed by toggling passes:
+
+| Pass | Draw calls | Triangles |
+|---|---|---|
+| scene | 40 | 331k |
+| shadow map | +34 | +203k |
+| viewmodel | +1 | ~1k |
+| **total** | **~75** | **~535k** |
+
+The shadow pass nearly doubles both, which makes it the first lever to pull if
+frame time becomes a problem (shorter shadow distance, or a cascade).
+
+Note that `renderer.info` resets per `render()` call. With two passes it must be
+reset manually and snapshotted, or it reports only the viewmodel — one draw call
+and seventy triangles, which looks like a spectacular optimisation and is in
+fact a broken measurement.
 
 - one draw call per fruit species, per plant type/variant, one for all props
 - terrain is one mesh; submerged seabed triangles are not indexed

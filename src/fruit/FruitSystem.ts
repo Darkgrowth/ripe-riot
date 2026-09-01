@@ -126,7 +126,8 @@ export class FruitSystem implements System {
         pos: [+f.position.x.toFixed(2), +f.position.y.toFixed(2), +f.position.z.toFixed(2)],
         mass: +f.mass.toFixed(2), size: +f.renderScale.toFixed(3),
         damage: +f.damage.toFixed(3), quality: f.quality, value: f.value(),
-        speed: +f.speed.toFixed(2), inflate: +f.inflate.toFixed(2),
+        speed: +f.speed.toFixed(2), peakSpeed: +f.maxSpeedSinceDetach.toFixed(2),
+        inflate: +f.inflate.toFixed(2),
         travelled: +f.travelled.toFixed(2), peak: +f.peakHeight.toFixed(2),
       };
     });
