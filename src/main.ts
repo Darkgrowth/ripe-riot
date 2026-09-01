@@ -6,6 +6,9 @@ import { Economy } from '@/systems/Economy';
 import { InteractionSystem } from '@/interaction/InteractionSystem';
 import { UIManager } from '@/ui/UIManager';
 import { PlayerRagdoll } from '@/player/PlayerRagdoll';
+import { RopeSystem } from '@/systems/RopeSystem';
+import { HarvestScoring } from '@/systems/HarvestScoring';
+import { ToolInventory } from '@/tools/ToolInventory';
 import { DebugAPI } from '@/debug/DebugAPI';
 
 const boot = document.getElementById('boot')!;
@@ -50,6 +53,9 @@ async function main(): Promise<void> {
   game.add(new FruitSystem());
   game.add(new PlayerRagdoll());
   game.add(new InteractionSystem());
+  game.add(new RopeSystem());
+  game.add(new HarvestScoring());
+  game.add(new ToolInventory());
   game.add(new UIManager());
 
   progress(52, 'planting');

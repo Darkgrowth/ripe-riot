@@ -69,6 +69,8 @@ export class PlayerController implements PhysicsOwner {
   private coyoteLeft = 0;
   private jumpBufferLeft = 0;
   private wantCrouch = false;
+  /** True while rising from a jump the player can still cut short. */
+  private jumpCut = false;
   height = STAND_HEIGHT;
   private targetHeight = STAND_HEIGHT;
 
@@ -80,6 +82,9 @@ export class PlayerController implements PhysicsOwner {
   carryLoad = 0;
   /** Set by tools/effects; multiplies max speed (e.g. mud, ice, vacuum recoil). */
   speedMul = 1;
+  /** Non-null while standing inside a ladder volume. Set by the ladder tool. */
+  climbVolume: { top: number; climbSpeed: number } | null = null;
+  climbing = false;
 
   /** Impact speed (m/s) above which the player ragdolls. */
   ragdollImpactSpeed = 13.5;
@@ -184,18 +189,45 @@ export class PlayerController implements PhysicsOwner {
       this.velocity.x *= d; this.velocity.z *= d;
     }
 
+    // --- ladders. Look where you want to go and hold forward; pressing jump
+    // steps off. Deliberately forgiving: climbing is transport, not a skill test.
+    this.climbing = false;
+    if (this.climbVolume && this.position.y < this.climbVolume.top) {
+      const wantsOff = input.jumpPressed;
+      if (!wantsOff && (Math.abs(input.moveZ) > 0.1 || input.jump)) {
+        this.climbing = true;
+        const cs = this.climbVolume.climbSpeed;
+        const lookY = Math.sin(this.pitch);
+        this.velocity.y = input.jump ? cs : clamp(lookY * 1.6, -1, 1) * input.moveZ * cs;
+        this.velocity.x *= 0.55;
+        this.velocity.z *= 0.55;
+        this.grounded = false;
+      } else if (wantsOff) {
+        this.velocity.y = Math.sqrt(2 * Math.abs(this.physics.gravity) * 0.7);
+        this.velocity.addScaledVector(_fwd, 3.2);
+        this.climbVolume = null;
+      }
+    }
+
     // --- gravity and jump
     this.coyoteLeft = this.grounded ? this.tuning.coyote : Math.max(0, this.coyoteLeft - dt);
     this.jumpBufferLeft = input.jumpPressed ? this.tuning.jumpBuffer : Math.max(0, this.jumpBufferLeft - dt);
 
     const g = Math.abs(this.physics.gravity);
-    if (this.jumpBufferLeft > 0 && this.coyoteLeft > 0) {
+    if (this.climbing) {
+      // No gravity and no jump while on a ladder; the block above owns velocity.y.
+      this.jumpBufferLeft = 0;
+    } else if (this.jumpBufferLeft > 0 && this.coyoteLeft > 0) {
       this.velocity.y = Math.sqrt(2 * g * this.tuning.jumpHeight);
       this.jumpBufferLeft = 0; this.coyoteLeft = 0; this.grounded = false;
+      this.jumpCut = true;
     } else {
-      // Short-hop: cut the rise when the button is released early.
+      // Short-hop: cut the rise when the button is released early. This applies
+      // ONLY to a rise the player started by jumping — applying it to every
+      // upward velocity silently halved the apex of air-cannon launches,
+      // explosions and Vinebomb rides.
       const rising = this.velocity.y > 0;
-      const gScale = rising && !input.jump ? 1.9 : rising ? 1.0 : 1.35;
+      const gScale = rising && this.jumpCut && !input.jump ? 1.9 : rising ? 1.0 : 1.35;
       this.velocity.y -= g * gScale * dt;
       if (this.velocity.y < -55) this.velocity.y = -55;
     }
@@ -261,6 +293,7 @@ export class PlayerController implements PhysicsOwner {
   }
 
   private onLand(): void {
+    this.jumpCut = false;
     const impact = -this.lastFallSpeed;
     this.lastFallSpeed = 0;
     if (impact > 3) this.landDip = clamp((impact - 3) / 16, 0, 0.55);
@@ -293,6 +326,8 @@ export class PlayerController implements PhysicsOwner {
     this.velocity.add(v);
     this.grounded = false;
     this.coyoteLeft = 0;
+    // An external launch is not a jump, so releasing space must not cut it.
+    this.jumpCut = false;
     if (ragdollIfStrong && v.length() > this.ragdollImpactSpeed) {
       this.onHardImpact?.(v.length(), source);
     }

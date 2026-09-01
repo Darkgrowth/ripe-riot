@@ -85,6 +85,11 @@ export class Fruit implements PhysicsOwner {
   private prevSpeed = 0;
   /** Velocity lost in the most recent step. The honest measure of an impact. */
   lastDeltaV = 0;
+  /** Flight record, read by HarvestScoring when the fruit is finally banked. */
+  touchedGround = false;
+  bounces = 0;
+  maxSpeedSinceDetach = 0;
+  caughtInAir = false;
 
   private physics: PhysicsWorld;
   private baseRadius = 0.5;
@@ -189,6 +194,10 @@ export class Fruit implements PhysicsOwner {
     this.lastTravelSample.copy(this.position);
     this.travelled = 0;
     this.peakHeight = this.position.y;
+    this.touchedGround = false;
+    this.bounces = 0;
+    this.maxSpeedSinceDetach = 0;
+    this.caughtInAir = false;
     this.createBody(inheritVel);
     for (const t of this.traits) t.onDetach?.(this, ctx);
     ctx.emit('fruit:detached', { fruitId: this.id, species: this.species, cause, playerId });
@@ -358,6 +367,7 @@ export class Fruit implements PhysicsOwner {
       // so totalForceMagnitude/mass overstates a hit by a large and
       // inconsistent factor; speed change is what the player can see.
       const speed = Math.hypot(v.x, v.y, v.z);
+      if (speed > this.maxSpeedSinceDetach) this.maxSpeedSinceDetach = speed;
       const lost = this.prevSpeed - speed;
       this.prevSpeed = speed;
       this.lastDeltaV = lost > 0 ? lost : 0;
@@ -394,6 +404,10 @@ export class Fruit implements PhysicsOwner {
   private registerImpact(dv: number, ctx: TraitContext): void {
     const onPlayer = ctx.elapsed - this.hitPlayerAt < 0.09;
     const point = onPlayer ? this.hitPoint : this.position;
+    if (!onPlayer) {
+      this.bounces++;
+      this.touchedGround = true;
+    }
     for (const t of this.traits) t.onImpact?.(this, dv, point, UP, ctx);
     if (this.destroyed) return;
 

@@ -155,6 +155,22 @@ export class FruitSystem implements System {
         pos: [+best.position.x.toFixed(2), +best.position.y.toFixed(2), +best.position.z.toFixed(2)],
         dist: +Math.sqrt(bestD).toFixed(2) } : null;
     });
+    d.addAction('fruit.body', (id: number) => {
+      const f = this.fruits.get(id);
+      if (!f) return null;
+      const b = f.body;
+      return {
+        hasBody: !!b,
+        sleeping: b ? b.isSleeping() : null,
+        colliders: f.colliders.length,
+        enabled: f.colliders.map((c) => c.isEnabled()),
+        groups: f.colliders.map((c) => c.collisionGroups().toString(16)),
+        mass: b ? +b.mass().toFixed(3) : null,
+        translation: b ? [+b.translation().x.toFixed(2), +b.translation().y.toFixed(2),
+          +b.translation().z.toFixed(2)] : null,
+        bodyType: b ? b.bodyType() : null,
+      };
+    });
     d.addAction('fruit.detach', (id: number) => {
       const f = this.fruits.get(id);
       if (!f) return false;

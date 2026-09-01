@@ -174,6 +174,17 @@ export class DebugAPI {
     };
   }
 
+  /** Fire a radial impulse directly, bypassing all tool code. */
+  explode(x: number, y: number, z: number, radius: number, strength: number): number {
+    return this.g.physics.explode(new THREE.Vector3(x, y, z), radius, strength).length;
+  }
+
+  /** Count physics bodies whose collider overlaps a sphere. */
+  overlap(x: number, y: number, z: number, radius: number): number {
+    return this.g.physics.overlapSphere(
+      new THREE.Vector3(x, y, z), radius, 0xffffffff).length;
+  }
+
   dumpLogs(): string[] { return this.logs.slice(); }
   clearLogs(): void { this.logs.length = 0; }
 }

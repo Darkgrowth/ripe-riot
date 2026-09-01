@@ -19,8 +19,12 @@ export interface GameEventMap {
   'fruit:sold': { fruitId: number; species: string; value: number; quality: string; mass: number };
   'fruit:spawned': { fruitId: number; species: string };
 
+  /** Raised by tools when something stunt-worthy might have happened; the
+   *  scoring system decides whether it actually counts. */
+  'stunt:candidate': { fruitId: number; kind: string };
   'stunt:awarded': { name: string; label: string; multiplier: number; fruitId: number };
   'stunt:chain': { count: number; total: number };
+  'vinebomb:launch': { fruitId: number; speed: number; restrained: number };
 
   'money:changed': { money: number; delta: number; reason: string };
   'shop:purchased': { itemId: string; cost: number };

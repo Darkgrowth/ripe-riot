@@ -108,20 +108,26 @@ export class UIManager implements System {
 
   /** Rebuilt whenever the tool inventory changes. */
   renderSlots(): void {
+    // Systems that initialise before the UI (tools does) will call this during
+    // their own init, before this one has run.
+    if (!this.g || !this.els) return;
     const inv = this.g.has('tools')
-      ? this.g.get<{ slotSummary(): Array<{ name: string; icon: string; active: boolean; empty: boolean }> }>('tools')
+      ? this.g.get<{ slotSummary(): Array<{
+        name: string; icon: string; active: boolean; empty: boolean; status: string;
+      }> }>('tools')
       : null;
     const slots = inv?.slotSummary() ?? [
-      { name: 'Hand', icon: '✋', active: true, empty: false },
-      { name: '—', icon: '', active: false, empty: true },
-      { name: '—', icon: '', active: false, empty: true },
-      { name: 'Basket', icon: '🧺', active: false, empty: false },
+      { name: 'Hand', icon: '✋', active: true, empty: false, status: '' },
+      { name: '—', icon: '', active: false, empty: true, status: '' },
+      { name: '—', icon: '', active: false, empty: true, status: '' },
+      { name: 'Basket', icon: '🧺', active: false, empty: false, status: '' },
     ];
     this.els.slots.innerHTML = slots.map((s, i) => `
       <div class="slot ${s.active ? 'active' : ''} ${s.empty ? 'empty' : ''}">
         <div class="num">${i + 1}</div>
         <div class="icon">${s.icon}</div>
         <div>${s.name}</div>
+        <div class="slot-status">${s.status ?? ''}</div>
       </div>`).join('');
   }
 
@@ -189,11 +195,26 @@ export class UIManager implements System {
     }
 
     this.updateCarry();
+    this.updateSlotStatus();
 
     this.debugTimer -= dt;
     if (this.debugVisible && this.debugTimer <= 0) {
       this.debugTimer = 0.25;
       this.els.debug.textContent = this.debugText();
+    }
+  }
+
+  /** The active tool's charge/ammo line, refreshed without rebuilding the DOM. */
+  private updateSlotStatus(): void {
+    const inv = this.g.has('tools')
+      ? this.g.get<{ slotSummary(): Array<{ status: string }>; activeSlot: number }>('tools')
+      : null;
+    if (!inv) return;
+    const nodes = this.els.slots.querySelectorAll('.slot-status');
+    const summary = inv.slotSummary();
+    for (let i = 0; i < nodes.length && i < summary.length; i++) {
+      const text = summary[i].status ?? '';
+      if (nodes[i].textContent !== text) nodes[i].textContent = text;
     }
   }
 

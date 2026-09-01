@@ -58,7 +58,8 @@ export class InteractionSystem implements System {
   /** Smoothed hand position offsets, so carrying has weight. */
   private handSway = new THREE.Vector3();
   private handLag = new THREE.Vector3();
-  private throwCharge = 0;
+  /** 0..1 wind-up, written by whichever tool is doing the throwing. */
+  throwCharge = 0;
   private nearSellPad = false;
   private sellCooldown = 0;
   /** Free fruit resting on the sell pad, with the time they arrived. */
@@ -106,20 +107,9 @@ export class InteractionSystem implements System {
     }
 
     if (input.interactPressed) this.tryInteract();
-    if (input.dropPressed) this.dropHeld();
-
-    // Hold LMB to wind up a throw; release to let go. A charged throw is how
-    // players discover they can put an apple through a shed window.
-    if (this.carried) {
-      if (input.primary) this.throwCharge = Math.min(1, this.throwCharge + dt * 1.9);
-      if (input.primaryReleased && this.throwCharge > 0.02) {
-        this.throwHeld(0.35 + this.throwCharge * 0.65);
-        this.throwCharge = 0;
-      }
-      if (input.secondaryPressed) this.stowHeld();
-    } else {
-      this.throwCharge = 0;
-    }
+    // The mouse buttons belong to the equipped tool (ToolInventory routes them);
+    // this system only owns E, and the state of what is in your hands.
+    if (!this.carried) this.throwCharge = 0;
 
     this.g.player.carryLoad = (this.carried?.heavy ? this.carried.fruit.mass : 0)
       + this.basket.massCarried * 0.25;
@@ -190,6 +180,11 @@ export class InteractionSystem implements System {
       if (since === undefined) { this.padFruit.set(f.id, now); continue; }
       if (now - since > 0.55) {
         this.padFruit.delete(f.id);
+        // Landing produce in the drop-off under its own power is a stunt, not
+        // an accident, and the scoring system should see it that way.
+        if (this.g.has('scoring')) {
+          this.g.get<{ awardDelivery(f: Fruit): void }>('scoring').awardDelivery(f);
+        }
         this.sellFruit([f], 'delivered');
       }
     }
@@ -255,6 +250,11 @@ export class InteractionSystem implements System {
     if (this.basket.items.length >= this.basket.capacity) {
       this.g.bus.emit('ui:toast', { text: 'Basket is full', kind: 'bad', ms: 1600 });
       return false;
+    }
+    // Evaluate before stowing: once stowed the fruit stops simulating and its
+    // flight record can no longer be judged.
+    if (this.g.has('scoring')) {
+      this.g.get<{ evaluate(f: Fruit): void }>('scoring').evaluate(f);
     }
     f.stow();
     this.basket.items.push(f);

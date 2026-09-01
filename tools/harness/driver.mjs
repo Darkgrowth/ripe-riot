@@ -100,6 +100,10 @@ export async function openGame({ width = 1280, height = 720, headless = true, qu
     pause: (on = true) => page.evaluate((o) => window.__RIPE.pause(o), on),
     advance: (n) => page.evaluate((n) => window.__RIPE.advance(n), n),
     probeLook: (d) => page.evaluate((d) => window.__RIPE.probeLook(d), d),
+    explode: (x, y, z, r, s) => page.evaluate(
+      ([x, y, z, r, s]) => window.__RIPE.explode(x, y, z, r, s), [x, y, z, r, s]),
+    overlap: (x, y, z, r) => page.evaluate(
+      ([x, y, z, r]) => window.__RIPE.overlap(x, y, z, r), [x, y, z, r]),
     logs: () => page.evaluate(() => window.__RIPE.dumpLogs()),
     clearLogs: () => page.evaluate(() => window.__RIPE.clearLogs()),
     terrainHeight: (x, z) => page.evaluate(([x, z]) => window.__RIPE.terrainHeight(x, z), [x, z]),

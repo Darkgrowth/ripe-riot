@@ -182,29 +182,35 @@ export class PhysicsWorld {
     return out;
   }
 
-  /** Radial impulse. Returns the bodies actually pushed. */
+  /**
+   * Radial impulse. Returns the bodies actually pushed.
+   *
+   * This iterates the body set rather than using intersectionsWithShape.
+   * Measured: a shape query centred on an awake dynamic collider that a raycast
+   * hits reliably returned only the terrain, silently making every explosion a
+   * no-op. Body iteration is O(bodies) — a few hundred, once per blast — and
+   * cannot miss. Explosions matter far too much in this game to leave on a
+   * query that behaves unexpectedly.
+   */
   explode(center: THREE.Vector3, radius: number, strength: number, upBias = 0.35): RBody[] {
     const pushed: RBody[] = [];
-    const shape = new RAPIER.Ball(radius);
-    this.world.intersectionsWithShape(
-      { x: center.x, y: center.y, z: center.z }, { x: 0, y: 0, z: 0, w: 1 }, shape,
-      (c) => {
-        const b = c.parent();
-        if (!b || b.isFixed() || pushed.includes(b)) return true;
-        const t = b.translation();
-        _v.set(t.x - center.x, t.y - center.y, t.z - center.z);
-        const d = _v.length();
-        const falloff = Math.max(0, 1 - d / radius);
-        if (falloff <= 0) return true;
-        if (d < 0.001) _v.set(0, 1, 0); else _v.multiplyScalar(1 / d);
-        _v.y += upBias;
-        _v.normalize().multiplyScalar(strength * falloff * falloff * Math.max(0.2, b.mass()));
-        b.applyImpulse({ x: _v.x, y: _v.y, z: _v.z }, true);
-        pushed.push(b);
-        return true;
-      },
-      undefined, QueryMask.anything,
-    );
+    const r2 = radius * radius;
+    this.world.bodies.forEach((b) => {
+      if (b.isFixed()) return;
+      const t = b.translation();
+      const dx = t.x - center.x, dy = t.y - center.y, dz = t.z - center.z;
+      const d2 = dx * dx + dy * dy + dz * dz;
+      if (d2 > r2) return;
+      const d = Math.sqrt(d2);
+      const falloff = 1 - d / radius;
+      if (falloff <= 0) return;
+      if (d < 0.001) _v.set(0, 1, 0);
+      else _v.set(dx / d, dy / d, dz / d);
+      _v.y += upBias;
+      _v.normalize().multiplyScalar(strength * falloff * falloff * Math.max(0.2, b.mass()));
+      b.applyImpulse({ x: _v.x, y: _v.y, z: _v.z }, true);
+      pushed.push(b);
+    });
     return pushed;
   }
 
