@@ -23,6 +23,9 @@ const STONE = C(0x8d8577);
 const HULL = C(0x4b7fa8);
 const HULL_DARK = C(0x2f5b7d);
 
+/** Collision radius of the King Melon; the mesh is built to match. */
+export const KING_MELON_RADIUS = 5.6;
+
 export interface BuiltLandmarks {
   mesh: THREE.Mesh;
   signs: THREE.Mesh[];
@@ -32,6 +35,8 @@ export interface BuiltLandmarks {
   shopCounter: THREE.Vector3;
   kingMelon: THREE.Mesh;
   kingMelonPos: THREE.Vector3;
+  /** Vine anchor points on the ravine rim, all above the melon. */
+  kingMelonAnchors: THREE.Vector3[];
 }
 
 /**
@@ -221,30 +226,44 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   }
 
   // ---- THE KING MELON -----------------------------------------------------
-  // Hanging over the ravine, deliberately visible from most of the island. It
-  // is scenery for now; LegendaryHarvestSystem takes ownership later.
+  // Hangs over the ravine, deliberately visible from most of the island.
+  //
+  // The anchors are chosen FIRST and the melon is hung below the lowest of
+  // them. Doing it the other way round put every anchor beneath the fruit,
+  // which meant four enormous vines that could not hold up anything at all.
   const kmX = 8, kmZ = -62;
-  const kmY = Math.max(ground(kmX, kmZ) + 26, 30);
+  // Anchors are SEARCHED for rather than assumed: each quadrant is sampled for
+  // its highest ground within reach, because hand-picked rim coordinates landed
+  // on low ground and produced four enormous vines running downward from the
+  // fruit, which of course could not hold it up at all.
+  const kingMelonAnchors: THREE.Vector3[] = [];
+  for (let q = 0; q < 4; q++) {
+    let best: THREE.Vector3 | null = null;
+    for (let s2 = 0; s2 < 9; s2++) {
+      const a = (q / 4) * Math.PI * 2 + Math.PI / 4 + (s2 - 4) * 0.12;
+      for (const r of [20, 24, 28, 32]) {
+        const ax = kmX + Math.cos(a) * r;
+        const az = kmZ + Math.sin(a) * r;
+        const ay = ground(ax, az);
+        if (!best || ay > best.y) best = new THREE.Vector3(ax, ay, az);
+      }
+    }
+    if (best) kingMelonAnchors.push(best.setY(best.y + 4.5));
+  }
+  const lowestAnchor = Math.min(...kingMelonAnchors.map((a) => a.y));
+  const ravineFloor = ground(kmX, kmZ);
+  // Hang it well below every anchor and well above the floor, so the vines
+  // genuinely suspend it and there is real ravine left to fall into.
+  const kmY = Math.max(ravineFloor + KING_MELON_RADIUS + 9, lowestAnchor - 14);
+  // If the rims were not tall enough to give that clearance, lift the anchors
+  // instead of lowering the fruit into the ground.
+  for (const a of kingMelonAnchors) a.y = Math.max(a.y, kmY + 12);
   const kingMelonPos = new THREE.Vector3(kmX, kmY, kmZ);
   const kingMelon = buildKingMelon(kingMelonPos);
   scene.add(kingMelon);
 
-  // Vines from the melon up to the ravine walls.
-  const vineAnchors: THREE.Vector3[] = [
-    new THREE.Vector3(kmX - 26, ground(kmX - 26, kmZ - 8) + 3, kmZ - 8),
-    new THREE.Vector3(kmX + 24, ground(kmX + 24, kmZ - 6) + 3, kmZ - 6),
-    new THREE.Vector3(kmX - 12, ground(kmX - 12, kmZ + 20) + 4, kmZ + 20),
-    new THREE.Vector3(kmX + 16, ground(kmX + 16, kmZ + 22) + 4, kmZ + 22),
-  ];
-  b.reset();
-  for (const anchor of vineAnchors) {
-    const mid = kingMelonPos.clone().lerp(anchor, 0.5);
-    mid.y -= kingMelonPos.distanceTo(anchor) * 0.10;   // sag
-    const curve = new THREE.CatmullRomCurve3([
-      kingMelonPos.clone().add(new THREE.Vector3(0, 4.2, 0)), mid, anchor,
-    ]);
-    b.mesh(new THREE.TubeGeometry(curve, 14, 0.34, 5, false), C(0x5c8f38));
-  }
+  // The vines themselves belong to LegendaryHarvestSystem: they are real rope
+  // constraints that can be cut, not decoration, so they are not baked in here.
 
   const merged = b.finish()!;
   const mat = new THREE.MeshStandardMaterial({
@@ -260,7 +279,10 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   scene.add(mesh);
   for (const s of signs) scene.add(s);
 
-  return { mesh, signs, sellPad, sellRadius: 3.2, shopCounter, kingMelon, kingMelonPos };
+  return {
+    mesh, signs, sellPad, sellRadius: 3.2, shopCounter,
+    kingMelon, kingMelonPos, kingMelonAnchors,
+  };
 }
 
 function makeSign(pos: THREE.Vector3, rotY: number, w: number, h: number,
@@ -278,8 +300,9 @@ function makeSign(pos: THREE.Vector3, rotY: number, w: number, h: number,
 
 /** The aspirational object. It has to look absurd from 150 metres away. */
 function buildKingMelon(pos: THREE.Vector3): THREE.Mesh {
+  const r = KING_MELON_RADIUS;
   const body = new THREE.SphereGeometry(1, 40, 28);
-  body.scale(8.5, 7.0, 8.5);
+  body.scale(r * 1.08, r * 0.9, r * 1.08);
   const light = new THREE.Color().setHex(0x76bd45, THREE.SRGBColorSpace);
   const dark = new THREE.Color().setHex(0x24581f, THREE.SRGBColorSpace);
   const pos3 = body.getAttribute('position');
@@ -290,7 +313,7 @@ function buildKingMelon(pos: THREE.Vector3): THREE.Mesh {
     const theta = Math.atan2(z, x);
     const stripe = Math.sin(theta * 8) + Math.sin(y * 0.55) * 0.35;
     c.copy(light).lerp(dark, THREE.MathUtils.smoothstep(stripe, -0.2, 0.45));
-    c.multiplyScalar(1 - Math.pow(Math.abs(y) / 7.0, 4) * 0.22);
+    c.multiplyScalar(1 - Math.pow(Math.abs(y) / (KING_MELON_RADIUS * 0.9), 4) * 0.22);
     col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
   }
   body.setAttribute('color', new THREE.BufferAttribute(col, 3));

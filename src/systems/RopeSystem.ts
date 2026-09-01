@@ -8,6 +8,14 @@ import { clamp } from '@/core/MathUtils';
 export interface RopeEnd {
   /** null means "pinned to the world at `point`". */
   body: RBody | null;
+  /**
+   * Rapier handle for `body`. Bodies are re-resolved from this every step:
+   * holding a RigidBody across its removal (a tethered fruit gets sold, a
+   * plant is despawned) means calling into freed WASM memory, which surfaces
+   * as "recursive use of an object" from wasm-bindgen and poisons every
+   * subsequent physics call.
+   */
+  handle?: number;
   /** Anchor in the body's local frame, or world space if body is null. */
   local: THREE.Vector3;
   /** Which fruit/entity this end is holding, for gameplay queries. */
@@ -31,6 +39,10 @@ export interface Rope {
   /** Set for ropes the player is personally holding. */
   heldByPlayer: boolean;
   color: THREE.Color;
+  /** Drawn radius. Vines are much thicker than rope. */
+  radius: number;
+  /** Vines can be cut; ropes are released instead. */
+  cuttable: boolean;
 }
 
 const SEGMENTS = 12;
@@ -38,6 +50,8 @@ const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
 const _mid = new THREE.Vector3();
 const _q = new THREE.Quaternion();
+const _n = new THREE.Vector3();
+const _imp = new THREE.Vector3();
 
 /**
  * Ropes as maximum-distance constraints rather than chains of jointed segments.
@@ -55,7 +69,7 @@ export class RopeSystem implements System {
   private group = new THREE.Group();
   private meshes = new Map<number, THREE.Mesh>();
   private material!: THREE.MeshStandardMaterial;
-  private geoPool: THREE.TubeGeometry[] = [];
+  private materials = new Map<string, THREE.MeshStandardMaterial>();
 
   init(g: Game): void {
     this.g = g;
@@ -69,10 +83,13 @@ export class RopeSystem implements System {
     g.debug?.addProbe('ropes', () => ({
       count: this.ropes.size,
       taut: [...this.ropes.values()].filter((r) => r.tension > 0.05).length,
-      list: [...this.ropes.values()].map((r) => ({
-        id: r.id, len: +r.length.toFixed(2), tension: +r.tension.toFixed(2),
-        a: r.a.ownerId, b: r.b.ownerId,
-      })),
+      list: [...this.ropes.values()].map((r) => {
+        this.endPoint(r.a, _a); this.endPoint(r.b, _b);
+        return {
+          id: r.id, len: +r.length.toFixed(2), dist: +_a.distanceTo(_b).toFixed(2),
+          tension: +r.tension.toFixed(0), a: r.a.ownerId, b: r.b.ownerId,
+        };
+      }),
     }));
     g.debug?.addAction('rope.count', () => this.ropes.size);
     g.debug?.addAction('rope.clear', () => { const n = this.ropes.size; this.clear(); return n; });
@@ -84,6 +101,7 @@ export class RopeSystem implements System {
    */
   create(a: RopeEnd, b: RopeEnd, length: number, opts: {
     maxTension?: number; minLength?: number; color?: THREE.Color; heldByPlayer?: boolean;
+    radius?: number; cuttable?: boolean;
   } = {}): Rope {
     const id = this.g.newId();
     const aBody = a.body ?? this.pin(a.local);
@@ -91,18 +109,11 @@ export class RopeSystem implements System {
     const aLocal = a.body ? a.local : ZERO;
     const bLocal = b.body ? b.local : ZERO;
 
-    const params = RAPIER.JointData.rope(
-      length,
-      { x: aLocal.x, y: aLocal.y, z: aLocal.z },
-      { x: bLocal.x, y: bLocal.y, z: bLocal.z },
-    );
-    const joint = this.g.physics.world.createImpulseJoint(params, aBody, bBody, true);
-
     const rope: Rope = {
       id,
-      a: { body: aBody, local: aLocal.clone(), ownerId: a.ownerId },
-      b: { body: bBody, local: bLocal.clone(), ownerId: b.ownerId },
-      length, restLength: length, joint,
+      a: { body: aBody, handle: aBody.handle, local: aLocal.clone(), ownerId: a.ownerId },
+      b: { body: bBody, handle: bBody.handle, local: bLocal.clone(), ownerId: b.ownerId },
+      length, restLength: length, joint: null,
       maxTension: opts.maxTension ?? 2600,
       tension: 0,
       reelRate: 0,
@@ -110,6 +121,8 @@ export class RopeSystem implements System {
       broken: false,
       heldByPlayer: opts.heldByPlayer ?? false,
       color: opts.color ?? Palette.rope,
+      radius: opts.radius ?? 0.045,
+      cuttable: opts.cuttable ?? false,
     };
     this.ropes.set(id, rope);
     this.makeMesh(rope);
@@ -121,12 +134,26 @@ export class RopeSystem implements System {
     return this.g.physics.createFixed(worldPoint);
   }
 
+  /** Materials are cached per colour: a handful at most, all flat-shaded. */
+  private materialFor(color: THREE.Color): THREE.MeshStandardMaterial {
+    const key = color.getHexString();
+    let m = this.materials.get(key);
+    if (!m) {
+      m = new THREE.MeshStandardMaterial({
+        color: color.clone(), roughness: 0.95, metalness: 0, flatShading: true,
+      });
+      m.name = `rope:${key}`;
+      this.materials.set(key, m);
+    }
+    return m;
+  }
+
   private makeMesh(rope: Rope): void {
     const curve = new THREE.CatmullRomCurve3([
       new THREE.Vector3(), new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 2),
     ]);
-    const geo = new THREE.TubeGeometry(curve, SEGMENTS, 0.045, 5, false);
-    const mesh = new THREE.Mesh(geo, this.material);
+    const geo = new THREE.TubeGeometry(curve, SEGMENTS, rope.radius, 5, false);
+    const mesh = new THREE.Mesh(geo, this.materialFor(rope.color));
     mesh.name = `Rope:${rope.id}`;
     mesh.frustumCulled = false;
     mesh.castShadow = false;
@@ -142,26 +169,23 @@ export class RopeSystem implements System {
 
   setLength(id: number, length: number): void {
     const r = this.ropes.get(id);
-    if (!r || !r.joint) return;
+    if (!r) return;
     r.length = clamp(length, r.minLength, r.restLength * 3);
-    // Rapier has no setter for a rope joint's limit, so it is rebuilt. Cheap:
-    // there are never more than a handful of ropes in play.
-    this.g.physics.world.removeImpulseJoint(r.joint, true);
-    const params = RAPIER.JointData.rope(
-      r.length,
-      { x: r.a.local.x, y: r.a.local.y, z: r.a.local.z },
-      { x: r.b.local.x, y: r.b.local.y, z: r.b.local.z },
-    );
-    r.joint = this.g.physics.world.createImpulseJoint(params, r.a.body!, r.b.body!, true);
   }
 
   remove(id: number): void {
     const r = this.ropes.get(id);
     if (!r) return;
-    if (r.joint) this.g.physics.world.removeImpulseJoint(r.joint, true);
-    // Pinned ends own a fixed body each; clean those up too.
-    if (r.a.ownerId === -1 && r.a.body) this.g.physics.removeBody(r.a.body);
-    if (r.b.ownerId === -1 && r.b.body) this.g.physics.removeBody(r.b.body);
+    // Pinned ends own a fixed body each; clean those up too, if still present.
+    const world = this.g.physics.world;
+    if (r.a.ownerId === -1 && r.a.handle !== undefined) {
+      const pinA = world.getRigidBody(r.a.handle);
+      if (pinA) this.g.physics.removeBody(pinA);
+    }
+    if (r.b.ownerId === -1 && r.b.handle !== undefined) {
+      const pinB = world.getRigidBody(r.b.handle);
+      if (pinB) this.g.physics.removeBody(pinB);
+    }
     const mesh = this.meshes.get(id);
     if (mesh) { this.group.remove(mesh); mesh.geometry.dispose(); this.meshes.delete(id); }
     this.ropes.delete(id);
@@ -180,37 +204,78 @@ export class RopeSystem implements System {
     return out;
   }
 
+  /**
+   * Solve every rope as a ONE-SIDED distance constraint.
+   *
+   * Rapier's rope joint was measured not to constrain at all here: a 2.6 tonne
+   * King Melon fell straight through three of them, and a tethered player could
+   * walk 9 m against a 2.5 m rope. Rather than build the game's signature
+   * mechanic on that, ropes are solved directly — which also gives an honest
+   * tension in newtons (for strain audio and snapping) and makes winching a
+   * change to one number instead of a joint rebuild every frame.
+   *
+   * Impulses are applied before world.step(), so the solver integrates them.
+   */
   fixedStep(dt: number): void {
+    const invDt = 1 / dt;
+    const world = this.g.physics.world;
     for (const r of [...this.ropes.values()]) {
-      if (r.reelRate !== 0) {
-        this.setLength(r.id, r.length + r.reelRate * dt);
-      }
-      // Tension is read from the joint's applied impulse, which is what makes
-      // "the rope is about to go" legible to the player and to the audio system.
-      const imp = r.joint ? (r.joint as unknown as { impulses?: Float32Array }).impulses : undefined;
-      let mag = 0;
-      if (imp && imp.length) {
-        for (let i = 0; i < Math.min(3, imp.length); i++) mag += imp[i] * imp[i];
-        mag = Math.sqrt(mag) / dt;
-      } else {
-        // Fall back to geometric strain when the binding does not expose impulses.
-        this.endPoint(r.a, _a);
-        this.endPoint(r.b, _b);
-        mag = Math.max(0, _a.distanceTo(_b) - r.length) * 900;
-      }
-      r.tension = mag;
-      if (mag > r.maxTension) {
+      // Re-resolve both ends. Either can vanish between steps.
+      const bodyA = r.a.handle !== undefined ? world.getRigidBody(r.a.handle) : null;
+      const bodyB = r.b.handle !== undefined ? world.getRigidBody(r.b.handle) : null;
+      if (!bodyA || !bodyB) { this.remove(r.id); continue; }
+      r.a.body = bodyA;
+      r.b.body = bodyB;
+
+      if (r.reelRate !== 0) this.setLength(r.id, r.length + r.reelRate * dt);
+      this.endPoint(r.a, _a);
+      this.endPoint(r.b, _b);
+      _n.copy(_b).sub(_a);
+      const dist = _n.length();
+      const slack = r.length - dist;
+      if (dist < 1e-5 || slack >= 0) { r.tension = 0; continue; }
+      _n.multiplyScalar(1 / dist);
+
+      const invMassA = movable(bodyA) ? 1 / Math.max(0.001, bodyA.mass()) : 0;
+      const invMassB = movable(bodyB) ? 1 / Math.max(0.001, bodyB.mass()) : 0;
+      const invSum = invMassA + invMassB;
+      if (invSum <= 0) { r.tension = 0; continue; }
+
+      // Separation speed along the rope, positive when it is being pulled apart.
+      const va = bodyA.linvel();
+      const vb = bodyB.linvel();
+      const vSep = (vb.x - va.x) * _n.x + (vb.y - va.y) * _n.y + (vb.z - va.z) * _n.z;
+
+      // Baumgarte term pulls out the overshoot without letting the rope snap
+      // taut in a single step, which would fling everything attached to it.
+      const violation = -slack;
+      const bias = Math.min(violation * invDt * 0.22, 14);
+      const j = (vSep + bias) / invSum;
+      if (j < 0) { r.tension = 0; continue; }
+
+      _imp.copy(_n).multiplyScalar(j);
+      if (invMassA > 0) bodyA.applyImpulseAtPoint({ x: _imp.x, y: _imp.y, z: _imp.z },
+        { x: _a.x, y: _a.y, z: _a.z }, true);
+      if (invMassB > 0) bodyB.applyImpulseAtPoint({ x: -_imp.x, y: -_imp.y, z: -_imp.z },
+        { x: _b.x, y: _b.y, z: _b.z }, true);
+
+      r.tension = j * invDt;
+      if (r.tension > r.maxTension) {
         this.g.bus.emit('rope:snapped', { ropeId: r.id });
         this.g.bus.emit('audio:sfx', { name: 'ropeSnap' });
         this.remove(r.id);
+      } else if (r.tension > r.maxTension * 0.55 && Math.random() < 0.02) {
+        this.g.bus.emit('audio:sfx', { name: 'ropeStrain', volume: 0.5 });
       }
     }
   }
 
   private endPoint(end: RopeEnd, out: THREE.Vector3): THREE.Vector3 {
-    if (!end.body) return out.copy(end.local);
-    const t = end.body.translation();
-    const r = end.body.rotation();
+    const body = end.handle !== undefined
+      ? this.g.physics.world.getRigidBody(end.handle) : null;
+    if (!body) return out.copy(end.local);
+    const t = body.translation();
+    const r = body.rotation();
     _q.set(r.x, r.y, r.z, r.w);
     return out.copy(end.local).applyQuaternion(_q).add(_v3.set(t.x, t.y, t.z));
   }
@@ -227,18 +292,30 @@ export class RopeSystem implements System {
       const sag = Math.min(rope.length * 0.34, slack * 0.55 + 0.04);
       _mid.copy(_a).lerp(_b, 0.5).setY(Math.min(_a.y, _b.y) - sag + Math.abs(_a.y - _b.y) * 0.12);
       const curve = new THREE.CatmullRomCurve3([_a.clone(), _mid.clone(), _b.clone()]);
-      const radius = 0.04 + clamp(rope.tension / 3000, 0, 1) * 0.018;
+      const radius = rope.radius * (1 + clamp(rope.tension / 3000, 0, 1) * 0.4);
       const geo = new THREE.TubeGeometry(curve, SEGMENTS, radius, 5, false);
       mesh.geometry.dispose();
       mesh.geometry = geo;
     }
   }
 
+  /** World-space endpoints, for hit-testing a rope the player is looking at. */
+  endpoints(rope: Rope, a: THREE.Vector3, b: THREE.Vector3): void {
+    this.endPoint(rope.a, _a); a.copy(_a);
+    this.endPoint(rope.b, _b); b.copy(_b);
+  }
+
   dispose(): void {
     this.clear();
     this.material.dispose();
-    for (const g of this.geoPool) g.dispose();
+    for (const m of this.materials.values()) m.dispose();
+    this.materials.clear();
   }
+}
+
+/** Fixed and kinematic bodies are immovable anchors as far as a rope knows. */
+function movable(b: RBody): boolean {
+  return !b.isFixed() && !b.isKinematic();
 }
 
 const ZERO = new THREE.Vector3(0, 0, 0);

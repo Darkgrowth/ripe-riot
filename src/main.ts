@@ -11,6 +11,7 @@ import { HarvestScoring } from '@/systems/HarvestScoring';
 import { ToolInventory } from '@/tools/ToolInventory';
 import { Shop } from '@/systems/Shop';
 import { HarvestBook } from '@/systems/HarvestBook';
+import { LegendaryHarvest } from '@/systems/LegendaryHarvest';
 import { AudioManager } from '@/audio/AudioManager';
 import { MultiplayerAuthority } from '@/net/MultiplayerAuthority';
 import { SaveSystem } from '@/save/SaveSystem';
@@ -63,6 +64,7 @@ async function main(): Promise<void> {
   game.add(new ToolInventory());
   game.add(new Shop());
   game.add(new HarvestBook());
+  game.add(new LegendaryHarvest());
   game.add(new AudioManager());
   game.add(new MultiplayerAuthority());
   game.add(new SaveSystem());
