@@ -64,12 +64,28 @@ function enrich(g) {
       const pitch = Math.atan2(dy, Math.hypot(dx, dz));
       await g.look(yaw, pitch);
     },
+    /**
+     * Full isolation between scenarios. Without this a test that leaves the
+     * player ragdolled, mid-fall, or holding a watermelon silently corrupts
+     * every scenario after it.
+     */
     async reset() {
       await g.clearInput();
+      await g.call('ragdoll.recover').catch(() => {});
+      await g.call('drop').catch(() => {});
       await g.call('fruit.despawnAllFree').catch(() => {});
       await g.call('basket.clear').catch(() => {});
       await g.call('economy.set', 0).catch(() => {});
       await g.call('wind.set', 1, 0.4, 2.2).catch(() => {});
+      await g.attachCam();
+      // Park on the flat orchard terrace and let the player settle.
+      const h = await g.terrainHeight(-24, 22);
+      await g.tp(-24, h + 1.2, 22);
+      await g.look(0, 0);
+      await g.wait(0.5);
+      await g.call('ragdoll.recover').catch(() => {});
+      await g.call('fruit.despawnAllFree').catch(() => {});
+      await g.wait(0.2);
     },
   });
 }

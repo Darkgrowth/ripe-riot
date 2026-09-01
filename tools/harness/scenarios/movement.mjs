@@ -94,12 +94,23 @@ export async function run(g, t) {
   }
   t.eq(sunk.length, 0, `player never settles below the terrain (sunk at: ${sunk.join(' ')})`);
 
-  // --- a long fall must resolve, not leave the player falling forever
+  // --- a long fall must resolve into a ragdoll, then recover on its own
   await g.tp(-24, 60, 22);
-  await g.wait(3.4);
+  let ragdolled = false;
+  for (let i = 0; i < 90; i++) {
+    await g.wait(0.05);
+    if ((await g.state()).player.state === 'ragdoll') { ragdolled = true; break; }
+  }
+  t.ok(ragdolled, 'a 50 m fall knocks the player down rather than being shrugged off');
+  let up = false;
+  for (let i = 0; i < 140; i++) {
+    await g.wait(0.05);
+    if ((await g.state()).player.state === 'active') { up = true; break; }
+  }
+  t.ok(up, 'and the player gets back up unaided');
   const landed = await g.state();
-  t.ok(landed.player.grounded || landed.player.state !== 'active', 'lands after a long fall');
-  t.note(`long fall ended grounded=${landed.player.grounded} state=${landed.player.state}`);
+  const h = await g.terrainHeight(landed.player.pos[0], landed.player.pos[2]);
+  t.lt(Math.abs(landed.player.pos[1] - h), 2.0, 'recovers standing on the ground, not inside it');
 }
 
 function dist2(a, b) {

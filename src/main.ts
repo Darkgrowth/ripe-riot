@@ -5,6 +5,7 @@ import { FruitSystem } from '@/fruit/FruitSystem';
 import { Economy } from '@/systems/Economy';
 import { InteractionSystem } from '@/interaction/InteractionSystem';
 import { UIManager } from '@/ui/UIManager';
+import { PlayerRagdoll } from '@/player/PlayerRagdoll';
 import { DebugAPI } from '@/debug/DebugAPI';
 
 const boot = document.getElementById('boot')!;
@@ -47,6 +48,7 @@ async function main(): Promise<void> {
   game.add(world);
   game.add(new Economy());
   game.add(new FruitSystem());
+  game.add(new PlayerRagdoll());
   game.add(new InteractionSystem());
   game.add(new UIManager());
 

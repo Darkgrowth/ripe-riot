@@ -34,6 +34,14 @@ export class Sunpatch implements System {
     this.built = buildLandmarks(g.renderer.scene, g.physics, this.terrain);
     g.renderer.refreshEnvironment(true);
     g.bus.emit('world:ready', { seed: g.seed });
+
+    g.debug?.addAction('world.info', () => ({
+      sellPad: v3(this.sellPad), sellRadius: this.sellRadius,
+      shopCounter: v3(this.shopCounter), kingMelon: v3(this.kingMelonPos),
+      spawn: v3(this.spawnPoint),
+      landmarks: Object.fromEntries([...this.landmarks.values()]
+        .map((l) => [l.id, { pos: v3(l.position), radius: l.radius, label: l.label }])),
+    }));
   }
 
   /** Where fruit is sold. */
@@ -79,4 +87,8 @@ export class Sunpatch implements System {
     // the simulation is paused for a screenshot.
     this.ocean.update(performance.now() / 1000);
   }
+}
+
+function v3(v: THREE.Vector3): [number, number, number] {
+  return [+v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2)];
 }

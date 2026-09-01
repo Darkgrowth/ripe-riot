@@ -19,6 +19,7 @@ export interface AttachPoint {
 
 const _v = new THREE.Vector3();
 const _q = new THREE.Quaternion();
+const UP = new THREE.Vector3(0, 1, 0);
 
 /**
  * One harvestable fruit. Deliberately has no mesh of its own: FruitRenderer
@@ -80,6 +81,10 @@ export class Fruit implements PhysicsOwner {
   private lastTravelSample = new THREE.Vector3();
   /** Set while any tool has a hold of it. */
   heldBy = -1;
+  /** Speed at the end of the previous fixed step, for impact detection. */
+  private prevSpeed = 0;
+  /** Velocity lost in the most recent step. The honest measure of an impact. */
+  lastDeltaV = 0;
 
   private physics: PhysicsWorld;
   private baseRadius = 0.5;
@@ -199,6 +204,7 @@ export class Fruit implements PhysicsOwner {
     });
     this.rebuildCollider();
     if (vel) this.body.setLinvel({ x: vel.x, y: vel.y, z: vel.z }, true);
+    this.prevSpeed = vel ? vel.length() : 0;
   }
 
   /** Rebuild the collider after size changes (inflation, variants). */
@@ -206,16 +212,17 @@ export class Fruit implements PhysicsOwner {
     if (!this.body) return;
     for (const c of this.colliders) this.physics.world.removeCollider(c, false);
     this.colliders.length = 0;
+    // setMass gives the design's kilograms AND a consistent inertia tensor for
+    // that shape. Setting a near-zero density and adding mass separately leaves
+    // the body spinning as if it were weightless.
     const desc = RAPIER.ColliderDesc.ball(this.radius)
       .setFriction(this.def.friction)
       .setRestitution(this.def.restitution)
-      .setDensity(0.0001)
+      .setMass(this.mass)
       .setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS)
       .setContactForceEventThreshold(4);
     const c = this.physics.attach(this.body, desc, Groups.fruit);
     this.colliders.push(c);
-    // Set mass explicitly: the design cares about kilograms, not density.
-    this.body.setAdditionalMass(this.mass, true);
     this.physics.register(this, this.body, this.colliders);
   }
 
@@ -345,6 +352,16 @@ export class Fruit implements PhysicsOwner {
       if (Math.abs(v.y) > 0.6 || !this.body.isSleeping()) {
         this.airborneTime += ctx.dt;
       }
+
+      // Impact severity is measured as velocity actually lost in one step, not
+      // from Rapier's contact force. The solver integrates force over substeps,
+      // so totalForceMagnitude/mass overstates a hit by a large and
+      // inconsistent factor; speed change is what the player can see.
+      const speed = Math.hypot(v.x, v.y, v.z);
+      const lost = this.prevSpeed - speed;
+      this.prevSpeed = speed;
+      this.lastDeltaV = lost > 0 ? lost : 0;
+      if (this.lastDeltaV > 1.5) this.registerImpact(this.lastDeltaV, ctx);
       // Sunk fruit is lost.
       if (this.position.y < -3.5) {
         this.destroyed = true;
@@ -357,28 +374,44 @@ export class Fruit implements PhysicsOwner {
   }
 
   // ---- contacts -----------------------------------------------------------
-  onContact(other: PhysicsOwner | null, impulse: number, point: THREE.Vector3, normal: THREE.Vector3): void {
+  /**
+   * Contact events tell us WHO was hit; the speed-change check in step() tells
+   * us HOW HARD. Both are needed: a coconut landing on a player is only funny
+   * if we know it was a player.
+   */
+  onContact(other: PhysicsOwner | null, _impulse: number, point: THREE.Vector3, _normal: THREE.Vector3): void {
     if (this.destroyed || this.state === 'gone') return;
-    const dv = impulse / Math.max(0.05, this.mass);
-    if (dv < 0.4) return;
-    const ctx = Fruit.context;
-    if (!ctx) return;
-    for (const t of this.traits) t.onImpact?.(this, dv, point, normal, ctx);
+    if (other?.kind === 'player' || other?.kind === 'ragdoll') {
+      this.hitPlayerAt = Fruit.context?.elapsed ?? 0;
+      this.hitPoint.copy(point);
+    }
+  }
+
+  /** Time of the last contact with a player, used to attribute impacts. */
+  private hitPlayerAt = -99;
+  private hitPoint = new THREE.Vector3();
+
+  private registerImpact(dv: number, ctx: TraitContext): void {
+    const onPlayer = ctx.elapsed - this.hitPlayerAt < 0.09;
+    const point = onPlayer ? this.hitPoint : this.position;
+    for (const t of this.traits) t.onImpact?.(this, dv, point, UP, ctx);
     if (this.destroyed) return;
 
-    // Damage model: a threshold of free chaos, then it starts to hurt.
-    const soft = other?.kind === 'player' ? 2.2 : 0;
-    const over = dv - (3.6 + soft);
+    // Free chaos up to a species-dependent tolerance, then it starts to cost.
+    // Tolerance is tuned so an apple shrugs off a 4 m drop while a watermelon
+    // is unhappy about 2 m.
+    const tolerance = 2 + 20 * Math.pow(1 - this.fragility, 0.8);
+    const over = dv - tolerance;
     if (over > 0) {
-      const changed = this.addDamage(over * 0.055 * this.fragility);
+      const changed = this.addDamage(over * 0.022 * (0.5 + this.fragility));
       if (changed) {
         ctx.emit('fruit:qualityChanged', { fruitId: this.id, quality: this.quality, damage: this.damage });
       }
     }
-    if (dv > 2.2) {
+    if (dv > 2.5) {
       ctx.emit('fruit:impact', {
         fruitId: this.id, species: this.species, speed: dv,
-        point: point.clone(), onPlayer: other?.kind === 'player',
+        point: point.clone(), onPlayer,
       });
     }
   }

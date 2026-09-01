@@ -44,8 +44,10 @@ const splitter: FruitTrait = {
   id: 'splitter',
   onImpact(f, dv, point, _n, ctx) {
     if (f.destroyed) return;
-    // Big fruit survives proportionally less; a Huge melon still bursts.
-    const limit = 11.5 / (1 + f.sizeScale * 0.35);
+    // dv is a real velocity change in m/s, so this reads as "hit the ground at
+    // more than ~20 m/s", i.e. a fall of about nine metres. Big fruit survives
+    // proportionally less; a Huge melon still bursts.
+    const limit = 21 / (1 + f.sizeScale * 0.3);
     if (dv > limit) {
       f.damage = 1;
       f.burst(point, ctx);
@@ -136,7 +138,7 @@ const volatile: FruitTrait = {
   id: 'volatile',
   onImpact(f, dv, point, _n, ctx) {
     if (f.destroyed) return;
-    f.charge = Math.min(1, f.charge + Math.max(0, dv - 4) * 0.14);
+    f.charge = Math.min(1, f.charge + Math.max(0, dv - 7) * 0.09);
     if (f.charge >= 1) {
       ctx.explode(point, 6.5 * f.sizeScale, 9.5 * f.sizeScale);
       ctx.emit('audio:sfx', { name: 'boom', position: point });
