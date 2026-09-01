@@ -12,6 +12,8 @@ import { ToolInventory } from '@/tools/ToolInventory';
 import { Shop } from '@/systems/Shop';
 import { HarvestBook } from '@/systems/HarvestBook';
 import { AudioManager } from '@/audio/AudioManager';
+import { MultiplayerAuthority } from '@/net/MultiplayerAuthority';
+import { SaveSystem } from '@/save/SaveSystem';
 import { DebugAPI } from '@/debug/DebugAPI';
 
 const boot = document.getElementById('boot')!;
@@ -62,6 +64,8 @@ async function main(): Promise<void> {
   game.add(new Shop());
   game.add(new HarvestBook());
   game.add(new AudioManager());
+  game.add(new MultiplayerAuthority());
+  game.add(new SaveSystem());
   game.add(new UIManager());
 
   progress(52, 'planting');

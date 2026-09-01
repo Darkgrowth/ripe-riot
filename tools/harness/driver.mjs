@@ -60,6 +60,20 @@ export async function openGame({ width = 1280, height = 720, headless = true, qu
     deviceScaleFactor: 1,
     reducedMotion: 'no-preference',
   });
+  return attachPage(browser, ctx, quiet);
+}
+
+/**
+ * A second (third, fourth) client inside the SAME browser context as an
+ * existing one. Required for multiplayer tests: BroadcastChannel is scoped to
+ * an origin within one browser, so clients launched as separate Chromium
+ * processes can never see each other.
+ */
+export async function openSecondClient(api, { quiet = true } = {}) {
+  return attachPage(api.browser, api.ctx, quiet);
+}
+
+async function attachPage(browser, ctx, quiet) {
   const page = await ctx.newPage();
   const consoleErrors = [];
   page.on('console', (m) => {
@@ -139,6 +153,7 @@ export async function openGame({ width = 1280, height = 720, headless = true, qu
       return file;
     },
     close: async () => { await browser.close(); },
+    closePage: async () => { await page.close(); },
   };
   return api;
 }
