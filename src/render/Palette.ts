@@ -19,29 +19,46 @@ export const Palette = {
   nightHorizon: c(0x2c4a6e),
 
   // --- ocean
-  oceanDeep:    c(0x0e6f8f),
-  oceanShallow: c(0x39c8c8),
+  oceanDeep:    c(0x0b5d8c),
+  oceanShallow: c(0x25c2c4),
   foam:         c(0xeafcff),
 
   // --- terrain
-  sand:         c(0xe3cf93),
-  sandWet:      c(0xcbb98a),
-  grass:        c(0x548f2e),
-  grassDry:     c(0x93b348),
-  grassDark:    c(0x35661f),
-  dirt:         c(0x8a6a44),
-  rock:         c(0x8e8676),
-  rockDark:     c(0x6e6a60),
+  sand:         c(0xe6cb8b),
+  sandWet:      c(0xc9ad78),
+  grass:        c(0x63a336),
+  grassDry:     c(0xa8c256),
+  grassDark:    c(0x3d7a26),
+  dirt:         c(0x94734a),
+  /** The worn dock -> shop -> orchard route. Packed, pale, walked-on. */
+  path:         c(0xc39a63),
+  pathDark:     c(0x9c7847),
+  rock:         c(0x9a8f7c),
+  rockDark:     c(0x6b6459),
 
   // --- plants
   trunk:        c(0x7a5537),
   trunkDark:    c(0x5c3f28),
   palmTrunk:    c(0xa8875c),
-  leaf:         c(0x4f9e35),
-  leafLight:    c(0x76c24a),
+  leaf:         c(0x59ac3a),
+  leafLight:    c(0x84cf53),
   leafDark:     c(0x35702a),
-  palmLeaf:     c(0x57a83c),
+  palmLeaf:     c(0x61b642),
   vine:         c(0x5c8f38),
+  // --- ground cover: the clutter layer that fills the dead space between
+  // landmarks. Kept a little lighter and yellower than the tree canopy so the
+  // ground reads as a separate plane from the foliage above it.
+  bladeBase:    c(0x4e8f2b),
+  bladeTip:     c(0x9ec94a),
+  bushLeaf:     c(0x458c2d),
+  bushLeafLit:  c(0x76b641),
+  fernLeaf:     c(0x3f8a3a),
+  petalRed:     c(0xe2503f),
+  petalYellow:  c(0xf5c33f),
+  petalWhite:   c(0xf6efdc),
+  petalPink:    c(0xe883a8),
+  petalOrange:  c(0xef8a35),
+  driftwood:    c(0xa78e6d),
 
   // --- built
   wood:         c(0xb08150),

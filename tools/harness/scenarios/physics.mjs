@@ -35,11 +35,16 @@ export async function run(g, t) {
   t.lt(m.damage, 0.25, 'setting it down gently barely marks it');
 
   // --- watermelon dropped from height should burst
+  const fxBefore = (await g.state()).fx.spawned;
   const melon2 = await g.call('fruit.spawn', 'watermelon', flat[0] + 6, groundY + 26, flat[1]);
   await g.wait(3.4);
   const m2 = await g.call('fruit.info', melon2);
   t.ok(m2 === null, 'a watermelon dropped 26 m does not survive');
   if (m2) t.note(`melon survived with damage ${m2.damage}`);
+  // And the burst has to be VISIBLE: impact feedback is part of the physics.
+  const fxAfter = (await g.state()).fx.spawned;
+  t.gt(fxAfter - fxBefore, 15, 'bursting a watermelon throws pulp');
+  t.note(`${fxAfter - fxBefore} impact particles from the burst`);
 
   // --- coconut on the head: the joke has to actually land
   await g.call('ragdoll.recover');

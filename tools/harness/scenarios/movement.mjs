@@ -11,11 +11,18 @@ export const name = 'movement';
 export async function run(g, t) {
   // --- flat ground walk speed
   await g.standAt(-24, 22, 0);            // orchard terrace, flat and open
+  // `grounded` is a per-step flag and a capsule on a real trimesh genuinely
+  // loses contact for the odd step (see TESTING.md), so it is sampled across
+  // the walk rather than read once.
   await g.input({ moveZ: 1 });
-  await g.wait(1.5);
+  let groundedSamples = 0;
+  for (let i = 0; i < 6; i++) {
+    await g.wait(0.25);
+    if ((await g.state()).player.grounded) groundedSamples++;
+  }
   let s = await g.state();
   t.between(s.player.speed, 4.6, 6.2, 'walk speed settles near 5.4 m/s');
-  t.ok(s.player.grounded, 'stays grounded while walking');
+  t.gte(groundedSamples, 5, `stays grounded while walking (${groundedSamples}/6 samples)`);
   const walkPos = s.player.pos;
 
   // --- sprint
@@ -52,6 +59,21 @@ export async function run(g, t) {
   }
   await g.clearInput();
   t.between(peak - groundY, 1.0, 1.7, 'full jump clears about 1.3 m');
+
+  // --- a press must survive frames that run no fixed step. At 120/144 Hz
+  // most rendered frames carry zero steps, and input edges used to be
+  // recomputed per frame and consumed per step, so a jump or a click on one of
+  // those frames was simply dropped. Press, render a few stepless frames, then
+  // let the world move: the jump has to happen.
+  await g.wait(1.0);
+  const g3 = (await g.state()).player.pos[1];
+  await g.input({ jumpPressed: true, jump: true });
+  await g.idleFrames(6);
+  await g.wait(0.3);
+  const latched = (await g.state()).player.pos[1];
+  await g.clearInput();
+  t.gt(latched - g3, 0.5, 'a jump pressed on a frame with no fixed step is not lost');
+  await g.wait(1.0);
 
   // --- short hop: releasing early must cut the arc
   await g.wait(1.0);

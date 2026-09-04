@@ -65,9 +65,23 @@ export function swayCurve(y: number, height: number): number {
 }
 
 // ---------------------------------------------------------------------------
+/**
+ * Broadleaf canopy. A crown blob, a ring of blobs round it at trunk height,
+ * and a lower, wider ring of smaller blobs offset by half a step, so the
+ * silhouette stacks and the fruit on the lower ring hangs at head height
+ * where a player can actually see it.
+ *
+ * The first pass was four blobs in one ring, coloured only by height within
+ * the blob, and the orchard read as bright green spheres on sticks. What sells
+ * a low-poly canopy is the underside: faces that point down are shaded toward
+ * the dark leaf colour and faces that point up toward the light one, in the
+ * vertex colours, so the hierarchy holds in flat light and in shadow alike.
+ */
 function broadleaf(seed: number, opts: {
   trunkH: number; trunkR: number; blobs: number; blobR: number;
   leaf: THREE.Color; leafAlt: THREE.Color; spread: number; lean: number;
+  /** Smaller blobs in a lower ring. */
+  underBlobs?: number;
 }): PlantShape {
   const rng = new Rng(seed);
   const parts: THREE.BufferGeometry[] = [];
@@ -94,42 +108,75 @@ function broadleaf(seed: number, opts: {
   }
 
   const attach: THREE.Vector3[] = [];
-  for (let i = 0; i < opts.blobs; i++) {
-    const a = (i / opts.blobs) * Math.PI * 2 + rng.range(-0.5, 0.5);
-    const r = i === 0 ? 0 : opts.spread * rng.range(0.55, 1.0);
-    const cx = Math.sin(a) * r;
-    const cz = Math.cos(a) * r;
-    const cy = opts.trunkH + rng.range(-0.25, 0.55) + (i === 0 ? 0.25 : 0);
-    const rad = opts.blobR * rng.range(0.72, 1.08);
+  const ring = Math.max(1, opts.blobs - 1);
+  const under = opts.underBlobs ?? 0;
+  for (let i = 0; i < 1 + ring + under; i++) {
+    let cx: number, cz: number, cy: number, rad: number;
+    let lower = false;
+    if (i === 0) {
+      // Crown: sits on top of the ring and gives the tree a peak.
+      cx = rng.range(-0.15, 0.15); cz = rng.range(-0.15, 0.15);
+      cy = opts.trunkH + opts.blobR * 0.6;
+      rad = opts.blobR * rng.range(0.88, 1.04);
+    } else if (i <= ring) {
+      const a = ((i - 1) / ring) * Math.PI * 2 + rng.range(-0.35, 0.35);
+      const r = opts.spread * rng.range(0.7, 1.0);
+      cx = Math.sin(a) * r; cz = Math.cos(a) * r;
+      cy = opts.trunkH + rng.range(-0.15, 0.35);
+      rad = opts.blobR * rng.range(0.74, 1.0);
+    } else {
+      lower = true;
+      const a = ((i - 1 - ring) / under) * Math.PI * 2 + Math.PI / Math.max(1, under) + rng.range(-0.3, 0.3);
+      const r = opts.spread * rng.range(0.95, 1.3);
+      cx = Math.sin(a) * r; cz = Math.cos(a) * r;
+      cy = opts.trunkH - opts.blobR * rng.range(0.35, 0.6);
+      rad = opts.blobR * rng.range(0.5, 0.74);
+    }
     const blob = new THREE.IcosahedronGeometry(rad, 1);
-    blob.scale(1.08, 0.82, 1.08);
-    // Rough the silhouette up so the canopy is not a row of spheres.
+    blob.scale(1.1, 0.78, 1.1);
+    // Rough the silhouette up so the canopy is not a row of spheres: one broad
+    // lump term and one finer one.
     const p = blob.getAttribute('position') as THREE.BufferAttribute;
     const v = new THREE.Vector3();
     for (let k = 0; k < p.count; k++) {
       v.fromBufferAttribute(p, k);
-      const n = Math.sin(v.x * 3.1 + seed) * Math.cos(v.z * 2.7 - seed) * Math.sin(v.y * 3.4);
-      v.multiplyScalar(1 + n * 0.16);
+      const n = Math.sin(v.x * 2.2 + seed) * Math.cos(v.z * 1.9 - seed) * Math.sin(v.y * 2.6) * 0.15
+        + Math.sin(v.x * 5.3 - seed * 0.7) * Math.cos(v.z * 4.7 + seed) * 0.06;
+      v.multiplyScalar(1 + n);
       p.setXYZ(k, v.x, v.y, v.z);
     }
     blob.translate(cx, cy, cz);
     const tone = rng.next();
-    parts.push(dress(blob, (y) => _mix(
+    const dressed = dress(blob, (y) => _mix(
       _mix(LEAF_DARK, opts.leaf, THREE.MathUtils.clamp((y - cy + rad) / (rad * 2), 0, 1)),
-      opts.leafAlt, tone * 0.5), (y) => swayCurve(y, H)));
+      opts.leafAlt, tone * 0.5), (y) => swayCurve(y, H));
+    shadeByFacing(dressed, LEAF_DARK, LEAF_LIGHT, lower ? 0.75 : 0.6, 0.35);
+    parts.push(dressed);
 
-    // Fruit hangs on the lower outside of each blob.
-    const perBlob = 3;
+    // Fruit hangs on the lower outside of each blob. The lower ring is where
+    // most of it should be: that is the fruit at head height.
+    const perBlob = lower ? 3 : 2;
+    // Never against the trunk: a blob on the far side of the axis can put a
+    // hanging point within 30 cm of it, where the trunk collider blocks the
+    // eye ray and the pick prompt never appears. Push those outward.
+    const minAxisR = opts.spread * 0.85;
     for (let k = 0; k < perBlob; k++) {
       // Out near the canopy edge and low on the blob: fruit buried inside
       // the foliage is fruit the player never sees.
       const aa = rng.range(0, Math.PI * 2);
       const rr = rad * rng.range(0.82, 1.05);
-      attach.push(new THREE.Vector3(
+      const pt = new THREE.Vector3(
         cx + Math.sin(aa) * rr,
         cy - rad * rng.range(0.45, 0.80),
         cz + Math.cos(aa) * rr,
-      ));
+      );
+      const axisR = Math.hypot(pt.x, pt.z);
+      if (axisR < minAxisR) {
+        const k2 = axisR > 1e-3 ? minAxisR / axisR : 0;
+        if (k2 > 0) { pt.x *= k2; pt.z *= k2; }
+        else { pt.x = minAxisR; }
+      }
+      attach.push(pt);
     }
   }
 
@@ -353,11 +400,11 @@ export function plantShape(type: PlantType, variant: number): PlantShape {
   let s: PlantShape;
   switch (type) {
     case 'appleTree':
-      s = broadleaf(seed, { trunkH: 3.1 + (variant % 3) * 0.35, trunkR: 0.24, blobs: 4, blobR: 1.5,
-        leaf: LEAF, leafAlt: LEAF_LIGHT, spread: 1.25, lean: (variant - 1) * 0.045 }); break;
+      s = broadleaf(seed, { trunkH: 3.1 + (variant % 3) * 0.35, trunkR: 0.24, blobs: 5, blobR: 1.45,
+        leaf: LEAF, leafAlt: LEAF_LIGHT, spread: 1.3, lean: (variant - 1) * 0.045, underBlobs: 3 }); break;
     case 'orangeTree':
-      s = broadleaf(seed, { trunkH: 2.7 + (variant % 3) * 0.3, trunkR: 0.21, blobs: 3, blobR: 1.35,
-        leaf: C(0x3f8f31), leafAlt: C(0x67ad3e), spread: 1.0, lean: (variant - 1) * 0.05 }); break;
+      s = broadleaf(seed, { trunkH: 2.7 + (variant % 3) * 0.3, trunkR: 0.21, blobs: 4, blobR: 1.3,
+        leaf: C(0x3f8f31), leafAlt: C(0x67ad3e), spread: 1.05, lean: (variant - 1) * 0.05, underBlobs: 2 }); break;
     case 'palm': s = palm(seed); break;
     case 'bananaPlant': s = bananaPlant(seed); break;
     case 'melonVine': s = melonVine(seed); break;
@@ -368,6 +415,36 @@ export function plantShape(type: PlantType, variant: number): PlantShape {
   }
   SHAPE_CACHE.set(key, s);
   return s;
+}
+
+/**
+ * Shade a non-indexed geometry's vertex colours by which way each face points:
+ * downward faces toward `dark`, upward faces toward `light`. This is what
+ * gives a faceted canopy a top and an underside regardless of how the sun and
+ * the hemisphere fill happen to land on it.
+ */
+function shadeByFacing(g: THREE.BufferGeometry, dark: THREE.Color, light: THREE.Color,
+  darkAmount: number, lightAmount: number): void {
+  const pos = g.getAttribute('position') as THREE.BufferAttribute;
+  const col = g.getAttribute('color') as THREE.BufferAttribute;
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+  const n = new THREE.Vector3(), t = new THREE.Vector3();
+  const cc = new THREE.Color();
+  for (let i = 0; i + 2 < pos.count; i += 3) {
+    a.fromBufferAttribute(pos, i); b.fromBufferAttribute(pos, i + 1); c.fromBufferAttribute(pos, i + 2);
+    n.subVectors(b, a).cross(t.subVectors(c, a));
+    if (n.lengthSq() < 1e-12) continue;
+    n.normalize();
+    const down = n.y < 0 ? -n.y * darkAmount : 0;
+    const up = n.y > 0.25 ? (n.y - 0.25) / 0.75 * lightAmount : 0;
+    if (down <= 0 && up <= 0) continue;
+    for (let j = 0; j < 3; j++) {
+      cc.setRGB(col.getX(i + j), col.getY(i + j), col.getZ(i + j));
+      if (down > 0) cc.lerp(dark, down);
+      if (up > 0) cc.lerp(light, up);
+      col.setXYZ(i + j, cc.r, cc.g, cc.b);
+    }
+  }
 }
 
 function _mix(a: THREE.Color, b: THREE.Color, t: number): THREE.Color {

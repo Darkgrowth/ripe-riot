@@ -99,8 +99,10 @@ export class Game {
       const b = performance.now();
       this.physics.step();
       tPhys += performance.now() - b;
-      // Edge-triggered input must not fire again on a second substep.
-      if (i === 0) clearEdges(input);
+      // Edge-triggered input must not fire again on a second substep - and
+      // must not be forgotten on a frame that runs no step at all, which is why
+      // the input layer latches them until this call rather than per frame.
+      if (i === 0) this.input.consumeEdges();
     }
 
     const t2 = performance.now();
@@ -149,11 +151,3 @@ export class Game {
 }
 
 const _f = new THREE.Vector3();
-
-function clearEdges(i: { jumpPressed: boolean; interactPressed: boolean; primaryPressed: boolean;
-  secondaryPressed: boolean; primaryReleased: boolean; secondaryReleased: boolean;
-  dropPressed: boolean; slot: number; }): void {
-  i.jumpPressed = false; i.interactPressed = false; i.primaryPressed = false;
-  i.secondaryPressed = false; i.primaryReleased = false; i.secondaryReleased = false;
-  i.dropPressed = false; i.slot = 0;
-}

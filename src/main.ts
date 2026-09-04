@@ -9,6 +9,7 @@ import { PlayerRagdoll } from '@/player/PlayerRagdoll';
 import { ViewmodelSystem } from '@/player/ViewmodelSystem';
 import { RopeSystem } from '@/systems/RopeSystem';
 import { HarvestScoring } from '@/systems/HarvestScoring';
+import { ImpactFX } from '@/fx/ImpactFX';
 import { ToolInventory } from '@/tools/ToolInventory';
 import { Shop } from '@/systems/Shop';
 import { HarvestBook } from '@/systems/HarvestBook';
@@ -62,6 +63,7 @@ async function main(): Promise<void> {
   game.add(new InteractionSystem());
   game.add(new RopeSystem());
   game.add(new HarvestScoring());
+  game.add(new ImpactFX());
   game.add(new ToolInventory());
   game.add(new ViewmodelSystem());
   game.add(new Shop());
@@ -74,7 +76,9 @@ async function main(): Promise<void> {
 
   progress(52, 'planting');
   await game.initSystems();
-  game.player.teleport(world.spawnPoint);
+  // Position AND orientation: a spawn transform that sets only the position
+  // leaves the player looking down whatever axis yaw 0 happens to be.
+  world.spawnPlayer(game.player);
 
   progress(88, 'starting');
   debug.log('boot complete');

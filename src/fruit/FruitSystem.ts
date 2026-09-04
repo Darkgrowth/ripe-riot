@@ -32,14 +32,21 @@ const PLANT_FRUIT: Record<PlantType, string | null> = {
 
 /** Sunpatch's authored planting plan. */
 const HABITATS: HabitatSpec[] = [
+  // Scale ranges are deliberately wide. The shipped orchard used the default
+  // 0.85-1.2, and thirty trees within 30% of one height read as a plantation
+  // of clones; pushing the range past 2:1 gives the canopy a skyline.
   { landmark: 'orchard', plants: [
-    { type: 'appleTree', count: 24 }, { type: 'orangeTree', count: 9 }, { type: 'melonVine', count: 5 },
+    { type: 'appleTree', count: 26, scale: [0.78, 1.5] },
+    { type: 'orangeTree', count: 10, scale: [0.8, 1.32] },
+    { type: 'melonVine', count: 5 },
   ] },
   { landmark: 'hillFarm', plants: [
-    { type: 'appleTree', count: 8 }, { type: 'melonVine', count: 5 }, { type: 'puffBush', count: 4 },
+    { type: 'appleTree', count: 8, scale: [0.85, 1.4] },
+    { type: 'melonVine', count: 5 }, { type: 'puffBush', count: 4 },
   ] },
   { landmark: 'palmBeach', plants: [
-    { type: 'palm', count: 17 }, { type: 'bananaPlant', count: 6 },
+    { type: 'palm', count: 17, scale: [0.8, 1.45] },
+    { type: 'bananaPlant', count: 6 },
   ] },
   { landmark: 'caveOrchard', plants: [
     { type: 'palm', count: 7 }, { type: 'orangeTree', count: 4 },
@@ -50,6 +57,44 @@ const HABITATS: HabitatSpec[] = [
   { landmark: 'ridge', plants: [
     { type: 'puffBush', count: 5 },
   ] },
+];
+
+/**
+ * Planting that exists purely to look at: palms and broadleaf cover along the
+ * dock-shop-orchard route, which crossed forty metres of empty ground.
+ *
+ * They are planted through the same PlantSystem as everything else, so they
+ * share its instanced batches (no new draw call) and its wind sway, and they
+ * simply never have `growOn` called on them — no fruit, no colliderful change
+ * to the harvest loop, no new system.
+ */
+const DECOR: Array<{ type: PlantType; x: number; z: number; scale: number }> = [
+  // Shoreline either side of the dock head.
+  { type: 'palm', x: 66.5, z: 55.0, scale: 1.25 },
+  { type: 'palm', x: 64.0, z: 51.5, scale: 1.10 },
+  { type: 'palm', x: 51.0, z: 70.5, scale: 1.20 },
+  { type: 'palm', x: 47.0, z: 67.0, scale: 1.05 },
+  // Framing the walk up to the shop, set back off the path on both sides.
+  { type: 'palm', x: 52.5, z: 63.5, scale: 1.15 },
+  { type: 'palm', x: 53.5, z: 46.0, scale: 1.30 },
+  { type: 'bananaPlant', x: 43.5, z: 60.5, scale: 1.15 },
+  { type: 'bananaPlant', x: 47.5, z: 45.5, scale: 1.00 },
+  // The long middle stretch.
+  { type: 'palm', x: 33.0, z: 57.5, scale: 1.20 },
+  { type: 'palm', x: 24.0, z: 53.0, scale: 1.35 },
+  { type: 'palm', x: 12.5, z: 45.5, scale: 1.25 },
+  { type: 'palm', x: 8.0, z: 31.5, scale: 1.10 },
+  { type: 'bananaPlant', x: 27.5, z: 41.0, scale: 1.10 },
+  { type: 'puffBush', x: 21.5, z: 48.0, scale: 1.10 },
+  // Orchard approach: a heavier canopy, so the trees start before the fence.
+  { type: 'palm', x: 1.0, z: 38.0, scale: 1.15 },
+  { type: 'bananaPlant', x: -4.0, z: 37.5, scale: 1.20 },
+  { type: 'puffBush', x: -14.0, z: 36.5, scale: 1.15 },
+  { type: 'bananaPlant', x: -19.5, z: 34.5, scale: 1.10 },
+  // Waterfall basin shore.
+  { type: 'palm', x: 44.0, z: 6.5, scale: 1.30 },
+  { type: 'palm', x: 26.5, z: 7.5, scale: 1.15 },
+  { type: 'bananaPlant', x: 39.5, z: -2.0, scale: 1.10 },
 ];
 
 /** Vinebombs hang from anchors above the ground, so they get their own pass. */
@@ -230,6 +275,13 @@ export class FruitSystem implements System {
         this.scatter(spec.type, lm.position, lm.radius, spec.count, spec.scale);
       }
     }
+    // Decorative planting: no fruit, so no growOn.
+    for (const d of DECOR) {
+      const y = this.world.terrain.height(d.x, d.z);
+      if (y < 1.0) continue;
+      this.plants.plant(this.g.newId(), d.type, new THREE.Vector3(d.x, y, d.z),
+        this.rng, { scale: d.scale });
+    }
     // Hanging vinebomb vines at authored cliff sites.
     for (const [x, z] of VINEBOMB_SITES) {
       const y = this.world.terrain.height(x, z);
@@ -262,6 +314,9 @@ export class FruitSystem implements System {
       const slope = terrain.slope(x, z);
       const maxSlope = type === 'palm' ? 0.34 : 0.28;
       if (slope > maxSlope) continue;              // not on a cliff
+      // Keep the worn route open. Without this the orchard grew straight
+      // across its own avenue and the walk in had no readable line through it.
+      if (terrain.pathWeight(x, z) > 0.28) continue;
       _v.set(x, y, z);
       let tooClose = false;
       for (const p of placedPts) {
@@ -386,6 +441,11 @@ export class FruitSystem implements System {
     const plant = this.plants.get(plantId);
     if (!plant) return 0;
     const amount = this.plants.shakePlant(plantId, strength);
+    if (strength > 0.3) {
+      this.g.bus.emit('plant:shaken', {
+        plantId, position: plant.position, height: plant.height, strength,
+      });
+    }
     let dropped = 0;
     const force = amount * 4.5;
     for (const node of plant.nodes) {

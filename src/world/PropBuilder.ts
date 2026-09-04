@@ -10,6 +10,10 @@ import { Groups } from '@/physics/Layers';
  * registered as they are added, which keeps the visual and the collision
  * definition of a prop on the same line of code.
  */
+/** A flat colour, or a function of the primitive's local Y — which is how a
+ *  post gets a dark waterline band without becoming two primitives. */
+export type PropColor = THREE.Color | ((y: number) => THREE.Color);
+
 export class PropBuilder {
   private parts: THREE.BufferGeometry[] = [];
   private physics: PhysicsWorld | null;
@@ -40,7 +44,7 @@ export class PropBuilder {
 
   // ---- primitives ---------------------------------------------------------
   /** Axis-aligned box in the current frame. Sizes are full extents. */
-  box(w: number, h: number, d: number, color: THREE.Color, collide = this.solid,
+  box(w: number, h: number, d: number, color: PropColor, collide = this.solid,
     at: [number, number, number] = [0, 0, 0]): this {
     const g = new THREE.BoxGeometry(w, h, d);
     g.translate(at[0], at[1], at[2]);
@@ -56,7 +60,7 @@ export class PropBuilder {
     return this;
   }
 
-  cylinder(rTop: number, rBot: number, h: number, seg: number, color: THREE.Color,
+  cylinder(rTop: number, rBot: number, h: number, seg: number, color: PropColor,
     collide = this.solid, at: [number, number, number] = [0, 0, 0]): this {
     const g = new THREE.CylinderGeometry(rTop, rBot, h, seg);
     g.translate(at[0], at[1], at[2]);
@@ -73,12 +77,12 @@ export class PropBuilder {
   }
 
   /** Decorative geometry with no collider, from any geometry you built. */
-  mesh(g: THREE.BufferGeometry, color: THREE.Color | ((y: number) => THREE.Color)): this {
+  mesh(g: THREE.BufferGeometry, color: PropColor): this {
     this.emit(g, color);
     return this;
   }
 
-  sphere(r: number, seg: number, color: THREE.Color, collide = this.solid,
+  sphere(r: number, seg: number, color: PropColor, collide = this.solid,
     at: [number, number, number] = [0, 0, 0]): this {
     const g = new THREE.IcosahedronGeometry(r, seg);
     g.translate(at[0], at[1], at[2]);
@@ -89,6 +93,25 @@ export class PropBuilder {
       const body = this.physics.createFixed(_pos, _dq);
       this.physics.attach(body, RAPIER.ColliderDesc.ball(r * _ds.x).setFriction(0.9), Groups.prop);
     }
+    return this;
+  }
+
+  /**
+   * A solid box that exists only to physics.
+   *
+   * The dock deck was one collider box drawn as well as collided with, sitting
+   * directly under eighteen planks — so it filled every seam between them and
+   * the deck rendered as a single flat slab of tan. Separating the two lets the
+   * planking be planking and the collision be one cheap cuboid.
+   */
+  collider(w: number, h: number, d: number, at: [number, number, number] = [0, 0, 0]): this {
+    if (!this.physics) return this;
+    _pos.set(at[0], at[1], at[2]).applyMatrix4(this.xform);
+    this.xform.decompose(_dc, _dq, _ds);
+    const body = this.physics.createFixed(_pos, _dq);
+    const desc = RAPIER.ColliderDesc.cuboid(
+      (w * _ds.x) / 2, (h * _ds.y) / 2, (d * _ds.z) / 2).setFriction(0.85);
+    this.physics.attach(body, desc, Groups.prop);
     return this;
   }
 
@@ -106,7 +129,7 @@ export class PropBuilder {
     this.physics.register(owner as never, body, [col]);
   }
 
-  private emit(g: THREE.BufferGeometry, color: THREE.Color | ((y: number) => THREE.Color)): void {
+  private emit(g: THREE.BufferGeometry, color: PropColor): void {
     const flat = g.index ? g.toNonIndexed() : g;
     if (flat !== g) g.dispose();
     flat.applyMatrix4(this.xform);
@@ -153,7 +176,7 @@ export function signTexture(lines: string[], opts: {
   const cv = document.createElement('canvas');
   cv.width = w; cv.height = h;
   const c = cv.getContext('2d')!;
-  c.fillStyle = opts.bg ?? '#e8d3a4';
+  c.fillStyle = opts.bg ?? '#e0c491';
   c.fillRect(0, 0, w, h);
   // Plank seams and a border, so the sign reads as carpentry.
   c.strokeStyle = 'rgba(120,86,44,0.35)';
@@ -161,19 +184,19 @@ export function signTexture(lines: string[], opts: {
   for (let y = h / 4; y < h; y += h / 4) {
     c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke();
   }
-  c.strokeStyle = opts.accent ?? '#8a5a2a';
-  c.lineWidth = 10;
+  c.strokeStyle = opts.accent ?? '#7a4a1e';
+  c.lineWidth = 12;
   c.strokeRect(9, 9, w - 18, h - 18);
 
   c.textAlign = 'center';
-  c.fillStyle = opts.fg ?? '#4a2f16';
+  c.fillStyle = opts.fg ?? '#3a2109';
   let y = 62;
   if (opts.title) {
-    c.font = `900 ${Math.round(h * 0.16)}px Segoe UI, system-ui, sans-serif`;
+    c.font = `900 ${Math.round(h * 0.20)}px Segoe UI, system-ui, sans-serif`;
     c.fillText(opts.title, w / 2, y);
     y += h * 0.13;
   }
-  c.font = `700 ${Math.round(h * 0.105)}px Segoe UI, system-ui, sans-serif`;
+  c.font = `800 ${Math.round(h * 0.125)}px Segoe UI, system-ui, sans-serif`;
   const step = (h - y - 26) / Math.max(1, lines.length);
   for (const line of lines) {
     c.fillText(line, w / 2, y + step * 0.75);

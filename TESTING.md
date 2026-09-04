@@ -14,7 +14,10 @@ node tools/harness/geo-check.mjs     # every procedural mesh: NaN, attrs, tris
 node tools/harness/run-tests.mjs     # all gameplay scenarios (~4 min)
 node tools/harness/run-tests.mjs ropes legendary    # by name
 node tools/harness/multiplayer.mjs   # two real clients over a real transport
+node tools/harness/startup-check.mjs # what the player sees when they press play
 node tools/harness/tour.mjs          # one contact sheet of every landmark
+node tools/harness/route.mjs         # the six first-person views of the main route
+node tools/harness/detail.mjs        # three close-range frames: deck, shop, fruit
 node tools/harness/shadow-check.mjs  # A/B the frame with shadows on and off
 node tools/harness/perf-check.mjs    # attribute draw calls between passes
 ```
@@ -27,6 +30,19 @@ node tools/harness/perf-check.mjs    # attribute draw calls between passes
 game in Chromium, and talks to `window.__RIPE`. Scenarios drive the game through
 **synthetic input** and **debug actions**, and assert on **numbers**.
 
+**Scenarios advance simulated time, never wall-clock time.** The runner holds
+the game clock paused for the whole run, and every `wait(seconds)` forces
+exactly `round(seconds * 60)` fixed steps (`__RIPE.simulate`), a few per
+rendered frame so the camera, UI and viewmodel keep up. A check that says
+"within 3.6 s" means 216 steps whether the harness renders at 320x180 or full
+screen, on a fast machine or a busy one. Nothing moves between a scenario's
+calls, so a `state()` read is exact. `idleFrames(n)` renders frames with no
+step at all, which is how the input-latching check reproduces a 144 Hz display.
+
+The visual harnesses (tour, route, startup-check) still use real time; they
+only need the world to look settled. `multiplayer.mjs` also uses real time,
+because it is testing an asynchronous transport between two pages.
+
 Chromium notes, all measured:
 - Do not force ANGLE backends. `--use-angle=swiftshader` is ~50× slower and
   `gl-egl` renders black. Chromium's own default works.
@@ -34,6 +50,13 @@ Chromium notes, all measured:
   stability wait never settles. Capture the canvas directly.
 - Use `127.0.0.1`, not `localhost` — Node's fetch tries `::1` first on Windows
   and stalls for seconds against an IPv4-bound Vite.
+- The driver reuses a dev server already on the port, and checks that it is
+  *ours* before doing so. "Something answers on 5173" is a different question:
+  another project's Vite took the port once, every stage reused it, and each one
+  waited the full 90 s for a `__RIPE_READY` that was never coming. It now fails
+  immediately with the reason. Set `RIPE_URL` to run against another port —
+  start Vite there yourself, e.g.
+  `npx vite --host 127.0.0.1 --port 5188 --strictPort`.
 
 ## Judging visuals without looking at hundreds of images
 
@@ -54,11 +77,20 @@ leave the context they enter. So:
    is there. `fruit.body()` reports whether a body exists, is asleep, its mass
    and its collision groups. Most "what IS that" questions are cheaper to
    answer numerically.
+5. **Somewhere, read the actual canvas.** Every check above looks at the scene
+   rather than at the frame, and a startup that was 92% flat clear-colour passed
+   all of them: `frameStats` re-renders into its own target, `probeLook` asks
+   the physics world, and every contact sheet detaches the camera first. So
+   `startup-check.mjs` and the `startup` scenario classify the presented canvas
+   by pixel — what fraction is the raw clear colour, what fraction is sky, where
+   the horizon falls, how much of the frame the viewmodel occupies. Still
+   numbers, but numbers taken from the thing the player is looking at.
 
 ## Scenarios
 
 | Scenario | Covers |
 |---|---|
+| `startup` | the pose the game boots into: on the deck, facing the island, never pitched up; the shop and the King Melon on screen from frame one; the presented canvas is the world and not the clear colour; eye height, FOV, walk/sprint/jump/crouch on the dock; look accumulation and pitch clamps; a respawn out of a ragdoll 34 m up reproducing the opening frame exactly |
 | `movement` | walk/sprint/crouch speeds, jump apex, short-hop, slope climbing, nine-point "never inside the terrain" sweep, long-fall ragdoll and recovery |
 | `harvest-loop` | the whole game: target an apple, pick it, auto-stow, fill the basket, walk to the pad, sell, and auto-delivery of fruit landed on the pad |
 | `fruit-physics` | drop damage thresholds by species, watermelon bursting, coconut knockdown and automatic recovery, an apple *not* knocking you down, oranges rolling |
@@ -67,8 +99,54 @@ leave the context they enter. So:
 | `progression` | discovery, records, rare variants, shop purchase and tier gating, Puff Melon inflation and drift, Vinebomb launch |
 | `legendary-king-melon` | four vines hold it still, gating on the rope gun, tethering, each cut, the 20 m drop, recovery to the pad, payout, and resetting for another attempt |
 
-Current status: **7/7 scenarios, 158 checks** plus **11/11 multiplayer checks**.
+Current status: **8/8 scenarios, 196 checks** plus **11/11 multiplayer checks**.
 Typecheck and production build are clean.
+
+## The harness window size is a cost, not a calibration
+
+`run-tests.mjs` renders at 320x180 because every forced step is still followed
+by a frame, and software rendering is fill-rate bound; the size decides how
+long the suite takes and nothing else. It used to be a calibration: with
+wall-clock waits and a five-step cap, render size decided how much simulation
+each check got, and an art pass that touched no gameplay code failed three
+physics scenarios in ways that read exactly like regressions (a 34 m drop that
+had not landed inside its 3.6 s, an uphill walk that covered 1.4 m instead of
+3.5 m). That whole class of failure is gone with forced stepping. Keep 16:9 —
+the startup scenario asserts on horizontal FOV.
+
+`multiplayer.mjs` still runs in real time at 400x225, and its settle waits are
+still frames-not-seconds; see the comments in it.
+
+Two traps worth knowing, both found by the harness:
+
+**Do not assert on one instantaneous read of a flickering flag.** `grounded` is
+per-step, and a capsule walking a flat deck genuinely loses contact for the odd
+step — sampled eight times across one walk it came back false once, at deck
+height, mid-stride, at full speed. The check now samples the walk and asks that
+the deck held for nearly all of it.
+
+**Remote avatars damp toward the snapshot rather than snapping to it,** so the
+multiplayer settle time is counted in frames, not seconds. At 900 ms the avatar
+was already 1.3 m short of the teleport it was chasing — inside the 4 m
+tolerance by luck rather than by margin.
+
+**An assertion a broken feature cannot fail is not an assertion.** "The rope
+restrains the player" was `walked < 26 m` after 2.6 s of walking, which is
+about 14 m with no rope at all. It passed for two reasons at once: the player
+is kinematic so the rope never pulled them, and the bound was wide enough not
+to notice. It is now `0.3..4 m` against a ~7 m rope, and the first version of
+the fix failed it — the rope snapped, because stopping 82 kg in one step is 23
+kN — which is exactly what a real bound is for.
+
+## The slow-motion bug, and why the harness had to move first
+
+`core/Time.ts` capped a frame at five fixed steps while its frame-time clamp
+allowed fifteen, so below about 12 fps the game ran in **slow motion**. The cap
+is now derived from the clamp. It could not be raised on its own because every
+scenario polled for transients between wall-clock frames, and at fifteen steps
+a frame a jump arc completes inside three of them. The scenarios were moved to
+forced stepping in the same change, which is what made the cap safe to fix and
+what made the suite independent of render cost.
 
 ## Writing a scenario
 
@@ -109,9 +187,32 @@ three others.
   in the collider that swallowed the player at exactly one spot on the island.
 - `NaN` in banana-leaf geometry from `Math.pow(-1e-17, 2.1)`.
 - `undefined !== false` rejected every non-utility tool in `assignSlot`.
+- The viewmodel pass re-cleared the colour buffer, so the game drew all of
+  Sunpatch and then wiped it: 92% of the opening frame was the raw clear colour
+  with two enormous forearms in front of it. Every existing visual check said
+  "ok" because none of them read the presented canvas.
+- Input edges were computed per rendered frame and consumed per fixed step, so
+  any frame that ran no step dropped the press. About half of all jumps, picks
+  and clicks on a 144 Hz display, invisible at 60 Hz.
+- A rope tied to the player never pulled the player (kinematic bodies are
+  immovable to the solver), and the check that should have caught it could
+  not fail.
+- The spawn point was 4.9 m off the side of the dock deck, so the player fell
+  2.4 m onto the sand, and nothing set a spawn yaw at all — the comment claimed
+  it faced the island, and it faced whatever direction yaw 0 happened to be.
+- The dock sign's board was positioned by a hand-rolled rotation that dropped
+  the local X term, leaving it floating unsupported in the middle of the
+  walkway, 2 m from its own post.
 
 ## Not yet automated
 
+- **Real pointer lock.** The transition is exercised event by event — the queued
+  delta is dropped, the first move after lock engages is swallowed, a spike is
+  clamped, an ordinary move still turns the view — and the orientation is
+  asserted unchanged across all of it. What is not covered is an actual
+  OS-level lock grant: neither headless Chromium nor an embedded preview will
+  hand one out (`requestPointerLock` rejects with "the root document of this
+  element is not valid for pointer lock").
 - Frame-rate on real GPU hardware (the harness runs under SwiftShader; its
   timings are useful for relative CPU cost only)
 - Audio output (synthesis is exercised, the waveform is not asserted)

@@ -21,12 +21,35 @@ uniform vec3 uSunColor;
 uniform float uSunSize;
 uniform float uHaze;
 uniform float uStars;
+uniform float uTime;
+uniform float uCloud;
+uniform vec3 uCloudLit;
+uniform vec3 uCloudShade;
 
 // Cheap hash for a star field; only used at night.
 float hash13(vec3 p) {
   p = fract(p * 0.1031);
   p += dot(p, p.yzx + 33.33);
   return fract((p.x + p.y) * p.z);
+}
+
+float hash12(vec2 p) {
+  vec3 q = fract(vec3(p.xyx) * 0.1031);
+  q += dot(q, q.yzx + 33.33);
+  return fract((q.x + q.y) * q.z);
+}
+
+float vnoise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash12(i), hash12(i + vec2(1.0, 0.0)), f.x),
+             mix(hash12(i + vec2(0.0, 1.0)), hash12(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+
+float fbm(vec2 p) {
+  float v = 0.0, a = 0.55;
+  for (int i = 0; i < 4; i++) { v += a * vnoise(p); p = p * 2.03 + 17.0; a *= 0.5; }
+  return v;
 }
 
 void main() {
@@ -46,6 +69,23 @@ void main() {
   float disc = smoothstep(1.0 - uSunSize, 1.0 - uSunSize * 0.35, cosA);
   float glow = pow(max(cosA, 0.0), 24.0) * 0.35 + pow(max(cosA, 0.0), 6.0) * 0.12;
   sky += uSunColor * (disc * 2.2 + glow);
+
+  // Clouds. A drifting FBM sheet projected onto a dome — one of the cheapest
+  // things in the frame and the single biggest difference between "a gradient"
+  // and "a sky". Two thresholds rather than one: a soft body plus a tighter
+  // core, which is what gives cumulus a lit top instead of a grey smear.
+  if (uCloud > 0.001) {
+    float ch = max(h, 0.035);
+    vec2 cuv = (d.xz / ch) * 0.42 + vec2(uTime * 0.0042, uTime * 0.0021);
+    float n = fbm(cuv);
+    float body = smoothstep(0.46, 0.74, n);
+    float core = smoothstep(0.58, 0.90, n);
+    // Fade out at the horizon, where the dome projection stretches to mush.
+    float cover = body * uCloud * smoothstep(0.015, 0.16, h);
+    vec3 cloudCol = mix(uCloudShade, uCloudLit, core);
+    cloudCol += uSunColor * pow(max(cosA, 0.0), 7.0) * 0.30;
+    sky = mix(sky, cloudCol, cover);
+  }
 
   // Horizon haze band keeps distant terrain sitting in atmosphere.
   sky = mix(sky, uHorizon, uHaze * exp(-abs(h) * 7.0));
@@ -78,6 +118,10 @@ export class Sky {
       uSunSize: { value: 0.006 },
       uHaze: { value: 0.55 },
       uStars: { value: 0.0 },
+      uTime: { value: 0.0 },
+      uCloud: { value: 0.78 },
+      uCloudLit: { value: new THREE.Color().setHex(0xfdfcf6, THREE.SRGBColorSpace) },
+      uCloudShade: { value: new THREE.Color().setHex(0xb9cfdd, THREE.SRGBColorSpace) },
     };
     const geo = new THREE.SphereGeometry(1, 32, 16);
     const material = new THREE.ShaderMaterial({
@@ -114,11 +158,19 @@ export class Sky {
     (u.uHorizon.value as THREE.Color).copy(Palette.skyHorizon).lerp(Palette.nightHorizon, t);
     (u.uGround.value as THREE.Color).copy(Palette.skyGround).lerp(Palette.nightZenith, t);
     u.uStars.value = Math.max(0, t * 1.2 - 0.2);
+    u.uCloud.value = 0.78 * (1 - t * 0.75);
     u.uHaze.value = 0.55 * (1 - t * 0.6);
     this.envDirty = true;
   }
 
   setHaze(v: number): void { this.uniforms.uHaze.value = v; this.envDirty = true; }
+
+  /** Drift the cloud sheet. Called from the render clock, so it keeps moving
+   *  while the simulation is paused for a screenshot. */
+  setTime(t: number): void { this.uniforms.uTime.value = t; }
+
+  /** 0 = clear sky, 1 = heavy cover. */
+  setCloudCover(v: number): void { this.uniforms.uCloud.value = v; this.envDirty = true; }
 
   get horizonColor(): THREE.Color { return this.uniforms.uHorizon.value as THREE.Color; }
 

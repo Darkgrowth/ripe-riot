@@ -71,15 +71,19 @@ export async function run(g, t) {
   t.eq(ropes.ropes.count, 1, 'the rope gun creates exactly one rope per shot');
   t.note(`rope: ${JSON.stringify(ropes.ropes.list[0] ?? null)}`);
 
-  // A tethered player cannot simply walk away for ever.
+  // A tethered player cannot simply walk away. The shot above hit the ground
+  // ~6.4 m ahead, so the rope is ~7.4 m long with under a metre of slack:
+  // backing off has to stop within a couple of metres, not the 14 m that 2.6 s
+  // of walking would otherwise cover. (The old bound here was 26 m, which a
+  // player with no rope at all could not have failed.)
   const anchorPos = (await g.state()).player.pos;
-  await g.input({ moveZ: -1, sprint: true });
+  await g.input({ moveZ: -1 });
   await g.wait(2.6);
   const pulled = await g.state();
   await g.clearInput();
   const dist = Math.hypot(pulled.player.pos[0] - anchorPos[0], pulled.player.pos[2] - anchorPos[2]);
-  t.lt(dist, 26, 'the rope actually restrains the player');
-  t.note(`walked ${dist.toFixed(1)} m against a rope`);
+  t.between(dist, 0.3, 4.0, 'the rope actually restrains the player');
+  t.note(`walked ${dist.toFixed(1)} m against a ${ropes.ropes.list[0]?.len ?? '?'} m rope`);
   await g.call('rope.clear');
 
   // ------------------------------------------------------------- air cannon

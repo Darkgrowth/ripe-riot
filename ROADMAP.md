@@ -5,10 +5,21 @@ end: arrive, pick, sell, buy, escalate, and take down the King Melon.
 
 ## Done
 
-**Foundation** — fixed-timestep loop, typed event bus, seeded RNG, system
-registry, profiling, debug API, Playwright harness with numeric frame triage,
-contact sheets, geometry validation, 7 gameplay scenarios (158 checks) and a
-two-client multiplayer test (11 checks).
+**Foundation** — fixed-timestep loop with the step cap derived from the
+frame-time clamp (no slow motion at low frame rates), latched input edges that
+survive stepless frames on high-refresh displays, typed event bus, seeded RNG,
+system registry, profiling, debug API, Playwright harness that advances the
+world by forced fixed steps rather than wall-clock time, numeric frame triage,
+contact sheets, geometry validation, 8 gameplay scenarios (196 checks), a
+two-client multiplayer test (11 checks) and a startup check that reads the
+presented canvas.
+
+**Player entry** — the spawn is a pose derived from the built dock (position,
+yaw and pitch together, one code path shared by boot, respawn and the tests):
+standing on the planking looking back down the deck, with the sign, the shop
+and the King Melon all in the opening frame. Viewmodel framing is measured
+rather than eyeballed — screen-height percentage, distance from the crosshair
+and the frame edges, at five aspect ratios.
 
 **Player** — first-person controller (walk/sprint/crouch/jump/coyote/buffer/
 short-hop), ladder climbing, carry-load slowdown, camera bob/roll/shake/recoil,
@@ -16,8 +27,17 @@ six-body articulated ragdoll with automatic recovery and a divergence guard,
 chunky worker rig with five suit presets.
 
 **World** — Sunpatch as an analytic height function; shared visual mesh and
-collider; ocean with distance-faded waves; dock, boat, shop shed, sell pad,
-signs, crates, rocks, waterfall and cliff; nine named landmarks.
+collider; ocean with distance-faded waves; nine named landmarks.
+
+**Sunpatch art pass** — the dock-to-shop-to-orchard route built for a first
+impression rather than for a greybox: planked decking with real seams, posts
+with rope swags, crates, barrels, fruit baskets and lanterns; a shop with a
+gabled roof, overhanging eaves, a lit serving hatch, shuttered windows, a
+bracket sign and a planked forecourt; a weighed and painted sell pad; a fenced
+orchard avenue with working props. A worn route the ground itself draws, a
+~2,100-piece instanced clutter layer, slope-placed rock outcrops, procedural
+clouds, and a waterfall of three crossing sheets over a real rock notch with
+spray at its foot. Nine extra draw calls for all of it.
 
 **Fruit** — 7 species, 8 traits, 5 quality tiers, 8 rare variants, instanced
 rendering (one draw call per species), activation radius, regrowth, honest
@@ -34,7 +54,14 @@ rope gun (tether/pin/winch), air cannon (charged blast + self-launch); three
 active slots plus one utility slot.
 
 **Ropes** — hand-solved one-sided distance constraints with real tension,
-winching, paying out and snapping.
+winching, paying out and snapping on time-smoothed tension. Ropes pull the
+player as an 82 kg body, capped to a tug per step, so a tether is a leash and a
+falling melon can drag you.
+
+**Impact feedback** — one instanced shard mesh driven by the events physics
+already emits: dust by momentum, pulp and rind on bursts, leaves on shakes and
+picks, a dust ring under a ragdoll and under the King Melon, and a camera thump
+scaled by momentum over distance. The hands punch on pick, stow and throw.
 
 **Systems** — economy with a discovery-tier gate, physical shop with tools and
 stat upgrades, harvest book with per-species records and variant tracking,
@@ -60,8 +87,8 @@ rigs, fruit replication, shared economy, client intents.
 1. **Feel pass on what exists.** The systems are verified; the *tuning* is not.
    Play an hour, adjust throw arcs, net radius, cannon recoil, damage
    thresholds, prices and regrowth timers against how it actually plays.
-2. **Particles and impact VFX** — splat, dust, leaf burst, water spray, rope
-   dust. Pooled, instanced.
+2. **More impact VFX** — water splash, rope dust, sale sparkle. The shard
+   system in `fx/ImpactFX.ts` is the place; it needs emitters, not a new system.
 3. **Music** — light exploration bed, discovery sting, legendary escalation.
    The sting hooks already exist as events.
 4. **WebRTC transport** — the interface is done; this is signalling plus ICE.

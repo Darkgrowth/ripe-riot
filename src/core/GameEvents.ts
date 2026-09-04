@@ -18,6 +18,8 @@ export interface GameEventMap {
   'fruit:stowed': { fruitId: number; species: string };
   'fruit:sold': { fruitId: number; species: string; value: number; quality: string; mass: number };
   'fruit:spawned': { fruitId: number; species: string };
+  /** A plant was shaken hard enough to notice; position is the base, height the canopy top. */
+  'plant:shaken': { plantId: number; position: THREE.Vector3; height: number; strength: number };
 
   /** Raised by tools when something stunt-worthy might have happened; the
    *  scoring system decides whether it actually counts. */
@@ -48,6 +50,8 @@ export interface GameEventMap {
 
   'legendary:phase': { id: string; phase: string };
   'legendary:complete': { id: string; payout: number };
+  /** The legendary body hit something hard. */
+  'legendary:landed': { id: string; position: THREE.Vector3; speed: number };
 
   'save:written': { slot: string };
   'save:loaded': { slot: string };

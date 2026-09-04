@@ -2,8 +2,12 @@ import * as THREE from 'three';
 import type { Game, System } from '@/core/Game';
 import type { ToolInventory } from '@/tools/ToolInventory';
 import type { InteractionSystem } from '@/interaction/InteractionSystem';
-import { buildViewModel, type ViewModel } from '@/render/Viewmodel';
+import { buildViewModel, VIEW_DEPTH, VIEW_LATERAL, type ViewModel } from '@/render/Viewmodel';
+import { VIEWMODEL_FOV_SCALE } from '@/render/Renderer';
 import { damp, clamp } from '@/core/MathUtils';
+
+/** Framing is authored at 16:9; anything narrower gets a smaller tool. */
+const REFERENCE_ASPECT = 16 / 9;
 
 /**
  * The tool in your hands.
@@ -50,6 +54,10 @@ export class ViewmodelSystem implements System {
     g.renderer.enableViewmodel();
 
     g.bus.on('tool:fired', () => this.punch(1));
+    // The hands are a tool too. Pulling fruit off a branch and dropping it in
+    // the basket should register in the arms, not only in the toast.
+    g.bus.on('fruit:detached', (p) => { if (p.cause === 'hand') this.punch(0.45); });
+    g.bus.on('fruit:stowed', () => this.punch(0.28));
     g.bus.on('tool:equipped', () => { this.stow = 1; });
 
     g.debug?.addProbe('viewmodel', () => ({
@@ -136,9 +144,21 @@ export class ViewmodelSystem implements System {
     // --- charge-up: pull the tool back as a throw or blast winds up
     const charge = Math.max(this.interaction.throwCharge, this.tools.activeTool?.charge ?? 0);
 
+    // --- framing. How much of the screen a tool covers, and how far to the
+    // right it sits, both depend on the aspect ratio, so both are expressed as
+    // fractions of the visible frame rather than as fixed distances. A window
+    // dragged tall and narrow otherwise hangs the hoop of a catch net off the
+    // edge of the screen.
+    //
+    // Read the MAIN camera: the view camera is only synced during render(),
+    // which runs after this, so using it would lag a frame behind a resize.
+    const vmFov = r.camera.fov * VIEWMODEL_FOV_SCALE;
+    const halfWidth = Math.tan(THREE.MathUtils.degToRad(vmFov) * 0.5) * r.camera.aspect * VIEW_DEPTH;
+    this.current.setFit(clamp(r.camera.aspect / REFERENCE_ASPECT, 0.5, 1));
+
     const root = this.current.root;
     root.position.set(
-      this.sway.x + this.bob.x,
+      VIEW_LATERAL * halfWidth + this.sway.x + this.bob.x,
       this.sway.y + this.bob.y - this.stow * 0.55 - player.landDip * 0.25,
       this.bob.z + this.kick * 0.09 + charge * 0.06,
     );

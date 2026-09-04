@@ -15,7 +15,14 @@ varying float vDist;
 void main() {
   vDepth = aDepth;
   vec3 p = position;
-  float shore = 1.0 - clamp(aDepth / 3.5, 0.0, 1.0);
+  // Foam is a SHORELINE, not a shallows. At 3.5 m the band covered the whole
+  // waterfall lagoon and every reef flat on the island, and the sea rendered
+  // as a sheet of white card wherever it was not deep. At 1.15 m it still
+  // covered the lagoon: the basin floor is gentle, the vertex grid is 5 m, and
+  // the lagoon measured (187,205,190) - a grey-green wash with the seabed
+  // showing through - where the target is a saturated turquoise with a thin
+  // white rim. The rim is the last half metre.
+  float shore = 1.0 - clamp(aDepth / 0.5, 0.0, 1.0);
   // Three cheap directional waves; damped as the water gets shallow.
   float w =
       sin(p.x * 0.085 + uTime * 1.05) * 0.34
@@ -50,13 +57,16 @@ varying float vDist;
 void main() {
   float detailFade = 1.0 - smoothstep(70.0, 260.0, vDist);
   float d = clamp(vDepth / 9.0, 0.0, 1.0);
-  vec3 col = mix(uShallow, uDeep, pow(d, 0.7));
+  // Hold the turquoise out into the shallows rather than diving for the deep
+  // blue within a couple of metres of the beach, but reach real colour by a
+  // metre or two: a lagoon is turquoise, not tinted glass.
+  vec3 col = mix(uShallow, uDeep, pow(d, 0.9));
 
   // Animated foam band along the shoreline.
-  float band = smoothstep(0.55, 1.0, vFoam);
+  float band = smoothstep(0.58, 1.0, vFoam);
   float ripple = sin(vWorld.x * 0.55 + vWorld.z * 0.45 + uTime * 1.7) * 0.5 + 0.5;
   float foam = band * (0.45 + 0.55 * mix(0.5, ripple, detailFade));
-  col = mix(col, uFoam, foam * 0.85);
+  col = mix(col, uFoam, foam * 0.5);
 
   // Broad specular sheet so the sea is not a flat colour.
   vec3 v = normalize(cameraPosition - vWorld);
@@ -68,9 +78,11 @@ void main() {
   float spec = pow(max(dot(n, hv), 0.0), 90.0) * detailFade;
   float fres = pow(1.0 - max(dot(n, v), 0.0), 4.0);
   col += vec3(1.0, 0.97, 0.9) * spec * 1.6;
-  col = mix(col, vec3(0.72, 0.88, 0.95), fres * 0.35);
+  col = mix(col, vec3(0.72, 0.88, 0.95), fres * 0.12);
 
-  float alpha = mix(0.80, 0.97, d);
+  // Shallow water was 80% transparent, so the pale seabed showed through and
+  // every lagoon on the island read as milk rather than as turquoise.
+  float alpha = mix(0.95, 0.99, d);
   gl_FragColor = vec4(col, alpha);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -84,12 +96,17 @@ export class Ocean {
     const size = 900;
     const seg = 180;
     const geo = new THREE.PlaneGeometry(size, size, seg, seg);
-    // PlaneGeometry is built in XY; we rotate it flat, so its local y is world z.
+    // PlaneGeometry is built in XY and rotated flat with rotateX(-90deg), which
+    // maps local y to world MINUS z. The first version sampled the terrain at
+    // +y, so every vertex carried the depth of the point mirrored across the
+    // island: the waterfall lagoon wore the shoreline foam of the dry hillside
+    // opposite it and rendered as a white sheet, and the numeric triage
+    // ("mean 0.41, hue 7, ok") could not tell foam from water.
     const pos = geo.getAttribute('position');
     const depth = new Float32Array(pos.count);
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i);
-      const z = pos.getY(i);
+      const z = -pos.getY(i);
       const inRange = Math.abs(x) < terrain.extent / 2 && Math.abs(z) < terrain.extent / 2;
       const h = inRange ? terrain.height(x, z) : -18;
       depth[i] = clamp(-h, 0, 20);

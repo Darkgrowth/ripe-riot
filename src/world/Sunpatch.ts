@@ -3,6 +3,7 @@ import type { Game, System } from '@/core/Game';
 import { Terrain } from './Terrain';
 import { Ocean } from './Ocean';
 import { buildLandmarks, type BuiltLandmarks } from './Landmarks';
+import { Dressing } from './Dressing';
 
 export interface Landmark {
   id: string;
@@ -21,6 +22,7 @@ export class Sunpatch implements System {
   readonly name = 'world';
   terrain = new Terrain();
   ocean = new Ocean();
+  dressing = new Dressing();
   landmarks = new Map<string, Landmark>();
   root = new THREE.Group();
   built!: BuiltLandmarks;
@@ -32,6 +34,9 @@ export class Sunpatch implements System {
     this.ocean.build(g.renderer.scene, this.terrain, g.renderer.sunDir);
     this.defineLandmarks();
     this.built = buildLandmarks(g.renderer.scene, g.physics, this.terrain);
+    // Clutter goes in AFTER the landmarks so its keep-clear zones are testing
+    // against buildings that already exist rather than against coordinates.
+    this.dressing.build(g.renderer.scene, this.terrain);
     g.renderer.refreshEnvironment(true);
     g.bus.emit('world:ready', { seed: g.seed });
 
@@ -39,9 +44,21 @@ export class Sunpatch implements System {
       sellPad: v3(this.sellPad), sellRadius: this.sellRadius,
       shopCounter: v3(this.shopCounter), kingMelon: v3(this.kingMelonPos),
       spawn: v3(this.spawnPoint),
+      spawnYaw: +this.spawnYaw.toFixed(4), spawnPitch: +this.spawnPitch.toFixed(4),
+      dock: { deckTop: +this.built.dock.deckTop.toFixed(3), dir: +this.built.dock.dir.toFixed(4) },
+      dressing: { total: this.dressing.total, tris: this.dressing.triangles,
+        counts: this.dressing.counts },
       landmarks: Object.fromEntries([...this.landmarks.values()]
         .map((l) => [l.id, { pos: v3(l.position), radius: l.radius, label: l.label }])),
     }));
+    // Restart must reproduce the opening frame exactly; this is the one path.
+    // Recovery runs FIRST because it stands the player up wherever the torso
+    // came to rest, which would otherwise undo the teleport.
+    g.debug?.addAction('world.respawn', () => {
+      if (g.has('ragdoll')) g.get<{ recover(): void }>('ragdoll').recover();
+      this.spawnPlayer(g.player);
+      return { pos: v3(g.player.position), yaw: g.player.yaw, pitch: g.player.pitch };
+    });
   }
 
   /** Where fruit is sold. */
@@ -77,9 +94,53 @@ export class Sunpatch implements System {
     return new THREE.Vector3(x, this.terrain.height(x, z) + offset, z);
   }
 
+  /** Where on the deck the player stands: just past the boat, most of the deck
+   *  still ahead of them. */
+  private readonly spawnLocalX = 0.5;
+  private readonly spawnLocalZ = 16.5;
+
+  /**
+   * The opening shot.
+   *
+   * Standing ON the planking near the seaward end, looking straight back down
+   * the deck. The dock's heading points at the Shop Shed, so that one pose puts
+   * the deck leading away underfoot, the SUNPATCH sign and the shop dead ahead,
+   * the orchard hillside behind them and the King Melon up to the right — the
+   * whole loop legible from the first frame without a scripted camera.
+   *
+   * It is derived from the built deck rather than written as world coordinates:
+   * the coordinates that shipped were 4.9 m off the side of it, so the player
+   * dropped 2.4 m onto the sand and spent the opening frame looking at nothing.
+   */
   get spawnPoint(): THREE.Vector3 {
-    // On the deck, facing back toward the island and the shop.
-    return new THREE.Vector3(60.5, this.terrain.height(60.5, 70) + 2.4, 70);
+    const d = this.built?.dock;
+    if (!d) return new THREE.Vector3(60.5, this.terrain.height(60.5, 70) + 2.4, 70);
+    // A few centimetres of clearance; the controller snaps down to the planks.
+    return d.toWorld(this.spawnLocalX, this.spawnLocalZ, d.deckTop + 0.12);
+  }
+
+  /** Facing back down the deck toward the shore. `dir` points out to sea, so
+   *  the player's heading is the same angle read as a yaw (see
+   *  PlayerController.forward: yaw ψ looks along (-sin ψ, 0, -cos ψ)). */
+  get spawnYaw(): number { return this.built?.dock.dir ?? 0.9273; }
+
+  /** Level would put the horizon exactly across the middle of the screen and
+   *  half the frame into empty sky. A few degrees down sits the planking in the
+   *  lower third and the island above it. */
+  get spawnPitch(): number { return -0.11; }
+
+  /**
+   * Put a player at the authored start pose. Everything that begins a run —
+   * boot, respawn, the harness — goes through here, so the opening frame is
+   * reproducible rather than whatever the last thing to touch the player left
+   * behind.
+   */
+  spawnPlayer(p: {
+    teleport(v: THREE.Vector3): void; yaw: number; pitch: number;
+  }): void {
+    p.teleport(this.spawnPoint);
+    p.yaw = this.spawnYaw;
+    p.pitch = this.spawnPitch;
   }
 
   frameUpdate(_dt: number, _alpha: number): void {
@@ -87,6 +148,7 @@ export class Sunpatch implements System {
     // simulation is paused for a screenshot.
     const t = performance.now() / 1000;
     this.ocean.update(t);
+    this.dressing.update(t);
     const fall = this.built?.waterfall?.userData?.uniforms as
       { uTime: { value: number } } | undefined;
     if (fall) fall.uTime.value = t;

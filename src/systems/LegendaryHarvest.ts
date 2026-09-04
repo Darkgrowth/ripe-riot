@@ -466,6 +466,12 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     if (impulse < 60_000) return;
     this.g.playerCamera.addShake(clamp(impulse / 900_000, 0.02, 0.12), 0.55, 16);
     this.g.bus.emit('audio:sfx', { name: 'boom', volume: 0.8 });
+    if (this.body) {
+      const t = this.body.translation();
+      this.g.bus.emit('legendary:landed', {
+        id: 'kingMelon', position: new THREE.Vector3(t.x, t.y, t.z), speed: len(this.body.linvel()),
+      });
+    }
   }
 
   serialize(): { phase: string; completedAt: number } {

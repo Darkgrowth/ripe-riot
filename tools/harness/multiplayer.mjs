@@ -17,7 +17,13 @@ const ok = (cond, label, detail = '') => {
 let a, b;
 try {
   console.log('opening two clients...');
-  a = await openGame({ width: 640, height: 360, headless: true, quiet: true });
+  // Two clients render in the SAME browser, so this is the slowest thing the
+  // harness runs and the one most exposed to render cost: a 900 ms wait for a
+  // teleport to replicate is 900 ms of wall clock, and the avatar interpolates
+  // in simulation time. At 640x360 x2 the host's avatar was still 6 m short of
+  // the client's new position when the check read it. Same calibration as
+  // run-tests.mjs, and the same reason.
+  a = await openGame({ width: 400, height: 225, headless: true, quiet: true });
   // Same browser context as A, or BroadcastChannel cannot reach between them.
   b = await openSecondClient(a);
 
@@ -47,7 +53,15 @@ try {
 
   // --- player replication
   await client.tp(-24, 12, 22);
-  await sleep(900);
+  // Remote avatars DAMP toward the position the snapshot reports rather than
+  // snapping to it, so this settle time is counted in frames, not seconds, and
+  // how many frames fit in a second here depends on what the harness happens to
+  // be rendering. At 900 ms the baseline avatar was already 1.3 m short of the
+  // teleport it was chasing — inside the 4 m tolerance by luck rather than by
+  // margin — and adding scenery to the island took the same wait to 6.5 m and
+  // failed the check with replication working perfectly. Give the damp time to
+  // finish; the tolerance below is what is actually being asserted.
+  await sleep(2600);
   const remotesOnHost = await host.call('net.remotes');
   ok(remotesOnHost.length >= 1, 'the host renders a remote avatar for the client');
   if (remotesOnHost.length) {

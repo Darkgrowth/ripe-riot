@@ -27,6 +27,9 @@ export interface Plant extends PhysicsOwner {
   phase: number;
   /** Extra sway amplitude from shaking; decays each step. */
   shake: number;
+  /** Per-instance colour multiplier: warm/cool and light/dark jitter, so a
+   *  grove of three shapes does not read as a grove of three trees. */
+  tint: [number, number, number];
   nodes: PlantNode[];
   batchKey: string;
   instanceIndex: number;
@@ -132,6 +135,7 @@ export class PlantSystem {
     const mesh = new THREE.InstancedMesh(geo, mat, capacity);
     mesh.name = `Plants:${type}:${variant}`;
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(capacity * 3).fill(1), 3);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.frustumCulled = false;
@@ -157,11 +161,14 @@ export class PlantSystem {
     (old.material as THREE.Material).dispose();
     this.batches.set(key, fresh);
     for (let i = 0; i < fresh.plants.length; i++) {
-      fresh.plants[i].instanceIndex = i;
-      fresh.phaseAttr.setX(i, fresh.plants[i].phase);
+      const p = fresh.plants[i];
+      p.instanceIndex = i;
+      fresh.phaseAttr.setX(i, p.phase);
+      fresh.mesh.instanceColor!.setXYZ(i, p.tint[0], p.tint[1], p.tint[2]);
     }
     fresh.mesh.count = fresh.plants.length;
     fresh.phaseAttr.needsUpdate = true;
+    fresh.mesh.instanceColor!.needsUpdate = true;
     // Callers hold Batch references only transiently, so swapping is safe.
     Object.assign(b, fresh);
   }
@@ -175,11 +182,18 @@ export class PlantSystem {
 
     const scale = opts.scale ?? rng.range(0.85, 1.2);
     const rotationY = opts.rotationY ?? rng.range(0, Math.PI * 2);
+    // Warm (yellow-green) to cool (blue-green), and a little lighter or darker.
+    const warm = rng.range(-1, 1);
+    const lum = rng.range(0.9, 1.08);
+    const tint: [number, number, number] = [
+      lum * (1 + warm * 0.09), lum * (1 + warm * 0.03), lum * (1 - warm * 0.11),
+    ];
     const p: Plant = {
       id, kind: 'plant', type, variant, position: position.clone(), rotationY, scale,
       height: shape.height * scale,
       phase: rng.range(0, Math.PI * 2),
       shake: 0,
+      tint,
       nodes: shape.attachPoints.map((local) => ({
         local: local.clone(), world: new THREE.Vector3(), quat: new THREE.Quaternion(),
         fruitId: -1, grip: rng.range(0.85, 1.25),
@@ -196,9 +210,11 @@ export class PlantSystem {
     _m.compose(position, _q, _s);
     b.mesh.setMatrixAt(p.instanceIndex, _m);
     b.phaseAttr.setX(p.instanceIndex, p.phase);
+    b.mesh.instanceColor!.setXYZ(p.instanceIndex, tint[0], tint[1], tint[2]);
     b.mesh.count = b.plants.length;
     b.mesh.instanceMatrix.needsUpdate = true;
     b.phaseAttr.needsUpdate = true;
+    b.mesh.instanceColor!.needsUpdate = true;
 
     if (shape.collider) {
       const c = shape.collider;

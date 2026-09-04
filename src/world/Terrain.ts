@@ -7,6 +7,27 @@ import { Groups } from '@/physics/Layers';
 
 export const SEA_LEVEL = 0;
 
+/**
+ * The worn route the island teaches itself along: off the dock, past the shop
+ * and the sell pad, then up the rise into the old orchard.
+ *
+ * It is a *ground treatment*, not a corridor — the height function is untouched,
+ * so nothing about traversal, collision or the pads changes. What it does is
+ * tint the ground toward packed earth and keep the clutter layer off itself,
+ * which between them is what makes the way ahead readable without hanging a
+ * marker in the sky.
+ *
+ * Entries are x, z, half-width in metres. The width opens out at the sell pad
+ * and again where the orchard starts, so the route reads as a place rather than
+ * a track of constant gauge.
+ */
+export const ROUTE: ReadonlyArray<readonly [number, number, number]> = [
+  [60.0, 65.0, 2.8], [55.5, 61.0, 3.0], [50.5, 58.2, 3.4], [45.5, 56.3, 4.2],
+  [41.0, 55.2, 4.6], [36.5, 52.6, 3.8], [31.0, 49.6, 3.4], [25.0, 46.0, 3.2],
+  [18.5, 42.6, 3.2], [11.0, 38.6, 3.2], [4.0, 35.0, 3.3], [-3.5, 31.4, 3.6],
+  [-10.5, 28.0, 3.8], [-17.0, 25.0, 4.2], [-24.0, 22.0, 5.0],
+];
+
 export interface BiomeWeights { sand: number; grass: number; rock: number; dirt: number; }
 
 /** A circular region whose height is pulled toward a target — used to carve
@@ -88,6 +109,36 @@ export class Terrain {
     return h;
   }
 
+  /**
+   * How strongly (x, z) sits on the worn route: 1 in the middle, 0 well off it.
+   *
+   * Distance to a 15-segment polyline is cheap, but it is evaluated once per
+   * terrain vertex and once per candidate clutter position, so the bounding-box
+   * reject in front of it earns its keep — most of the island is nowhere near
+   * the route and pays two comparisons instead of thirty.
+   */
+  pathWeight(x: number, z: number): number {
+    if (x < ROUTE_BOX.minX || x > ROUTE_BOX.maxX ||
+        z < ROUTE_BOX.minZ || z > ROUTE_BOX.maxZ) return 0;
+    let best = 0;
+    for (let i = 0; i < ROUTE.length - 1; i++) {
+      const [x1, z1, w1] = ROUTE[i];
+      const [x2, z2, w2] = ROUTE[i + 1];
+      const vx = x2 - x1, vz = z2 - z1;
+      const len2 = vx * vx + vz * vz;
+      let t = len2 > 0 ? ((x - x1) * vx + (z - z1) * vz) / len2 : 0;
+      t = clamp(t, 0, 1);
+      const d = Math.hypot(x - (x1 + vx * t), z - (z1 + vz * t));
+      const w = w1 + (w2 - w1) * t;
+      // Wander the edge so the route is a worn track, not a painted stripe.
+      const wobble = fbm2(x * 0.16, z * 0.16, 2, this.seed + 77) * 0.9;
+      const wt = smoothstep(w * 1.5 + wobble, w * 0.5, d);
+      if (wt > best) best = wt;
+      if (best > 0.999) break;
+    }
+    return best;
+  }
+
   normal(x: number, z: number, out = new THREE.Vector3()): THREE.Vector3 {
     const e = 0.6;
     const hL = this.height(x - e, z), hR = this.height(x + e, z);
@@ -102,8 +153,20 @@ export class Terrain {
   }
 
   biome(x: number, z: number, h = this.height(x, z), s = this.slope(x, z)): BiomeWeights {
-    const sand = clamp(smoothstep(4.2, 0.1, h) * (1 - smoothstep(0.30, 0.55, s)), 0, 1);
-    const rock = clamp(smoothstep(0.20, 0.46, s) + smoothstep(21, 30, h) * 0.85, 0, 1);
+    // Sand used to reach 4.2 m, which is above both authored pads: the dock
+    // apron, the whole first stretch of the route and the shop frontage all
+    // came out beige, and the worn path had nothing to read against. Pulled
+    // back to a real beach band, the route crosses grass within twenty metres
+    // of the dock and the path reads as a path.
+    const tide = fbm2(x * 0.06, z * 0.06, 2, this.seed + 211) * 0.9;
+    const sand = clamp(smoothstep(2.15 + tide, 0.1, h) * (1 - smoothstep(0.30, 0.55, s)), 0, 1);
+    // Rock is a SLOPE story, not an altitude one. The shipped altitude term
+    // started at 21 m, which greyed out the waterfall knoll, the ravine rims
+    // and the whole King Melon massif — every distant hill read as bare stone
+    // where the art direction wants green with rock showing through the steep
+    // faces. Pushed up and weighted down, the peaks keep their vegetation and
+    // the cliffs still read as cliffs.
+    const rock = clamp(smoothstep(0.22, 0.50, s) + smoothstep(32, 48, h) * 0.6, 0, 1);
     const dirtNoise = fbm2(x * 0.05, z * 0.05, 2, this.seed + 400);
     const dirt = clamp(smoothstep(0.16, 0.42, dirtNoise) * (1 - rock) * (1 - sand) * 0.7, 0, 1);
     const grass = clamp(1 - sand - rock - dirt, 0, 1);
@@ -112,23 +175,59 @@ export class Terrain {
 
   colorAt(x: number, z: number, out: THREE.Color, h?: number, s?: number): THREE.Color {
     const hh = h ?? this.height(x, z);
-    const b = this.biome(x, z, hh, s);
+    const ss = s ?? this.slope(x, z);
+    const b = this.biome(x, z, hh, ss);
     out.setRGB(0, 0, 0);
-    _c.copy(hh < 0.35 ? Palette.sandWet : Palette.sand);
+
+    // Sand. The waterline gets its own darker, wetter band, and the band is
+    // warped by noise so the beach does not read as a contour line drawn round
+    // the island at exactly one height.
+    const tideWarp = fbm2(x * 0.07, z * 0.07, 2, this.seed + 133) * 1.1;
+    _c.copy(hh < 0.55 + tideWarp ? Palette.sandWet : Palette.sand);
+    // A little dry-sand mottling so the beach is not one flat card.
+    _c.lerp(Palette.dirt, clamp(fbm2(x * 0.13, z * 0.13, 2, this.seed + 61) * 0.4 + 0.1, 0, 1) * 0.16);
     addScaled(out, _c, b.sand);
-    // Two-tone grass, tinted drier as it climbs.
-    const dry = smoothstep(8, 26, hh);
-    _c.copy(Palette.grass).lerp(Palette.grassDry, dry * 0.55);
-    const patch = fbm2(x * 0.08, z * 0.08, 2, this.seed + 21);
-    _c.lerp(Palette.grassDark, clamp(patch * 0.5 + 0.25, 0, 1) * 0.5);
+
+    // Grass, in three registers: lush in the hollows, standard on the flat,
+    // dry and yellow where it climbs or catches the light on a shoulder.
+    const dry = smoothstep(9, 30, hh);
+    _c.copy(Palette.grass).lerp(Palette.grassDry, dry * 0.5);
+    const patch = clamp(fbm2(x * 0.055, z * 0.055, 3, this.seed + 21) * 0.5 + 0.5, 0, 1);
+    // Two-sided: the same noise pushes toward dark lush green below the middle
+    // and toward dry highlight above it, which roughly doubles the amount of
+    // colour variation for one noise lookup.
+    if (patch < 0.5) _c.lerp(Palette.grassDark, (0.5 - patch) * 1.15);
+    else _c.lerp(Palette.grassDry, (patch - 0.5) * 0.75);
+    // Steeper grass sits in shadow more of the day; darkening it is what gives
+    // a rolling hillside its form when the geometry itself is smooth.
+    _c.lerp(Palette.grassDark, smoothstep(0.10, 0.42, ss) * 0.45);
     addScaled(out, _c, b.grass);
-    _c.copy(Palette.rock).lerp(Palette.rockDark, clamp(fbm2(x * 0.06, z * 0.06, 2, this.seed + 3) * 0.5 + 0.5, 0, 1));
+
+    // Rock, with a crevice term. The high-frequency band is only applied where
+    // it is actually steep, so flat ground does not pick up grey speckle.
+    const crev = clamp(fbm2(x * 0.24, z * 0.24, 2, this.seed + 313) * 0.5 + 0.5, 0, 1);
+    _c.copy(Palette.rock).lerp(Palette.rockDark,
+      clamp(fbm2(x * 0.06, z * 0.06, 2, this.seed + 3) * 0.5 + 0.5, 0, 1));
+    _c.lerp(Palette.rockDark, smoothstep(0.34, 0.62, ss) * crev * 0.7);
     addScaled(out, _c, b.rock);
+
     addScaled(out, Palette.dirt, b.dirt);
+
     // A large-scale shade term. Without it the island reads as one flat colour
     // no matter how the biomes blend; measured contrast roughly doubles.
-    const shade = 1 + fbm2(x * 0.017, z * 0.017, 3, this.seed + 909) * 0.20;
+    const shade = 1 + fbm2(x * 0.017, z * 0.017, 3, this.seed + 909) * 0.24;
     out.r *= shade; out.g *= shade; out.b *= shade;
+
+    // The worn route, laid over everything else. Pale packed earth in the
+    // middle where it is actually walked, darker at the shoulders where it
+    // gives way to the grass.
+    const pw = this.pathWeight(x, z);
+    if (pw > 0.001) {
+      _c.copy(Palette.pathDark).lerp(Palette.path, smoothstep(0.3, 0.9, pw));
+      // Scuff it, so a 5 m band of flat colour does not appear on the hillside.
+      _c.lerp(Palette.dirt, clamp(fbm2(x * 0.35, z * 0.35, 2, this.seed + 505) * 0.5 + 0.5, 0, 1) * 0.22);
+      out.lerp(_c, pw * 0.92);
+    }
     return out;
   }
 
@@ -207,6 +306,19 @@ export class Terrain {
     this.mesh?.geometry.dispose();
   }
 }
+
+/** Bounding box of ROUTE, padded by the widest half-width. Used to reject the
+ *  ~95% of the island that is nowhere near the route in two comparisons. */
+const ROUTE_BOX = (() => {
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity, pad = 0;
+  for (const [x, z, w] of ROUTE) {
+    minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+    minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
+    pad = Math.max(pad, w);
+  }
+  pad = pad * 1.5 + 2;
+  return { minX: minX - pad, maxX: maxX + pad, minZ: minZ - pad, maxZ: maxZ + pad };
+})();
 
 const _n = new THREE.Vector3();
 const _c = new THREE.Color();

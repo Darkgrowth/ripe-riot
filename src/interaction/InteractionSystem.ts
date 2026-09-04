@@ -290,6 +290,7 @@ export class InteractionSystem implements System {
     this.carried = null;
     this.g.playerCamera.addRecoil((Math.random() - 0.5) * 0.01, 0.02 * power);
     this.g.bus.emit('audio:sfx', { name: 'throw', volume: 0.5 + power * 0.5 });
+    this.g.bus.emit('tool:fired', { toolId: 'hand' });
   }
 
   // ---- selling ------------------------------------------------------------

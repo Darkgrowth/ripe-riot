@@ -25,15 +25,33 @@ export function ensureOut(sub = '') {
   return dir;
 }
 
-async function serverUp() {
+/**
+ * Is the thing on that port OUR dev server?
+ *
+ * "Something answers on 5173" is not the same question, and answering the wrong
+ * one costs 90 seconds per stage: another project's Vite took the port, every
+ * harness run happily reused it, and each one sat waiting for a `__RIPE_READY`
+ * that was never going to arrive on somebody else's index.html.
+ *
+ * Returns 'ours', 'foreign' or 'down'.
+ */
+async function serverKind() {
   try {
     const res = await fetch(URL_BASE, { method: 'GET', signal: AbortSignal.timeout(1500) });
-    return res.ok;
-  } catch { return false; }
+    if (!res.ok) return 'down';
+    const html = await res.text();
+    return html.includes('/src/main.ts') && html.includes('id="view"') ? 'ours' : 'foreign';
+  } catch { return 'down'; }
 }
 
 export async function startServer() {
-  if (await serverUp()) return { proc: null, reused: true };
+  const kind = await serverKind();
+  if (kind === 'ours') return { proc: null, reused: true };
+  if (kind === 'foreign') {
+    throw new Error(
+      `${URL_BASE} is serving a different project. Free the port, or point the ` +
+      'harness elsewhere with RIPE_URL (and start Vite there yourself).');
+  }
   const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
   const proc = spawn(npmCmd, ['run', 'dev', '--', '--host', '127.0.0.1', '--strictPort'], {
     cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], shell: process.platform === 'win32',
@@ -41,7 +59,7 @@ export async function startServer() {
   proc.stdout.on('data', (d) => { if (process.env.RIPE_VERBOSE) process.stdout.write(`[vite] ${d}`); });
   proc.stderr.on('data', (d) => process.stderr.write(`[vite:err] ${d}`));
   for (let i = 0; i < 120; i++) {
-    if (await serverUp()) return { proc, reused: false };
+    if (await serverKind() === 'ours') return { proc, reused: false };
     await sleep(400);
   }
   throw new Error('dev server did not come up');
@@ -123,8 +141,18 @@ async function attachPage(browser, ctx, quiet) {
     logs: () => page.evaluate(() => window.__RIPE.dumpLogs()),
     clearLogs: () => page.evaluate(() => window.__RIPE.clearLogs()),
     terrainHeight: (x, z) => page.evaluate(([x, z]) => window.__RIPE.terrainHeight(x, z), [x, z]),
-    /** Let real time pass (physics runs). */
+    /** Let real time pass (physics runs at whatever rate the machine manages). */
     wait: async (seconds) => { await page.evaluate((s) => new Promise((r) => setTimeout(r, s * 1000)), seconds); },
+    /**
+     * Advance the SIMULATION by a number of seconds, deterministically: the
+     * clock is held paused and exactly round(seconds * 60) fixed steps are
+     * forced, a few per rendered frame. Wall-clock cost is whatever the
+     * renderer costs; the amount of world that elapses is fixed. The scenario
+     * runner substitutes this for `wait`.
+     */
+    simulate: async (seconds) => { await page.evaluate((s) => window.__RIPE.simulate(s), seconds); },
+    /** Render N frames with the clock paused: zero fixed steps, real time passes. */
+    idleFrames: async (n) => { await page.evaluate((n) => window.__RIPE.idleFrames(n), n); },
     /**
      * Read the WebGL canvas directly rather than using page.screenshot(): the
      * game never stops animating, so Playwright's stability wait never settles.

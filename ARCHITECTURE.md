@@ -45,10 +45,56 @@ per frame:
 Look is applied per frame rather than per fixed step: mouse deltas are already
 frame-quantised, and re-integrating them at 60 Hz feels laggy.
 
+**Input edges are latched until a fixed step consumes them.** A press is
+recorded by the event handler and cleared by `PlayerInput.consumeEdges()`,
+which the loop calls after the first fixed step of a frame and never on a frame
+that ran none. The first version derived "pressed" from a per-frame key-set
+diff, and because edges were computed per rendered frame but read per fixed
+step, any frame with zero steps lost the press. On a 120 or 144 Hz display that
+is most frames: jump, pick and click were dropped about half the time, and a
+60 Hz harness could not see it. The `movement` scenario now presses jump, renders
+six stepless frames, and asserts the jump still happens.
+
+**The step cap matches the frame-time clamp.** `Time.ts` allows a frame to
+represent 0.25 s and lets it run `0.25 / (1/60)` = 15 steps. They used to be
+separate numbers (0.25 s and 5) and the game ran in slow motion below ~12 fps.
+A slow frame now costs frame rate and nothing else. The test harness no longer
+depends on either number: it advances the world by forced steps.
+
 Rope constraints are solved in `fixedStep`, i.e. *before* `physics.step()`, so
 the solver integrates the impulses they apply.
 
 ## Key decisions, and why
+
+**The route is a ground treatment, not a corridor.** `Terrain.ROUTE` is a
+fifteen-point polyline from the dock, past the shop, up into the orchard, with a
+half-width that opens out at the sell pad. `pathWeight(x, z)` answers "how much
+is this point on the route", and three separate systems consult it: the terrain
+tints toward packed earth, the clutter layer keeps off it, and the tree scatter
+refuses to plant on it. The height function is not touched at all, so nothing
+about traversal, collision or the authored pads changes — and the way ahead is
+readable without hanging a marker in the sky.
+
+**Clutter is instanced, clumped, and never collidable.** `world/Dressing.ts`
+places ~2,100 pieces of grass, bush, fern, flower, stone and driftwood for nine
+draw calls. Density is multiplied by a low-frequency noise field so vegetation
+gathers into thickets with clear ground between them: at the same instance count
+a uniform scatter reads as static and hides the route, and a clumped one reads
+as a place and frames it. On top of the procedural field sits a table of
+hand-placed clusters, because the scatter has no idea that the corner where the
+dock meets the sand is the first thing anybody sees. Nothing in the layer has a
+collider — a bush you have to walk round is a bug, not detail.
+
+Flowers are two meshes sharing one set of transforms: green stems, and heads
+that take a per-instance tint. `instanceColor` multiplies the whole instance, so
+a single merged mesh would tint the stems red along with the petals; split, five
+flower colours cost two draw calls instead of five.
+
+**Decorative planting goes through the fruit system's plant pool.** The palms
+and broadleaf cover along the route are planted by `FruitSystem` from a `DECOR`
+table and simply never have `growOn` called on them. They land in the same
+instanced batches as the fruiting plants, so thirty of them cost no draw call
+and get the existing GPU wind sway for free.
 
 **The island is a pure function, not a heightmap.** `world/Terrain.ts` is
 `height(x, z)`. The visual mesh and the collider are generated from the same
@@ -83,6 +129,16 @@ Rope endpoints are resolved from Rapier *handles* every step, never from cached
 `RigidBody` references — holding one across its removal calls into freed WASM
 memory and poisons every later physics call.
 
+The player is a kinematic body, which Rapier treats as immovable. A rope tied
+to the player therefore held a melon and could never pull the player, and the
+"restrains the player" check passed with a bound a player with no rope could
+not have failed. The solver now treats the player end as an 82 kg movable
+whose velocity lives on the controller, capped at a 9 m/s change per step so
+the end of a rope is a tug rather than a teleport. Snapping is judged on
+tension smoothed over ~0.15 s: arresting a walking player inside one step is
+23 kN on paper, more than any rope is rated for, and the first version of this
+parted the rope on the first taut step.
+
 **Explosions iterate bodies rather than shape-querying.** Measured,
 `intersectionsWithShape` reliably returned only the terrain even when centred on
 an awake dynamic collider a raycast had just hit, silently making every blast a
@@ -99,10 +155,53 @@ adding mass separately gives the right kilograms with a near-zero inertia
 tensor. A lone fruit survives that; a jointed ragdoll diverges to 1.7e6 m, and a
 2.6 tonne melon that weighs nothing ignores its vines.
 
+**Impact feedback is one instanced mesh, simulated in the fixed step.**
+`fx/ImpactFX.ts` listens to the events the physics already emits —
+`fruit:impact` with its honest velocity-loss, `fruit:destroyed`, `plant:shaken`,
+`player:ragdoll`, `legendary:landed` — and throws chunky octahedron shards:
+dust for landings, pulp and rind for bursts, leaves for anything that disturbs
+a canopy. It also thumps the camera by momentum over distance, so a coconut
+beside you and the King Melon across the basin both register and an apple
+never does. Particles bounce off `terrain.height`, which is a function, so no
+raycasts. It is cosmetic, one draw call, and the `fruit-physics` scenario
+asserts a burst actually produces particles.
+
+**Canopies are shaded by facing, in the vertex colours.** `PlantGeometry`
+darkens faces that point down and lightens faces that point up before merging,
+so a low-poly canopy has a top and an underside in flat light and in shadow
+alike; the lighting only adds to that. Broadleaf trees are a crown, a ring and
+a lower wider ring of smaller blobs, which stacks the silhouette and hangs most
+of the fruit at head height. Each plant instance also carries a warm/cool and
+light/dark tint on `instanceColor`, so three cached shapes do not read as three
+trees.
+
 **The viewmodel gets its own scene and camera.** Tools are rendered as a second
 pass with the depth buffer cleared, so a tool can sit 40 cm from the eye without
 ever poking through a wall — the usual failure of parenting a viewmodel straight
 to the camera. It is purely cosmetic and never feeds back into simulation.
+
+Two things about that second pass are not optional. `autoClear` must be off
+around it: `render()` honours it on *every* call, so the viewmodel pass
+otherwise wipes the colour buffer and the entire world with it, leaving the
+clear colour behind the tool. That shipped, and nothing caught it —
+`frameStats()` renders the scene into its own target, so the numeric triage
+never looked at the canvas the player was looking at, and every contact sheet
+detached the camera first. `tools/harness/startup-check.mjs` now reads the real
+canvas and fails if any measurable fraction of it is the raw clear colour.
+
+And a viewmodel's screen size is set by how CLOSE its nearest vertex is, not by
+its scale — at 0.22 m a 7 cm forearm is a quarter of the frame height. Framing
+lives in one place (`VIEW_OFFSET`, `VIEW_SCALE` in `render/Viewmodel.ts`), the
+lateral placement is a fraction of the visible width rather than a fixed
+distance so it survives a narrow window, and the harness asserts the resulting
+percentages for every tool at five aspect ratios.
+
+**The spawn is a pose, not a point.** `Sunpatch.spawnPlayer()` sets position,
+yaw and pitch together, is derived from the built dock rather than from
+coordinates written next to it, and is the single path used by boot, respawn and
+the tests. The coordinates that shipped were 4.9 m off the side of the deck, so
+the player fell onto the sand and — since nothing set a yaw — faced whatever
+direction yaw 0 happens to be.
 
 ## Multiplayer
 
@@ -131,6 +230,13 @@ renders the current view into a 96×54 target and reduces it to mean luminance,
 flat fraction, contrast, hue spread and a histogram, which is enough to catch a
 black screen, an untextured wall or a washed-out horizon without anyone opening
 an image.
+
+It has one blind spot worth knowing: it renders the scene *itself*, into its own
+target. It therefore cannot see anything a later pass does to the presented
+frame — which is precisely how a viewmodel pass that wiped the whole canvas
+scored "ok" on every metric. Anything that asks "what is the player actually
+looking at" has to read the canvas, which is what `startup-check.mjs` and the
+`startup` scenario do.
 
 ## Performance posture
 

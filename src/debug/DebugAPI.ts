@@ -109,13 +109,44 @@ export class DebugAPI {
 
   /** Advance the simulation deterministically by N fixed steps, rendering each. */
   async advance(steps: number): Promise<void> {
-    const wasPaused = this.g.clock.paused;
-    this.g.clock.paused = true;
-    for (let i = 0; i < steps; i++) {
-      this.g.clock.stepOnce(1);
-      await new Promise<void>((r) => requestAnimationFrame(() => r()));
+    await this.simulate(steps / 60, 1);
+  }
+
+  /**
+   * Advance the simulation by an exact number of seconds - round(seconds*60)
+   * fixed steps - regardless of what the renderer costs. Steps are spread over
+   * rendered frames so per-frame systems (camera, UI, viewmodel, plant sway)
+   * keep running in step with the world rather than being skipped.
+   *
+   * The clock is held paused for the duration and restored afterwards; the
+   * scenario runner keeps it paused for the whole run so nothing moves between
+   * a scenario's calls.
+   */
+  async simulate(seconds: number, stepsPerFrame = 6): Promise<void> {
+    const clock = this.g.clock;
+    const wasPaused = clock.paused;
+    clock.paused = true;
+    let left = Math.max(0, Math.round(seconds * 60));
+    while (left > 0) {
+      const n = Math.min(stepsPerFrame, left);
+      const target = clock.tick + n;
+      clock.stepOnce(n);
+      left -= n;
+      // Forced steps are taken by the next game tick; wait until it has
+      // actually happened rather than assuming rAF ordering.
+      while (clock.tick < target) await nextFrame();
     }
-    this.g.clock.paused = wasPaused;
+    clock.paused = wasPaused;
+  }
+
+  /** Render N frames with the clock paused and no fixed step. Used to prove an
+   *  input edge survives frames that run no simulation. */
+  async idleFrames(n: number): Promise<void> {
+    const clock = this.g.clock;
+    const wasPaused = clock.paused;
+    clock.paused = true;
+    for (let i = 0; i < n; i++) await nextFrame();
+    clock.paused = wasPaused;
   }
 
   input(patch: Partial<InputFrame> | null): void {
@@ -212,6 +243,12 @@ export class DebugAPI {
 
   dumpLogs(): string[] { return this.logs.slice(); }
   clearLogs(): void { this.logs.length = 0; }
+}
+
+/** Resolves once the game loop has run a frame past the current one, so a
+ *  forced step queued now has definitely been taken. */
+function nextFrame(): Promise<void> {
+  return new Promise<void>((r) => requestAnimationFrame(() => r()));
 }
 
 function v3(v: THREE.Vector3): [number, number, number] {

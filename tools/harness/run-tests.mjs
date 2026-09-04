@@ -41,6 +41,15 @@ function makeCtx(name) {
 /** Extra helpers layered on the raw driver, shared by every scenario. */
 function enrich(g) {
   return Object.assign(g, {
+    /**
+     * Scenarios advance SIMULATED time, never wall-clock time. The game clock
+     * is paused for the whole run and every wait forces an exact number of
+     * fixed steps, so a check that says "within 3.6 s" means 216 steps whether
+     * the harness renders at 320x180 or 1920x1080, on a fast machine or a
+     * busy one. Wall-clock waits made the suite a fill-rate benchmark: an art
+     * pass that touched no gameplay code failed three physics scenarios.
+     */
+    wait: (seconds) => g.simulate(seconds),
     /** Hold a synthetic input for `seconds` of real time, then clear it. */
     async hold(patch, seconds) {
       await g.input(patch);
@@ -93,6 +102,10 @@ function enrich(g) {
 const results = await withGame(async (raw) => {
   const g = enrich(raw);
   const out = [];
+  // Hold the clock for the entire run: see `wait` above. Frames still render
+  // (the UI, camera and viewmodel keep updating), the world only moves when a
+  // scenario asks it to.
+  await g.pause(true);
   for (const file of chosen) {
     const mod = await import(pathToFileURL(path.join(DIR, file)).href);
     const name = mod.name ?? file.replace(/\.mjs$/, '');
@@ -108,7 +121,18 @@ const results = await withGame(async (raw) => {
     out.push({ name, ctx, error, ms: Date.now() - t0 });
   }
   return out;
-}, { width: 960, height: 540, headless: true, quiet: true });
+// The window size is a COST, not a calibration.
+//
+// Scenarios advance the world in forced fixed steps (see `wait` in enrich),
+// so what the harness renders no longer decides how much simulation a check
+// gets: a 34 m drop is 216 steps at any resolution. Render size only sets how
+// long the run takes, because every forced step is still followed by a frame.
+// Keep the 16:9 aspect — the startup scenario asserts on horizontal FOV, which
+// is derived from it — and keep it small, because nothing here looks at pixels
+// except the startup scenario's canvas classification, which is resolution
+// independent. The visual harnesses (tour, route, startup-check) keep their
+// own, much larger sizes; they are the ones that actually look at the frame.
+}, { width: 320, height: 180, headless: true, quiet: true });
 
 let failed = 0;
 for (const r of results) {

@@ -20,6 +20,27 @@ export interface FrameStats {
 }
 
 /**
+ * Vertical field of view for gameplay, in degrees.
+ *
+ * three.js `fov` is VERTICAL, which is not the number games quote. At 16:9 this
+ * works out at 2·atan(tan(fov/2)·16/9) horizontally:
+ *
+ *   76 vertical -> 108.5 horizontal   (fisheye; the island read as tiny and
+ *                                      distant, and the sky dominated the frame)
+ *   68 vertical ->  99.9 horizontal   (wide, still comfortable)
+ *
+ * 68 keeps the horizontal FOV inside the band modern first-person games use
+ * while leaving plenty of peripheral vision for a game where large objects
+ * arrive from off-screen. Ultrawide displays get MORE horizontal FOV from the
+ * same value, which is the Hor+ behaviour players expect.
+ */
+export const BASE_FOV = 68;
+
+/** The viewmodel camera is slightly tighter than the world camera, so tools do
+ *  not stretch at the frame edges. */
+export const VIEWMODEL_FOV_SCALE = 0.86;
+
+/**
  * Owns the WebGL renderer, the main scene graph root, camera and sun.
  * Also provides numeric frame statistics, so automated visual checks can triage
  * hundreds of frames without anyone having to look at hundreds of images.
@@ -36,11 +57,11 @@ export class Renderer {
   /** Half-extent of the shadow ortho box; smaller = crisper shadows. */
   shadowRadius = 56;
   private shadowTarget = new THREE.Vector3();
-  private baseFov = 76;
+  private baseFov = BASE_FOV;
   private fovOffset = 0;
   /** Separate scene for first-person tool models; see enableViewmodel(). */
   viewScene = new THREE.Scene();
-  viewCamera = new THREE.PerspectiveCamera(58, 16 / 9, 0.01, 6);
+  viewCamera = new THREE.PerspectiveCamera(BASE_FOV * VIEWMODEL_FOV_SCALE, 16 / 9, 0.01, 6);
   private viewmodelOn = false;
   private statsTarget: THREE.WebGLRenderTarget | null = null;
   private statsBuf: Uint8Array | null = null;
@@ -58,7 +79,12 @@ export class Renderer {
     });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 0.98;
+    // A touch brighter. The island gained a lot of foliage in the art pass and
+    // foliage is dark: measured, mean frame luminance at the spawn fell from
+    // 0.37 to 0.32 with nothing about the lighting changed. This puts the
+    // exposure back where the art direction wants it without lifting the
+    // shadows, which is what a fill light would have done.
+    this.renderer.toneMappingExposure = 1.06;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.setClearColor(Palette.skyHorizon, 1);
@@ -66,7 +92,13 @@ export class Renderer {
     this.camera = new THREE.PerspectiveCamera(this.baseFov, 16 / 9, 0.12, 3000);
     this.camera.position.set(0, 3, 0);
 
-    this.fog = new THREE.FogExp2(Palette.fog.getHex(), 0.0022);
+    // Enough haze that a headland at 200 m sits behind one at 80 m. At 0.0022
+    // the island had no aerial perspective at all and every distance read as
+    // the same distance, which is most of why it looked like a diorama.
+    // A touch more aerial perspective than the first pass: at 0.0040 the far
+    // ridge and the near orchard were the same saturation and the island read
+    // as one plane. Still light enough that the King Melon stays a landmark.
+    this.fog = new THREE.FogExp2(Palette.fog.getHex(), 0.0047);
     this.scene.fog = this.fog;
     this.scene.add(this.sky.mesh);
 
@@ -81,7 +113,9 @@ export class Renderer {
     this.scene.add(this.sun);
     this.scene.add(this.sun.target);
 
-    this.hemi = new THREE.HemisphereLight(Palette.skyHorizon, Palette.grassDark, 0.30);
+    // Less sky fill. The shadows were being lifted almost flat by it, and
+    // "readable soft shadows" is the difference between forms and flat colour.
+    this.hemi = new THREE.HemisphereLight(Palette.skyHorizon, Palette.grassDark, 0.22);
     this.scene.add(this.hemi);
 
     // A lower sun. At 58 degrees the shadows were so short that the island
@@ -167,13 +201,24 @@ export class Renderer {
     // Keep the sky sphere centred on the camera and large enough to enclose it.
     this.sky.mesh.position.copy(this.camera.position);
     this.sky.mesh.scale.setScalar(this.camera.far * 0.5);
+    // Cloud drift runs off the render clock, not the simulation clock, so the
+    // sky keeps moving while the harness has the game paused for a capture.
+    this.sky.setTime(performance.now() / 1000);
     this.renderer.render(this.scene, this.camera);
     if (this.viewmodelOn && this.viewScene.children.length > 2) {
+      // autoClear is ON by default, and `render()` honours it on EVERY call —
+      // so a second pass silently wipes the colour buffer and the world with
+      // it, leaving the clear colour (a pale sky blue) behind the tool. That is
+      // exactly what shipped: 92% of the opening frame was the clear colour,
+      // and `frameStats` never caught it because it re-renders the scene into
+      // its own target. Clear depth only, keep the pixels.
+      this.renderer.autoClear = false;
       this.renderer.clearDepth();
       this.viewCamera.aspect = this.camera.aspect;
-      this.viewCamera.fov = this.camera.fov * 0.86;
+      this.viewCamera.fov = this.camera.fov * VIEWMODEL_FOV_SCALE;
       this.viewCamera.updateProjectionMatrix();
       this.renderer.render(this.viewScene, this.viewCamera);
+      this.renderer.autoClear = true;
     }
     // Snapshot before anything else (frameStats, for one) touches the counters.
     const i = this.renderer.info;

@@ -13,8 +13,16 @@ export async function run(g, t) {
     'apple', 'attached');
   t.ok(apple, 'found an apple on it');
 
-  // --- stand under it and look up
-  await g.standAt(apple.pos[0] + 1.1, apple.pos[2] + 1.1, 0, 0.4);
+  // --- stand under it and look up. Stand on the OUTSIDE of the fruit, away
+  // from the trunk: a fixed offset put the player inside the trunk collider
+  // whenever the nearest apple happened to hang on the far side of the tree.
+  const outward = (f, dist) => {
+    const dx = f.pos[0] - tree.pos[0], dz = f.pos[2] - tree.pos[2];
+    const d = Math.hypot(dx, dz) || 1;
+    return [f.pos[0] + (dx / d) * dist, f.pos[2] + (dz / d) * dist];
+  };
+  const [sx, sz] = outward(apple, 1.5);
+  await g.standAt(sx, sz, 0, 0.4);
   await g.faceTo(apple.pos[0], apple.pos[1], apple.pos[2]);
   await g.wait(0.3);
 
@@ -40,7 +48,8 @@ export async function run(g, t) {
     const nxt = await g.call('fruit.nearest', tree.pos[0], tree.pos[1] + 3, tree.pos[2],
       'apple', 'attached');
     if (!nxt || nxt.dist > 7) break;
-    await g.standAt(nxt.pos[0] + 1.0, nxt.pos[2] + 1.0, 0, 0.4);
+    const [nx, nz] = outward(nxt, 1.4);
+    await g.standAt(nx, nz, 0, 0.4);
     await g.faceTo(nxt.pos[0], nxt.pos[1], nxt.pos[2]);
     await g.wait(0.18);
     const before = (await g.state()).interaction;
