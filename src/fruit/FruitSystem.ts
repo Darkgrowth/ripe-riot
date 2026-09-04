@@ -176,6 +176,19 @@ export class FruitSystem implements System {
         travelled: +f.travelled.toFixed(2), peak: +f.peakHeight.toFixed(2),
       };
     });
+    // Inflation is normally a race against a two-thirds-of-a-second animation,
+    // which is not a thing a test can stand still inside. This pins a Puff
+    // Melon at an exact size so the carry rules can be checked at the boundary
+    // rather than near it.
+    d.addAction('fruit.inflate', (id: number, v: number, keepGrowing = false) => {
+      const f = this.fruits.get(id);
+      if (!f) return null;
+      f.inflateTarget = Math.max(f.inflateTarget, v);
+      f.setInflation(v);
+      f.inflating = keepGrowing;
+      return { inflate: +f.inflate.toFixed(3), diameter: +f.diameter.toFixed(3),
+        mass: +f.mass.toFixed(2) };
+    });
     d.addAction('fruit.list', (state?: string) => {
       const out: unknown[] = [];
       for (const f of this.fruits.values()) {

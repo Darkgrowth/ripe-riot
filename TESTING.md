@@ -17,6 +17,8 @@ node tools/harness/feel.mjs          # numbers for how each interaction feels
 node tools/harness/feel.mjs throw hit               # by section
 node tools/harness/multiplayer.mjs   # two real clients over a real transport
 node tools/harness/startup-check.mjs # what the player sees when they press play
+node tools/harness/carry-check.mjs   # how much of the frame a carried fruit takes
+node tools/harness/hud-check.mjs     # the DOM overlay, which no canvas shot contains
 node tools/harness/tour.mjs          # one contact sheet of every landmark
 node tools/harness/route.mjs         # the six first-person views of the main route
 node tools/harness/detail.mjs        # three close-range frames: deck, shop, fruit
@@ -122,9 +124,40 @@ visible by reading the code that produced them.
 | `tools` | shaker drops fruit, net catches mid-air and awards the stunt, ground nets, rope gun restrains, air cannon launches fruit and shoves the player, self-launch |
 | `progression` | discovery, records, rare variants, shop purchase and tier gating, Puff Melon inflation and drift, Vinebomb launch |
 | `legendary-king-melon` | four vines hold it still, gating on the rope gun, tethering, each cut, the 20 m drop, recovery to the pad, payout, and resetting for another attempt |
+| `carry` | the carry classification table; the local copy leaving the world batch when picked up and returning when dropped; the tool stowing itself while the hands are full; a Puff Melon inflating from medium to large in hand and then leaving by itself past 1.10 m; oversized fruit refused, shoved, and prompted for; the aim highlight lighting the right instance |
 
-Current status: **8/8 scenarios, 203 checks** plus **11/11 multiplayer checks**.
+Current status: **9/9 scenarios, 246 checks** plus **11/11 multiplayer checks**.
 Typecheck and production build are clean.
+
+## The camera is a thing under test
+
+Every scenario in the table above measures the WORLD. That is most of the game
+and it is not all of it, and the gap is not academic: the worst bug found in the
+project so far — carried fruit filling the screen, with the tool viewmodel drawn
+on top of it — passed all 203 checks, because every one of them asked the
+simulation what was true rather than asking the frame what was visible.
+
+Two harnesses now ask the frame:
+
+- `startup-check.mjs` — the pose the game boots into, and the framing of every
+  tool at five aspect ratios.
+- `carry-check.mjs` — the framing of every carry state. It projects the carry
+  proxy's vertices through the real view camera and reports the fruit's screen
+  height and where its top edge falls relative to the crosshair, then asserts
+  those. It also samples the escaping Puff Melon's angular size in degrees of
+  FOV, which is how "it leaves rather than loitering in front of the lens"
+  becomes a number.
+- `hud-check.mjs` — the DOM overlay. Every other capture in the harness reads
+  the WebGL canvas directly, which is correct for the world and completely blind
+  to the HUD: the carry readout, the prompt, the slots and the toasts are HTML
+  and appeared in no screenshot the project had ever taken. This asserts on the
+  overlay's markup and composites it onto the canvas so it can be looked at.
+
+Both write a contact sheet, and neither needs anyone to open it unless the
+numbers look wrong. Two things in this pass were only findable by looking:
+the grip hands were behind the fruit rather than on it, and the escaping melon
+parked itself in the frame. Both then got a number attached so they cannot come
+back silently.
 
 ## The harness window size is a cost, not a calibration
 

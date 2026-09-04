@@ -97,6 +97,10 @@ html, body {
   padding: 6px 14px; border-radius: 99px; letter-spacing: 0.4px;
 }
 .carry .q { font-weight: 800; margin-left: 8px; }
+/* The verbs sit back from the noun: what you are holding is the information,
+   how to put it down is the reminder. */
+.carry .keys { opacity: 0.66; font-size: 12px; }
+.carry .keys b { color: var(--gold); font-weight: 800; }
 /* What you are holding just lost a quality tier. */
 .carry.knock { animation: carryKnock 0.42s ease; }
 @keyframes carryKnock {
@@ -191,6 +195,24 @@ html, body {
   opacity: 0; transition: opacity 0.2s ease;
 }
 .hurt.on { opacity: 1; }
+/* The same wash, turned gold: a discovery is the one moment in the loop worth
+   lighting the whole screen for. Brighter in the middle than the hurt vignette,
+   because this one is meant to arrive rather than to warn. */
+.hurt.good {
+  background: radial-gradient(circle, rgba(255, 214, 110, 0.30) 0%, rgba(255, 176, 40, 0.30) 100%);
+  transition: opacity 0.09s ease;
+}
+
+/* A discovery banner lands harder and clears sooner than an ordinary one. */
+.celebrate.discovery .big, .celebrate.legendary .big {
+  font-size: 56px;
+  animation: popBig 0.5s cubic-bezier(0.15, 1.9, 0.35, 1);
+}
+@keyframes popBig {
+  0%   { opacity: 0; transform: scale(0.55) translateY(20px); }
+  55%  { opacity: 1; transform: scale(1.10); }
+  100% { opacity: 1; transform: none; }
+}
 
 .state-banner {
   position: absolute; left: 50%; top: 44%; transform: translateX(-50%);

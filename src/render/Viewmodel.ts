@@ -131,6 +131,19 @@ function hand(x: number, y: number, z: number, roll = 0, inward = 1): THREE.Buff
   return parts;
 }
 
+/**
+ * A single hand on its own, for the carry rig.
+ *
+ * The tool models bake their hands into one merged mesh because a tool never
+ * changes shape. A carried fruit does — a Puff Melon triples in size in under a
+ * second — so the hands have to be separate objects the carry rig can move
+ * apart. Same geometry, same material, so a hand on an apple and a hand on a
+ * shaker are visibly the same pair of gloves.
+ */
+export function gripHand(material: THREE.Material, inward: 1 | -1): THREE.Mesh {
+  return assemble(hand(0, 0, 0, 0, inward), material, `grip${inward > 0 ? 'L' : 'R'}`);
+}
+
 function assemble(parts: THREE.BufferGeometry[], material: THREE.Material, name: string): THREE.Mesh {
   const merged = mergeGeometries(parts, false);
   if (!merged) throw new Error(`viewmodel merge failed: ${name}`);

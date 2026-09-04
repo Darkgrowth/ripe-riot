@@ -92,7 +92,7 @@ export class TreeShaker extends Tool {
     const dropped = this.ctx.fruit.shake(hit.owner.id, 1.75, p.id);
     this.game.playerCamera.addShake(0.03, 0.45, 26);
     this.game.bus.emit('audio:sfx', { name: 'shake', position: hit.point });
-    this.game.bus.emit('tool:fired', { toolId: this.def.id });
+    this.game.bus.emit('tool:fired', { toolId: this.def.id, power: 1.15 });
     if (dropped > 0) {
       this.game.bus.emit('ui:toast', {
         text: `${dropped} came down`, kind: 'good', ms: 1600,
@@ -308,7 +308,7 @@ export class CatchNet extends Tool {
         this.flash = 1;
         this.game.playerCamera.addShake(clamp(0.006 + speed * 0.0016, 0.006, 0.03), 0.16, 30);
         this.game.playerCamera.addRecoil(0, -0.006 - Math.min(0.012, speed * 0.0009));
-        this.game.bus.emit('tool:fired', { toolId: this.def.id });
+        this.game.bus.emit('tool:fired', { toolId: this.def.id, power: clamp(0.3 + speed / 22, 0.3, 1.1) });
         if (speed > 8) {
           this.game.bus.emit('ui:toast', {
             text: 'CAUGHT', sub: `${f.displayName} at ${speed.toFixed(0)} m/s`, kind: 'good', ms: 1400,
@@ -370,7 +370,7 @@ export class RopeGun extends Tool {
       this.game.playerCamera.addShake(0.01 + k * 0.05, 0.22 + k * 0.2, 24);
       this.game.playerCamera.addRecoil((Math.random() - 0.5) * 0.02 * k, -0.03 * k);
       // Only a serious yank goes through the arms as well as the head.
-      if (k > 0.5) this.game.bus.emit('tool:fired', { toolId: this.def.id });
+      if (k > 0.5) this.game.bus.emit('tool:fired', { toolId: this.def.id, power: 0.5 + k * 0.9 });
     });
   }
 
@@ -414,7 +414,7 @@ export class RopeGun extends Tool {
     }
     this.game.playerCamera.addRecoil(0, 0.012);
     this.game.bus.emit('audio:sfx', { name: 'ropeFire', position: hit.point });
-    this.game.bus.emit('tool:fired', { toolId: this.def.id });
+    this.game.bus.emit('tool:fired', { toolId: this.def.id, power: 0.7 });
   }
 
   /**
@@ -577,7 +577,10 @@ export class AirCannon extends Tool {
     this.game.playerCamera.addRecoil(0, 0.05);
     this.punchFov(9, 0.26);
     this.game.bus.emit('audio:sfx', { name: 'cannon', volume: 0.9, pitch: 0.82 });
-    this.game.bus.emit('tool:fired', { toolId: this.def.id });
+    this.game.bus.emit('tool:fired', { toolId: this.def.id, power: 2.0 });
+    this.game.bus.emit('tool:blast', {
+      toolId: this.def.id, point: p.position.clone(), power: 1, radius: 4.0,
+    });
     this.game.physics.explode(p.position.clone(), 4.0, 5.5, 0.2);
   }
 
@@ -658,7 +661,13 @@ export class AirCannon extends Tool {
     this.game.bus.emit('audio:sfx', {
       name: 'cannon', volume: 0.55 + power * 0.45, pitch: 1.18 - power * 0.36,
     });
-    this.game.bus.emit('tool:fired', { toolId: this.def.id });
+    this.game.bus.emit('tool:fired', { toolId: this.def.id, power: 0.5 + power * 1.3 });
+    // Where the blast LANDED, which up to now the player could only infer from
+    // what happened to move. A $1450 cannon that leaves no mark on the world
+    // reads as a physics cheat rather than as a tool.
+    this.game.bus.emit('tool:blast', {
+      toolId: this.def.id, point: _v.clone(), power, radius,
+    });
     if (pushed.length > 2) {
       this.game.bus.emit('ui:toast', { text: `${pushed.length} objects airborne`, ms: 1500 });
     }

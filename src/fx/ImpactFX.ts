@@ -68,6 +68,7 @@ export class ImpactFX implements System {
     g.bus.on('player:ragdoll', () => this.dustRing(g.player.position, 14, 0.55));
     g.bus.on('vinebomb:launch', (p) => this.onVinebomb(p.fruitId, p.speed));
     g.bus.on('player:hit', (p) => this.bonk(p.momentum, p.fromAbove, p.point));
+    g.bus.on('tool:blast', (p) => this.blast(p.point, p.power, p.radius));
     g.bus.on('legendary:landed', (p) => this.onLegendaryLanding(p.position, p.speed));
 
     g.debug?.addProbe('fx', () => ({ alive: this.alive, spawned: this.spawned, enabled: this.enabled }));
@@ -231,6 +232,34 @@ export class ImpactFX implements System {
       q.gravity = 1.6; q.drag = 1.4; q.bounce = 0;
       q.spin = rand(-6, 6);
       q.flutter = rand(2, 5);
+    });
+  }
+
+  /**
+   * A tool put energy into a point in the air.
+   *
+   * Unlike `dustRing` this does NOT snap to the ground: an air cannon fired
+   * into a canopy delivers its blast eight metres up, and putting the dust at
+   * the player's feet tells them the opposite of what happened. The shell
+   * expands from the blast centre in every direction, so the size of the puff
+   * IS the size of the blast — the player can see the radius they paid for.
+   */
+  private blast(at: THREE.Vector3, power: number, radius: number): void {
+    const n = clamp(Math.round(14 + power * 26), 14, 44);
+    this.emit(n, at, (q) => {
+      mixInto(q, DUST, DUST_DARK, Math.random() * 0.65);
+      // A spherical shell, not a disc: the blast is a sphere and the particles
+      // should say so from any angle the player happens to be watching from.
+      const a = Math.random() * Math.PI * 2;
+      const c = rand(-1, 1);
+      const sn = Math.sqrt(Math.max(0, 1 - c * c));
+      const s = radius * rand(1.5, 2.6);
+      q.vx = Math.cos(a) * sn * s;
+      q.vz = Math.sin(a) * sn * s;
+      q.vy = c * s * 0.8 + 1.2;
+      q.size = rand(0.09, 0.2) * (0.8 + power * 0.6);
+      q.life = q.maxLife = rand(0.35, 0.7);
+      q.gravity = 3.5; q.drag = 3.4; q.bounce = 0;
     });
   }
 

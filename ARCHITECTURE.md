@@ -196,6 +196,43 @@ lateral placement is a fraction of the visible width rather than a fixed
 distance so it survives a narrow window, and the harness asserts the resulting
 percentages for every tool at five aspect ratios.
 
+**The world's idea of size and the camera's idea of size are allowed to
+disagree, in one direction only.** Carried fruit used to be placed in world
+space at its true radius, 0.85 m in front of the eye, and perspective decided
+the rest. That is honest and it is unusable: a 22 kg watermelon covered 62% of
+the frame height, and a Puff Melon — which triples in diameter in the two thirds
+of a second *after* it leaves the bush, i.e. while it is in your hands — reached
+a radius of 0.87 m at a hold distance of 0.85 m and literally contained the
+camera. Meanwhile the equipped tool went on drawing itself over the top of it in
+the depth-cleared viewmodel pass, so a bad frame was a melon, a basket, a rope
+gun and two unrelated gloves at once.
+
+The split is now explicit:
+
+- **The world copy is the truth.** True size, true position, true physics, and
+  it is what other players see you holding. Its hold distance grows with the
+  fruit's radius so it never intersects the person carrying it.
+- **The camera copy is a proxy** (`player/CarryViewmodel.ts`), drawn in the
+  viewmodel scene at a size chosen so that the fruit's TOP EDGE lands at a fixed
+  fraction of frame height — 34% for a small fruit, 40% for a heavy haul, all
+  well under the crosshair at 50%. Sizing from the top edge rather than the
+  centre is the trick: a bigger fruit then grows *downward* out of frame instead
+  of upward into the crosshair. Real size still shows through a compressed curve
+  (`screenHeightPctFor`), so an apple, a coconut and a watermelon are visibly
+  three different sizes; the curve is just capped.
+- The local player's world copy is suppressed from the instanced batch for the
+  one frame it is held (`FruitRenderer.hiddenId`) so the two never fight.
+
+`interaction/CarryRules.ts` owns the classification — small / medium / large /
+oversized, gated on BOTH true diameter and true mass — and it is a pure function
+so it can be checked exhaustively without spawning anything. Above the limit
+(1.10 m across or 60 kg) a fruit cannot be hand-carried at all: picking it up is
+refused with a reason, aiming at it offers a shove instead, and anything that
+grows past the limit *while held* is handed back to the world, upward and away,
+with the buoyancy clock restarted so it genuinely leaves rather than hanging in
+front of the lens. Big fruit is a physics problem in the world, never a
+visibility problem in the camera.
+
 **Weight is a spring, not a number in the HUD.** A carried fruit is drawn at the
 hand point plus an offset that a mass-softened spring pulls back to zero, and
 the hands moving is what displaces it. Stiffness falls with mass, so an apple

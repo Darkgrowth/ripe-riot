@@ -65,10 +65,20 @@ export class UIManager implements System {
 
     g.bus.on('money:changed', (p) => this.onMoney(p.money, p.delta));
     g.bus.on('ui:toast', (p) => this.toast(p.text, p.sub, p.kind, p.ms));
-    g.bus.on('ui:celebrate', (p) => this.celebrate(p.title, p.sub));
+    g.bus.on('ui:celebrate', (p) => this.celebrate(p.title, p.sub, p.kind));
     g.bus.on('ui:prompt', (p) => this.setPrompt(p.text));
     g.bus.on('stunt:awarded', (p) => this.stunt(p.label, p.multiplier));
-    g.bus.on('book:discovered', (p) => this.celebrate('NEW FRUIT', p.species.toUpperCase()));
+    // A discovery is the strongest single moment in the loop and it used to be
+    // the quietest: two handlers wrote the same banner over each other (this one
+    // with the raw species id), nothing made a sound, and nothing moved. The
+    // banner comes from the book's own ui:celebrate; this adds the parts a
+    // player feels — a chime, a gold flash and a kick.
+    g.bus.on('book:discovered', () => {
+      this.flash('good', 340);
+      g.bus.emit('audio:sfx', { name: 'discovery', volume: 0.9 });
+      g.playerCamera.addRecoil(0, 0.02);
+      g.playerCamera.addShake(0.012, 0.3, 22);
+    });
     g.bus.on('player:ragdoll', () => this.flashHurt(260));
     g.bus.on('player:hit', (p) => this.flashHurt(p.momentum > 140 ? 200 : 130));
     // Only your own accidents are worth interrupting for: a melon bursting
@@ -151,10 +161,14 @@ export class UIManager implements System {
     }
   }
 
-  celebrate(title: string, sub?: string): void {
+  celebrate(title: string, sub?: string, kind = 'info'): void {
     this.els.celebrate.innerHTML = `<div class="big">${title}</div>${sub ? `<div class="sub">${sub}</div>` : ''}`;
-    this.els.celebrate.classList.remove('out');
-    this.celebrateTimer = 2.6;
+    // Reassigning className both applies the kind and clears `out`, so a second
+    // discovery inside the fade of the first still plays its entry animation.
+    this.els.celebrate.className = `celebrate ${kind}`;
+    // Louder AND shorter. A banner that hangs for nearly three seconds stops
+    // being an event and starts being UI you are waiting out.
+    this.celebrateTimer = kind === 'discovery' || kind === 'legendary' ? 1.9 : 2.6;
   }
 
   /**
@@ -211,9 +225,16 @@ export class UIManager implements System {
   }
   private bannerTimer = 0;
 
-  private flashHurt(ms = 260): void {
-    this.els.hurt.classList.add('on');
-    setTimeout(() => this.els.hurt.classList.remove('on'), ms);
+  private flashHurt(ms = 260): void { this.flash('hurt', ms); }
+
+  /** A brief full-screen wash. 'hurt' is red at the edges; 'good' is gold. */
+  private flash(kind: 'hurt' | 'good', ms = 260): void {
+    const el = this.els.hurt;
+    el.classList.remove('on', 'good');
+    void el.offsetWidth;                    // restart the transition
+    el.classList.add('on');
+    if (kind === 'good') el.classList.add('good');
+    setTimeout(() => el.classList.remove('on', 'good'), ms);
   }
 
   /** Is that fruit in the player's hands, or close enough to be theirs? */
@@ -295,7 +316,13 @@ export class UIManager implements System {
     const parts: string[] = [];
     if (held) {
       const f = held.fruit;
-      parts.push(`${f.displayName} <span class="q">${f.quality}</span> · ${f.mass.toFixed(1)} kg`);
+      const grip = held.cls === 'small' ? '' : ' · <b>both hands</b>';
+      parts.push(`${f.displayName} <span class="q">${f.quality}</span> · ${f.mass.toFixed(1)} kg${grip}`);
+      // How to put it down. Picking things up was always discoverable — the
+      // look prompt says so — and putting them down never was: Q and the stow
+      // click existed from the first build and appeared nowhere on screen.
+      const canStow = f.mass <= basket.maxItemMass && basket.items.length < basket.capacity;
+      parts.push(`<span class="keys">${canStow ? '<b>RMB</b> basket · ' : ''}<b>LMB</b> throw · <b>Q</b> drop</span>`);
     }
     if (basket.items.length) {
       parts.push(`🧺 ${basket.items.length}/${basket.capacity} · $${inter.basketValue()}`);

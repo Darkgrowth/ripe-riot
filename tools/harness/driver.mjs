@@ -182,6 +182,65 @@ async function attachPage(browser, ctx, quiet) {
       writeFileSync(file, Buffer.from(data.split(',')[1], 'base64'));
       return file;
     },
+    /**
+     * Screen-space extent of a group in the VIEWMODEL scene, through the real
+     * view camera, as percentages of the visible frame.
+     *
+     * This is the instrument the whole first-person framing argument rests on.
+     * "The melon is too big" is an opinion; "the melon's top edge is at 71% of
+     * frame height, 21 points above the crosshair" is a number that can fail a
+     * build. `topPct` and `bottomPct` are measured UP FROM THE BOTTOM edge, so
+     * the crosshair sits at 50 and anything below that is out of the way.
+     */
+    viewExtent: (prefix) => page.evaluate((prefix) => {
+      const r = window.__GAME.renderer;
+      const V3 = Object.getPrototypeOf(r.camera.position).constructor;
+      // Search the whole view scene, not just its top level: the cap that
+      // matters is on the FRUIT, and the hands deliberately run off the bottom
+      // edge of the frame the way every viewmodel's forearms do.
+      let group = null;
+      r.viewScene.traverse((o) => {
+        if (!group && o.name && o.name.startsWith(prefix)) group = o;
+      });
+      if (!group) return { error: `no ${prefix} in view scene` };
+      group.updateMatrixWorld(true);
+      const cam = r.viewCamera;
+      cam.updateMatrixWorld(true);
+      let minX = 9, maxX = -9, minY = 9, maxY = -9, near = 9, verts = 0;
+      group.traverse((o) => {
+        if (!o.isMesh || !o.visible) return;
+        let p = o;
+        while (p) { if (!p.visible) return; p = p.parent; }
+        const pos = o.geometry.getAttribute('position');
+        const v = new V3();
+        for (let i = 0; i < pos.count; i++) {
+          v.fromBufferAttribute(pos, i);
+          o.localToWorld(v);
+          near = Math.min(near, -v.z);
+          v.project(cam);
+          minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
+          minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
+          verts++;
+        }
+      });
+      if (!verts) return { visible: false, name: group.name };
+      const clip = (v) => Math.max(-1, Math.min(1, v));
+      const pct = (ndc) => ((clip(ndc) + 1) / 2) * 100;
+      return {
+        visible: group.visible,
+        name: group.name,
+        heightPct: +(pct(maxY) - pct(minY)).toFixed(1),
+        widthPct: +(pct(maxX) - pct(minX)).toFixed(1),
+        topPct: +pct(maxY).toFixed(1),
+        bottomPct: +pct(minY).toFixed(1),
+        leftPct: +pct(minX).toFixed(1),
+        rightPct: +pct(maxX).toFixed(1),
+        offRight: maxX > 1,
+        offLeft: minX < -1,
+        nearest: +near.toFixed(3),
+        camNear: cam.near,
+      };
+    }, prefix),
     close: async () => { await browser.close(); },
     closePage: async () => { await page.close(); },
   };

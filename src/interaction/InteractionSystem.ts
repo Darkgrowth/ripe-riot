@@ -6,12 +6,16 @@ import type { Sunpatch } from '@/world/Sunpatch';
 import type { Economy } from '@/systems/Economy';
 import { clamp, damp } from '@/core/MathUtils';
 import { QueryMask } from '@/physics/Layers';
+import { PLAYER_RADIUS } from '@/player/PlayerController';
+import { canHandCarry, carryClassFor, refusalReason, type CarryClass } from './CarryRules';
 
 /** Anything the player can carry in their hands. Fruit for now; crates later. */
 export interface Carried {
   fruit: Fruit;
   /** Two-handed haul: slower, held low, cannot be stowed. */
   heavy: boolean;
+  /** Presentation class, refreshed every step because fruit can change size. */
+  cls: CarryClass;
 }
 
 export interface BasketState {
@@ -51,7 +55,7 @@ export class InteractionSystem implements System {
 
   /** What the player is currently looking at, if anything. */
   target: Fruit | null = null;
-  targetKind: 'fruit' | 'sell' | 'shop' | 'shake' | null = null;
+  targetKind: 'fruit' | 'sell' | 'shop' | 'shake' | 'shove' | null = null;
   private targetPlantId = -1;
   promptText: string | null = null;
 
@@ -62,6 +66,12 @@ export class InteractionSystem implements System {
   private handLag = new THREE.Vector3();
   private handLagVel = new THREE.Vector3();
   private lastHold = new THREE.Vector3();
+  /**
+   * The same lag resolved into the camera's own axes (right / up / forward),
+   * which is what the first-person presentation needs. The world spring stays
+   * the authority on weight; this is only a change of basis.
+   */
+  readonly handLagView = new THREE.Vector3();
   /** 1 the instant something is picked, decaying: widens the swing cap so
    *  the fruit springs off the branch rather than teleporting to the hand. */
   private snap = 0;
@@ -69,6 +79,8 @@ export class InteractionSystem implements System {
   throwCharge = 0;
   private nearSellPad = false;
   private sellCooldown = 0;
+  /** Why the last pickup was refused, for the probe and the harness. */
+  lastRefusal: string | null = null;
   /** Free fruit resting on the sell pad, with the time they arrived. */
   private padFruit = new Map<number, number>();
 
@@ -82,7 +94,10 @@ export class InteractionSystem implements System {
       carrying: this.carried ? {
         id: this.carried.fruit.id, species: this.carried.fruit.species,
         heavy: this.carried.heavy, mass: +this.carried.fruit.mass.toFixed(1),
+        cls: this.carried.cls, diameter: +this.carried.fruit.diameter.toFixed(2),
       } : null,
+      carryClass: this.carryClass,
+      lastRefusal: this.lastRefusal,
       basket: this.basket.items.length,
       basketMass: +this.basket.massCarried.toFixed(1),
       basketValue: this.basketValue(),
@@ -94,6 +109,16 @@ export class InteractionSystem implements System {
     g.debug?.addAction('interact', () => this.tryInteract());
     g.debug?.addAction('throw', (power = 1) => this.throwHeld(power));
     g.debug?.addAction('drop', () => this.dropHeld());
+    g.debug?.addAction('carry.class', (diameter: number, mass: number) =>
+      carryClassFor(diameter, mass));
+    g.debug?.addAction('pickup', (id: number) => {
+      const f = this.fruitSys.get(id);
+      return f ? this.pickUp(f) : false;
+    });
+    g.debug?.addAction('shove', (id?: number) => {
+      const f = id === undefined ? this.target : this.fruitSys.get(id);
+      return f ? this.shove(f) : false;
+    });
     g.debug?.addAction('sell', () => this.sellAll());
     g.debug?.addAction('basket.list', () => this.basket.items.map((f) => ({
       id: f.id, species: f.species, quality: f.quality, value: f.value(),
@@ -101,10 +126,16 @@ export class InteractionSystem implements System {
     g.debug?.addAction('basket.clear', () => { this.basket.items.length = 0; this.basket.massCarried = 0; });
   }
 
+  /** Presentation class of whatever is in the player's hands right now. */
+  get carryClass(): CarryClass {
+    return this.carried?.cls ?? 'small';
+  }
+
   // ---- per-frame ----------------------------------------------------------
   fixedStep(dt: number): void {
     const input = this.g.input.frame;
     this.sellCooldown = Math.max(0, this.sellCooldown - dt);
+    this.refreshCarryClass();
     this.updateTarget();
     this.updateSellPad(dt);
 
@@ -127,6 +158,119 @@ export class InteractionSystem implements System {
     this.g.bus.emit('ui:prompt', { text: this.promptText });
   }
 
+  /**
+   * Fruit does not stay the size it was when you picked it up.
+   *
+   * A Puff Melon triples in diameter in about two thirds of a second, and it
+   * starts doing that the instant it leaves the bush — which is to say, in your
+   * hands. The old code had no opinion about this at all: the fruit simply kept
+   * growing at the hold point until a 1.7 m sphere contained the camera.
+   *
+   * One guard, checked every step, covers every way a carried thing can change
+   * size — inflation now, and whatever grows or shrinks later — rather than one
+   * special case per trait.
+   */
+  private refreshCarryClass(): void {
+    const c = this.carried;
+    // The local player's carried fruit is drawn by the first-person rig, not by
+    // the world batch. Remote clients still get it at true size and position.
+    this.fruitSys.renderer.hiddenId = c ? c.fruit.id : -1;
+    if (!c) return;
+    const f = c.fruit;
+    if (!canHandCarry(f.diameter, f.mass)) { this.escapeFromHands(f); return; }
+    c.cls = carryClassFor(f.diameter, f.mass);
+  }
+
+  /**
+   * Hand it back to the world, safely.
+   *
+   * "Safely" is doing real work here: the fruit was being drawn 0.7 m from the
+   * eye and is now, say, 1.7 m across, so releasing it in place would spawn a
+   * body overlapping the player capsule and the solver would answer by firing
+   * one of them across the island. It goes out in front, above the ground, with
+   * a shove — which also happens to be the funniest reading of the event.
+   */
+  private escapeFromHands(f: Fruit): void {
+    const p = this.g.player;
+    p.lookDir(_dir);
+    _dir.y = 0;
+    if (_dir.lengthSq() < 1e-6) _dir.set(0, 0, -1);
+    _dir.normalize();
+    // Generous: a body that spawns even slightly inside the player capsule is
+    // resolved by the solver, and the solver's idea of "resolved" for a 1.7 m
+    // ball against a person is to fire one of them across the island.
+    const clearance = PLAYER_RADIUS + f.radius + 0.9;
+    f.position.copy(p.eyePosition).addScaledVector(_dir, clearance);
+    const ground = this.world.terrain.height(f.position.x, f.position.z) + f.radius + 0.08;
+    if (f.position.y < ground) f.position.y = ground;
+    // UP, hard, and away. Handing a 1.1 m ball back to the world 1.3 m from the
+    // eye and letting it drift is just the original bug with extra steps: it
+    // fills the frame for as long as it takes to fall. It has to LEAVE, and a
+    // balloon bursting upward out of your arms is also the funnier reading.
+    _v.copy(p.velocity).multiplyScalar(0.5).addScaledVector(_dir, 3.0);
+    _v.y += 6.5;
+    // Restart the escape clock so the buoyancy trait gives it the full 2.4 g of
+    // lift it gives a fruit that has just come off the bush. Without this a
+    // melon that spent ten seconds in your hands escapes with no escape in it.
+    f.detachedAt = this.g.clock.elapsed;
+    f.release(_v);
+    // Newton gets a say: shoving a melon off your chest shoves you too.
+    p.velocity.addScaledVector(_dir, -1.6);
+    this.carried = null;
+    this.throwCharge = 0;
+    this.handLag.set(0, 0, 0);
+    this.handLagVel.set(0, 0, 0);
+    this.handLagView.set(0, 0, 0);
+    this.fruitSys.renderer.hiddenId = -1;
+    this.g.playerCamera.addRecoil(0, -0.03);
+    this.g.playerCamera.addShake(0.02, 0.4, 22);
+    this.g.bus.emit('audio:sfx', {
+      name: 'throw', volume: 0.55, pitch: 0.7, position: f.position.clone(),
+    });
+    this.g.bus.emit('ui:toast', {
+      text: `${f.displayName} got away from you`,
+      sub: `${f.diameter.toFixed(1)} m across — rope it, net it, or shove it home`,
+      kind: 'bad', ms: 2600,
+    });
+  }
+
+  /**
+   * Push something you cannot lift.
+   *
+   * The recovery path for oversized fruit has to exist or "you cannot pick that
+   * up" is just a wall. The impulse lands ABOVE the centre, so a round fruit
+   * topples into a roll rather than skating, and it scales down with mass so a
+   * 370 kg melon takes real work while an inflated Puff Melon goes bounding.
+   */
+  shove(f: Fruit): boolean {
+    if (f.state === 'attached') this.fruitSys.detach(f, 'shove', this.g.player.id);
+    if (f.state !== 'free' || !f.body) return false;
+    const p = this.g.player;
+    p.lookDir(_dir);
+    _dir.y = clamp(_dir.y, -0.25, 0.12);
+    _dir.normalize();
+    // A person puts a bounded amount of push into a shove; heavier things just
+    // move less. sqrt keeps a 370 kg melon budgeable rather than immovable.
+    const power = clamp(26 * Math.sqrt(Math.max(1, f.mass)) * 0.55, 18, 420);
+    _v.copy(_dir).multiplyScalar(power);
+    _v2.copy(f.position);
+    _v2.y += f.radius * 0.55;
+    _v2.addScaledVector(_dir, -f.radius * 0.6);
+    f.body.applyImpulseAtPoint({ x: _v.x, y: _v.y, z: _v.z },
+      { x: _v2.x, y: _v2.y, z: _v2.z }, true);
+    f.lastToucherId = p.id;
+    this.g.playerCamera.addRecoil(0, -0.014);
+    this.g.playerCamera.addShake(0.010, 0.22, 20);
+    this.g.bus.emit('audio:sfx', {
+      name: 'thud', volume: 0.42, pitch: clamp(1.2 / Math.pow(Math.max(0.5, f.mass), 0.22), 0.5, 1.2),
+      position: f.position.clone(),
+    });
+    this.g.bus.emit('fruit:grabbed', {
+      fruitId: f.id, species: f.species, mass: f.mass, heavy: true,
+    });
+    return true;
+  }
+
   // ---- targeting ----------------------------------------------------------
   private updateTarget(): void {
     const p = this.g.player;
@@ -135,6 +279,7 @@ export class InteractionSystem implements System {
     this.target = null;
     this.targetKind = null;
     this.targetPlantId = -1;
+    this.fruitSys.renderer.highlightId = -1;
 
     // Selling wins over picking when you are standing on the pad with goods.
     if (this.nearSellPad && (this.basket.items.length > 0 || this.carried)) {
@@ -145,12 +290,24 @@ export class InteractionSystem implements System {
       return;
     }
 
-    const f = this.fruitSys.lookTarget(_eye, _dir, REACH, 13);
-    if (f && (f.state === 'attached' || f.state === 'free')) {
+    // Big fruit needs a wider reach: standing far enough back to see a 1.7 m
+    // Puff Melon at all already puts its surface outside a 3.4 m grab.
+    const f = this.fruitSys.lookTarget(_eye, _dir, REACH + 1.6, 13);
+    if (f && (f.state === 'attached' || f.state === 'free')
+      && _eye.distanceTo(f.position) - f.radius < REACH) {
       this.target = f;
+      this.fruitSys.renderer.highlightId = f.id;
+      const q = f.damage > 0.001 ? ` <b>${f.quality}</b>` : '';
+      if (!canHandCarry(f.diameter, f.mass)) {
+        // Naming the obstacle is what turns "the button does nothing" into a
+        // puzzle. It is also the only place the game ever teaches that shoving
+        // is a thing you can do.
+        this.targetKind = 'shove';
+        this.promptText = `<b>E</b> Shove ${f.displayName} — <b>too big to carry</b>`;
+        return;
+      }
       this.targetKind = 'fruit';
       const verb = f.state === 'attached' ? 'Pick' : 'Grab';
-      const q = f.damage > 0.001 ? ` <b>${f.quality}</b>` : '';
       this.promptText = `<b>E</b> ${verb} ${f.displayName}${q} — $${f.value()}`;
       return;
     }
@@ -201,6 +358,7 @@ export class InteractionSystem implements System {
   // ---- actions ------------------------------------------------------------
   tryInteract(): boolean {
     if (this.targetKind === 'sell') return this.sellAll().count > 0;
+    if (this.targetKind === 'shove' && this.target) return this.shove(this.target);
     if (this.targetKind === 'shake' && this.targetPlantId >= 0) {
       const dropped = this.fruitSys.shake(this.targetPlantId, 0.55, this.g.player.id);
       this.g.playerCamera.addShake(0.012, 0.28, 30);
@@ -219,6 +377,23 @@ export class InteractionSystem implements System {
     // take it back out, which reads as "the pick key did nothing".
     if (this.carried?.fruit === f) return false;
     if (f.state === 'stowed' || f.state === 'gone') return false;
+    // Size is checked BEFORE the stem, so a Puff Melon that has already
+    // inflated on the bush is refused rather than torn free and then dropped.
+    if (!canHandCarry(f.diameter, f.mass)) {
+      this.lastRefusal = refusalReason(f.diameter, f.mass);
+      this.g.playerCamera.addRecoil(0, -0.012);
+      this.g.playerCamera.addShake(0.008, 0.2, 18);
+      this.g.bus.emit('audio:sfx', {
+        name: 'thud', volume: 0.3, pitch: 0.55, position: f.position.clone(),
+      });
+      this.g.bus.emit('ui:toast', {
+        text: `${f.displayName} — ${this.lastRefusal}`,
+        sub: 'Shove it, rope it, net it or blast it home', kind: 'bad', ms: 2400,
+      });
+      // Refusing is not the same as doing nothing: leaning on it moves it.
+      this.shove(f);
+      return false;
+    }
     if (f.state === 'attached') {
       // Bare hands only work on fruit that is ready to come off.
       if (f.def.attachStrength > 6.0) {
@@ -250,8 +425,13 @@ export class InteractionSystem implements System {
     }
     const from = _v2.copy(f.position);
     f.pickUp(this.g.player.id);
-    this.carried = { fruit: f, heavy: f.mass > this.basket.maxItemMass };
-    this.holdPoint(this.lastHold, this.carried.heavy);
+    this.carried = {
+      fruit: f,
+      heavy: f.mass > this.basket.maxItemMass,
+      cls: carryClassFor(f.diameter, f.mass),
+    };
+    this.lastRefusal = null;
+    this.holdPoint(this.lastHold, this.carried.heavy, f.radius);
     // Start the spring displaced by where the fruit actually was, so it flies
     // into the hand from the branch.
     this.handLag.copy(from).sub(this.lastHold);
@@ -322,8 +502,13 @@ export class InteractionSystem implements System {
    * leaves your hands.
    */
   private releasePoint(f: Fruit): void {
-    this.holdPoint(_hold, this.carried?.heavy ?? false);
+    this.holdPoint(_hold, this.carried?.heavy ?? false, f.radius);
     f.position.copy(_hold).add(this.handLag);
+    // …but never below the ground. Dropping a watermelon while looking at your
+    // feet used to start it half-buried, and Rapier's answer to a body born
+    // inside the terrain is to evict it at speed.
+    const ground = this.world.terrain.height(f.position.x, f.position.z) + f.radius * 0.9;
+    if (f.position.y < ground) f.position.y = ground;
   }
 
   throwHeld(power = 1): void {
@@ -357,7 +542,9 @@ export class InteractionSystem implements System {
       name: 'throw', volume: 0.45 + power * 0.55,
       pitch: clamp(1.45 / Math.pow(Math.max(0.4, f.mass), 0.28), 0.6, 1.45),
     });
-    this.g.bus.emit('tool:fired', { toolId: 'hand' });
+    // A watermelon shot-put and a lobbed orange should not move the arms the
+    // same amount; `heft` is already the measure of that.
+    this.g.bus.emit('tool:fired', { toolId: 'hand', power: clamp(heft * power, 0.3, 1.8) });
   }
 
   // ---- selling ------------------------------------------------------------
@@ -400,10 +587,20 @@ export class InteractionSystem implements System {
   }
 
   // ---- held-item presentation --------------------------------------------
-  private holdPoint(out: THREE.Vector3, heavy: boolean): THREE.Vector3 {
+  /**
+   * Where the WORLD copy of a carried fruit sits.
+   *
+   * Note what this is and is not. It is not framing — the first-person view
+   * draws its own proxy and ignores this entirely. It is the honest position of
+   * a real object: what other players see you holding, and where the thing
+   * starts from when you let go. So the only rule it has to obey is that the
+   * fruit never intersects the player who is holding it, which for anything
+   * bigger than a coconut means standing it off further than an apple.
+   */
+  private holdPoint(out: THREE.Vector3, heavy: boolean, radius = 0.2): THREE.Vector3 {
     const p = this.g.player;
     p.lookDir(_dir);
-    const dist = heavy ? 1.15 : 0.85;
+    const dist = Math.max(heavy ? 1.15 : 0.85, PLAYER_RADIUS + radius + 0.28);
     const drop = heavy ? -0.45 : -0.18;
     const side = heavy ? 0 : 0.28;
     out.copy(p.eyePosition).addScaledVector(_dir, dist);
@@ -414,9 +611,9 @@ export class InteractionSystem implements System {
   }
 
   private updateHeldTransform(dt: number): void {
-    if (!this.carried) return;
+    if (!this.carried) { this.handLagView.set(0, 0, 0); return; }
     const f = this.carried.fruit;
-    this.holdPoint(_hold, this.carried.heavy);
+    this.holdPoint(_hold, this.carried.heavy, f.radius);
 
     // A spring between the hands and the fruit, softened by mass.
     //
@@ -468,6 +665,15 @@ export class InteractionSystem implements System {
     _e.set(p.pitch * 0.35, p.yaw, 0, 'YXZ');
     _q.setFromEuler(_e);
     f.quaternion.slerp(_q, Math.min(1, dt * 9));
+
+    // Resolve the world swing into camera axes for the first-person rig. Doing
+    // it here rather than in the viewmodel keeps one definition of "how far the
+    // fruit is trailing the hands", which is the number `feel.mjs carry` reads.
+    p.lookDir(_dir);
+    p.right(_v);
+    _v2.crossVectors(_v, _dir).normalize();          // right x forward = up
+    this.handLagView.set(
+      this.handLag.dot(_v), this.handLag.dot(_v2), -this.handLag.dot(_dir));
   }
 
   get throwPower(): number { return this.throwCharge; }

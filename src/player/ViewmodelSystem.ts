@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import type { Game, System } from '@/core/Game';
 import type { ToolInventory } from '@/tools/ToolInventory';
-import type { InteractionSystem } from '@/interaction/InteractionSystem';
+import type { Carried, InteractionSystem } from '@/interaction/InteractionSystem';
 import { buildViewModel, VIEW_DEPTH, VIEW_LATERAL, type ViewModel } from '@/render/Viewmodel';
+import { CarryViewmodel } from '@/player/CarryViewmodel';
+import { framingFor } from '@/interaction/CarryRules';
 import { VIEWMODEL_FOV_SCALE } from '@/render/Renderer';
 import { damp, clamp } from '@/core/MathUtils';
 
@@ -41,6 +43,17 @@ export class ViewmodelSystem implements System {
   private kickVel = 0;
   visible = true;
 
+  /**
+   * The carry rig. Mutually exclusive with the tool: whenever something is in
+   * the player's hands the equipped tool stows itself and this takes the frame,
+   * so a fruit, a basket, a rope gun and a spare pair of gloves can never be on
+   * screen at the same time.
+   */
+  private carry!: CarryViewmodel;
+  /** 0 = carried fruit fully presented, 1 = fully out of frame. */
+  private carryStow = 1;
+  private carryBob = new THREE.Vector3();
+
   init(g: Game): void {
     this.g = g;
     this.tools = g.get<ToolInventory>('tools');
@@ -52,8 +65,10 @@ export class ViewmodelSystem implements System {
     });
     this.material.name = 'viewmodel';
     g.renderer.enableViewmodel();
+    this.carry = new CarryViewmodel(this.material);
+    g.renderer.viewScene.add(this.carry.root);
 
-    g.bus.on('tool:fired', () => this.punch(1));
+    g.bus.on('tool:fired', (p) => this.punch(clamp(p.power ?? 1, 0.15, 2.2)));
     // The hands are a tool too. Pulling fruit off a branch and dropping it in
     // the basket should register in the arms, not only in the toast.
     g.bus.on('fruit:detached', (p) => { if (p.cause === 'hand') this.punch(0.45); });
@@ -70,6 +85,10 @@ export class ViewmodelSystem implements System {
       kick: +this.kick.toFixed(3),
       visible: this.visible,
       cached: this.cache.size,
+      toolShown: !!this.current?.root.visible,
+      carryShown: this.carry.root.visible,
+      carryClass: this.interaction.carryClass,
+      carryHeightPct: +this.carry.targetHeightPct.toFixed(1),
     }));
     g.debug?.addAction('viewmodel.show', (on: boolean) => {
       this.visible = on;
@@ -96,10 +115,16 @@ export class ViewmodelSystem implements System {
     const wantId = this.tools.activeId ?? 'hand';
     const player = this.g.player;
 
-    // Hide the viewmodel whenever the camera is not on the player's face.
-    const shouldShow = this.visible
-      && player.state === 'active'
-      && this.g.playerCamera.enabled;
+    // Hide the viewmodel whenever the camera is not on the player's face — or
+    // whenever the hands are full. Carrying a fruit and holding a tool are
+    // mutually exclusive PRESENTATIONS even though they are not mutually
+    // exclusive states: the rope gun still fires while you have an apple under
+    // your arm, it just is not drawn, because the alternative is the failure
+    // this whole pass exists to fix — a melon, a basket and two unrelated
+    // gloves stacked on top of each other in the middle of the screen.
+    const carried = this.interaction.carried;
+    const onScreen = this.visible && player.state === 'active' && this.g.playerCamera.enabled;
+    const shouldShow = onScreen && !carried;
 
     // Swap tools through a quick stow-and-draw rather than popping.
     if (wantId !== this.currentId) {
@@ -110,8 +135,14 @@ export class ViewmodelSystem implements System {
         this.currentId = wantId;
         r.viewScene.add(this.current.root);
       }
+    } else if (shouldShow) {
+      this.stow = damp(this.stow, 0, 9, dt);
     } else {
-      this.stow = damp(this.stow, shouldShow ? 0 : 1, 9, dt);
+      // Putting a tool away is a RAMP, not a decay. An exponential approach
+      // takes 0.6 s to get within the threshold that actually stops drawing it,
+      // so picking up an apple left the shaker fading on screen for most of a
+      // second — long enough to be exactly the overlap this pass is removing.
+      this.stow = Math.min(1, this.stow + dt * 7);
     }
     if (!this.current) {
       this.current = this.modelFor(wantId);
@@ -172,6 +203,63 @@ export class ViewmodelSystem implements System {
       this.sway.x * 1.6 - this.stow * 0.5,
     );
     root.visible = this.stow < 0.995;
+
+    this.updateCarry(dt, carried, charge);
+  }
+
+  /**
+   * Frame the carried fruit.
+   *
+   * The fruit itself is placed by `CarryViewmodel` from the framing table; what
+   * happens here is the movement — bob, look-lag, the spring the interaction
+   * system is already running on the world copy, and the wind-up of a throw.
+   * Without those the proxy is a decal and the weight the carry spring works so
+   * hard to communicate never reaches the screen.
+   */
+  private updateCarry(dt: number, carried: Carried | null, charge: number): void {
+    const showCarry = !!carried && this.visible && this.g.player.state === 'active'
+      && this.g.playerCamera.enabled;
+    this.carryStow = showCarry
+      ? damp(this.carryStow, 0, 13, dt)
+      : Math.min(1, this.carryStow + dt * 8);
+    this.carry.root.visible = this.carryStow < 0.995;
+    if (!this.carry.root.visible) { this.carry.reset(); return; }
+    if (!carried) return;
+
+    const player = this.g.player;
+    const f = framingFor(this.interaction.carryClass);
+    const speed = player.speed;
+    const moving = player.grounded && speed > 0.6;
+    const amp = (moving ? clamp(speed / 8, 0.2, 1) * 0.022 : 0) * f.heft;
+    this.carryBob.x = damp(this.carryBob.x, Math.sin(player.bobPhase) * amp, 11, dt);
+    this.carryBob.y = damp(this.carryBob.y, -Math.abs(Math.cos(player.bobPhase)) * amp, 11, dt);
+    this.carryBob.z = damp(this.carryBob.z, moving ? -amp * 0.4 : 0, 10, dt);
+
+    // The world spring's displacement, already resolved into view axes by the
+    // interaction system. Scaled down hard: 0.32 m of world swing across a
+    // 0.55 m deep viewmodel scene would throw the fruit out of frame.
+    const lag = this.interaction.handLagView;
+    _sway.set(
+      this.carryBob.x + this.sway.x * 0.55 + lag.x * 0.16,
+      this.carryBob.y + this.sway.y * 0.55 + lag.y * 0.16
+        - this.carryStow * 0.42 - player.landDip * 0.06 * f.heft,
+      this.carryBob.z + lag.z * 0.10 + charge * 0.10 + this.kick * 0.03,
+    );
+    // Turning your head tips the fruit; winding up a throw rolls it back.
+    _e2.set(
+      -this.sway.y * 1.4 + charge * 0.5 + this.kick * 0.2,
+      -this.sway.x * 1.8 + 0.5,
+      this.sway.x * 1.1 + this.carryStow * 0.5,
+      'YXZ',
+    );
+    _q2.setFromEuler(_e2);
+
+    const r = this.g.renderer;
+    this.carry.update(
+      dt, this.interaction.carryClass, carried.fruit.diameter, carried.fruit.species,
+      carried.fruit.tint, carried.fruit.emissive ? 0.5 : 0,
+      r.camera.aspect, r.camera.fov * VIEWMODEL_FOV_SCALE, _sway, _q2,
+    );
   }
 
   /** Where a carried fruit should be drawn so it lines up with the hands. */
@@ -182,6 +270,7 @@ export class ViewmodelSystem implements System {
   dispose(): void {
     for (const vm of this.cache.values()) vm.dispose();
     this.cache.clear();
+    this.carry.dispose();
     this.material.dispose();
   }
 }
@@ -191,3 +280,7 @@ function shortestAngle(a: number): number {
   while (a < -Math.PI) a += Math.PI * 2;
   return a;
 }
+
+const _sway = new THREE.Vector3();
+const _e2 = new THREE.Euler();
+const _q2 = new THREE.Quaternion();

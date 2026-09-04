@@ -99,7 +99,15 @@ export async function run(g, t) {
   const armed = await g.state();
   t.note(`active tool before firing: ${armed.tools.active} (${armed.tools.status})`);
   t.eq(armed.tools.active, 'aircannon', 'the air cannon is the equipped tool');
+  // A blast that moves things but leaves no mark reads as a physics cheat
+  // rather than as a tool, so the puff at the blast centre is part of the
+  // contract, not decoration.
+  const fxBefore = armed.fx.spawned;
+  const kickBefore = (await g.state()).viewmodel.kick;
   await g.call('tool.fire');
+  const fired = await g.state();
+  t.gt(fired.fx.spawned, fxBefore, 'firing the cannon puts a visible blast in the world');
+  t.ok(fired.viewmodel.kick !== kickBefore, 'and it moves the arms');
   const cannon = await g.call('tool.debug', 'aircannon');
   t.note(`cannon after fire: ${JSON.stringify(cannon)}`);
   // Isolate: does a radial impulse work at all, independent of the tool?

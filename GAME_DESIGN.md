@@ -71,6 +71,31 @@ fits* — nine items, nothing over 6.5 kg. That single threshold is what turns a
 watermelon from "an apple worth more" into a logistics problem, and it is why
 the Deep Basket upgrade matters.
 
+### Carry states
+How a fruit is held is a function of how big and how heavy it actually is, and
+the four states are mutually exclusive — the equipped tool is always put away
+while something is in your hands.
+
+| State | Up to | Reads as |
+|---|---|---|
+| **Small** | 0.46 m / 4.5 kg | Held low and to the right, one hand under it. Apple, orange, coconut. |
+| **Medium** | 0.72 m / 12 kg | Two hands, lower and further from the eye. Banana bunch, deflated Puff Melon, Vinebomb. |
+| **Large** | 1.10 m / 60 kg | A haul: centred, low, heavy, and it slows you down. Watermelon, Huge Coconut. |
+| **Oversized** | above that | Cannot be carried at all. |
+
+**Oversized fruit is a haulage problem.** A fully inflated Puff Melon (1.74 m),
+a Huge Watermelon (1.30 m, 374 kg) and an Ancient anything cannot go in your
+hands. They can be shoved (E leans on them, above the centre, so round ones
+roll), roped, netted, or fired home with the air cannon — and fruit that comes
+to rest on the sell pad sells itself, so herding one downhill into the drop-off
+is a legitimate and very slow strategy.
+
+**The Puff Melon is the joke this rule exists for.** It carries fine while
+deflated. It then inflates in your hands, going medium → large as you watch,
+and the moment it passes 1.10 m it bursts free upward and takes the wind. You
+are not robbed of it — it is a physics object two metres in front of you, and
+everything you own can still catch it. You just cannot hold it any more.
+
 ### Tools
 Three active slots plus one utility slot. The constraint is the point: with
 everything available at once nobody has to decide what to bring, and nobody has

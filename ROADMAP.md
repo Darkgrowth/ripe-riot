@@ -93,6 +93,19 @@ runs (it did not); the catch net telegraphs and rewards a real catch; ropes
 announce going taut on the edge and tug the view; the air cannon out-throws an
 arm; stunts stopped firing on every ordinary pick and now read as rewards.
 
+**Carry presentation pass** — found by a human playing the build, not by any
+check in the suite. Carried fruit was placed in world space at its true radius
+0.85 m from the eye, so a watermelon covered 62% of the frame height and an
+inflating Puff Melon contained the camera outright — while the equipped tool
+kept drawing itself on top in the depth-cleared viewmodel pass. The world copy
+is still the truth; the first-person view now draws a framed proxy whose top
+edge is held below the crosshair, the tool stows itself whenever the hands are
+full, and fruit above 1.10 m or 60 kg cannot be hand-carried at all — it is
+shoved, roped, netted or blasted home instead. Anything that grows past the
+limit while held leaves upward under its own power. Verified by
+`tools/harness/carry-check.mjs` (framing, in percentages of the real frame) and
+the `carry` scenario (the rules, in forced fixed steps).
+
 ## Next, in order
 
 1. **More impact VFX** — water splash, rope dust, sale sparkle. The shard
