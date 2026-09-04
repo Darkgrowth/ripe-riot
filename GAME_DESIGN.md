@@ -104,8 +104,11 @@ to shout at a teammate to bring the other thing.
 - **Hand Picker** (start) — pick, charge-throw, stow
 - **Basket** (start, utility) — nine small fruit, or tip them all out
 - **Ladder** (start, utility) — placeable, climbable
-- **Catch Net** ($260) — hold to sweep the air; right-click lays a ground net
-  that softens whatever lands in it
+- **Catch Net** ($260) — click to swing as the fruit arrives. The hoop only
+  catches through the middle of the swing, so it is a timing call: too early
+  or too late whooshes, droops, and costs a recovery; holding the button
+  flails. The ring glows as something catchable closes on it, which is the
+  cue. Right-click lays a ground net that softens whatever lands in it
 - **Tree Shaker** ($380) — one trunk hard, or everything nearby gently
 - **Rope Gun** ($720, tier 1) — tether, pin the near end, winch
 - **Air Cannon** ($1,450, tier 2) — charged blast that launches fruit, shakes

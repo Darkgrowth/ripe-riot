@@ -376,6 +376,9 @@ const VOICES: Record<string, Voice> = {
     freq: 92 * p.pitch, to: 96 * p.pitch, dur: 0.16, type: 'square', gain: 0.09 }),
   netCatch: (c, o, t, p) => burst(c, o, t, {
     dur: 0.24, type: 'bandpass', from: 2400 * p.pitch, to: 600, q: 0.9, gain: 0.3, attack: 0.02 }),
+  // A net through the air. Lower and longer for a miss (pitch < 1).
+  netSwing: (c, o, t, p) => burst(c, o, t, {
+    dur: 0.22 / Math.max(0.6, p.pitch), type: 'bandpass', from: 320 * p.pitch, to: 1700 * p.pitch, q: 1.4, gain: 0.16, attack: 0.05 }),
   netPlace: (c, o, t, p) => burst(c, o, t, {
     dur: 0.2, type: 'lowpass', from: 1400 * p.pitch, to: 300, gain: 0.28 }),
   ladderPlace: (c, o, t, p) => {

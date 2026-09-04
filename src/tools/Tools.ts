@@ -11,6 +11,8 @@ const _v = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
 const _dir = new THREE.Vector3();
 const _pos = new THREE.Vector3();
+const _right = new THREE.Vector3();
+const _up = new THREE.Vector3();
 
 // ---------------------------------------------------------------------------
 // HAND PICKER — the one you start with
@@ -124,15 +126,56 @@ export class TreeShaker extends Tool {
 // ---------------------------------------------------------------------------
 // CATCH NET — turns "it fell" into "we caught it"
 // ---------------------------------------------------------------------------
+/**
+ * A swing, not a vacuum.
+ *
+ * The first version was "hold the button and anything that enters a 1.55 m
+ * sphere in front of you is yours". Measured against a falling apple that was
+ * a 100% catch with no decision in it: you held the button before the fruit
+ * left the tree and waited. The tool everyone buys second had no skill in it,
+ * no miss, and therefore no story.
+ *
+ * Now a click is a SWING. The hoop sweeps through the aim point over a third
+ * of a second and only the middle of that sweep can catch, so the player has
+ * to commit as the fruit ARRIVES. Too early and the hoop has passed; too late
+ * and it is still coming up. A miss whooshes, droops, and costs a recovery
+ * before the next swing. Holding the button flails — swing after swing with
+ * the same window — which still works on a shower of fruit and reads as
+ * exactly what it is.
+ *
+ * The telegraph is the other half: the hoop is always in view while the net
+ * is equipped, and it brightens as something catchable closes on it, so "swing
+ * when it glows" is learnable from the first coconut.
+ */
 export class CatchNet extends Tool {
   readonly def: ToolDef = {
     id: 'net', label: 'Catch Net', icon: '🥅',
-    description: 'Hold to sweep the air in front of you. Catches anything moving.',
+    description: 'Click to swing as the fruit arrives. Right-click lays a ground net.',
     tagline: 'The difference between a harvest and a mess.',
     cost: 260, tier: 0,
   };
 
-  private active = false;
+  /** Seconds a swing takes, and the slice of it that can actually catch. */
+  static readonly SWING = 0.34;
+  static readonly ACTIVE_FROM = 0.06;
+  static readonly ACTIVE_TO = 0.28;
+  /** Seconds after a swing before the next one. Longer after a miss. */
+  static readonly RECOVER = 0.36;
+  static readonly RECOVER_MISS = 0.50;
+  /** A press this close to the end of recovery queues the next swing. */
+  static readonly BUFFER = 0.14;
+  /** Speed a fruit must be doing to count as CAUGHT rather than scooped. */
+  private static readonly CATCH_SPEED = 2.2;
+
+  private phase: 'ready' | 'swing' | 'recover' = 'ready';
+  private phaseT = 0;
+  private recoverFor = CatchNet.RECOVER;
+  private queued = false;
+  /** What this swing caught, and whether something already got past it. */
+  private swingCaught = 0;
+  private missedThisSwing = false;
+  private hintsLeft = 3;
+
   /** Ground nets soften whatever lands on them. */
   private groundNets: Array<{ pos: THREE.Vector3; radius: number; until: number; mesh: THREE.Mesh }> = [];
   private ring: THREE.Mesh | null = null;
@@ -141,14 +184,20 @@ export class CatchNet extends Tool {
   private lock = 0;
   /** Decaying flash left by the last catch. */
   private flash = 0;
-  catchRadius = 1.55;
-  catchDistance = 2.0;
+  /** Measured: at 1.55 m (a 3.1 m hoop) a press a tenth of a second early still caught a falling apple on the last active step. */
+  catchRadius = 1.05;
+  /** Seen from the eye, a 1.05 m hoop at 2.8 m is ~41 degrees across: a big net,
+   *  not a reticle. At 2.0 m the ring touched the frame edges. */
+  catchDistance = 2.8;
+  /** Instrumentation. */
   caught = 0;
-  /** Speed a fruit must be doing to count as CAUGHT rather than scooped. */
-  private static readonly CATCH_SPEED = 2.2;
+  swings = 0;
+  misses = 0;
+  /** The hoop's current centre, which is also the catch volume's centre. */
+  private hoop = new THREE.Vector3();
 
   override onAttach(): void {
-    const geo = new THREE.TorusGeometry(this.catchRadius, 0.05, 6, 20);
+    const geo = new THREE.TorusGeometry(this.catchRadius, 0.035, 6, 24);
     this.ringMat = new THREE.MeshStandardMaterial({
       color: Palette.rope, roughness: 0.9, transparent: true, opacity: 0.85,
     });
@@ -158,13 +207,80 @@ export class CatchNet extends Tool {
     this.game.renderer.scene.add(this.ring);
   }
 
-  override onPrimary(down: boolean): void { this.active = down; }
+  override onPrimary(down: boolean): void {
+    if (!down) return;
+    if (this.phase === 'ready') { this.beginSwing(); return; }
+    // Pressing during the tail of a recovery should not be eaten: the player
+    // meant "again", and jump buffering exists for exactly this reason.
+    if (this.phase === 'recover' && this.recoverFor - this.phaseT <= CatchNet.BUFFER) {
+      this.queued = true;
+    }
+  }
+
   override onUnequip(): void {
     super.onUnequip();
-    this.active = false;
+    this.phase = 'ready';
+    this.phaseT = 0;
+    this.queued = false;
     this.lock = 0;
     this.flash = 0;
     if (this.ring) { this.ring.visible = false; this.ring.scale.setScalar(1); }
+  }
+
+  /** True during the slice of a swing that can catch. */
+  get active(): boolean {
+    return this.phase === 'swing'
+      && this.phaseT >= CatchNet.ACTIVE_FROM && this.phaseT <= CatchNet.ACTIVE_TO;
+  }
+
+  private beginSwing(): void {
+    this.phase = 'swing';
+    this.phaseT = 0;
+    this.queued = false;
+    this.swings++;
+    this.swingCaught = 0;
+    this.missedThisSwing = false;
+    this.game.bus.emit('audio:sfx', { name: 'netSwing', volume: 0.5, pitch: 1 });
+    this.game.bus.emit('tool:swing', { toolId: this.def.id, duration: CatchNet.SWING });
+    this.game.playerCamera.addRecoil((Math.random() - 0.5) * 0.004, 0.004);
+  }
+
+  private endSwing(): void {
+    this.phase = 'recover';
+    this.phaseT = 0;
+    // Whiffing at something costs more than swinging at nothing.
+    this.recoverFor = this.missedThisSwing ? CatchNet.RECOVER_MISS : CatchNet.RECOVER;
+  }
+
+  /**
+   * A miss is a real event, not the absence of a catch: a catchable fruit
+   * went through the hoop while the net could not take it — too late (the
+   * dead start of the swing) or too early (the recovery). It has to be
+   * legible as a miss the moment it happens, or the player concludes the
+   * tool is broken rather than that their timing was off. A low whoosh, a
+   * dip in the view, a longer recovery, and — the first few times — the one
+   * sentence that fixes it.
+   */
+  private checkMiss(): void {
+    if (this.missedThisSwing || this.swingCaught > 0) return;
+    const r2 = Math.pow(this.catchRadius * 1.15, 2);
+    for (const f of this.ctx.fruit.fruits.values()) {
+      if (f.state !== 'free' || !f.body || f.mass > 14) continue;
+      if (f.speed < CatchNet.CATCH_SPEED * 1.5) continue;
+      if (f.position.distanceToSquared(this.hoop) > r2) continue;
+      this.missedThisSwing = true;
+      this.misses++;
+      if (this.phase === 'recover') this.recoverFor = CatchNet.RECOVER_MISS;
+      this.game.bus.emit('audio:sfx', { name: 'netSwing', volume: 0.42, pitch: 0.72 });
+      this.game.playerCamera.addRecoil(0, -0.007);
+      if (this.hintsLeft > 0) {
+        this.hintsLeft--;
+        this.game.bus.emit('ui:toast', {
+          text: 'MISSED', sub: 'Swing as it reaches the hoop — when the ring glows', kind: 'bad', ms: 1800,
+        });
+      }
+      return;
+    }
   }
 
   /** Lay a net on the ground that softens anything landing in it. */
@@ -203,34 +319,81 @@ export class CatchNet extends Tool {
     this.groundNets.splice(i, 1);
   }
 
+  /**
+   * Where the hoop is right now. At rest it hangs a little right of the aim
+   * point; a swing carries it from the right, through the aim point at the
+   * middle of the active window, and out to the left; a recovery lets it
+   * droop and drift back. Expressed in the camera's own axes so it reads the
+   * same whichever way the player is facing.
+   */
+  private placeHoop(out: THREE.Vector3): THREE.Vector3 {
+    this.muzzle(out, this.catchDistance);
+    const cam = this.game.renderer.camera;
+    _right.set(1, 0, 0).applyQuaternion(cam.quaternion);
+    _up.set(0, 1, 0).applyQuaternion(cam.quaternion);
+    let lateral = 0.35, vertical = -0.10;
+    if (this.phase === 'swing') {
+      const mid = (CatchNet.ACTIVE_FROM + CatchNet.ACTIVE_TO) * 0.5;
+      // 0 at the start of the swing, 0.5 at the middle of the active window,
+      // 1 at the end: the hoop is dead on the aim point when it matters most.
+      const s = this.phaseT < mid
+        ? 0.5 * this.phaseT / mid
+        : 0.5 + 0.5 * (this.phaseT - mid) / (CatchNet.SWING - mid);
+      const e = s * s * (3 - 2 * s);
+      lateral = 1.05 - e * 1.85;
+      vertical = 0.28 - e * 0.55;
+    } else if (this.phase === 'recover') {
+      const k = clamp(this.phaseT / this.recoverFor, 0, 1);
+      const back = k * k * (3 - 2 * k);
+      lateral = -0.8 + (0.35 + 0.8) * back;
+      vertical = -0.45 + (-0.10 + 0.45) * back;
+    }
+    return out.addScaledVector(_right, lateral).addScaledVector(_up, vertical);
+  }
+
   override step(dt: number, held: { primary: boolean }): void {
     super.step(dt, held as never);
     this.flash = Math.max(0, this.flash - dt * 3.4);
+
+    // --- the swing state machine
+    if (this.phase === 'swing') {
+      this.phaseT += dt;
+      if (this.phaseT >= CatchNet.SWING) this.endSwing();
+    } else if (this.phase === 'recover') {
+      this.phaseT += dt;
+      if (this.phaseT >= this.recoverFor) {
+        this.phase = 'ready';
+        this.phaseT = 0;
+        // Buffered press, or the button still down: swing again.
+        if (this.queued || held.primary) this.beginSwing();
+      }
+    }
+
+    // --- hoop and telegraph
+    this.placeHoop(this.hoop);
     if (this.ring) {
-      this.ring.visible = this.active;
-      if (this.active) {
-        this.muzzle(_pos, this.catchDistance);
-        this.ring.position.copy(_pos);
-        this.ring.quaternion.copy(this.game.renderer.camera.quaternion);
-        // Telegraph. Catching used to be blind: the hoop looked identical
-        // whether the fruit was about to pass through it or twenty metres
-        // away, so a catch was luck rather than timing. The ring now brightens
-        // and swells as something catchable closes on it, which is the whole
-        // readability of the tool.
-        this.lock = clamp(this.lock + (this.threat(_pos) - this.lock) * Math.min(1, dt * 14), 0, 1);
-        const glow = Math.max(this.lock, this.flash);
-        const s = 1 + glow * 0.16 + this.flash * 0.22;
-        this.ring.scale.setScalar(s);
-        if (this.ringMat) {
-          this.ringMat.color.copy(Palette.rope).lerp(WHITE, this.flash * 0.8);
-          this.ringMat.emissive.copy(GOLD).multiplyScalar(glow * 0.85);
-          this.ringMat.opacity = 0.6 + glow * 0.4;
-        }
-      } else {
-        this.lock = 0;
+      this.ring.visible = this.equipped && this.player.state === 'active';
+      this.ring.position.copy(this.hoop);
+      this.ring.quaternion.copy(this.game.renderer.camera.quaternion);
+      // The telegraph is read at the AIM point, which is where the swing
+      // passes at the middle of its window — that is the thing being timed.
+      this.muzzle(_pos, this.catchDistance);
+      const threat = this.threat(_pos);
+      this.lock = clamp(this.lock + (threat - this.lock) * Math.min(1, dt * 14), 0, 1);
+      const glow = Math.max(Math.pow(this.lock, 0.7), this.flash);
+      const droop = this.phase === 'recover' ? 1 - clamp(this.phaseT / this.recoverFor, 0, 1) : 0;
+      const s = 1 + glow * 0.16 + this.flash * 0.22 - droop * 0.12;
+      this.ring.scale.setScalar(s);
+      if (this.ringMat) {
+        this.ringMat.color.copy(Palette.rope).lerp(WHITE, this.flash * 0.8);
+        this.ringMat.emissive.copy(GOLD).multiplyScalar(glow * 0.85);
+        // Dim at rest, fully there during a swing, greyed out in recovery.
+        const base = this.phase === 'swing' ? 0.9 : this.phase === 'recover' ? 0.3 : 0.5;
+        this.ringMat.opacity = base + glow * (1 - base);
       }
     }
     if (this.active) this.sweep();
+    else if (this.phase !== 'ready') this.checkMiss();
   }
 
   /** How close the nearest catchable fruit is to the hoop, as 0..1. */
@@ -244,7 +407,9 @@ export class CatchNet extends Tool {
       // Weight by speed: a fruit lying still in the grass is not a catch.
       const moving = clamp(f.speed / 6, 0, 1);
       const near = 1 - d / warn;
-      const v = near * near * (0.35 + moving * 0.65);
+      // Rises early enough to be a cue, not a confirmation: with near squared the
+      // ring only lit once the fruit was already inside the swing.
+      const v = Math.pow(near, 1.5) * (0.35 + moving * 0.65);
       if (v > best) best = v;
     }
     return best;
@@ -279,23 +444,27 @@ export class CatchNet extends Tool {
     }
   }
 
-  /** Catch anything moving through the hoop. */
+  /** Catch anything inside the hoop during the active slice of a swing. */
   private sweep(): void {
-    this.muzzle(_pos, this.catchDistance);
     const inter = this.ctx.interaction;
     const r2 = this.catchRadius * this.catchRadius;
     for (const f of this.ctx.fruit.fruits.values()) {
       if (f.state !== 'free' || !f.body) continue;
-      if (f.position.distanceToSquared(_pos) > r2) continue;
+      if (f.position.distanceToSquared(this.hoop) > r2) continue;
       // Too heavy to catch by hand — but it does get slowed down a lot.
       if (f.mass > 14) {
         const v = f.body.linvel();
         f.body.setLinvel({ x: v.x * 0.72, y: v.y * 0.72, z: v.z * 0.72 }, true);
+        this.swingCaught++;   // deflecting a watermelon is not a miss
+        this.game.bus.emit('audio:sfx', {
+          name: 'thud', volume: 0.4, pitch: 0.7, position: f.position.clone(),
+        });
         continue;
       }
       const speed = f.speed;
       const realCatch = speed > CatchNet.CATCH_SPEED;
       this.caught++;
+      this.swingCaught++;
       // A catch and a scoop are different events and should not sound the
       // same: snatching a coconut out of the air is the point of the tool,
       // sweeping a windfall out of the grass is tidying up.
@@ -306,10 +475,15 @@ export class CatchNet extends Tool {
       });
       if (realCatch) {
         this.flash = 1;
-        this.game.playerCamera.addShake(clamp(0.006 + speed * 0.0016, 0.006, 0.03), 0.16, 30);
-        this.game.playerCamera.addRecoil(0, -0.006 - Math.min(0.012, speed * 0.0009));
-        this.game.bus.emit('tool:fired', { toolId: this.def.id, power: clamp(0.3 + speed / 22, 0.3, 1.1) });
-        if (speed > 8) {
+        // The catch lands in the hands: a thump in the view, a bite on the
+        // arms, and a puff where the fruit hit the netting.
+        this.game.playerCamera.addShake(clamp(0.008 + speed * 0.0018, 0.008, 0.034), 0.18, 30);
+        this.game.playerCamera.addRecoil(0, -0.008 - Math.min(0.014, speed * 0.001));
+        this.game.bus.emit('tool:fired', { toolId: this.def.id, power: clamp(0.4 + speed / 20, 0.4, 1.3) });
+        this.game.bus.emit('tool:blast', {
+          toolId: this.def.id, point: f.position.clone(), power: clamp(speed / 30, 0.12, 0.4), radius: 0.9,
+        });
+        if (speed > 5) {
           this.game.bus.emit('ui:toast', {
             text: 'CAUGHT', sub: `${f.displayName} at ${speed.toFixed(0)} m/s`, kind: 'good', ms: 1400,
           });
@@ -325,7 +499,19 @@ export class CatchNet extends Tool {
   }
 
   override status(): string {
+    if (this.phase === 'swing') return 'SWING';
+    if (this.phase === 'recover') return this.missedThisSwing ? 'miss' : '…';
     return this.groundNets.length ? `${this.groundNets.length} laid` : '';
+  }
+
+  override debugState(): Record<string, unknown> {
+    return {
+      ...super.debugState(), phase: this.phase, phaseT: +this.phaseT.toFixed(3),
+      active: this.active, swings: this.swings, caught: this.caught, misses: this.misses,
+      lock: +this.lock.toFixed(2),
+      hoop: [+this.hoop.x.toFixed(2), +this.hoop.y.toFixed(2), +this.hoop.z.toFixed(2)],
+      window: [CatchNet.ACTIVE_FROM, CatchNet.ACTIVE_TO, CatchNet.SWING, CatchNet.RECOVER],
+    };
   }
 
   override onEquip(): void { super.onEquip(); }

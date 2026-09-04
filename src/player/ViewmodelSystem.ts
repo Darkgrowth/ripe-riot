@@ -41,6 +41,12 @@ export class ViewmodelSystem implements System {
   private stow = 1;
   private kick = 0;
   private kickVel = 0;
+  /** A lateral sweep of the whole rig, for tools that swing: seconds left, total, and the smoothed pose. */
+  private swingLeft = 0;
+  private swingTotal = 0;
+  private swingX = 0;
+  private swingY = 0;
+  private swingYaw = 0;
   visible = true;
 
   /**
@@ -69,6 +75,7 @@ export class ViewmodelSystem implements System {
     g.renderer.viewScene.add(this.carry.root);
 
     g.bus.on('tool:fired', (p) => this.punch(clamp(p.power ?? 1, 0.15, 2.2)));
+    g.bus.on('tool:swing', (p) => { this.swingLeft = this.swingTotal = Math.max(0.05, p.duration); });
     // The hands are a tool too. Pulling fruit off a branch and dropping it in
     // the basket should register in the arms, not only in the toast.
     g.bus.on('fruit:detached', (p) => { if (p.cause === 'hand') this.punch(0.45); });
@@ -171,6 +178,24 @@ export class ViewmodelSystem implements System {
     this.bob.y = damp(this.bob.y, -Math.abs(Math.cos(player.bobPhase)) * amp, 12, dt);
     this.bob.z = damp(this.bob.z, moving ? -amp * 0.5 : 0, 10, dt);
 
+    // --- swing: the rig sweeps right-to-left across the frame and yaws with
+    // it, then settles back. Driven by the tool's own timing so the arms and
+    // the hoop in the world agree about when the net is where.
+    let swingX = 0, swingY = 0, swingYaw = 0;
+    if (this.swingLeft > 0) {
+      this.swingLeft = Math.max(0, this.swingLeft - dt);
+      const s = 1 - this.swingLeft / this.swingTotal;
+      const e = s * s * (3 - 2 * s);
+      // An upward scoop across the frame: right and low, up through the
+      // middle, out to the left. The middle is where the hoop meets the fruit.
+      swingX = 0.16 - e * 0.34;
+      swingY = Math.sin(e * Math.PI) * 0.17;
+      swingYaw = -0.55 + e * 1.1;
+    }
+    this.swingX = damp(this.swingX, swingX, this.swingLeft > 0 ? 40 : 9, dt);
+    this.swingY = damp(this.swingY, swingY, this.swingLeft > 0 ? 40 : 9, dt);
+    this.swingYaw = damp(this.swingYaw, swingYaw, this.swingLeft > 0 ? 40 : 9, dt);
+
     // --- recoil spring
     this.kickVel -= this.kick * 90 * dt;
     this.kickVel *= Math.exp(-11 * dt);
@@ -193,14 +218,14 @@ export class ViewmodelSystem implements System {
 
     const root = this.current.root;
     root.position.set(
-      VIEW_LATERAL * halfWidth + this.sway.x + this.bob.x,
-      this.sway.y + this.bob.y - this.stow * 0.55 - player.landDip * 0.25,
+      VIEW_LATERAL * halfWidth + this.sway.x + this.bob.x + this.swingX,
+      this.sway.y + this.bob.y + this.swingY - this.stow * 0.55 - player.landDip * 0.25,
       this.bob.z + this.kick * 0.09 + charge * 0.06,
     );
     root.rotation.set(
-      -this.sway.y * 2.2 + this.kick * 0.35 + charge * 0.22,
-      -this.sway.x * 2.4,
-      this.sway.x * 1.6 - this.stow * 0.5,
+      -this.sway.y * 2.2 + this.kick * 0.35 + charge * 0.22 - this.swingY * 3.2,
+      -this.sway.x * 2.4 + this.swingYaw,
+      this.sway.x * 1.6 - this.stow * 0.5 - this.swingYaw * 0.25,
     );
     root.visible = this.stow < 0.995;
 

@@ -233,6 +233,22 @@ with the buoyancy clock restarted so it genuinely leaves rather than hanging in
 front of the lens. Big fruit is a physics problem in the world, never a
 visibility problem in the camera.
 
+**The catch net is a timed swing, not a volume.** The first net was "hold the
+button and anything entering a 1.55 m sphere is yours", and measured against a
+falling apple it was a 100% catch with no decision in it. `CatchNet` is now a
+three-phase state machine — swing (0.34 s, of which 0.06–0.28 s can catch),
+recover (0.36 s, 0.50 s after a whiff), ready — with the hoop sweeping through
+the aim point at the middle of the active slice. A miss is an *event*, not the
+absence of a catch: a catchable fruit passing the hoop while the net cannot
+take it plays, dips the view, extends the recovery and, the first three times,
+says what went wrong. Presses in the last 0.14 s of a recovery are buffered,
+and a held button swings again on the same clock, so flailing is legal and
+never gets a wider window for it. The arms follow the swing through a
+`tool:swing` event rather than the tool reaching into the viewmodel.
+`feel.mjs net` prints the resulting tolerance band — presses about 0.10–0.25 s
+before arrival catch a falling apple, either side misses — and
+`net-check.mjs` shows the four phases and the King Melon on one sheet.
+
 **Weight is a spring, not a number in the HUD.** A carried fruit is drawn at the
 hand point plus an offset that a mass-softened spring pulls back to zero, and
 the hands moving is what displaces it. Stiffness falls with mass, so an apple

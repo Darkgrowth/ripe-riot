@@ -47,6 +47,8 @@ export interface GameEventMap {
   /** A tool did its thing. `power` (0..2, default 1) scales the arms' reaction,
    *  so a tap of the shaker and a full-charge cannon do not kick alike. */
   'tool:fired': { toolId: string; power?: number };
+  /** A tool swept through an arc: the viewmodel follows it for `duration` seconds. */
+  'tool:swing': { toolId: string; duration: number };
   /** A tool put energy into a POINT IN THE WORLD. Separate from tool:fired,
    *  which is about the hands: this is what the blast looked like. */
   'tool:blast': { toolId: string; point: THREE.Vector3; power: number; radius: number };

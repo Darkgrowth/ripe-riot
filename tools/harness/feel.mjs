@@ -306,6 +306,54 @@ await withGame(async (g) => {
   }
 
   // ------------------------------------------------------------- stunt spam
+  // ------------------------------------------------------------- catch net
+  // The net is a timed swing. This prints how forgiving the window is for the
+  // ordinary case — an apple falling straight through the hoop — by pressing
+  // at a range of lead times and reporting caught / missed / nothing.
+  if (want('net')) {
+    head('catch net: press-to-arrival lead time vs outcome, apple falling through the hoop');
+    await reset();
+    await g.call('tool.give', 'net');
+    await g.call('tool.select', 'net');
+    await sim(0.2);
+    const s0 = await g.state();
+    await g.look(s0.player.yaw, 1.15);
+    await sim(0.1);
+    const rest = await g.call('tool.debug', 'net');
+    const [ax, ay, az] = rest.hoop;
+    row('window', `active ${rest.window[0]}..${rest.window[1]} s of a ${rest.window[2]} s swing`, `recover ${rest.window[3]} s`);
+    let misses = rest.misses;
+    const G = 22;   // world gravity (PhysicsWorld.gravity), not 9.81
+    for (const lead of [0.5, 0.35, 0.25, 0.17, 0.1, 0.04, -0.05]) {
+      await g.call('fruit.despawnAllFree');
+      await g.call('basket.clear');
+      await sim(0.8);
+      const id = await g.call('fruit.spawn', 'apple', ax, ay + 9, az);
+      let pressed = false, aboveAt = 0;
+      for (let i = 0; i < 140 && !pressed; i++) {
+        await g.advance(1);
+        const f = await g.call('fruit.info', id);
+        if (!f) break;
+        const above = f.pos[1] - ay;
+        const v = Math.max(0.5, f.speed);
+        const t = (-v + Math.sqrt(v * v + 2 * G * Math.max(0, above))) / G;
+        if (above < 0.3 || t <= lead) {
+          await g.call('tool.primary', true);
+          await g.call('tool.primary', false);
+          pressed = true;
+          aboveAt = above;
+        }
+      }
+      await sim(0.9);
+      const st = await g.state();
+      const d = await g.call('tool.debug', 'net');
+      const outcome = st.interaction.basket ? 'CAUGHT' : d.misses > misses ? 'missed' : 'nothing';
+      misses = d.misses;
+      row(`press ${n(lead)} s before`, `apple ${n(aboveAt)} m up`, outcome);
+    }
+    await g.call('tool.select', 'hand');
+  }
+
   if (want('stunt')) {
     head('stunts: what an ordinary hand pick-and-stow awards');
     await reset();

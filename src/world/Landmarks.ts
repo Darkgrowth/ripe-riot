@@ -1003,16 +1003,22 @@ function buildKingMelon(pos: THREE.Vector3): THREE.Mesh {
   const r = KING_MELON_RADIUS;
   const body = new THREE.SphereGeometry(1, 40, 28);
   body.scale(r * 1.08, r * 0.9, r * 1.08);
-  const light = new THREE.Color().setHex(0x76bd45, THREE.SRGBColorSpace);
-  const dark = new THREE.Color().setHex(0x24581f, THREE.SRGBColorSpace);
+  // Measured from the dock: at 0x76bd45 over 0x24581f the stripes averaged
+  // out to the same green as the canopies behind it and the legendary read
+  // as one more tree. A pale, slightly yellow stripe over a rind darker
+  // than any leaf is what makes it a watermelon at 150 m rather than at 15.
+  const light = new THREE.Color().setHex(0xa9d95c, THREE.SRGBColorSpace);
+  const dark = new THREE.Color().setHex(0x173f14, THREE.SRGBColorSpace);
   const pos3 = body.getAttribute('position');
   const col = new Float32Array(pos3.count * 3);
   const c = new THREE.Color();
   for (let i = 0; i < pos3.count; i++) {
     const x = pos3.getX(i), y = pos3.getY(i), z = pos3.getZ(i);
     const theta = Math.atan2(z, x);
-    const stripe = Math.sin(theta * 8) + Math.sin(y * 0.55) * 0.35;
-    c.copy(light).lerp(dark, THREE.MathUtils.smoothstep(stripe, -0.2, 0.45));
+    // Fewer, broader, sharper stripes: eight thin ones blur to a mean at any
+    // distance a landmark is seen from.
+    const stripe = Math.sin(theta * 6) + Math.sin(y * 0.55) * 0.25;
+    c.copy(light).lerp(dark, THREE.MathUtils.smoothstep(stripe, -0.35, 0.15));
     c.multiplyScalar(1 - Math.pow(Math.abs(y) / (KING_MELON_RADIUS * 0.9), 4) * 0.22);
     col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
   }

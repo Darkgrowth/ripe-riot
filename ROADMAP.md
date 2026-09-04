@@ -10,7 +10,7 @@ frame-time clamp (no slow motion at low frame rates), latched input edges that
 survive stepless frames on high-refresh displays, typed event bus, seeded RNG,
 system registry, profiling, debug API, Playwright harness that advances the
 world by forced fixed steps rather than wall-clock time, numeric frame triage,
-contact sheets, geometry validation, 8 gameplay scenarios (203 checks), a
+contact sheets, geometry validation, 9 gameplay scenarios (256 checks), a
 two-client multiplayer test (11 checks) and a startup check that reads the
 presented canvas.
 
@@ -105,6 +105,18 @@ shoved, roped, netted or blasted home instead. Anything that grows past the
 limit while held leaves upward under its own power. Verified by
 `tools/harness/carry-check.mjs` (framing, in percentages of the real frame) and
 the `carry` scenario (the rules, in forced fixed steps).
+
+**Catch net pass** — the net was a volume you held open, and measured against a
+falling apple it was a certain catch with no decision in it. It is now an
+aimed, timed swing: a third of a second of arc, a window in the middle of it
+that can catch, a miss that whooshes, droops and costs a recovery, a buffered
+re-press, and flailing on a held button that never earns a wider window. The
+tolerance band is printed by `feel.mjs net` (about 0.10–0.25 s before arrival
+catches), the four phases and the King Melon are on one sheet from
+`net-check.mjs`, and the `tools` scenario swings early on purpose. The
+King Melon's rind also went from two greens that averaged to canopy colour at
+range to a pale stripe over a dark rind, so the legendary reads as a
+watermelon from the dock rather than as one more tree.
 
 ## Next, in order
 

@@ -18,6 +18,7 @@ node tools/harness/feel.mjs throw hit               # by section
 node tools/harness/multiplayer.mjs   # two real clients over a real transport
 node tools/harness/startup-check.mjs # what the player sees when they press play
 node tools/harness/carry-check.mjs   # how much of the frame a carried fruit takes
+node tools/harness/net-check.mjs     # the catch net's four phases, and the King Melon from the ravine
 node tools/harness/hud-check.mjs     # the DOM overlay, which no canvas shot contains
 node tools/harness/tour.mjs          # one contact sheet of every landmark
 node tools/harness/route.mjs         # the six first-person views of the main route
@@ -105,6 +106,7 @@ never asserts, and you read it before and after a tuning change:
 | `puff` | a Puff Melon's height second by second in still air |
 | `rope` | tension, worst single-step yank, and how far you get sprinting off a leash |
 | `cannon` | charge, blast power delivered to a fruit, and the shove it puts on you |
+| `net` | press-to-arrival lead time against outcome for an apple falling through the hoop: the width of the swing's window, in seconds |
 | `stunt` | what an ordinary pick-and-stow awards, which is how you catch reward spam |
 
 The measurements are the argument. "Held fruit trails 0.030 m whatever it
@@ -121,12 +123,12 @@ visible by reading the code that produced them.
 | `harvest-loop` | the whole game: target an apple, pick it, auto-stow, fill the basket, walk to the pad, sell, auto-delivery of fruit landed on the pad, picking on the left mouse button (and the release not throwing back what the press just picked), and a basket filled by hand earning no stunts |
 | `fruit-physics` | drop damage thresholds by species, watermelon bursting, coconut knockdown and automatic recovery, the band under it where a low-branch coconut registers as a hit without flattening you, an apple *not* knocking you down, oranges rolling |
 | `ropes` | a rope actually holds a load at its length, reports correct tension, winches in, pays out, and snaps past its rating |
-| `tools` | shaker drops fruit, net catches mid-air and awards the stunt, ground nets, rope gun restrains, air cannon launches fruit and shoves the player, self-launch |
+| `tools` | shaker drops fruit; the net as a timed swing — a swing timed to the apple's arrival catches it and awards MID-AIR HARVEST, a swing made too early catches nothing and registers a miss, a press during recovery is not a swing, holding the button flails on the same clock; ground nets; rope gun restrains the player; air cannon launches fruit and shoves the player, self-launch |
 | `progression` | discovery, records, rare variants, shop purchase and tier gating, Puff Melon inflation and drift, Vinebomb launch |
 | `legendary-king-melon` | four vines hold it still, gating on the rope gun, tethering, each cut, the 20 m drop, recovery to the pad, payout, and resetting for another attempt |
 | `carry` | the carry classification table; the local copy leaving the world batch when picked up and returning when dropped; the tool stowing itself while the hands are full; a Puff Melon inflating from medium to large in hand and then leaving by itself past 1.10 m; oversized fruit refused, shoved, and prompted for; the aim highlight lighting the right instance |
 
-Current status: **9/9 scenarios, 246 checks** plus **11/11 multiplayer checks**.
+Current status: **9/9 scenarios, 256 checks** plus **11/11 multiplayer checks**.
 Typecheck and production build are clean.
 
 ## The camera is a thing under test
@@ -272,6 +274,11 @@ three others.
 - `InteractionSystem` computed a spring offset for the carried fruit and then
   never added it to the fruit's position, so every species rode the hand point
   exactly and a 22 kg watermelon carried identically to an apple.
+- The catch net could not miss. Held open, it caught a falling apple 100% of
+  the time with no timing in it, and the scenario that covered it — hold the
+  button, drop an apple, wait — would have passed a net with an infinite
+  radius. The timing scenario that replaced it swings early on purpose and
+  asserts the miss.
 - `fruit:impact.onPlayer` is never true. Rapier reports no contact-force event
   for the kinematic player capsule, which the ragdoll's own detector documents
   and works around — but the camera thump was gated on that flag, so being hit

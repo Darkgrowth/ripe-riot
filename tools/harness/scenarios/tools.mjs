@@ -27,28 +27,94 @@ export async function run(g, t) {
   t.note(`shaker dropped ${after.free - before.free} fruit`);
 
   // ------------------------------------------------------------------- net
+  //
+  // The net is a SWING with a short active window, not a volume you hold
+  // open — so this is a timing test. Swing as the apple arrives and it is
+  // caught; swing while it is still five metres up and it goes straight past
+  // during the recovery, which is a MISS the tool has to say out loud; a press
+  // during recovery is not a swing; holding the button flails, which still
+  // works on a shower of fruit but never gets a wider window for it.
   await g.call('fruit.despawnAllFree');
   await g.call('basket.clear');
   await g.call('tool.select', 'net');
   await g.wait(0.2);
   const st = await g.state();
-  const [px, py, pz] = st.player.pos;
-  // Aim the net up and drop an apple straight into it.
   await g.look(st.player.yaw, 1.15);
-  await g.call('tool.primary', true);          // hold the net open
-  await g.call('fruit.spawn', 'apple', px + 0.2, py + 9, pz + 0.1);
-  let caught = false;
-  for (let i = 0; i < 50; i++) {
+  await g.wait(0.1);
+  const rest = await g.call('tool.debug', 'net');
+  t.ok(rest.phase === 'ready' && !rest.active, 'the net starts ready and cannot catch until swung');
+  const [ax, ay, az] = rest.hoop;
+  const dropApple = (h) => g.call('fruit.spawn', 'apple', ax, ay + h, az);
+  const press = async () => { await g.call('tool.primary', true); await g.call('tool.primary', false); };
+  const G = 22;   // world gravity (PhysicsWorld.gravity), not 9.81
+  /** Seconds until a fruit `above` metres up, falling at `v`, reaches the hoop. */
+  const eta = (above, v) => (-v + Math.sqrt(v * v + 2 * G * Math.max(0, above))) / G;
+  // Press-to-middle-of-window lead.
+  const lead = (rest.window[0] + rest.window[1]) / 2;
+
+  // 1. Timed: swing when the apple is `lead` seconds from the hoop.
+  let apple = await dropApple(9);
+  let swungAt = null;
+  for (let i = 0; i < 60 && swungAt === null; i++) {
     await g.wait(0.05);
-    const s = await g.state();
-    if (s.interaction.basket > 0) { caught = true; break; }
+    const f = await g.call('fruit.info', apple);
+    if (!f) break;
+    const above = f.pos[1] - ay;
+    if (eta(above, Math.max(1, f.speed)) <= lead + 0.02) { await press(); swungAt = above; }
   }
+  await g.wait(0.6);
+  const s1 = await g.state();
+  const net1 = await g.call('tool.debug', 'net');
+  t.ok(swungAt !== null, 'the harness found a moment to swing');
+  t.eq(s1.interaction.basket, 1, 'a swing timed to the apple\'s arrival catches it');
+  t.eq(net1.misses, 0, 'and that is not a miss');
+  t.note(`swung with the apple ${swungAt?.toFixed(2)} m above the hoop; swings ${net1.swings}, caught ${net1.caught}`);
+  t.ok((s1.scoring?.seen ?? []).includes('midAir'), 'catching in mid-air awards MID-AIR HARVEST');
+
+  // 2. Early: swing with the apple still ~6 m up. The window has closed and
+  //    the net is recovering when the apple goes through the hoop.
+  await g.call('basket.clear');
+  await g.call('fruit.despawnAllFree');
+  await g.wait(0.7);
+  apple = await dropApple(9);
+  let early = null;
+  for (let i = 0; i < 60 && early === null; i++) {
+    await g.wait(0.05);
+    const f = await g.call('fruit.info', apple);
+    if (!f) break;
+    const above = f.pos[1] - ay;
+    if (above <= 6.2) { await press(); early = above; }
+  }
+  const mid = await g.call('tool.debug', 'net');
+  t.eq(mid.phase, 'swing', 'the press starts a swing');
+  // 3. Recovery: pressing again right after the swing does not swing again.
+  await g.wait(0.36);
+  const rec = await g.call('tool.debug', 'net');
+  t.eq(rec.phase, 'recover', 'after the swing the net is recovering');
+  await press();
+  await g.wait(0.05);
+  const rec2 = await g.call('tool.debug', 'net');
+  t.eq(rec2.swings, rec.swings, 'a press during recovery is not a swing');
+  await g.wait(0.8);
+  const s2 = await g.state();
+  const net2 = await g.call('tool.debug', 'net');
+  t.eq(s2.interaction.basket, 0, 'a swing made too early catches nothing');
+  t.eq(net2.misses, 1, 'and the apple going past the hoop registers as a MISS');
+  t.note(`early swing with the apple ${early?.toFixed(2)} m up: swings ${net2.swings}, misses ${net2.misses}`);
+
+  // 4. Flailing: holding the button swings again and again, on the same clock.
+  await g.call('fruit.despawnAllFree');
+  await g.wait(0.7);
+  const swingsBefore = (await g.call('tool.debug', 'net')).swings;
+  await g.call('tool.primary', true);
+  await g.input({ primary: true });
+  await g.wait(1.6);
+  await g.clearInput();
   await g.call('tool.primary', false);
-  t.ok(caught, 'the catch net takes a falling apple out of the air');
-  const scoring = await g.state();
-  t.note(`stunts seen so far: ${(scoring.scoring?.seen ?? []).join(', ') || 'none'}`);
-  t.ok((scoring.scoring?.seen ?? []).includes('midAir'),
-    'catching in mid-air awards MID-AIR HARVEST');
+  const flail = await g.call('tool.debug', 'net');
+  t.between(flail.swings - swingsBefore, 2, 3,
+    'holding the button flails: repeated swings, each with the same window');
+  await g.wait(0.8);
 
   // ------------------------------------------------------------- ground net
   await g.call('basket.clear');
