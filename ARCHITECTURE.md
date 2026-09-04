@@ -196,6 +196,32 @@ lateral placement is a fraction of the visible width rather than a fixed
 distance so it survives a narrow window, and the harness asserts the resulting
 percentages for every tool at five aspect ratios.
 
+**Weight is a spring, not a number in the HUD.** A carried fruit is drawn at the
+hand point plus an offset that a mass-softened spring pulls back to zero, and
+the hands moving is what displaces it. Stiffness falls with mass, so an apple
+trails 7 cm through a fast turn and a 22 kg watermelon trails 21 cm and takes a
+beat to catch up; the cap on that offset opens up for a moment on a pick so the
+fruit visibly springs off the branch rather than teleporting into frame. The
+offset was already being computed before this and simply never added to the
+fruit's position, which is why every species used to carry identically.
+
+**Getting hit is detected by proximity and velocity loss, in one place.**
+Rapier reports no contact-force event for the kinematic player capsule, so
+`fruit:impact.onPlayer` is never true. `PlayerRagdoll.checkFruitStrikes` is the
+only detector that works: capsule-distance plus the fruit's velocity lost this
+step. It now has two outcomes rather than one — above the threshold you are
+flattened, below it a `player:hit` goes out and the camera, viewmodel and HUD
+react. Anything that wants to know a player was struck listens to that event;
+nothing should reach for the contact flag, which looks authoritative and is
+always false.
+
+**Forces on fruit bodies are applied as impulses.** Rapier's `addForce`
+accumulates into a persistent buffer that is only cleared by `resetForces`, so
+a force written every step is not "a force" — it is a growing one, and one
+written and then abandoned keeps acting forever. The Puff Melon's drag and
+buoyancy did both. Traits multiply by `ctx.dt` and call `applyImpulse`, so a
+number in the source is one step's worth of exactly what it says.
+
 **The spawn is a pose, not a point.** `Sunpatch.spawnPlayer()` sets position,
 yaw and pitch together, is derived from the built dock rather than from
 coordinates written next to it, and is the single path used by boot, respawn and

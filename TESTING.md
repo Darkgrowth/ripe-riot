@@ -13,6 +13,8 @@ node tools/harness/smoke.mjs         # boots? renders? no errors? (~30 s)
 node tools/harness/geo-check.mjs     # every procedural mesh: NaN, attrs, tris
 node tools/harness/run-tests.mjs     # all gameplay scenarios (~4 min)
 node tools/harness/run-tests.mjs ropes legendary    # by name
+node tools/harness/feel.mjs          # numbers for how each interaction feels
+node tools/harness/feel.mjs throw hit               # by section
 node tools/harness/multiplayer.mjs   # two real clients over a real transport
 node tools/harness/startup-check.mjs # what the player sees when they press play
 node tools/harness/tour.mjs          # one contact sheet of every landmark
@@ -86,20 +88,42 @@ leave the context they enter. So:
    the horizon falls, how much of the frame the viewmodel occupies. Still
    numbers, but numbers taken from the thing the player is looking at.
 
+## Reading feel as numbers
+
+`run-tests.mjs` answers "does it work". `feel.mjs` answers "how does it feel",
+which is a different question and needs a different instrument — it prints, it
+never asserts, and you read it before and after a tuning change:
+
+| Section | What it measures |
+|---|---|
+| `pick` | whether E and LMB land on the step the button goes down; whether grabbing loose fruit moves the hands or makes any sound at all |
+| `carry` | how far a held fruit trails the hand point through a 60° turn, per species — the only readout of carried weight |
+| `throw` | release speed by species, which is where mass has to be legible |
+| `hit` | peak camera amplitude when fruit lands on the player, and whether it flattened them |
+| `puff` | a Puff Melon's height second by second in still air |
+| `rope` | tension, worst single-step yank, and how far you get sprinting off a leash |
+| `cannon` | charge, blast power delivered to a fruit, and the shove it puts on you |
+| `stunt` | what an ordinary pick-and-stow awards, which is how you catch reward spam |
+
+The measurements are the argument. "Held fruit trails 0.030 m whatever it
+weighs" and "an apple to the head produces 0.0000 of camera movement" are the
+kind of statement that settles a design discussion in one line, and neither was
+visible by reading the code that produced them.
+
 ## Scenarios
 
 | Scenario | Covers |
 |---|---|
 | `startup` | the pose the game boots into: on the deck, facing the island, never pitched up; the shop and the King Melon on screen from frame one; the presented canvas is the world and not the clear colour; eye height, FOV, walk/sprint/jump/crouch on the dock; look accumulation and pitch clamps; a respawn out of a ragdoll 34 m up reproducing the opening frame exactly |
 | `movement` | walk/sprint/crouch speeds, jump apex, short-hop, slope climbing, nine-point "never inside the terrain" sweep, long-fall ragdoll and recovery |
-| `harvest-loop` | the whole game: target an apple, pick it, auto-stow, fill the basket, walk to the pad, sell, and auto-delivery of fruit landed on the pad |
-| `fruit-physics` | drop damage thresholds by species, watermelon bursting, coconut knockdown and automatic recovery, an apple *not* knocking you down, oranges rolling |
+| `harvest-loop` | the whole game: target an apple, pick it, auto-stow, fill the basket, walk to the pad, sell, auto-delivery of fruit landed on the pad, picking on the left mouse button (and the release not throwing back what the press just picked), and a basket filled by hand earning no stunts |
+| `fruit-physics` | drop damage thresholds by species, watermelon bursting, coconut knockdown and automatic recovery, the band under it where a low-branch coconut registers as a hit without flattening you, an apple *not* knocking you down, oranges rolling |
 | `ropes` | a rope actually holds a load at its length, reports correct tension, winches in, pays out, and snaps past its rating |
 | `tools` | shaker drops fruit, net catches mid-air and awards the stunt, ground nets, rope gun restrains, air cannon launches fruit and shoves the player, self-launch |
 | `progression` | discovery, records, rare variants, shop purchase and tier gating, Puff Melon inflation and drift, Vinebomb launch |
 | `legendary-king-melon` | four vines hold it still, gating on the rope gun, tethering, each cut, the 20 m drop, recovery to the pad, payout, and resetting for another attempt |
 
-Current status: **8/8 scenarios, 196 checks** plus **11/11 multiplayer checks**.
+Current status: **8/8 scenarios, 203 checks** plus **11/11 multiplayer checks**.
 Typecheck and production build are clean.
 
 ## The harness window size is a cost, not a calibration
@@ -203,6 +227,22 @@ three others.
 - The dock sign's board was positioned by a hand-rolled rotation that dropped
   the local X term, leaving it floating unsupported in the middle of the
   walkway, 2 m from its own post.
+- The Puff Melon's wind behaviour never ran. `setInflation` clears `inflating`
+  the moment the fruit reaches full size, and every one of drag, wind and
+  buoyancy sat behind `if (!f.inflating) return` — so the species named for
+  being blown across the island switched all of it off at the instant it
+  became a balloon. What looked like flight was a stale force left in Rapier's
+  accumulator by the code that had stopped running: `addForce` persists until
+  something calls `resetForces`, so the last force written before the early
+  return kept pushing forever. The melon hung motionless at a fixed height in
+  still air, and a scenario measuring 58 m of drift passed on the artefact.
+- `InteractionSystem` computed a spring offset for the carried fruit and then
+  never added it to the fruit's position, so every species rode the hand point
+  exactly and a 22 kg watermelon carried identically to an apple.
+- `fruit:impact.onPlayer` is never true. Rapier reports no contact-force event
+  for the kinematic player capsule, which the ragdoll's own detector documents
+  and works around — but the camera thump was gated on that flag, so being hit
+  by fruit produced no camera movement whatsoever.
 
 ## Not yet automated
 

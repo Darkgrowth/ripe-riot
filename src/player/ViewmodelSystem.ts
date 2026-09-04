@@ -58,6 +58,10 @@ export class ViewmodelSystem implements System {
     // the basket should register in the arms, not only in the toast.
     g.bus.on('fruit:detached', (p) => { if (p.cause === 'hand') this.punch(0.45); });
     g.bus.on('fruit:stowed', () => this.punch(0.28));
+    // Taking hold of something loose is the commonest action in the game and
+    // used to move nothing on screen at all. Heavier is a bigger heave.
+    g.bus.on('fruit:grabbed', (p) => this.punch(clamp(0.3 + p.mass * 0.05, 0.3, 1.1)));
+    g.bus.on('player:hit', (p) => this.punch(clamp(p.momentum / 90, 0.25, 0.9)));
     g.bus.on('tool:equipped', () => { this.stow = 1; });
 
     g.debug?.addProbe('viewmodel', () => ({

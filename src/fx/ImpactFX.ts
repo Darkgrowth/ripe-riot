@@ -66,6 +66,8 @@ export class ImpactFX implements System {
     g.bus.on('fruit:detached', (p) => this.onDetach(p.fruitId, p.cause));
     g.bus.on('plant:shaken', (p) => this.onShake(p.position, p.height, p.strength));
     g.bus.on('player:ragdoll', () => this.dustRing(g.player.position, 14, 0.55));
+    g.bus.on('vinebomb:launch', (p) => this.onVinebomb(p.fruitId, p.speed));
+    g.bus.on('player:hit', (p) => this.bonk(p.momentum, p.fromAbove, p.point));
     g.bus.on('legendary:landed', (p) => this.onLegendaryLanding(p.position, p.speed));
 
     g.debug?.addProbe('fx', () => ({ alive: this.alive, spawned: this.spawned, enabled: this.enabled }));
@@ -108,11 +110,50 @@ export class ImpactFX implements System {
     const momentum = mass * dv;
     const d = point.distanceTo(this.g.player.eyePosition);
     const reach = 14 + Math.min(40, momentum / 60);
-    if (d < reach && !onPlayer) {
+    if (!onPlayer && d < reach) {
       const near = Math.pow(1 - d / reach, 1.6);
       const amp = clamp(momentum / 900, 0, 1) * 0.06 * near;
       if (amp > 0.0025) this.g.playerCamera.addShake(amp, 0.24 + amp * 3, 30);
     }
+  }
+
+  /**
+   * Fruit landing on the player, below the knockdown threshold.
+   *
+   * Raised by PlayerRagdoll, which owns the only detector that actually works
+   * (Rapier reports no contact-force event for the kinematic player capsule,
+   * so `fruit:impact.onPlayer` is never set and everything hanging off it was
+   * dead). The view is driven down harder for a hit from above, so you can
+   * tell a coconut on the skull from one that clipped your shoulder without
+   * looking up.
+   */
+  private bonk(momentum: number, fromAbove: boolean, point: THREE.Vector3): void {
+    const k = clamp(momentum / 60, 0, 1);
+    if (k < 0.03) return;
+    // Kept deliberately short and modest: this fires on every bump, and a
+    // long shake on a routine event is how a first-person game makes people
+    // ill. The push-down does most of the communicating.
+    this.g.playerCamera.addShake(0.015 + k * 0.06, 0.2 + k * 0.22, 27);
+    this.g.playerCamera.addRecoil(
+      (Math.random() - 0.5) * 0.045 * k,
+      -(0.028 + k * 0.13) * (fromAbove ? 1 : 0.5),
+    );
+    this.g.bus.emit('audio:sfx', {
+      name: 'thud', volume: clamp(0.3 + k * 0.7, 0.3, 1),
+      pitch: clamp(1.3 - k * 0.55, 0.7, 1.3), position: point.clone(),
+    });
+    this.dust(point, k);
+  }
+
+  /** A small puff where something bounced off you. */
+  private dust(at: THREE.Vector3, k: number): void {
+    this.emit(clamp(Math.round(3 + k * 8), 3, 11), at, (q) => {
+      mixInto(q, DUST, DUST_DARK, Math.random() * 0.4);
+      scatter(q, 0.7 + k, 1.4 + k * 2.4, 0.5);
+      q.size = rand(0.04, 0.09);
+      q.life = q.maxLife = rand(0.3, 0.6);
+      q.gravity = 7; q.drag = 3.4; q.bounce = 0;
+    });
   }
 
   private onBurst(fruitId: number, species: string): void {
@@ -135,6 +176,21 @@ export class ImpactFX implements System {
     // A burst is a landing that went badly; it still thumps.
     const d = f.position.distanceTo(this.g.player.eyePosition);
     if (d < 20) this.g.playerCamera.addShake(0.02 * (1 - d / 20) * (0.5 + r), 0.3, 28);
+  }
+
+  /**
+   * A vine letting go of what it was holding. Leaves everywhere and a snap in
+   * the view, so an eight-metre-per-second launch and a twenty-metre one are
+   * distinguishable from where you are standing.
+   */
+  private onVinebomb(fruitId: number, speed: number): void {
+    const f = this.fruitSys.get(fruitId);
+    if (!f) return;
+    this.leaves(f.position, clamp(Math.round(6 + speed), 6, 22), 1.4);
+    const d = f.position.distanceTo(this.g.player.eyePosition);
+    if (d > 26) return;
+    const k = clamp(speed / 22, 0, 1) * Math.pow(1 - d / 26, 1.4);
+    this.g.playerCamera.addShake(0.012 + k * 0.05, 0.24 + k * 0.2, 28);
   }
 
   private onDetach(fruitId: number, cause: string): void {

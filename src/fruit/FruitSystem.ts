@@ -421,6 +421,7 @@ export class FruitSystem implements System {
   detach(f: Fruit, cause: string, playerId = -1, inheritVel?: THREE.Vector3): void {
     if (f.state !== 'attached') return;
     const at = f.attach;
+    this.aimElastic(f, playerId);
     f.detach(this.ctx, cause, playerId, inheritVel);
     if (at) {
       const plant = this.plants.get(at.plantId);
@@ -434,6 +435,25 @@ export class FruitSystem implements System {
         });
       }
     }
+  }
+
+  /**
+   * Point a Vinebomb where the player is looking as they cut it loose.
+   *
+   * The stored vine tension was a fixed random direction, so releasing one was
+   * a lottery: it fired somewhere upward and you found out where afterwards.
+   * That is fine for a hazard and useless for a stunt tool — the brief wants
+   * it "controllable enough for deliberate attempts". The vine still owns most
+   * of the launch, so it never becomes a gun, but the way you pull it off
+   * decides where it goes.
+   */
+  private aimElastic(f: Fruit, playerId: number): void {
+    if (playerId < 0 || playerId !== this.g.player.id || !f.hasTrait('elastic')) return;
+    this.g.player.lookDir(_v);
+    f.tensionDir.multiplyScalar(0.45).addScaledVector(_v, 0.55);
+    // A vine cannot fire you into the dirt: it is anchored above the fruit.
+    f.tensionDir.y = Math.max(f.tensionDir.y, 0.34);
+    f.tensionDir.normalize();
   }
 
   /** Shake a plant hard enough and its weaker fruit lets go. */

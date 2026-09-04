@@ -57,7 +57,14 @@ export class InteractionSystem implements System {
 
   /** Smoothed hand position offsets, so carrying has weight. */
   private handSway = new THREE.Vector3();
+  /** Offset of the held fruit from the hand point, its velocity, and where
+   *  the hand point was last frame (the spring's driving term). */
   private handLag = new THREE.Vector3();
+  private handLagVel = new THREE.Vector3();
+  private lastHold = new THREE.Vector3();
+  /** 1 the instant something is picked, decaying: widens the swing cap so
+   *  the fruit springs off the branch rather than teleporting to the hand. */
+  private snap = 0;
   /** 0..1 wind-up, written by whichever tool is doing the throwing. */
   throwCharge = 0;
   private nearSellPad = false;
@@ -215,6 +222,11 @@ export class InteractionSystem implements System {
     if (f.state === 'attached') {
       // Bare hands only work on fruit that is ready to come off.
       if (f.def.attachStrength > 6.0) {
+        // A refusal is an interaction too: it should thump, not just print.
+        this.g.bus.emit('audio:sfx', {
+          name: 'stow', volume: 0.3, pitch: 0.5, position: f.position.clone(),
+        });
+        this.g.playerCamera.addRecoil(0, -0.008);
         this.g.bus.emit('ui:toast', {
           text: `${f.displayName} will not come loose`,
           sub: 'It needs proper equipment', kind: 'bad', ms: 2000,
@@ -222,7 +234,13 @@ export class InteractionSystem implements System {
         return false;
       }
       this.fruitSys.detach(f, 'hand', this.g.player.id);
-      this.g.bus.emit('audio:sfx', { name: 'pick', position: f.position.clone() });
+      // The snap of a stem giving way. Bigger fruit lets go lower and harder.
+      this.g.bus.emit('audio:sfx', {
+        name: 'pick', position: f.position.clone(),
+        volume: clamp(0.7 + f.mass * 0.05, 0.7, 1.1),
+        pitch: clamp(1.35 / Math.pow(Math.max(0.4, f.mass), 0.26), 0.62, 1.35),
+      });
+      this.g.playerCamera.addRecoil(0, clamp(0.004 + f.mass * 0.0016, 0.004, 0.02));
     }
     // Make room: stow whatever is in hand if the basket will take it.
     if (this.carried) {
@@ -230,10 +248,33 @@ export class InteractionSystem implements System {
         this.dropHeld();
       }
     }
+    const from = _v2.copy(f.position);
     f.pickUp(this.g.player.id);
     this.carried = { fruit: f, heavy: f.mass > this.basket.maxItemMass };
-    this.handLag.set(0, 0, 0);
+    this.holdPoint(this.lastHold, this.carried.heavy);
+    // Start the spring displaced by where the fruit actually was, so it flies
+    // into the hand from the branch.
+    this.handLag.copy(from).sub(this.lastHold);
+    if (this.handLag.lengthSq() > 0.81) this.handLag.setLength(0.9);
+    this.handLagVel.set(0, 0, 0);
+    this.snap = 1;
+    // Taking hold of something is an action, and it used to be a silent one:
+    // grabbing loose fruit off the ground — the commonest thing you do after
+    // a tree shake — made no sound and did not move the hands at all. Weight
+    // rides on the pitch, so a coconut lands lower in the ear than an apple.
+    this.g.bus.emit('fruit:grabbed', {
+      fruitId: f.id, species: f.species, mass: f.mass, heavy: this.carried.heavy,
+    });
+    this.g.bus.emit('audio:sfx', {
+      name: this.carried.heavy ? 'thud' : 'stow',
+      volume: this.carried.heavy ? 0.34 : 0.5,
+      pitch: clamp(1.5 / Math.pow(Math.max(0.4, f.mass), 0.3), 0.55, 1.5),
+      position: f.position.clone(),
+    });
     if (this.carried.heavy) {
+      // Hoisting a two-hander is a physical event, not a notification.
+      this.g.playerCamera.addRecoil(0, -0.022);
+      this.g.playerCamera.addShake(0.012, 0.22, 18);
       this.g.bus.emit('ui:toast', {
         text: `${f.displayName} — ${f.mass.toFixed(1)} kg`,
         sub: 'Too big for the basket. Both hands.', ms: 2400,
@@ -268,28 +309,54 @@ export class InteractionSystem implements System {
   dropHeld(): void {
     if (!this.carried) return;
     const f = this.carried.fruit;
-    this.holdPoint(_hold, this.carried.heavy);
-    f.position.copy(_hold);
+    this.releasePoint(f);
     _v.copy(this.g.player.velocity).multiplyScalar(0.6);
     f.release(_v);
     this.carried = null;
   }
 
+  /**
+   * Where a released fruit starts: where it was DRAWN, not the ideal hand
+   * point. Now that heavy fruit trails the hands by up to a third of a metre,
+   * releasing it from the ideal point pops it across that gap on the frame it
+   * leaves your hands.
+   */
+  private releasePoint(f: Fruit): void {
+    this.holdPoint(_hold, this.carried?.heavy ?? false);
+    f.position.copy(_hold).add(this.handLag);
+  }
+
   throwHeld(power = 1): void {
     if (!this.carried) return;
     const f = this.carried.fruit;
-    this.holdPoint(_hold, this.carried.heavy);
-    f.position.copy(_hold);
+    this.releasePoint(f);
     // Heavier fruit leaves your hands slower. A watermelon is a shot put.
-    const base = 15.5 * clamp(2.2 / Math.sqrt(Math.max(0.35, f.mass)), 0.28, 1.35);
+    //
+    // The old curve saturated against its own upper clamp below about 3 kg, so
+    // an apple, an orange and a banana bunch all left the hand at exactly
+    // 21 m/s and the weight in the HUD was a lie. This one has no ceiling to
+    // hit in the light range, so every species throws differently:
+    //   orange 1.0 kg 21.0   apple 1.1 kg 20.0   banana 2.6 kg 12.4
+    //   coconut 3.4 kg 10.7  watermelon 22 kg 4.7 (a shot put, as advertised)
+    const base = 15.5 * clamp(1.35 / Math.pow(Math.max(0.35, f.mass), 0.55), 0.30, 1.45);
     this.g.player.lookDir(_dir);
     _v.copy(_dir).multiplyScalar(base * power);
     _v.y += 1.4 * power;
     _v.add(this.g.player.velocity);
-    f.release(_v, _v2.set((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6));
+    // Spin scales with how hard it was thrown; a lobbed melon should not
+    // leave the hand rotating like a shuriken.
+    const spin = 3 + power * 5 * clamp(2.5 / Math.max(0.5, f.mass), 0.3, 1.6);
+    f.release(_v, _v2.set(
+      (Math.random() - 0.5) * spin, (Math.random() - 0.5) * spin, (Math.random() - 0.5) * spin));
     this.carried = null;
-    this.g.playerCamera.addRecoil((Math.random() - 0.5) * 0.01, 0.02 * power);
-    this.g.bus.emit('audio:sfx', { name: 'throw', volume: 0.5 + power * 0.5 });
+    // Follow-through: heavier releases kick the view harder and lower.
+    const heft = clamp(Math.pow(f.mass, 0.45) * 0.5, 0.4, 2.2);
+    this.g.playerCamera.addRecoil((Math.random() - 0.5) * 0.012 * heft, 0.022 * power * heft);
+    this.g.playerCamera.addShake(0.006 * power * heft, 0.18, 24);
+    this.g.bus.emit('audio:sfx', {
+      name: 'throw', volume: 0.45 + power * 0.55,
+      pitch: clamp(1.45 / Math.pow(Math.max(0.4, f.mass), 0.28), 0.6, 1.45),
+    });
     this.g.bus.emit('tool:fired', { toolId: 'hand' });
   }
 
@@ -319,9 +386,13 @@ export class InteractionSystem implements System {
     for (const f of batch) this.fruitSys.remove(f);
     this.g.bus.emit('audio:sfx', { name: 'sale' });
     const best = result.lines.reduce((a, b) => (b.total > a.total ? b : a), result.lines[0]);
+    // Say what the stunts were worth. A bonus the player cannot see is a
+    // bonus that does not exist, and "+$41 from stunts" is the line that
+    // makes someone try the stupid route again on the next load.
+    const bonus = result.stuntBonus > 0 ? ` &nbsp;<b>+$${result.stuntBonus} stunts</b>` : '';
     this.g.bus.emit('ui:toast', {
       text: `Sold ${result.count} — $${result.total}`,
-      sub: result.count > 1 ? `Best: ${best.displayName} $${best.total}` : `${best.quality} · ${best.mass} kg`,
+      sub: (result.count > 1 ? `Best: ${best.displayName} $${best.total}` : `${best.quality} · ${best.mass} kg`) + bonus,
       kind: 'gold', ms: 2600,
     });
     void how;
@@ -347,13 +418,36 @@ export class InteractionSystem implements System {
     const f = this.carried.fruit;
     this.holdPoint(_hold, this.carried.heavy);
 
-    // Lag the hand behind the camera slightly: instant tracking looks glued on.
-    const lagK = this.carried.heavy ? 11 : 20;
-    this.handLag.x = damp(this.handLag.x, 0, lagK, dt);
-    this.handLag.y = damp(this.handLag.y, 0, lagK, dt);
-    this.handLag.z = damp(this.handLag.z, 0, lagK, dt);
-    _v.copy(_hold).sub(f.position);
-    this.handLag.addScaledVector(_v, Math.min(1, dt * lagK));
+    // A spring between the hands and the fruit, softened by mass.
+    //
+    // This is the only place a player can FEEL what a fruit weighs while
+    // walking around with it, so the numbers matter: an apple is stiff enough
+    // to look glued to the hands, a 22 kg watermelon swings a fifth of a metre
+    // wide of a turn and takes a beat to catch up. The offset is `fruit minus
+    // hands`: moving the hands displaces it, the spring pulls it back.
+    //
+    // (An earlier version computed this offset and then never added it to the
+    // fruit, which is why every species used to carry like the same
+    // polystyrene prop no matter what the HUD said it weighed.)
+    const stiff = clamp(105 / (1 + f.mass * 0.55), 11, 95);
+    const damping = 2 * Math.sqrt(stiff) * 0.78;
+    // This runs on the RENDER step, whose dt is whatever the frame took. An
+    // explicit spring integrated over a 200 ms hitch explodes; clamping the
+    // step just makes the fruit catch up a frame later, which nobody sees.
+    const h = Math.min(dt, 1 / 30);
+    _v.copy(_hold).sub(this.lastHold);
+    this.lastHold.copy(_hold);
+    this.handLag.sub(_v);
+    this.handLagVel.addScaledVector(this.handLag, -stiff * h);
+    this.handLagVel.multiplyScalar(Math.exp(-damping * h));
+    this.handLag.addScaledVector(this.handLagVel, h);
+    // Cap the swing so a heavy fruit stays in frame rather than orbiting.
+    // The cap opens up briefly at the moment of the pick so the fruit visibly
+    // springs off the branch into the hand instead of teleporting there: the
+    // detach snap is the whole physical read of "I took that".
+    this.snap = Math.max(0, this.snap - dt * 4.5);
+    const swing = clamp(0.05 + f.mass * 0.012, 0.05, 0.32) + this.snap * 0.75;
+    if (this.handLag.lengthSq() > swing * swing) this.handLag.setLength(swing);
 
     const p = this.g.player;
     const bobAmp = this.carried.heavy ? 0.055 : 0.03;
@@ -362,7 +456,9 @@ export class InteractionSystem implements System {
       Math.abs(Math.cos(p.bobPhase)) * bobAmp,
       0,
     );
-    f.position.copy(_hold).add(this.handSway);
+    f.position.copy(_hold).add(this.handSway).add(this.handLag);
+    // Heavy things sag in the hands rather than floating at hand height.
+    f.position.y -= clamp(f.mass * 0.0045, 0, 0.10);
     // Charging a throw pulls the fruit back and up.
     if (this.throwCharge > 0.01) {
       p.lookDir(_dir);

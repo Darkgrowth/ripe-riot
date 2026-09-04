@@ -10,10 +10,17 @@ export interface GameEventMap {
   'player:downed': { playerId: number };
   'player:revived': { playerId: number; byId: number };
   'player:landed': { playerId: number; speed: number };
+  /** Something hit the player hard enough to notice but not to flatten them. */
+  'player:hit': { momentum: number; fromAbove: boolean; point: THREE.Vector3 };
 
   'fruit:detached': { fruitId: number; species: string; cause: string; playerId: number };
+  /** Something loose was taken into the hands. `mass` drives the feedback. */
+  'fruit:grabbed': { fruitId: number; species: string; mass: number; heavy: boolean };
   'fruit:impact': { fruitId: number; species: string; speed: number; point: THREE.Vector3; onPlayer: boolean };
-  'fruit:qualityChanged': { fruitId: number; quality: string; damage: number };
+  'fruit:qualityChanged': {
+    fruitId: number; quality: string; damage: number;
+    displayName: string; lost: number;
+  };
   'fruit:destroyed': { fruitId: number; species: string; value: number };
   'fruit:stowed': { fruitId: number; species: string };
   'fruit:sold': { fruitId: number; species: string; value: number; quality: string; mass: number };
@@ -41,6 +48,10 @@ export interface GameEventMap {
 
   'rope:attached': { ropeId: number; aId: number; bId: number };
   'rope:snapped': { ropeId: number };
+  /** A rope crossed from slack into load, or back. `tension` is in newtons. */
+  'rope:taut': { ropeId: number; taut: boolean; tension: number };
+  /** A rope moved the player this step. `speed` is the velocity change, m/s. */
+  'rope:tug': { ropeId: number; speed: number };
 
   'ui:toast': { text: string; sub?: string; kind?: 'info' | 'good' | 'bad' | 'gold'; ms?: number };
   'ui:celebrate': { title: string; sub?: string; kind?: 'discovery' | 'record' | 'stunt' | 'legendary' };

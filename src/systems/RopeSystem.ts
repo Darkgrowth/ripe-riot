@@ -51,6 +51,12 @@ export interface Rope {
   radius: number;
   /** Vines can be cut; ropes are released instead. */
   cuttable: boolean;
+  /** Latched "is under load" state, so the taut event fires on the edge. */
+  taut: boolean;
+  /** Seconds until the next creak while heavily loaded. */
+  creak: number;
+  /** Seconds until this rope may report another tug on the player. */
+  tugCool: number;
 }
 
 const SEGMENTS = 12;
@@ -132,6 +138,9 @@ export class RopeSystem implements System {
       color: opts.color ?? Palette.rope,
       radius: opts.radius ?? 0.045,
       cuttable: opts.cuttable ?? false,
+      taut: false,
+      creak: 0,
+      tugCool: 0,
     };
     this.ropes.set(id, rope);
     this.makeMesh(rope);
@@ -235,6 +244,7 @@ export class RopeSystem implements System {
       if (!bodyA || !bodyB) { this.remove(r.id); continue; }
       r.a.body = bodyA;
       r.b.body = bodyB;
+      if (r.tugCool > 0) r.tugCool = Math.max(0, r.tugCool - dt);
 
       if (r.reelRate !== 0) this.setLength(r.id, r.length + r.reelRate * dt);
       this.endPoint(r.a, _a);
@@ -242,7 +252,11 @@ export class RopeSystem implements System {
       _n.copy(_b).sub(_a);
       const dist = _n.length();
       const slack = r.length - dist;
-      if (dist < 1e-5 || slack >= 0) { r.tension = 0; r.tensionAvg *= TENSION_DECAY; continue; }
+      if (dist < 1e-5 || slack >= 0) {
+        r.tension = 0; r.tensionAvg *= TENSION_DECAY;
+        this.setTaut(r, false);
+        continue;
+      }
       _n.multiplyScalar(1 / dist);
 
       // The player is a kinematic body as far as Rapier is concerned, which
@@ -255,7 +269,11 @@ export class RopeSystem implements System {
       const invMassA = playerA ? 1 / PLAYER_MASS : movable(bodyA) ? 1 / Math.max(0.001, bodyA.mass()) : 0;
       const invMassB = playerB ? 1 / PLAYER_MASS : movable(bodyB) ? 1 / Math.max(0.001, bodyB.mass()) : 0;
       const invSum = invMassA + invMassB;
-      if (invSum <= 0) { r.tension = 0; r.tensionAvg *= TENSION_DECAY; continue; }
+      if (invSum <= 0) {
+        r.tension = 0; r.tensionAvg *= TENSION_DECAY;
+        this.setTaut(r, false);
+        continue;
+      }
 
       // Separation speed along the rope, positive when it is being pulled apart.
       const va = playerA ? this.g.player.velocity : bodyA.linvel();
@@ -267,13 +285,17 @@ export class RopeSystem implements System {
       const violation = -slack;
       const bias = Math.min(violation * invDt * 0.22, 14);
       const j = (vSep + bias) / invSum;
-      if (j < 0) { r.tension = 0; r.tensionAvg *= TENSION_DECAY; continue; }
+      if (j < 0) {
+        r.tension = 0; r.tensionAvg *= TENSION_DECAY;
+        this.setTaut(r, false);
+        continue;
+      }
 
       _imp.copy(_n).multiplyScalar(j);
-      if (playerA) this.pullPlayer(_imp, 1 / PLAYER_MASS);
+      if (playerA) this.pullPlayer(_imp, 1 / PLAYER_MASS, r);
       else if (invMassA > 0) bodyA.applyImpulseAtPoint({ x: _imp.x, y: _imp.y, z: _imp.z },
         { x: _a.x, y: _a.y, z: _a.z }, true);
-      if (playerB) this.pullPlayer(_imp, -1 / PLAYER_MASS);
+      if (playerB) this.pullPlayer(_imp, -1 / PLAYER_MASS, r);
       else if (invMassB > 0) bodyB.applyImpulseAtPoint({ x: -_imp.x, y: -_imp.y, z: -_imp.z },
         { x: _b.x, y: _b.y, z: _b.z }, true);
 
@@ -288,10 +310,39 @@ export class RopeSystem implements System {
         this.g.bus.emit('rope:snapped', { ropeId: r.id });
         this.g.bus.emit('audio:sfx', { name: 'ropeSnap' });
         this.remove(r.id);
-      } else if (r.tension > r.maxTension * 0.55 && Math.random() < 0.02) {
-        this.g.bus.emit('audio:sfx', { name: 'ropeStrain', volume: 0.5 });
+        continue;
+      }
+      // Going taut is an EDGE, not a die roll. The old code played a strain
+      // sound on 2% of the steps a loaded rope spent above half its rating,
+      // which is a random noise in the middle of the one moment the player
+      // needs to hear precisely: the instant the line bit.
+      this.setTaut(r, r.tension > TAUT_N);
+      // Sustained heavy load keeps creaking, on a fixed cadence rather than
+      // a coin flip, with the pitch riding the load.
+      if (r.tensionAvg > r.maxTension * 0.5) {
+        r.creak -= dt;
+        if (r.creak <= 0) {
+          r.creak = 0.42;
+          this.g.bus.emit('audio:sfx', {
+            name: 'ropeStrain',
+            volume: 0.35 + clamp(r.tensionAvg / r.maxTension, 0, 1) * 0.4,
+            pitch: clamp(0.9 + r.tensionAvg / r.maxTension, 0.9, 2.0),
+          });
+        }
+      } else {
+        r.creak = 0;
       }
     }
+  }
+
+  /** Announce the slack/taut edge once, with a little hysteresis. */
+  private setTaut(r: Rope, taut: boolean): void {
+    if (taut === r.taut) return;
+    // Coming off load needs the tension to actually be gone, so a rope
+    // hovering around the threshold does not chatter.
+    if (!taut && r.tension > TAUT_N * 0.35) return;
+    r.taut = taut;
+    this.g.bus.emit('rope:taut', { ropeId: r.id, taut, tension: r.tension });
   }
 
   private isPlayer(b: RBody): boolean {
@@ -302,7 +353,7 @@ export class RopeSystem implements System {
   /** A rope impulse on the player becomes a velocity change on the controller,
    *  which is where player motion actually lives. A hard yank also reads as an
    *  impact, so a player tied to something that falls gets flattened. */
-  private pullPlayer(impulse: THREE.Vector3, invMass: number): void {
+  private pullPlayer(impulse: THREE.Vector3, invMass: number, rope: Rope): void {
     _pull.copy(impulse).multiplyScalar(invMass);
     const p = this.g.player;
     const wanted = _pull.length();
@@ -314,6 +365,18 @@ export class RopeSystem implements System {
     // Ropes pull up as well as along; let the controller leave the ground
     // rather than immediately zeroing the lift as "landed".
     if (_pull.y > 0.6) p.grounded = false;
+    // Being yanked was invisible below the ragdoll threshold: sprinting to
+    // the end of a tether took 6.5 m/s off you in one step and the camera
+    // did not so much as blink. Anything that moves the player this much is
+    // worth feeling.
+    // Rate-limited per rope: a sustained haul yanks you on every one of the
+    // sixty steps in a second, and sixty stacked camera shakes is a seizure,
+    // not a tug.
+    const felt = _pull.length();
+    if (felt > TUG_FELT && rope.tugCool <= 0) {
+      rope.tugCool = 0.34;
+      this.g.bus.emit('rope:tug', { ropeId: rope.id, speed: felt });
+    }
     if (wanted > p.ragdollImpactSpeed) p.onHardImpact?.(wanted, 'rope');
   }
 
@@ -372,5 +435,9 @@ const _pull = new THREE.Vector3();
 const PLAYER_MASS = 82;
 /** Largest velocity change one step may put on the player, m/s. */
 const MAX_PLAYER_YANK = 9;
+/** Velocity change in one step worth reporting as a tug the player felt. */
+const TUG_FELT = 1.2;
+/** Tension (N) at which a rope reads as loaded rather than merely straight. */
+const TAUT_N = 45;
 /** Per-step retention of the smoothed tension: e^(-dt/0.15) at 60 Hz. */
 const TENSION_DECAY = Math.exp(-(1 / 60) / 0.15);

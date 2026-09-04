@@ -67,28 +67,66 @@ const inflate: FruitTrait = {
     f.setDrag(2.6, 3.2);
   },
   onStep(f, ctx) {
-    if (!f.inflating) return;
-    const rate = f.hasTrait('unstable') ? 6.5 : 1.55;
-    const next = Math.min(f.inflateTarget, f.inflate + rate * ctx.dt);
-    if (next !== f.inflate) f.setInflation(next);
+    if (f.inflating) {
+      // "Inflates the moment it comes free" — at the old rate it took most of
+      // two seconds, by which time it had already fallen half its escape.
+      const rate = f.hasTrait('unstable') ? 6.5 : 3.2;
+      const next = Math.min(f.inflateTarget, f.inflate + rate * ctx.dt);
+      if (next !== f.inflate) f.setInflation(next);
+    }
 
-    if (!f.body || f.state !== 'free') return;
+    // Everything below used to sit behind `if (!f.inflating) return`, and
+    // `setInflation` clears `inflating` the instant the fruit reaches full
+    // size — so drag, wind and buoyancy all switched off at the exact moment
+    // the fruit became a balloon. The species is named for its wind
+    // behaviour and it had none: what looked like flight was a stale force
+    // left in Rapier's accumulator by the code that had stopped running.
+    if (!f.body || f.state !== 'free' || f.inflate <= 1.001) return;
     // Drag against the wind, scaled by frontal area. This is what makes a Puff
     // Melon a chase rather than a pickup.
+    //
+    // Applied as impulses (force x dt) rather than `addForce`: Rapier's force
+    // accumulator persists until it is explicitly reset, so adding a force
+    // every step piles them up and the numbers written here stop meaning what
+    // they say. An impulse is exactly one step's worth, every time.
     const area = f.radius * f.radius * Math.PI;
     const v = f.body.linvel();
     _rel.set(ctx.wind.x - v.x, ctx.wind.y * 0.35 - v.y, ctx.wind.z - v.z);
     const speed = _rel.length();
     if (speed > 0.01) {
-      const dragK = 0.62 * area * speed;
+      const dragK = 0.62 * area * speed * ctx.dt;
       _rel.multiplyScalar(dragK);
-      f.body.addForce({ x: _rel.x, y: _rel.y, z: _rel.z }, true);
+      f.body.applyImpulse({ x: _rel.x, y: _rel.y, z: _rel.z }, true);
     }
-    // Slight buoyancy once fully puffed, so it hangs rather than plummets.
-    const lift = (f.inflate - 1) / (f.inflateTarget - 1);
-    f.body.addForce({ x: 0, y: lift * f.mass * 17.0, z: 0 }, true);
+    // Buoyancy, and the shape of it is the whole fruit.
+    //
+    // Measured on the old constant: a released Puff Melon climbed steadily and
+    // never came back down, so "chasing it" meant watching it leave. It now
+    // overshoots hard while it inflates — the escape, which is the joke — then
+    // bleeds off to a little heavier than air and sinks at about two metres a
+    // second: low enough to run under with a net, while the wind drags it
+    // across the island.
+    //
+    // Lift is expressed in GRAVITIES so the arc survives a change to world
+    // gravity, which is -22 here rather than -9.81.
+    const fill = (f.inflate - 1) / (f.inflateTarget - 1);
+    const age = ctx.elapsed - f.detachedAt;
+    const buoyancy = age < ESCAPE_TIME
+      ? ESCAPE_LIFT
+      : Math.max(SETTLED_LIFT, ESCAPE_LIFT - (age - ESCAPE_TIME) * LIFT_DECAY);
+    const g = Math.abs(f.gravity);
+    f.body.applyImpulse({ x: 0, y: fill * buoyancy * f.mass * g * ctx.dt, z: 0 }, true);
   },
 };
+
+/** Gravities of lift while a Puff Melon is making its escape. */
+const ESCAPE_LIFT = 2.4;
+/** …and once it has settled: under 1, so it comes down. */
+const SETTLED_LIFT = 0.86;
+/** Seconds of escape before the lift starts bleeding away. */
+const ESCAPE_TIME = 1.5;
+/** Gravities of lift lost per second after that. */
+const LIFT_DECAY = 0.9;
 
 /**
  * Vinebomb. While attached, the vine stores tension; releasing it without
@@ -104,6 +142,13 @@ const elastic: FruitTrait = {
     _imp.copy(f.tensionDir).multiplyScalar(released * f.mass);
     f.body.applyImpulse({ x: _imp.x, y: _imp.y, z: _imp.z }, true);
     f.body.applyTorqueImpulse({ x: released * 0.05, y: released * 0.03, z: 0 }, true);
+    // A catapult letting go should sound and feel like one. Pitch rides the
+    // release, so a restrained vine twangs low and a free one cracks.
+    ctx.emit('audio:sfx', {
+      name: 'ropeSnap', position: f.position.clone(),
+      volume: 0.4 + Math.min(0.6, released / 22),
+      pitch: 0.75 + Math.min(0.8, released / 26),
+    });
     ctx.emit('vinebomb:launch', { fruitId: f.id, speed: released, restrained: f.restraint });
   },
 };

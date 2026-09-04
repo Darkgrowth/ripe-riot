@@ -10,7 +10,7 @@ frame-time clamp (no slow motion at low frame rates), latched input edges that
 survive stepless frames on high-refresh displays, typed event bus, seeded RNG,
 system registry, profiling, debug API, Playwright harness that advances the
 world by forced fixed steps rather than wall-clock time, numeric frame triage,
-contact sheets, geometry validation, 8 gameplay scenarios (196 checks), a
+contact sheets, geometry validation, 8 gameplay scenarios (203 checks), a
 two-client multiplayer test (11 checks) and a startup check that reads the
 presented canvas.
 
@@ -82,24 +82,32 @@ rigs, fruit replication, shared economy, client intents.
 
 **Save** — opt-in per-system serialisation, autosave, versioned blob.
 
+**Feel pass** — the core loop tuned against measurements taken from the real
+first-person game rather than from reading the source (`tools/harness/feel.mjs`
+prints them). Carried fruit rides on a mass-softened spring so weight is
+visible; left-click picks; grabbing loose fruit makes a sound and moves the
+hands; the throw curve no longer saturates, so every species leaves the hand at
+a different speed; being hit by fruit moves the camera at all, and the coconut
+knockdown bar sits above a legible bonk band; the Puff Melon's wind behaviour
+runs (it did not); the catch net telegraphs and rewards a real catch; ropes
+announce going taut on the edge and tug the view; the air cannon out-throws an
+arm; stunts stopped firing on every ordinary pick and now read as rewards.
+
 ## Next, in order
 
-1. **Feel pass on what exists.** The systems are verified; the *tuning* is not.
-   Play an hour, adjust throw arcs, net radius, cannon recoil, damage
-   thresholds, prices and regrowth timers against how it actually plays.
-2. **More impact VFX** — water splash, rope dust, sale sparkle. The shard
+1. **More impact VFX** — water splash, rope dust, sale sparkle. The shard
    system in `fx/ImpactFX.ts` is the place; it needs emitters, not a new system.
-3. **Music** — light exploration bed, discovery sting, legendary escalation.
+2. **Music** — light exploration bed, discovery sting, legendary escalation.
    The sting hooks already exist as events.
-4. **WebRTC transport** — the interface is done; this is signalling plus ICE.
-5. **Prediction and reconciliation** for client-side fruit interaction. Clients
+3. **WebRTC transport** — the interface is done; this is signalling plus ICE.
+4. **Prediction and reconciliation** for client-side fruit interaction. Clients
    currently see a round-trip delay on their own picks.
-6. **Save/load round-trip test** through a real page reload.
-7. **Mid-tier tools** — harpoon, portable winch, sticky anchor, bounce charge,
+5. **Save/load round-trip test** through a real page reload.
+6. **Mid-tier tools** — harpoon, portable winch, sticky anchor, bounce charge,
    large catch net. All are compositions of existing systems.
-8. **Full Sunpatch content** — cave orchard interior, secret spawns, the rest of
+7. **Full Sunpatch content** — cave orchard interior, secret spawns, the rest of
    the landmark dressing.
-9. **Weather and time** — day/night, wind events, rain surfaces. `TimeSystem`
+8. **Weather and time** — day/night, wind events, rain surfaces. `TimeSystem`
     and `WeatherSystem` are named in the brief and not yet written; wind is
     currently a vector on `FruitSystem`.
 

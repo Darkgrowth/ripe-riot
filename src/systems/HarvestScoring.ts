@@ -24,8 +24,8 @@ export const STUNTS: Record<string, StuntDef> = {
     blurb: 'Off three things, at least.' },
   fourWayTether: { id: 'fourWayTether', label: 'FOUR-WAY TETHER', bonus: 1.10,
     blurb: 'Four ropes. Somebody planned this.' },
-  zeroDamage: { id: 'zeroDamage', label: 'ZERO DAMAGE', bonus: 0.30,
-    blurb: 'Perfect condition, all the way to the counter.' },
+  zeroDamage: { id: 'zeroDamage', label: 'NOT A MARK ON IT', bonus: 0.30,
+    blurb: 'Through all of that, and still Perfect.' },
   hillRunner: { id: 'hillRunner', label: 'HILL RUNNER', bonus: 0.50,
     blurb: 'You chased that a long way downhill.' },
   skyPick: { id: 'skyPick', label: 'SKY PICK', bonus: 0.35,
@@ -89,6 +89,12 @@ export class HarvestScoring implements System {
       const f = this.fruitSys.get(p.fruitId);
       if (!f) return;
       if (f.detachPosition.y > 21) this.award(f, 'skyPick');
+      // "Five at once. Nobody meant that." — so a chain reaction is something
+      // you caused INDIRECTLY. Counting hand picks made a methodical player
+      // filling a basket off one tree score it every time, which is the same
+      // reward spam as awarding ZERO DAMAGE for reaching up and taking an
+      // apple. A shake, a blast or a rope pull still counts.
+      if (p.cause === 'hand') return;
       const now = g.clock.elapsed;
       this.recentDetaches.push(now);
       while (this.recentDetaches.length && now - this.recentDetaches[0] > 3.2) {
@@ -149,7 +155,13 @@ export class HarvestScoring implements System {
     this.g.bus.emit('stunt:awarded', {
       name: stuntId, label: def.label, multiplier: rec.multiplier, fruitId: f.id,
     });
-    this.g.bus.emit('audio:sfx', { name: 'stunt', volume: 0.6 });
+    // Stack the fanfare. Each stunt on the same run comes in a step higher, so
+    // a fruit that earns four of them on one flight arpeggiates instead of
+    // playing the same three notes four times.
+    this.g.bus.emit('audio:sfx', {
+      name: 'stunt', volume: 0.55 + Math.min(3, rec.stunts.size - 1) * 0.1,
+      pitch: 1 + Math.min(4, rec.stunts.size - 1) * 0.14,
+    });
     if (!this.seen.has(stuntId)) {
       this.seen.add(stuntId);
       this.g.bus.emit('ui:toast', { text: def.label, sub: def.blurb, kind: 'gold', ms: 3400 });
@@ -167,9 +179,27 @@ export class HarvestScoring implements System {
     if (f.bounces >= 3) this.award(f, 'ricochet');
     if (!f.touchedGround && f.airborneTime > 0.5) this.award(f, 'oneShot');
     if (drop > 14 && f.damage <= 0.001) this.award(f, 'perfectLanding');
-    if (f.damage <= 0.001) this.award(f, 'zeroDamage');
+    // Undamaged is only an achievement if the fruit was ever in danger.
+    // Unconditionally, this fired on every hand-picked apple in the game —
+    // a stunt chip and a fanfare for reaching up and taking hold of
+    // something, which is what taught players to ignore stunt chips.
+    if (f.damage <= 0.001 && this.wasAtRisk(f, drop)) this.award(f, 'zeroDamage');
     if (f.maxSpeedSinceDetach > 24) this.award(f, 'launched');
     if (this.ropes.attachedTo(f.id).length >= 4) this.award(f, 'fourWayTether');
+  }
+
+  /**
+   * Did this fruit actually go through anything on the way to the basket?
+   *
+   * Tuned against the ordinary case rather than in the abstract: a tree shake
+   * drops fruit four to six metres at nine or ten metres a second and bounces
+   * it once or twice, and that is the most routine thing in the game. The
+   * bars sit above it, so surviving a shake is normal and surviving a fall
+   * off a palm or a ride on an air cannon is worth saying out loud.
+   */
+  private wasAtRisk(f: Fruit, drop: number): boolean {
+    return f.caughtInAir || f.bounces >= 3 || drop > 6.5
+      || f.maxSpeedSinceDetach > 13 || f.travelled > 16;
   }
 
   /** Awarded for a catch made barely above the ground or the sea. */

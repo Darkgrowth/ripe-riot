@@ -69,7 +69,14 @@ export class UIManager implements System {
     g.bus.on('ui:prompt', (p) => this.setPrompt(p.text));
     g.bus.on('stunt:awarded', (p) => this.stunt(p.label, p.multiplier));
     g.bus.on('book:discovered', (p) => this.celebrate('NEW FRUIT', p.species.toUpperCase()));
-    g.bus.on('player:ragdoll', () => this.flashHurt());
+    g.bus.on('player:ragdoll', () => this.flashHurt(260));
+    g.bus.on('player:hit', (p) => this.flashHurt(p.momentum > 140 ? 200 : 130));
+    // Only your own accidents are worth interrupting for: a melon bursting
+    // on the far side of the island is somebody else's problem.
+    g.bus.on('fruit:qualityChanged', (p) => {
+      if (!this.nearPlayer(p.fruitId)) return;
+      this.quality(p.displayName, p.quality, p.lost);
+    });
 
     window.addEventListener('keydown', (e) => {
       if (e.code === 'F3' || (e.code === 'Backquote' && !e.ctrlKey)) {
@@ -150,12 +157,51 @@ export class UIManager implements System {
     this.celebrateTimer = 2.6;
   }
 
+  /**
+   * A stunt landed.
+   *
+   * These used to be a 13px pill that appeared beside the crosshair and then
+   * vanished mid-frame with no exit, which reads as a debug print rather than
+   * a reward. Now they punch in, stack, count up as a run continues, and fade
+   * out — and a run that has earned several turns the whole stack brighter,
+   * because the escalating multiplier is the actual prize.
+   */
   stunt(label: string, mult: number): void {
+    this.stuntRun += 1;
+    this.stuntRunUntil = performance.now() + 2600;
     const el = document.createElement('div');
-    el.className = 'stunt-chip';
+    el.className = `stunt-chip${this.stuntRun > 1 ? ' combo' : ''}`;
     el.innerHTML = `${label}<span class="mult">×${mult.toFixed(2)}</span>`;
     this.els.stunts.appendChild(el);
-    this.stuntNodes.push({ el, until: performance.now() + 3000 });
+    this.els.stunts.classList.toggle('hot', this.stuntRun >= 3);
+    this.stuntNodes.push({ el, until: performance.now() + 2900 });
+    while (this.stuntNodes.length > 5) {
+      const old = this.stuntNodes.shift()!;
+      old.el.remove();
+    }
+  }
+  /** Stunts awarded in quick succession, for escalating the presentation. */
+  private stuntRun = 0;
+  private stuntRunUntil = 0;
+
+  /**
+   * A fruit dropped a quality tier.
+   *
+   * `fruit:qualityChanged` was emitted from the moment the damage model was
+   * written and nothing ever listened, so the entire fragility system — the
+   * thing that is supposed to make carrying a watermelon tense — was
+   * communicated by a slightly darker tint on a mesh you are usually running
+   * away from. Now it says so, and says what it cost.
+   */
+  private quality(name: string, tier: string, lost: number): void {
+    const ruined = tier === 'Ruined' || tier === 'Damaged';
+    this.toast(`${name} — ${tier.toUpperCase()}`,
+      lost > 0 ? `−$${lost} of value` : 'Handle it more gently',
+      ruined ? 'bad' : 'info', ruined ? 2400 : 1700);
+    const el = this.els.carry;
+    el.classList.remove('knock');
+    void el.offsetWidth;
+    el.classList.add('knock');
   }
 
   banner(text: string, seconds: number): void {
@@ -165,9 +211,19 @@ export class UIManager implements System {
   }
   private bannerTimer = 0;
 
-  private flashHurt(): void {
+  private flashHurt(ms = 260): void {
     this.els.hurt.classList.add('on');
-    setTimeout(() => this.els.hurt.classList.remove('on'), 260);
+    setTimeout(() => this.els.hurt.classList.remove('on'), ms);
+  }
+
+  /** Is that fruit in the player's hands, or close enough to be theirs? */
+  private nearPlayer(fruitId: number): boolean {
+    if (!this.g.has('fruit')) return false;
+    const f = this.g.get<{ get(id: number): { position: { distanceTo(v: unknown): number };
+      state: string } | undefined }>('fruit').get(fruitId);
+    if (!f) return false;
+    if (f.state === 'carried' || f.state === 'stowed') return true;
+    return f.position.distanceTo(this.g.player.position) < 14;
   }
 
   // ---- loop ---------------------------------------------------------------
@@ -183,7 +239,14 @@ export class UIManager implements System {
     }
     for (let i = this.stuntNodes.length - 1; i >= 0; i--) {
       const s = this.stuntNodes[i];
+      // Fade out rather than blinking away: the chip used to be removed from
+      // the DOM mid-frame, which is what made a reward look like a log line.
+      if (now > s.until - 420) s.el.classList.add('out');
       if (now > s.until) { s.el.remove(); this.stuntNodes.splice(i, 1); }
+    }
+    if (this.stuntRun > 0 && now > this.stuntRunUntil) {
+      this.stuntRun = 0;
+      this.els.stunts.classList.remove('hot');
     }
     if (this.celebrateTimer > 0) {
       this.celebrateTimer -= dt;

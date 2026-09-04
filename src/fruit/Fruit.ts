@@ -118,6 +118,8 @@ export class Fruit implements PhysicsOwner {
   get diameter(): number { return this.radius * 2; }
   get renderScale(): number { return this.def.size * this.sizeScale * this.inflate; }
   get quality(): QualityTier { return qualityFor(this.damage).tier; }
+  /** World gravity, so traits can express lift in gravities rather than N/kg. */
+  get gravity(): number { return this.physics.gravity; }
   get fragility(): number { return this.def.fragility * (this.variant?.fragilityMul ?? 1); }
   get visible(): boolean { return this.state !== 'stowed' && this.state !== 'gone'; }
 
@@ -417,9 +419,13 @@ export class Fruit implements PhysicsOwner {
     const tolerance = 2 + 20 * Math.pow(1 - this.fragility, 0.8);
     const over = dv - tolerance;
     if (over > 0) {
+      const worthBefore = this.value();
       const changed = this.addDamage(over * 0.022 * (0.5 + this.fragility));
       if (changed) {
-        ctx.emit('fruit:qualityChanged', { fruitId: this.id, quality: this.quality, damage: this.damage });
+        ctx.emit('fruit:qualityChanged', {
+          fruitId: this.id, quality: this.quality, damage: this.damage,
+          displayName: this.displayName, lost: Math.max(0, worthBefore - this.value()),
+        });
       }
     }
     if (dv > 2.5) {

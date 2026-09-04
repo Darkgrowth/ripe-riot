@@ -23,9 +23,21 @@ export class HandPicker extends Tool {
     cost: 0, tier: 0, starter: true,
   };
 
+  /** True while the click that just picked something is still held down, so
+   *  releasing it cannot immediately throw what it picked. */
+  private pickedOnPress = false;
+
   override onPrimary(down: boolean): void {
     const inter = this.ctx.interaction;
-    if (down) { this.charge = 0; return; }
+    if (down) {
+      this.charge = 0;
+      // Left-click with empty hands used to do nothing at all, which is a
+      // strange thing for the first button of a first-person game to do:
+      // every player tries it on the first apple they see. It picks.
+      this.pickedOnPress = !inter.carried && inter.tryInteract();
+      return;
+    }
+    if (this.pickedOnPress) { this.pickedOnPress = false; this.charge = 0; return; }
     if (inter.carried) {
       inter.throwHeld(0.35 + this.charge * 0.65);
       this.charge = 0;
@@ -41,10 +53,11 @@ export class HandPicker extends Tool {
 
   override step(dt: number, held: { primary: boolean }): void {
     super.step(dt, held as never);
-    if (held.primary && this.ctx.interaction.carried) {
+    if (held.primary && this.ctx.interaction.carried && !this.pickedOnPress) {
       this.charge = Math.min(1, this.charge + dt * 1.9);
     } else if (!held.primary) {
       this.charge = 0;
+      this.pickedOnPress = false;
     }
     // Share the wind-up so the held fruit pulls back on screen.
     this.ctx.interaction.throwCharge = this.charge;
@@ -123,23 +136,36 @@ export class CatchNet extends Tool {
   /** Ground nets soften whatever lands on them. */
   private groundNets: Array<{ pos: THREE.Vector3; radius: number; until: number; mesh: THREE.Mesh }> = [];
   private ring: THREE.Mesh | null = null;
+  private ringMat: THREE.MeshStandardMaterial | null = null;
+  /** 0..1 telegraph: something catchable is closing on the hoop. */
+  private lock = 0;
+  /** Decaying flash left by the last catch. */
+  private flash = 0;
   catchRadius = 1.55;
   catchDistance = 2.0;
   caught = 0;
+  /** Speed a fruit must be doing to count as CAUGHT rather than scooped. */
+  private static readonly CATCH_SPEED = 2.2;
 
   override onAttach(): void {
     const geo = new THREE.TorusGeometry(this.catchRadius, 0.05, 6, 20);
-    const mat = new THREE.MeshStandardMaterial({
+    this.ringMat = new THREE.MeshStandardMaterial({
       color: Palette.rope, roughness: 0.9, transparent: true, opacity: 0.85,
     });
-    this.ring = new THREE.Mesh(geo, mat);
+    this.ring = new THREE.Mesh(geo, this.ringMat);
     this.ring.visible = false;
     this.ring.frustumCulled = false;
     this.game.renderer.scene.add(this.ring);
   }
 
   override onPrimary(down: boolean): void { this.active = down; }
-  override onUnequip(): void { super.onUnequip(); this.active = false; if (this.ring) this.ring.visible = false; }
+  override onUnequip(): void {
+    super.onUnequip();
+    this.active = false;
+    this.lock = 0;
+    this.flash = 0;
+    if (this.ring) { this.ring.visible = false; this.ring.scale.setScalar(1); }
+  }
 
   /** Lay a net on the ground that softens anything landing in it. */
   override onSecondary(down: boolean): void {
@@ -179,15 +205,49 @@ export class CatchNet extends Tool {
 
   override step(dt: number, held: { primary: boolean }): void {
     super.step(dt, held as never);
+    this.flash = Math.max(0, this.flash - dt * 3.4);
     if (this.ring) {
       this.ring.visible = this.active;
       if (this.active) {
         this.muzzle(_pos, this.catchDistance);
         this.ring.position.copy(_pos);
         this.ring.quaternion.copy(this.game.renderer.camera.quaternion);
+        // Telegraph. Catching used to be blind: the hoop looked identical
+        // whether the fruit was about to pass through it or twenty metres
+        // away, so a catch was luck rather than timing. The ring now brightens
+        // and swells as something catchable closes on it, which is the whole
+        // readability of the tool.
+        this.lock = clamp(this.lock + (this.threat(_pos) - this.lock) * Math.min(1, dt * 14), 0, 1);
+        const glow = Math.max(this.lock, this.flash);
+        const s = 1 + glow * 0.16 + this.flash * 0.22;
+        this.ring.scale.setScalar(s);
+        if (this.ringMat) {
+          this.ringMat.color.copy(Palette.rope).lerp(WHITE, this.flash * 0.8);
+          this.ringMat.emissive.copy(GOLD).multiplyScalar(glow * 0.85);
+          this.ringMat.opacity = 0.6 + glow * 0.4;
+        }
+      } else {
+        this.lock = 0;
       }
     }
     if (this.active) this.sweep();
+  }
+
+  /** How close the nearest catchable fruit is to the hoop, as 0..1. */
+  private threat(hoop: THREE.Vector3): number {
+    let best = 0;
+    const warn = this.catchRadius * 3.4;
+    for (const f of this.ctx.fruit.fruits.values()) {
+      if (f.state !== 'free' || !f.body || f.mass > 14) continue;
+      const d = f.position.distanceTo(hoop);
+      if (d > warn) continue;
+      // Weight by speed: a fruit lying still in the grass is not a catch.
+      const moving = clamp(f.speed / 6, 0, 1);
+      const near = 1 - d / warn;
+      const v = near * near * (0.35 + moving * 0.65);
+      if (v > best) best = v;
+    }
+    return best;
   }
 
   /** Runs even when the net is stowed: ground nets keep working. */
@@ -234,8 +294,27 @@ export class CatchNet extends Tool {
         continue;
       }
       const speed = f.speed;
+      const realCatch = speed > CatchNet.CATCH_SPEED;
       this.caught++;
-      this.game.bus.emit('audio:sfx', { name: 'netCatch', position: f.position.clone() });
+      // A catch and a scoop are different events and should not sound the
+      // same: snatching a coconut out of the air is the point of the tool,
+      // sweeping a windfall out of the grass is tidying up.
+      this.game.bus.emit('audio:sfx', {
+        name: 'netCatch', position: f.position.clone(),
+        volume: realCatch ? clamp(0.55 + speed / 18, 0.55, 1) : 0.3,
+        pitch: realCatch ? clamp(0.85 + speed / 26, 0.85, 1.5) : 0.7,
+      });
+      if (realCatch) {
+        this.flash = 1;
+        this.game.playerCamera.addShake(clamp(0.006 + speed * 0.0016, 0.006, 0.03), 0.16, 30);
+        this.game.playerCamera.addRecoil(0, -0.006 - Math.min(0.012, speed * 0.0009));
+        this.game.bus.emit('tool:fired', { toolId: this.def.id });
+        if (speed > 8) {
+          this.game.bus.emit('ui:toast', {
+            text: 'CAUGHT', sub: `${f.displayName} at ${speed.toFixed(0)} m/s`, kind: 'good', ms: 1400,
+          });
+        }
+      }
       if (speed > 5.5 && f.position.y > this.player.position.y + 0.4) {
         this.game.bus.emit('stunt:candidate', { fruitId: f.id, kind: 'midAir' });
       }
@@ -268,9 +347,31 @@ export class RopeGun extends Tool {
   private mine: Rope[] = [];
   maxRopes = 4;
   range = 34;
+  /** Winch speed ramps in rather than starting at full rate. */
+  private winchSpeed = 0;
+  /** Seconds until the next winch tick; the ratchet is a rhythm, not noise. */
+  private winchTick = 0;
 
   override onAttach(): void {
     this.ropes = this.game.get<RopeSystem>('ropes');
+    // A rope going taut is the tool's most important piece of information and
+    // the player is usually looking the other way when it happens, so it gets
+    // a sound and a bite in the view rather than only a thicker line.
+    this.game.bus.on('rope:taut', (p) => {
+      if (!p.taut || !this.mine.some((r) => r.id === p.ropeId)) return;
+      this.game.bus.emit('audio:sfx', {
+        name: 'ropeStrain', volume: 0.55,
+        pitch: clamp(0.8 + p.tension / 4000, 0.8, 1.9),
+      });
+    });
+    this.game.bus.on('rope:tug', (p) => {
+      if (!this.mine.some((r) => r.id === p.ropeId)) return;
+      const k = clamp(p.speed / 9, 0, 1);
+      this.game.playerCamera.addShake(0.01 + k * 0.05, 0.22 + k * 0.2, 24);
+      this.game.playerCamera.addRecoil((Math.random() - 0.5) * 0.02 * k, -0.03 * k);
+      // Only a serious yank goes through the arms as well as the head.
+      if (k > 0.5) this.game.bus.emit('tool:fired', { toolId: this.def.id });
+    });
   }
 
   override onPrimary(down: boolean): void {
@@ -330,6 +431,8 @@ export class RopeGun extends Tool {
     for (const r of this.mine) this.ropes.setReel(r.id, 0);
     if (this.secondaryHeldFor >= 0 && this.secondaryHeldFor < 0.28) this.pinNearEnd();
     this.secondaryHeldFor = -1;
+    this.winchSpeed = 0;
+    this.winchTick = 0;
   }
 
   private pinNearEnd(): void {
@@ -371,12 +474,24 @@ export class RopeGun extends Tool {
       if (this.secondaryHeldFor > 0.28) {
         const rope = this.mine[this.mine.length - 1];
         if (rope) {
-          this.ropes.setReel(rope.id, -2.4);
-          if (Math.random() < 0.04) {
-            this.game.bus.emit('audio:sfx', { name: 'winch', volume: 0.4 });
+          // Spin up rather than snapping to full rate: a winch that reaches
+          // 2.4 m/s on the first frame reads as a teleport, and it is the
+          // ramp that makes fine positioning under a load possible at all.
+          this.winchSpeed = Math.min(2.6, this.winchSpeed + dt * 5.0);
+          this.ropes.setReel(rope.id, -this.winchSpeed);
+          // A ratchet at a steady rate, pitched by how hard it is working.
+          this.winchTick -= dt;
+          if (this.winchTick <= 0) {
+            this.winchTick = 0.16;
+            this.game.bus.emit('audio:sfx', {
+              name: 'winch', volume: 0.3 + (this.winchSpeed / 2.6) * 0.25,
+              pitch: clamp(0.8 + rope.tension / 2600, 0.8, 1.7),
+            });
           }
         }
       }
+    } else if (this.winchSpeed !== 0) {
+      this.winchSpeed = 0;
     }
   }
 
@@ -384,11 +499,24 @@ export class RopeGun extends Tool {
   releaseNewest(): boolean {
     const rope = this.mine.pop();
     if (!rope) return false;
+    // Cutting loose under load should feel like letting go of something, not
+    // like a line vanishing from the scene.
+    const loaded = clamp(rope.tension / 3000, 0, 1);
     this.ropes.remove(rope.id);
+    this.game.bus.emit('audio:sfx', {
+      name: 'ropeSnap', volume: 0.25 + loaded * 0.45, pitch: 1.35 - loaded * 0.35,
+    });
+    if (loaded > 0.05) this.game.playerCamera.addShake(0.008 + loaded * 0.022, 0.2, 26);
     return true;
   }
 
-  override status(): string { return this.mine.length ? `${this.mine.length}` : ''; }
+  /** Length, and how hard the newest rope is pulling. */
+  override status(): string {
+    const rope = this.mine[this.mine.length - 1];
+    if (!rope) return '';
+    const taut = rope.tension > 60 ? ' ‼' : rope.tension > 1 ? ' ·' : '';
+    return `${this.mine.length} · ${rope.length.toFixed(1)}m${taut}`;
+  }
   override onUnequip(): void { super.onUnequip(); this.stopWinch(); }
 }
 
@@ -405,6 +533,12 @@ export class AirCannon extends Tool {
 
   private charging = false;
   private recharge = 1;
+  /** Seconds of FOV punch left, its full duration, and its peak offset. */
+  private fovLeft = 0;
+  private fovTotal = 0;
+  private fovPeak = 0;
+  /** Charge milestones already announced, so the whine steps rather than buzzes. */
+  private chargeStep = 0;
   blastRange = 13;
   blastRadius = 3.6;
   /** Instrumentation for the harness. */
@@ -418,31 +552,59 @@ export class AirCannon extends Tool {
   lastVelAfter: [number, number, number] = [0, 0, 0];
 
   override onPrimary(down: boolean): void {
-    if (down) { this.charging = true; this.charge = 0; return; }
+    if (down) { this.charging = true; this.charge = 0; this.chargeStep = 0; return; }
     if (!this.charging) return;
     this.charging = false;
-    this.fire(0.42 + this.charge * 0.58);
+    // A tap is a puff and a full charge is a cannon. The old floor of 0.42
+    // meant a tap already did 43% of the damage of a full wind-up, so holding
+    // the button was a formality rather than a decision.
+    this.fire(0.28 + this.charge * 0.72);
     this.charge = 0;
+    this.chargeStep = 0;
   }
 
   /** Fire straight down: the self-launch everyone discovers within a minute. */
   override onSecondary(down: boolean): void {
-    if (!down || this.recharge < 0.55) return;
+    if (!down || this.recharge < 0.55) {
+      if (down) this.dryFire();
+      return;
+    }
     this.recharge -= 0.55;
     const p = this.player;
     _v.set(0, 1, 0).multiplyScalar(13.5);
     p.addImpulseVelocity(_v, false, 'aircannon');
     this.game.playerCamera.addShake(0.05, 0.4, 24);
-    this.game.renderer.setFovOffset(9);
-    setTimeout(() => this.game.renderer.setFovOffset(0), 260);
-    this.game.bus.emit('audio:sfx', { name: 'cannon', volume: 0.9 });
+    this.game.playerCamera.addRecoil(0, 0.05);
+    this.punchFov(9, 0.26);
+    this.game.bus.emit('audio:sfx', { name: 'cannon', volume: 0.9, pitch: 0.82 });
+    this.game.bus.emit('tool:fired', { toolId: this.def.id });
     this.game.physics.explode(p.position.clone(), 4.0, 5.5, 0.2);
+  }
+
+  /**
+   * A FOV kick that lives on the fixed step rather than on `setTimeout`.
+   *
+   * The wall clock is the wrong clock for anything the player sees: with the
+   * game paused (the harness does this for every scenario) a timeout still
+   * fires, and at 20 fps a 220 ms timeout lands four frames late.
+   */
+  private punchFov(amount: number, seconds: number): void {
+    this.fovPeak = amount;
+    this.fovLeft = seconds;
+    this.fovTotal = seconds;
+    this.game.renderer.setFovOffset(amount);
+  }
+
+  /** Nothing in the tank. Say so with a click instead of only a toast. */
+  private dryFire(): void {
+    this.game.bus.emit('audio:sfx', { name: 'ropeAnchor', volume: 0.22, pitch: 0.55 });
   }
 
   private fire(power: number): void {
     this.lastPower = power;
     if (this.recharge < 0.3) {
       this.lastBlocked = 'recharge';
+      this.dryFire();
       this.game.bus.emit('ui:toast', { text: 'Compressor still building', ms: 1200 });
       return;
     }
@@ -461,7 +623,10 @@ export class AirCannon extends Tool {
     _v.copy(_pos).addScaledVector(_dir, dist);
 
     const radius = this.blastRadius * (0.75 + power * 0.5);
-    const strength = 13 * power;
+    // Measured at the old value: a full-charge blast left an apple doing
+    // 11.7 m/s, which is slower than throwing the same apple by hand (21 m/s).
+    // A $1450 compressed-air cannon has to beat an arm.
+    const strength = 22 * power;
     const pushed = this.game.physics.explode(_v, radius, strength, 0.30);
     this.lastPushed = pushed.length;
     this.lastCentre = [+_v.x.toFixed(2), +_v.y.toFixed(2), +_v.z.toFixed(2)];
@@ -475,18 +640,24 @@ export class AirCannon extends Tool {
       }
     }
 
-    // Recoil. Enough to matter, not enough to be an accident every time.
-    _v2.copy(_dir).multiplyScalar(-6.5 * power);
-    _v2.y += 1.6 * power;
+    // Recoil, scaled with the blast so the two stay honest with each other:
+    // a tap still pushes you off your mark, a full charge is a decision. It
+    // stays under the 13.5 m/s knockdown bar, so the cannon shoves you around
+    // without ever flattening you for using it.
+    _v2.copy(_dir).multiplyScalar(-8.5 * power);
+    _v2.y += 2.0 * power;
     this.lastRecoil = [+_v2.x.toFixed(2), +_v2.y.toFixed(2), +_v2.z.toFixed(2)];
     p.addImpulseVelocity(_v2, false, 'aircannon');
     this.lastVelAfter = [+p.velocity.x.toFixed(2), +p.velocity.y.toFixed(2), +p.velocity.z.toFixed(2)];
 
-    this.game.playerCamera.addShake(0.035 + power * 0.045, 0.4, 26);
-    this.game.playerCamera.addRecoil((Math.random() - 0.5) * 0.02, 0.035 * power);
-    this.game.renderer.setFovOffset(5 * power);
-    setTimeout(() => this.game.renderer.setFovOffset(0), 220);
-    this.game.bus.emit('audio:sfx', { name: 'cannon', volume: 0.6 + power * 0.4 });
+    this.game.playerCamera.addShake(0.03 + power * 0.055, 0.34 + power * 0.16, 26);
+    this.game.playerCamera.addRecoil((Math.random() - 0.5) * 0.022 * power, 0.045 * power);
+    this.punchFov(3 + 6 * power, 0.16 + power * 0.12);
+    // Deeper and louder the harder it is charged, so the wind-up pays off in
+    // the ear as well as in the physics.
+    this.game.bus.emit('audio:sfx', {
+      name: 'cannon', volume: 0.55 + power * 0.45, pitch: 1.18 - power * 0.36,
+    });
     this.game.bus.emit('tool:fired', { toolId: this.def.id });
     if (pushed.length > 2) {
       this.game.bus.emit('ui:toast', { text: `${pushed.length} objects airborne`, ms: 1500 });
@@ -496,7 +667,31 @@ export class AirCannon extends Tool {
   override step(dt: number, held: { primary: boolean }): void {
     super.step(dt, held as never);
     this.recharge = Math.min(1, this.recharge + dt * 0.42);
-    if (this.charging && held.primary) this.charge = Math.min(1, this.charge + dt * 1.35);
+    if (this.charging && held.primary) {
+      this.charge = Math.min(1, this.charge + dt * 1.35);
+      // Three rising clicks and a distinct top-out, so the wind-up is
+      // audible without needing a looping voice.
+      const step = this.charge >= 1 ? 4 : this.charge > 0.72 ? 3 : this.charge > 0.42 ? 2 : 1;
+      if (step > this.chargeStep) {
+        this.chargeStep = step;
+        this.game.bus.emit('audio:sfx', {
+          name: step === 4 ? 'ropeAnchor' : 'winch',
+          volume: step === 4 ? 0.3 : 0.22, pitch: 0.9 + step * 0.22,
+        });
+      }
+    }
+    if (this.fovLeft > 0) {
+      this.fovLeft = Math.max(0, this.fovLeft - dt);
+      const k = this.fovTotal > 0 ? this.fovLeft / this.fovTotal : 0;
+      this.game.renderer.setFovOffset(this.fovPeak * k * k);
+    }
+  }
+
+  override onUnequip(): void {
+    super.onUnequip();
+    this.charging = false;
+    this.chargeStep = 0;
+    if (this.fovLeft > 0) { this.fovLeft = 0; this.game.renderer.setFovOffset(0); }
   }
 
   override background(dt: number): void {
@@ -703,6 +898,9 @@ function mergeSimple(parts: THREE.BufferGeometry[]): THREE.BufferGeometry {
 }
 
 const UP = new THREE.Vector3(0, 1, 0);
+/** Catch-net ring tints. Allocated once; the material lerps between them. */
+const WHITE = new THREE.Color(1, 1, 1);
+const GOLD = new THREE.Color(1.0, 0.78, 0.26);
 
 export const ALL_TOOLS: Array<new () => Tool> = [
   HandPicker, CatchNet, TreeShaker, RopeGun, AirCannon, BasketTool, LadderTool,

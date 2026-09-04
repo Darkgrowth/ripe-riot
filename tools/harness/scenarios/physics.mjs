@@ -86,6 +86,35 @@ export async function run(g, t) {
   const nowKnockdowns = (await g.state()).ragdoll.knockdowns;
   t.eq(nowKnockdowns, before, 'an apple to the head is survivable');
 
+  // --- there has to be a band UNDER the knockdown, or the coconut is weather
+  // rather than a consequence. World gravity is -22, so a coconut is already
+  // doing 11.5 m/s three metres off the branch; at the original threshold
+  // every coconut from every palm flattened you and the hit had no reading
+  // between "nothing happened" and "you are on the floor".
+  await g.call('ragdoll.recover');
+  await g.call('fruit.despawnAllFree');
+  await g.standAt(flat[0], flat[1], 0, 0.6);
+  await g.wait(0.4);
+  const beforeShort = (await g.state()).ragdoll.knockdowns;
+  const p3 = (await g.state()).player.pos;
+  await g.page.evaluate(() => {
+    window.__FEELHITS = { n: 0, biggest: 0 };
+    if (!window.__FEELHITS_BOUND) {
+      window.__FEELHITS_BOUND = true;
+      window.__GAME.bus.on('player:hit', (p) => {
+        window.__FEELHITS.n++;
+        window.__FEELHITS.biggest = Math.max(window.__FEELHITS.biggest, p.momentum);
+      });
+    }
+  });
+  await g.call('fruit.spawn', 'coconut', p3[0], p3[1] + 5, p3[2]);
+  await g.wait(2.4);
+  const shortDrop = await g.page.evaluate(() => window.__FEELHITS);
+  t.eq((await g.state()).ragdoll.knockdowns, beforeShort,
+    'a coconut off a low branch does not flatten you');
+  t.gt(shortDrop.n, 0, 'but it still registers as a hit the player can feel');
+  t.note(`5 m coconut: ${shortDrop.n} hit event(s), peak momentum ${shortDrop.biggest.toFixed(0)}`);
+
   // --- oranges roll: dropped on a slope one should travel a long way
   await g.call('fruit.despawnAllFree');
   const slope = [-30, -4];

@@ -150,6 +150,13 @@ export class Shop implements System {
 
     if (entry.kind === 'tool') {
       this.tools.give(id);
+      // Put it in their hands. Buying a Catch Net and then walking out still
+      // holding the hand picker is a strange reward for the first 260 dollars
+      // anyone earns; the point of a purchase is to go and try the thing.
+      this.tools.selectById(id);
+      this.g.bus.emit('ui:toast', {
+        text: `${entry.label} equipped`, sub: entry.description, kind: 'good', ms: 4200,
+      });
     } else {
       const up = UPGRADES.find((u) => u.id === id)!;
       up.apply(this.g);

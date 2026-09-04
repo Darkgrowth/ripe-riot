@@ -258,19 +258,48 @@ export class PlayerRagdoll implements System, PhysicsOwner {
 
       // Heavier and faster hurts more; a fruit's own danger flag lowers the bar.
       const punch = f.lastDeltaV * clamp(f.mass / 3, 0.4, 3.4);
-      const threshold = f.def.dangerous ? 13 : 26;
-      if (punch < threshold) continue;
+      // World gravity is -22, so a coconut is already doing 11.5 m/s after a
+      // three-metre fall: at the old bar of 13 you were flattened by anything
+      // that came off any palm, from any height, every time. Raising it puts
+      // a legible band underneath — short drops bonk, long ones flatten —
+      // which is what makes the knockdown read as a consequence rather than
+      // as the weather.
+      const threshold = f.def.dangerous ? 18 : 26;
+      const onHead = f.position.y > headY - 0.28;
+      if (punch < threshold) {
+        // Not a knockdown, but it still landed on you.
+        //
+        // This is the ONLY place in the game that reliably knows a fruit hit
+        // the player — Rapier gives us no contact-force event for the
+        // kinematic capsule, so `fruit:impact`'s `onPlayer` flag is never
+        // actually set and everything hanging off it was dead code. An apple
+        // to the head used to produce precisely nothing: no camera movement,
+        // no vignette, no reaction of any kind. Now every hit registers and
+        // only the big ones flatten you, which is the readable version of
+        // "knockdown must not be frustrating".
+        if (this.hitCooldown <= 0 && f.lastDeltaV > 4.5) {
+          this.hitCooldown = 0.25;
+          this.g.bus.emit('player:hit', {
+            momentum: f.mass * f.lastDeltaV,
+            fromAbove: onHead,
+            point: f.position.clone(),
+          });
+        }
+        continue;
+      }
 
       _v.copy(f.velocity).multiplyScalar(clamp(f.mass / 20, 0.25, 1.2));
       _v.y = Math.max(_v.y, 2.4);
-      const onHead = f.position.y > headY - 0.28;
       this.trigger(punch, onHead ? `${f.displayName} (head)` : f.displayName, _v);
       return;
     }
   }
+  /** Seconds until another sub-knockdown hit may be reported. */
+  private hitCooldown = 0;
 
   // ---- loop ---------------------------------------------------------------
   fixedStep(dt: number): void {
+    if (this.hitCooldown > 0) this.hitCooldown = Math.max(0, this.hitCooldown - dt);
     if (!this.active) { this.checkFruitStrikes(); return; }
     this.timer += dt;
     if (this.timer < this.minTime) return;
