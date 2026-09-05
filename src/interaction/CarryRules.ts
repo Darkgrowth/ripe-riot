@@ -54,6 +54,17 @@ export const MAX_CARRY_DIAMETER = RULES[RULES.length - 1].maxDiameter;
 /** The heaviest thing a person will lift off the ground unaided. */
 export const MAX_CARRY_MASS = RULES[RULES.length - 1].maxMass;
 
+/**
+ * Basket limits live here rather than on the basket, because in a co-op session
+ * the HOST enforces them for every player and it must use the same two numbers
+ * the client used to decide what to ask for. A host that disagreed with the
+ * client about "will this fit" would deny a stow the client had already
+ * predicted, which is a visible pop for a rule nobody was breaking.
+ */
+export const BASKET_CAPACITY = 9;
+/** Heaviest single fruit the basket will take, in kg. Above this: both hands. */
+export const BASKET_MAX_ITEM_MASS = 6.5;
+
 export function carryClassFor(diameter: number, mass: number): CarryClass {
   for (const r of RULES) {
     if (diameter <= r.maxDiameter && mass <= r.maxMass) return r.cls;

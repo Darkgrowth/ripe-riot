@@ -46,6 +46,18 @@ export class Game {
 
   newId(): number { return this.nextId++; }
 
+  /**
+   * Make sure a locally-minted id can never collide with one handed to us.
+   *
+   * Ids are deterministic across peers only for the fruit the world seed
+   * plants. Anything the HOST creates afterwards travels by id, and a client
+   * that adopts id 5000 for a replicated melon must not hand 5000 out again
+   * later to something of its own.
+   */
+  reserveId(id: number): void {
+    if (id >= this.nextId) this.nextId = id + 1;
+  }
+
   add<T extends System>(sys: T): T {
     this.systems.push(sys);
     this.byName.set(sys.name, sys);

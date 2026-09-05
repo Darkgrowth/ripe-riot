@@ -34,6 +34,13 @@ export class Fruit implements PhysicsOwner {
   variant: VariantDef | null;
   state: FruitState = 'attached';
 
+  /**
+   * The 0..1 roll this fruit was built from. Kept because it is the ONLY input
+   * a peer needs to rebuild an identical fruit: species + variant + roll gives
+   * the same size, mass, radius and traits on every machine, so a replicated
+   * melon weighs what the host's melon weighs rather than an average one.
+   */
+  readonly sizeRoll: number;
   /** Natural size multiplier (variation + variant), before inflation. */
   sizeScale = 1;
   /** Current inflation multiplier (Puff Melon). */
@@ -97,6 +104,7 @@ export class Fruit implements PhysicsOwner {
   constructor(physics: PhysicsWorld, id: number, speciesId: string, variantId: string | null, sizeRoll: number) {
     this.physics = physics;
     this.id = id;
+    this.sizeRoll = sizeRoll;
     this.def = FRUIT[speciesId];
     if (!this.def) throw new Error(`Unknown fruit species: ${speciesId}`);
     this.variant = variantById(variantId);

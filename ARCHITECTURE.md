@@ -289,13 +289,51 @@ local co-op) is what ships today and is what the automated multiplayer test
 drives — two real browser pages, two real game instances. A WebRTC transport
 implements the same interface and nothing above it changes.
 
-`net/MultiplayerAuthority.ts` is host-authoritative. The host owns fruit
-physics, detachment, ropes, quality, economy and weather. Clients own only their
-own movement and otherwise send **intents** the host validates and applies. Host
-selection is deterministic (lowest peer id) so there is no election round.
+`net/MultiplayerAuthority.ts` owns the wire. `net/FruitAuthority.ts` owns the
+decision: a ledger of which peer holds which fruit, plus the validation for
+every action that changes it. Host selection is deterministic (lowest peer id)
+so there is no election round.
+
+The split, stated once: **the host owns the world** — which fruit exists, whose
+hands it is in, what it is worth, when it is gone. **A client owns exactly one
+thing, its own player.** Everything else a client does is an intent naming the
+fruit it means; the host validates it against the ledger and either applies it
+or refuses it with a reason.
+
+Where the boundary is enforced matters more than that it exists. The gate sits
+at the bottom of the stack — `FruitSystem.detach` and `FruitSystem.shake` — so
+it catches the hand, the shaker, the rope gun and the air cannon in one place,
+rather than at each of the nine call sites someone has to remember. Ownership
+transitions (`pickUp`, `stow`, release, sell) are gated in `InteractionSystem`,
+which every tool already routes through.
+
+Clients **predict** the cheap, reversible half so the game still feels local: a
+picked fruit is in your hands on the frame the key went down. They reconcile
+two ways — a targeted refusal, which undoes the prediction immediately and says
+why, and the 15 Hz snapshot, which corrects hands and basket against the host's
+ledger whatever caused the drift. **Nothing that creates money is predicted.**
+A sale costs one round trip and buys certainty that the payout happens once.
+
+Three details that are load-bearing:
+
+- **Replicated fruit carries the host's id and the host's size roll.** Species
+  plus variant plus roll rebuilds a fruit exactly, so a replica weighs, values
+  and carries like the host's copy. The old path minted a fresh local id and
+  filed the fruit under it; that only ever worked because two peers booting the
+  same world consume ids in the same order.
+- **The carrier owns its carried fruit's transform** — but only because the
+  host said so, and only while the ledger agrees. A position report for a fruit
+  the host has not booked out to that peer moves nothing.
+- **Sold and destroyed fruit is tombstoned.** A snapshot in flight is older
+  than the request that crossed it, and without tombstones it puts the fruit
+  back.
 
 This exists early because retrofitting an authority boundary through a physics
 game is a rewrite, not a refactor.
+
+Still client-side, and known: the Shop spends the shared pot locally, and the
+King Melon is simulated and paid out independently on every peer. Neither is
+replicated at all today, so neither can be made authoritative by a guard.
 
 ## Debug surface
 

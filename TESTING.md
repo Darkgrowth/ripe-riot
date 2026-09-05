@@ -128,8 +128,46 @@ visible by reading the code that produced them.
 | `legendary-king-melon` | four vines hold it still, gating on the rope gun, tethering, each cut, the 20 m drop, recovery to the pad, payout, and resetting for another attempt |
 | `carry` | the carry classification table; the local copy leaving the world batch when picked up and returning when dropped; the tool stowing itself while the hands are full; a Puff Melon inflating from medium to large in hand and then leaving by itself past 1.10 m; oversized fruit refused, shoved, and prompted for; the aim highlight lighting the right instance |
 
-Current status: **9/9 scenarios, 256 checks** plus **11/11 multiplayer checks**.
+Current status: **9/9 scenarios, 256 checks** plus **60/60 multiplayer checks**.
 Typecheck and production build are clean.
+
+## The multiplayer suite tests authority, not connectivity
+
+`multiplayer.mjs` used to prove that two pages could see each other. It now
+proves who is allowed to be right, which is a different and much harder claim,
+and the way it is written is the argument:
+
+**Nothing in it calls an authority method.** Every action goes through the
+entry point the game uses — `pickup` is `InteractionSystem.pickUp`, which is
+what the E key calls; `interact` is the E key; `fruit.detach` is what the
+shaker and the hand call. On a client all of those are supposed to turn into
+intents, and if that gating ever comes off, these checks fail instead of
+quietly passing on local mutation. A test that reached past the boundary would
+pass just as happily with no boundary there.
+
+What it establishes, in order: both peers know the same attached fruit by the
+same id; a replica weighs and measures exactly what the host's copy does; a
+client's detach request is decided by the host; a claim from 89 m away is
+refused and the client's prediction is rolled back; a claim from arm's length
+is booked out; a second player cannot take what is already claimed, in both
+directions; a genuine simultaneous grab — both peers reaching in the same tick,
+before either has seen a snapshot mentioning the other — leaves the fruit with
+exactly one of them, and the one holding it is the one the host says holds it;
+a client's sale pays the host's own valuation, once, credited once, banked
+once, agreed by both peers, with the fruit gone on both and tombstoned; a
+second request for the same fruit pays nothing; a client cannot sell what
+somebody else is carrying; a peer that leaves while carrying has its fruit
+spilled where it stood rather than orphaned; and rejoining duplicates neither
+the money nor the fruit, with both peers holding the same set of loose fruit by
+id.
+
+Two of the three failures on the first run were the test measuring the wrong
+thing. The third was real, and worth writing down: **the range check treated
+every detach as hand reach.** Because the gate sits at the bottom of
+`FruitSystem`, it catches tools as well as hands, and a 7 m limit would have
+silently broken the shaker (11 m), the rope gun and the air cannon in
+multiplayer while the hand kept working perfectly — which is exactly the sort
+of thing that ships.
 
 ## The camera is a thing under test
 
@@ -283,6 +321,16 @@ three others.
   for the kinematic player capsule, which the ragdoll's own detector documents
   and works around — but the camera thump was gated on that flag, so being hit
   by fruit produced no camera movement whatsoever.
+- A client's sell intent ran `sellAll()` **on the host**. The request carried no
+  fruit ids, so the host emptied its own basket, paid its own fruit into the
+  shared pot, and the client that asked kept everything it was carrying. Every
+  connectivity check passed, because money did change and both peers did agree
+  on the number.
+- Replicated fruit was filed under a locally-minted id rather than the host's.
+  It worked only because two peers booting the same world consume ids in the
+  same order; the first divergence would have produced a second copy of every
+  replicated fruit, and the check that "a fruit spawned on the host appears on
+  the client" would still have passed.
 
 ## Not yet automated
 

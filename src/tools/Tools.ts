@@ -930,23 +930,12 @@ export class BasketTool extends Tool {
   /** Tip the basket out, for when you need your hands and the ground is fine. */
   override onSecondary(down: boolean): void {
     if (!down) return;
-    const inter = this.ctx.interaction;
-    const items = [...inter.basket.items];
-    if (!items.length) return;
-    inter.basket.items.length = 0;
-    inter.basket.massCarried = 0;
-    const p = this.player;
-    p.lookDir(_dir);
-    for (let i = 0; i < items.length; i++) {
-      const f = items[i];
-      const a = (i / items.length) * Math.PI * 2;
-      f.position.copy(p.eyePosition)
-        .addScaledVector(_dir, 1.1)
-        .add(_v.set(Math.cos(a) * 0.35, -0.4 + i * 0.05, Math.sin(a) * 0.35));
-      f.state = 'carried';
-      f.release(_v2.set(Math.cos(a) * 1.1, 0.6, Math.sin(a) * 1.1));
-    }
-    this.game.bus.emit('ui:toast', { text: `Tipped out ${items.length}`, ms: 1500 });
+    // The spill itself lives in InteractionSystem: nine fruit going back into
+    // the world is nine authority transitions, and they belong on the same
+    // path as dropping one.
+    const n = this.ctx.interaction.tipOutBasket();
+    if (!n) return;
+    this.game.bus.emit('ui:toast', { text: `Tipped out ${n}`, ms: 1500 });
   }
 
   override status(): string {

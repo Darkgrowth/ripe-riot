@@ -12,6 +12,25 @@ import { QueryMask } from '@/physics/Layers';
 
 interface Regrow { plantId: number; nodeIndex: number; species: string; readyAt: number; }
 
+/**
+ * The authority gate, as narrow as it can be made.
+ *
+ * `MultiplayerAuthority` installs itself here during its own init. Everything
+ * else in the game keeps calling `detach` and `shake` exactly as before; on a
+ * peer that is not the host those two calls stop mutating the world and become
+ * requests instead. Putting the gate at the bottom of the stack rather than at
+ * each of the nine call sites is the difference between "clients cannot break
+ * stems" and "clients cannot break stems yet, in the paths someone remembered".
+ */
+export interface NetGate {
+  /** True when this peer may change shared state directly. */
+  readonly authoritative: boolean;
+  /** `cause` travels because the host validates a hand differently from a
+   *  tool: bare hands reach 3.4 m, a shaker reaches eleven. */
+  requestDetach(fruitId: number, cause: string): void;
+  requestShake(plantId: number, strength: number): void;
+}
+
 interface HabitatSpec {
   landmark: string;
   plants: Array<{ type: PlantType; count: number; scale?: [number, number] }>;
@@ -122,6 +141,9 @@ export class FruitSystem implements System {
   private regrow: Regrow[] = [];
   private ctx!: TraitContext;
   private activationTimer = 0;
+  /** Installed by MultiplayerAuthority; null in single player, where you are
+   *  the authority by definition. */
+  net: NetGate | null = null;
   /** Fruit whose static collider is currently enabled. */
   private nearbyIds = new Set<number>();
   activationRadius = 42;
@@ -431,7 +453,25 @@ export class FruitSystem implements System {
   }
 
   // ---- actions ------------------------------------------------------------
+  /** True when this peer owns shared state. Always true in single player. */
+  get authoritative(): boolean { return !this.net || this.net.authoritative; }
+
+  /**
+   * Break a stem.
+   *
+   * On a client this does NOT break the stem: it asks the host to, and returns.
+   * The fruit comes off when the host says so, one snapshot later — which for
+   * the paths that matter is invisible, because picking by hand predicts the
+   * carry locally and the detach is bookkeeping the player never sees.
+   */
   detach(f: Fruit, cause: string, playerId = -1, inheritVel?: THREE.Vector3): void {
+    if (f.state !== 'attached') return;
+    if (!this.authoritative) { this.net!.requestDetach(f.id, cause); return; }
+    this.detachAuthoritative(f, cause, playerId, inheritVel);
+  }
+
+  /** The mutation itself, with no authority question asked. Host only. */
+  detachAuthoritative(f: Fruit, cause: string, playerId = -1, inheritVel?: THREE.Vector3): void {
     if (f.state !== 'attached') return;
     const at = f.attach;
     this.aimElastic(f, playerId);
@@ -471,6 +511,19 @@ export class FruitSystem implements System {
 
   /** Shake a plant hard enough and its weaker fruit lets go. */
   shake(plantId: number, strength: number, playerId = -1): number {
+    if (!this.authoritative) {
+      // Shake the plant locally anyway: the sway is pure presentation and the
+      // tool should look like it did something on the frame you swung it. What
+      // does not happen locally is any fruit coming off.
+      this.plants.shakePlant(plantId, strength);
+      this.net!.requestShake(plantId, strength);
+      return 0;
+    }
+    return this.shakeAuthoritative(plantId, strength, playerId);
+  }
+
+  /** The mutation itself, with no authority question asked. Host only. */
+  shakeAuthoritative(plantId: number, strength: number, playerId = -1): number {
     const plant = this.plants.get(plantId);
     if (!plant) return 0;
     const amount = this.plants.shakePlant(plantId, strength);
@@ -487,7 +540,7 @@ export class FruitSystem implements System {
       if (!f) continue;
       if (force > f.def.attachStrength * node.grip) {
         _v.set(this.rng.range(-0.7, 0.7), 0.4, this.rng.range(-0.7, 0.7));
-        this.detach(f, 'shake', playerId, _v);
+        this.detachAuthoritative(f, 'shake', playerId, _v);
         dropped++;
       }
     }
@@ -517,6 +570,97 @@ export class FruitSystem implements System {
   remove(f: Fruit): void {
     f.despawn();
     this.fruits.delete(f.id);
+  }
+
+  // ---- replication --------------------------------------------------------
+  /**
+   * Build a display-only copy of a fruit the HOST owns, under the HOST'S ID.
+   *
+   * The id is the whole point. The old replication path called `spawnFree`,
+   * which minted a fresh local id and then filed the fruit under it — so a
+   * client's copy of host fruit 5031 was its own fruit 5044, the next snapshot
+   * did not recognise it, and a second copy appeared. It only ever looked
+   * correct because two clients that boot the same world consume ids in the
+   * same order, so the numbers happened to line up until something diverged.
+   *
+   * Species + variant + roll rebuilds the fruit exactly: same size, same mass,
+   * same traits. A replica gets no body — the host owns the physics — and no
+   * detach traits fire, because a replica is not a fruit that has just come off
+   * a plant, it is a picture of one that did somewhere else.
+   */
+  spawnReplica(id: number, speciesId: string, variantId: string | null, sizeRoll: number): Fruit {
+    const existing = this.fruits.get(id);
+    if (existing) return existing;
+    const f = new Fruit(this.g.physics, id, speciesId, variantId, sizeRoll);
+    f.state = 'free';
+    this.fruits.set(id, f);
+    this.g.reserveId(id);
+    return f;
+  }
+
+  /**
+   * Move a local fruit to the state the host says it is in.
+   *
+   * The transitions are not interchangeable with assigning `f.state`: coming
+   * off a plant has to free the plant's node (or the branch stays occupied
+   * forever and never regrows), and every state but `free` has to be sure the
+   * fruit is not still holding a physics body a client has no business
+   * simulating.
+   */
+  applyRemoteState(f: Fruit, want: Fruit['state']): void {
+    if (f.state === want) return;
+    if (f.state === 'attached') this.releaseAttachment(f);
+    switch (want) {
+      case 'carried': f.pickUp(-1); break;
+      case 'stowed': f.stow(); break;
+      case 'gone': this.remove(f); break;
+      default:
+        // Free, but simulated by the host: strip any body we happen to hold.
+        if (f.body) f.pickUp(-1);
+        f.state = 'free';
+        break;
+    }
+  }
+
+  /** Local-only bookkeeping for a stem the host broke: free the node, drop the
+   *  static collider, and queue the regrowth so both peers refill the tree. */
+  releaseAttachment(f: Fruit): void {
+    const at = f.attach;
+    f.setNearby(false);
+    this.nearbyIds.delete(f.id);
+    f.attach = null;
+    f.state = 'free';
+    if (!at) return;
+    const node = this.plants.get(at.plantId)?.nodes[at.nodeIndex];
+    if (node && node.fruitId === f.id) {
+      node.fruitId = -1;
+      this.regrow.push({
+        plantId: at.plantId, nodeIndex: at.nodeIndex, species: f.species,
+        readyAt: this.g.clock.elapsed + this.rng.range(95, 190),
+      });
+    }
+  }
+
+  /**
+   * Put a fruit back on the branch it came from.
+   *
+   * The undo half of a client's optimistic pick. A prediction the host refuses
+   * has to leave NOTHING behind — not a free-floating apple where a branch
+   * used to be, and not a regrowth entry that would eventually grow a second
+   * apple into the same node.
+   */
+  reattach(f: Fruit, plantId: number, nodeIndex: number): boolean {
+    const plant = this.plants.get(plantId);
+    const node = plant?.nodes[nodeIndex];
+    if (!node || (node.fruitId >= 0 && node.fruitId !== f.id)) return false;
+    if (f.body) { this.g.physics.removeBody(f.body, f.colliders); f.body = null; f.colliders.length = 0; }
+    f.attachTo({ plantId, nodeIndex, position: node.world, quaternion: node.quat });
+    f.syncToAttachment();
+    f.heldBy = -1;
+    node.fruitId = f.id;
+    const i = this.regrow.findIndex((r) => r.plantId === plantId && r.nodeIndex === nodeIndex);
+    if (i >= 0) this.regrow.splice(i, 1);
+    return true;
   }
 
   // ---- loop ---------------------------------------------------------------
