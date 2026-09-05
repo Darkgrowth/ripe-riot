@@ -571,7 +571,11 @@ export class RopeGun extends Tool {
     }
     this.cooldown = 0.35;
 
-    const targetBody = hit.body && !hit.body.isFixed() ? hit.body : null;
+    // A fixed body is a world point as far as a rope cares — except the
+    // legendary, which hangs FIXED until its first vine is cut. A rope pinned
+    // to the melon's surface in world space held nothing when it fell: the
+    // line stayed up in the air and the melon went without it.
+    const targetBody = hit.body && (!hit.body.isFixed() || hit.owner?.kind === 'legendary') ? hit.body : null;
     const owner = hit.owner;
     // Local anchor on a moving target, world point on static geometry.
     let bLocal: THREE.Vector3;
@@ -633,7 +637,11 @@ export class RopeGun extends Tool {
     const len = rope.length;
     this.ropes.remove(rope.id);
     const idx = this.mine.indexOf(rope);
-    const targetBody = hit.body && !hit.body.isFixed() ? hit.body : null;
+    // A fixed body is a world point as far as a rope cares — except the
+    // legendary, which hangs FIXED until its first vine is cut. A rope pinned
+    // to the melon's surface in world space held nothing when it fell: the
+    // line stayed up in the air and the melon went without it.
+    const targetBody = hit.body && (!hit.body.isFixed() || hit.owner?.kind === 'legendary') ? hit.body : null;
     let aLocal: THREE.Vector3;
     if (targetBody) {
       const t = targetBody.translation();
@@ -767,7 +775,7 @@ export class AirCannon extends Tool {
     this.game.bus.emit('tool:blast', {
       toolId: this.def.id, point: p.position.clone(), power: 1, radius: 4.0,
     });
-    this.game.physics.explode(p.position.clone(), 4.0, 5.5, 0.2);
+    this.ctx.fruit.blast(p.position.clone(), 4.0, 5.5, 0.2);
   }
 
   /**
@@ -816,8 +824,8 @@ export class AirCannon extends Tool {
     // 11.7 m/s, which is slower than throwing the same apple by hand (21 m/s).
     // A $1450 compressed-air cannon has to beat an arm.
     const strength = 22 * power;
-    const pushed = this.game.physics.explode(_v, radius, strength, 0.30);
-    this.lastPushed = pushed.length;
+    const pushed = this.ctx.fruit.blast(_v, radius, strength, 0.30);
+    this.lastPushed = pushed;
     this.lastCentre = [+_v.x.toFixed(2), +_v.y.toFixed(2), +_v.z.toFixed(2)];
     this.lastRadius = +radius.toFixed(2);
 
@@ -854,8 +862,8 @@ export class AirCannon extends Tool {
     this.game.bus.emit('tool:blast', {
       toolId: this.def.id, point: _v.clone(), power, radius,
     });
-    if (pushed.length > 2) {
-      this.game.bus.emit('ui:toast', { text: `${pushed.length} objects airborne`, ms: 1500 });
+    if (pushed > 2) {
+      this.game.bus.emit('ui:toast', { text: `${pushed} objects airborne`, ms: 1500 });
     }
   }
 

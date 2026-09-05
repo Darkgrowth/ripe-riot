@@ -64,6 +64,10 @@ export const MAX_CARRY_MASS = RULES[RULES.length - 1].maxMass;
 export const BASKET_CAPACITY = 9;
 /** Heaviest single fruit the basket will take, in kg. Above this: both hands. */
 export const BASKET_MAX_ITEM_MASS = 6.5;
+/** The same two numbers after the Deep Basket upgrade. Named here so the shop
+ *  that grants it and the host ledger that enforces it read one source. */
+export const DEEP_BASKET_CAPACITY = 16;
+export const DEEP_BASKET_MAX_ITEM_MASS = 11;
 
 export function carryClassFor(diameter: number, mass: number): CarryClass {
   for (const r of RULES) {

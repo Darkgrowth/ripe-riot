@@ -3,6 +3,8 @@ import type { Economy } from './Economy';
 import type { ToolInventory } from '@/tools/ToolInventory';
 import type { Sunpatch } from '@/world/Sunpatch';
 import type { InteractionSystem } from '@/interaction/InteractionSystem';
+import type { MultiplayerAuthority } from '@/net/MultiplayerAuthority';
+import { DEEP_BASKET_CAPACITY, DEEP_BASKET_MAX_ITEM_MASS } from '@/interaction/CarryRules';
 
 export interface ShopEntry {
   id: string;
@@ -37,8 +39,8 @@ const UPGRADES: UpgradeDef[] = [
     tagline: 'Structural wicker.',
     apply(g) {
       const i = g.get<InteractionSystem>('interaction');
-      i.basket.capacity = 16;
-      i.basket.maxItemMass = 11;
+      i.basket.capacity = DEEP_BASKET_CAPACITY;
+      i.basket.maxItemMass = DEEP_BASKET_MAX_ITEM_MASS;
     },
   },
   {
@@ -80,13 +82,17 @@ export class Shop implements System {
   open = false;
   nearCounter = false;
   purchased = new Set<string>();
+  /** Item a client has asked the host for and not yet heard back about. */
+  pendingBuy: string | null = null;
   private panel: HTMLElement | null = null;
+  private net: MultiplayerAuthority | null = null;
 
   init(g: Game): void {
     this.g = g;
     this.economy = g.get<Economy>('economy');
     this.tools = g.get<ToolInventory>('tools');
     this.world = g.get<Sunpatch>('world');
+    this.net = g.has('net') ? g.get<MultiplayerAuthority>('net') : null;
 
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Escape' && this.open) this.close();
@@ -96,6 +102,7 @@ export class Shop implements System {
       open: this.open, near: this.nearCounter,
       purchased: [...this.purchased],
       offers: this.catalogue().length,
+      pendingBuy: this.pendingBuy,
     }));
     g.debug?.addAction('shop.list', () => this.catalogue());
     g.debug?.addAction('shop.buy', (id: string) => this.buy(id));
@@ -131,7 +138,25 @@ export class Shop implements System {
     return out;
   }
 
-  buy(id: string): { ok: boolean; reason?: string } {
+  /** The price list, for the host's ledger. Null for anything not on sale. */
+  priceOf(id: string): { cost: number; tier: number } | null {
+    const tool = this.tools.all.get(id);
+    if (tool && !(tool.def.cost <= 0 && tool.def.starter)) return { cost: tool.def.cost, tier: tool.def.tier };
+    const up = UPGRADES.find((u) => u.id === id);
+    return up ? { cost: up.cost, tier: up.tier } : null;
+  }
+
+  /**
+   * Buy something.
+   *
+   * Money is shared and the host owns it, so on a client this SPENDS NOTHING:
+   * it checks what it can see (owned, tier, balance — all mirrored from the
+   * host) so the refusal is instant, then asks. The host spends once and
+   * answers, and `grant` runs when the answer is yes. The old version spent
+   * the shared pot locally and was overwritten by the next snapshot, which is
+   * a free tool with extra steps.
+   */
+  buy(id: string): { ok: boolean; reason?: string; requested?: boolean } {
     const entry = this.catalogue().find((e) => e.id === id);
     if (!entry) return { ok: false, reason: 'no such item' };
     if (entry.owned) return { ok: false, reason: 'already owned' };
@@ -141,13 +166,29 @@ export class Shop implements System {
       });
       return { ok: false, reason: 'locked' };
     }
-    if (!this.economy.spend(entry.cost, `buy:${id}`)) {
+    if (!this.economy.canAfford(entry.cost)) {
       this.g.bus.emit('ui:toast', {
         text: 'Not enough money', sub: `${entry.label} costs $${entry.cost}`, kind: 'bad', ms: 2200,
       });
       return { ok: false, reason: 'too expensive' };
     }
+    if (this.net && !this.net.authoritative) {
+      if (this.pendingBuy) return { ok: false, reason: 'waiting on the host' };
+      this.pendingBuy = id;
+      this.net.requestBuy(id);
+      return { ok: false, requested: true };
+    }
+    if (!this.economy.spend(entry.cost, `buy:${id}`)) return { ok: false, reason: 'too expensive' };
+    this.net?.noteBought(id);
+    this.grant(id);
+    return { ok: true };
+  }
 
+  /** The host said yes (or we are the host): hand the thing over. */
+  grant(id: string): void {
+    if (this.pendingBuy === id) this.pendingBuy = null;
+    const entry = this.catalogue().find((e) => e.id === id);
+    if (!entry || entry.owned) return;
     if (entry.kind === 'tool') {
       this.tools.give(id);
       // Put it in their hands. Buying a Catch Net and then walking out still
@@ -166,7 +207,16 @@ export class Shop implements System {
     this.g.bus.emit('audio:sfx', { name: 'purchase' });
     this.g.bus.emit('ui:celebrate', { title: entry.label.toUpperCase(), sub: entry.tagline });
     if (this.open) this.render();
-    return { ok: true };
+  }
+
+  /** The host said no. Nothing was spent, so nothing is undone. */
+  refused(id: string, why: string): void {
+    if (this.pendingBuy === id) this.pendingBuy = null;
+    const entry = this.catalogue().find((e) => e.id === id);
+    this.g.bus.emit('ui:toast', {
+      text: entry ? `${entry.label} — ${why}` : why, kind: 'bad', ms: 2200,
+    });
+    if (this.open) this.render();
   }
 
   // ---- panel --------------------------------------------------------------

@@ -2,7 +2,9 @@ import * as THREE from 'three';
 import type { Fruit } from '@/fruit/Fruit';
 import type { FruitSystem } from '@/fruit/FruitSystem';
 import type { Economy } from '@/systems/Economy';
-import { BASKET_CAPACITY, BASKET_MAX_ITEM_MASS } from '@/interaction/CarryRules';
+import {
+  BASKET_CAPACITY, BASKET_MAX_ITEM_MASS, DEEP_BASKET_CAPACITY, DEEP_BASKET_MAX_ITEM_MASS,
+} from '@/interaction/CarryRules';
 import type { PeerId } from './Transport';
 
 /**
@@ -33,7 +35,13 @@ export type Deny =
   | 'needs-tool'
   | 'not-at-pad'
   | 'nothing-to-sell'
-  | 'already-sold';
+  | 'already-sold'
+  | 'no-such-item'
+  | 'already-owned'
+  | 'locked'
+  | 'too-expensive'
+  | 'wrong-phase'
+  | 'restrain-first';
 
 export const DENY_TEXT: Record<Deny, string> = {
   'no-fruit': 'that fruit is gone',
@@ -47,6 +55,12 @@ export const DENY_TEXT: Record<Deny, string> = {
   'not-at-pad': 'not standing at the drop-off',
   'nothing-to-sell': 'nothing to sell',
   'already-sold': 'already sold',
+  'no-such-item': 'the shed does not sell that',
+  'already-owned': 'you already own that',
+  'locked': 'not unlocked yet',
+  'too-expensive': 'not enough money',
+  'wrong-phase': 'not now',
+  'restrain-first': 'restrain it first',
 };
 
 /** What the host knows about one player's hands. */
@@ -59,6 +73,18 @@ export interface Holding {
   /** Last reported foot position, which is what zone checks are measured from. */
   pos: THREE.Vector3;
   name: string;
+  /**
+   * This player's basket limits, as the host knows them. Upgrades are
+   * per-player and bought through the host, so the host is the one place that
+   * knows a client paid for a Deep Basket — and the one place that would
+   * otherwise refuse their tenth apple with 'basket-full'.
+   */
+  capacity: number;
+  maxItemMass: number;
+  /** Shop items the host has sold this peer. A double-click is not two sales. */
+  bought: Set<string>;
+  /** Reported with the player packet; gates the legendary's first phase. */
+  hasRopeGun: boolean;
 }
 
 export interface AuthorityHooks {
@@ -71,7 +97,14 @@ export interface AuthorityHooks {
   evaluate(f: Fruit): void;
   multiplierFor(f: Fruit): number;
   emit(name: string, payload: unknown): void;
+  /** The shed's price list, as the host sees it. Null for an unknown item. */
+  priceOf(itemId: string): { cost: number; tier: number } | null;
+  /** Where a plant stands, for ranging a shake. Null for an unknown plant. */
+  plantAt(plantId: number): THREE.Vector3 | null;
 }
+
+/** How far from a player's reported position a blast or a shake may land. */
+const ACT_RANGE = 22;
 
 /**
  * How far from a player's reported position a fruit may be and still be
@@ -110,7 +143,7 @@ export class FruitAuthority {
   /** The tail of that set, for the wire, so clients can drop them at once. */
   private recentGone: number[] = [];
 
-  stats = { claims: 0, denials: 0, sales: 0, spilled: 0 };
+  stats = { claims: 0, denials: 0, sales: 0, spilled: 0, buys: 0 };
 
   constructor(hooks: AuthorityHooks) { this.hooks = hooks; }
 
@@ -124,10 +157,26 @@ export class FruitAuthority {
   holdingFor(peer: PeerId, name = 'Harvester'): Holding {
     let h = this.holdings.get(peer);
     if (!h) {
-      h = { peer, carried: -1, basket: [], pos: new THREE.Vector3(), name };
+      h = {
+        peer, carried: -1, basket: [], pos: new THREE.Vector3(), name,
+        capacity: BASKET_CAPACITY, maxItemMass: BASKET_MAX_ITEM_MASS,
+        bought: new Set(), hasRopeGun: false,
+      };
       this.holdings.set(peer, h);
     }
     return h;
+  }
+
+  /** Does any player in the session own a rope gun? The legendary asks. */
+  anyoneHasRopeGun(): boolean {
+    for (const h of this.holdings.values()) if (h.hasRopeGun) return true;
+    return false;
+  }
+
+  /** Is a point close enough to where this peer says they are standing? */
+  nearPeer(peer: PeerId, x: number, y: number, z: number, range = ACT_RANGE): boolean {
+    const h = this.holdingFor(peer);
+    return Math.hypot(x - h.pos.x, z - h.pos.z) <= range && Math.abs(y - h.pos.y) <= Math.max(14, range);
   }
 
   /** Everything the host has to forget when it stops being the host. */
@@ -178,10 +227,49 @@ export class FruitAuthority {
     return !!f && this.inRange(this.holdingFor(peer), f, range);
   }
 
-  /** Shake a plant on a peer's behalf. Returns how much came down. */
+  /**
+   * Shake a plant on a peer's behalf. Returns how much came down.
+   *
+   * Ranged and clamped: the strongest thing in the game that shakes a tree is
+   * a full-charge air cannon at 2.1, and a peer on the dock has no business
+   * stripping the orchard.
+   */
   shake(peer: PeerId, plantId: number, strength: number): number {
-    void peer;
-    return this.hooks.fruit.shakeAuthoritative(plantId, strength, -1);
+    const at = this.hooks.plantAt(plantId);
+    if (!at || !this.nearPeer(peer, at.x, at.y, at.z, DETACH_RANGE)) return 0;
+    return this.hooks.fruit.shakeAuthoritative(plantId, clamp01(strength, 2.4), -1);
+  }
+
+  /**
+   * Buy something from the shed. The one place shared money is DESTROYED, and
+   * the reason a client's purchase has to come through here: the old shop
+   * spent the shared pot locally and was overwritten by the next snapshot,
+   * which is a free tool with extra steps.
+   *
+   * Tools and upgrades are per-player, so ownership is checked per peer; the
+   * price, the tier gate and the balance are the host's. Returns the amount
+   * actually spent so the reply can say so.
+   */
+  buy(peer: PeerId, itemId: string): { deny: Deny | null; cost: number } {
+    const h = this.holdingFor(peer);
+    const entry = this.hooks.priceOf(itemId);
+    if (!entry) return { deny: this.no('no-such-item'), cost: 0 };
+    if (h.bought.has(itemId)) return { deny: this.no('already-owned'), cost: 0 };
+    if (this.hooks.economy.discoveryTier < entry.tier) return { deny: this.no('locked'), cost: 0 };
+    if (!this.hooks.economy.spend(entry.cost, `buy:${itemId}:${peer}`)) {
+      return { deny: this.no('too-expensive'), cost: 0 };
+    }
+    this.noteBought(peer, itemId);
+    this.stats.buys++;
+    return { deny: null, cost: entry.cost };
+  }
+
+  /** Record a purchase's per-player consequences on the ledger. */
+  noteBought(peer: PeerId, itemId: string): void {
+    const h = this.holdingFor(peer);
+    h.bought.add(itemId);
+    if (itemId === 'bigBasket') { h.capacity = DEEP_BASKET_CAPACITY; h.maxItemMass = DEEP_BASKET_MAX_ITEM_MASS; }
+    if (itemId === 'ropegun') h.hasRopeGun = true;
   }
 
   /**
@@ -219,7 +307,7 @@ export class FruitAuthority {
     const held = this.hooks.fruit.get(h.carried);
     h.carried = -1;
     if (!held) return;
-    if (held.mass <= BASKET_MAX_ITEM_MASS && h.basket.length < BASKET_CAPACITY) {
+    if (held.mass <= h.maxItemMass && h.basket.length < h.capacity) {
       this.hooks.evaluate(held);
       held.stow();
       h.basket.push(held.id);
@@ -266,9 +354,9 @@ export class FruitAuthority {
     // the fruit this player picked up next. Agreeing twice is not an error.
     if (f.state === 'stowed' && this.holdingFor(peer).basket.includes(fruitId)) return null;
     if (f.state !== 'carried') return this.no('wrong-state');
-    if (f.mass > BASKET_MAX_ITEM_MASS) return this.no('too-heavy');
     const h = this.holdingFor(peer);
-    if (h.basket.length >= BASKET_CAPACITY) return this.no('basket-full');
+    if (f.mass > h.maxItemMass) return this.no('too-heavy');
+    if (h.basket.length >= h.capacity) return this.no('basket-full');
     // Judge the flight before the fruit stops simulating — once stowed there is
     // no record left to score, and the multiplier is part of the payout.
     this.hooks.evaluate(f);
@@ -288,14 +376,14 @@ export class FruitAuthority {
    * client kept everything it was carrying.
    */
   sell(peer: PeerId, fruitIds: number[]): {
-    deny: Deny | null; count: number; total: number; ids: number[];
+    deny: Deny | null; count: number; total: number; ids: number[]; values: number[];
   } {
     const h = this.holdingFor(peer);
     const pad = this.hooks.sellPad();
     const r = this.hooks.sellRadius();
     const onPad = Math.hypot(h.pos.x - pad.x, h.pos.z - pad.z) < r + 1.2
       && Math.abs(h.pos.y - pad.y) < 4;
-    if (!onPad) return { deny: this.no('not-at-pad'), count: 0, total: 0, ids: [] };
+    if (!onPad) return { deny: this.no('not-at-pad'), count: 0, total: 0, ids: [], values: [] };
 
     const batch: Fruit[] = [];
     for (const id of fruitIds) {
@@ -307,20 +395,22 @@ export class FruitAuthority {
       if (batch.some((b) => b.id === id)) continue;   // a repeated id is one fruit
       batch.push(f);
     }
-    if (!batch.length) return { deny: this.no('nothing-to-sell'), count: 0, total: 0, ids: [] };
+    if (!batch.length) return { deny: this.no('nothing-to-sell'), count: 0, total: 0, ids: [], values: [] };
 
     const result = this.hooks.economy.sell(batch, (f) => this.hooks.multiplierFor(f));
     const ids: number[] = [];
-    for (const f of batch) {
+    const values: number[] = [];
+    batch.forEach((f, i) => {
       ids.push(f.id);
+      values.push(result.lines[i]?.total ?? 0);
       this.noteGone(f.id);
       this.owner.delete(f.id);
       if (h.carried === f.id) h.carried = -1;
       this.hooks.fruit.remove(f);
-    }
+    });
     h.basket = h.basket.filter((id) => !ids.includes(id));
     this.stats.sales++;
-    return { deny: null, count: result.count, total: result.total, ids };
+    return { deny: null, count: result.count, total: result.total, ids, values };
   }
 
   /** Record a fruit this host destroyed, so no snapshot brings it back. */
@@ -418,4 +508,9 @@ export class FruitAuthority {
   }
 
   private no(reason: Deny): Deny { this.stats.denials++; return reason; }
+}
+
+/** A number off the wire, held to 0..max. NaN is 0. */
+export function clamp01(v: number, max: number): number {
+  return Number.isFinite(v) ? Math.min(max, Math.max(0, v)) : 0;
 }

@@ -301,9 +301,11 @@ fruit it means; the host validates it against the ledger and either applies it
 or refuses it with a reason.
 
 Where the boundary is enforced matters more than that it exists. The gate sits
-at the bottom of the stack — `FruitSystem.detach` and `FruitSystem.shake` — so
-it catches the hand, the shaker, the rope gun and the air cannon in one place,
-rather than at each of the nine call sites someone has to remember. Ownership
+at the bottom of the stack — `FruitSystem.detach`, `FruitSystem.shake` and
+`FruitSystem.blast` — so it catches the hand, the shaker, the rope gun and the
+air cannon in one place, rather than at each of the nine call sites someone
+has to remember. (The cannon's blast went straight to the physics world
+before, which on a client with bodiless replicas did nothing at all.) Ownership
 transitions (`pickUp`, `stow`, release, sell) are gated in `InteractionSystem`,
 which every tool already routes through.
 
@@ -331,9 +333,75 @@ Three details that are load-bearing:
 This exists early because retrofitting an authority boundary through a physics
 game is a rewrite, not a refactor.
 
-Still client-side, and known: the Shop spends the shared pot locally, and the
-King Melon is simulated and paid out independently on every peer. Neither is
-replicated at all today, so neither can be made authoritative by a guard.
+**Money is destroyed in one place too.** A client's purchase is a `buy` intent:
+the host checks the price list, the discovery tier and the balance, spends
+once, records the sale against that peer, and answers; the client grants
+itself the tool or upgrade only on a yes. Nothing is predicted — the shed
+already checks the mirrored balance and tier before asking, so a refusal is
+instant and a purchase costs one round trip. Tools and upgrades are
+per-player; the pot is shared. The ledger also keeps each peer's basket
+limits, because a client that paid for a Deep Basket used to have its tenth
+apple refused by a host that only knew the base capacity. The discovery tier
+travels in the snapshot with the money, since it gates the shed and a client's
+book never fires the events that raise it.
+
+**The King Melon runs on the host and pays once.** Clients mirror a small
+state (`LegendaryNetState`: phase, a bitmask of the vines still holding, the
+melon's transform, the tether anchors, the payout, and a generation number
+that bumps on reset) and send cuts and tethers as intents. A client's melon is
+a fixed body moved to where the host says it is, with the mesh damped between
+reports, so ropes on it draw and walking into it is honest; the client never
+simulates the drop. Cosmetic copies of other players' tethers are built from
+the anchor list; a client's own pinned rope is reported once and removed when
+the host stops listing it, which is how "the ropes parted" reaches the person
+holding the other end. Owning a rope gun travels in the player packet, so a
+client's rope gun opens the encounter on a host that has none.
+
+**A tether is a rope, not a method call.** The legendary reads its tethers off
+the rope system every step — any rope on the melon that is not a vine and is
+not in somebody's hands — instead of keeping a list only a debug action could
+append to. The shipped slice was not completable by a player for that reason,
+and for a second one: the melon hangs *fixed* until its first cut, and the
+rope gun anchored any line fired at a fixed body to a point in world space, so
+the rope stayed in the air when the melon fell. The rope gun now ties to the
+body when the body is the legendary; the pin (right-click) is what turns a
+leash into a tether, and the prompt says so.
+
+**The attached population travels as a log of node changes.** Snapshots skip
+attached fruit because it is deterministic from the seed — and stop being
+deterministic the moment a branch regrows, since every peer used to roll its
+own regrowth with its own ids. The host now logs every node it empties and
+every node it refills (`NodeChange`, sequence-numbered), streams the tail each
+peer has not acknowledged with the snapshot, and sends a compacted
+one-entry-per-node manifest to a joiner or to anyone who has fallen out of the
+ring. Clients keep their regrowth queue (so a promoted host can carry on) and
+grow nothing on their own clock. A fruit the log frees that the same snapshot
+does not place anywhere is one the host no longer has — sold, burst, or long
+gone — and is removed, which is what stops a late joiner seeing phantoms.
+
+**The incumbent keeps the session.** Lowest-id election on every peer change
+handed the world to whichever fresh page rolled a small id — host migration
+*to an empty world*. Now a page that has just opened does not elect at all
+until somebody answers its hello; the hello carries the sender's claim and
+connection age, and the older session wins with lowest-id only for a genuine
+simultaneous start. Nothing a peer says while it is briefly "host of nobody"
+counts: snapshots, manifests and results are only applied from the peer the
+receiver believes is host, and a host broadcasts no snapshot until it has been
+established. When the host does leave, the survivors elect lowest-id among
+themselves and the promoted client seeds its ledger from its mirror of the old
+one — who held what, and where they stood — so nobody else's hands are
+forgotten; the departed host's own fruit is spilled where it stood.
+
+**Intents are ranged and clamped.** A shake must name a plant near the peer, a
+blast must land within cannon reach at no more than a full charge, a release
+point must be within arm's reach of where the peer says it stands, and a
+throw is capped at 45 m/s. A client's position is still trusted, which is the
+stated posture for co-op with friends.
+
+**Species and variants travel as indices into the registries**, not a
+hand-written list. The list silently mapped anything it did not know to
+`'apple'`, so the first fruit added for Island 2 would have replicated as an
+apple on every client and passed every check that only asked the host.
 
 ## Debug surface
 

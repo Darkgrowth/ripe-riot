@@ -29,7 +29,33 @@ export interface NetGate {
    *  tool: bare hands reach 3.4 m, a shaker reaches eleven. */
   requestDetach(fruitId: number, cause: string): void;
   requestShake(plantId: number, strength: number): void;
+  requestBlast(center: THREE.Vector3, radius: number, strength: number, upBias: number): void;
 }
+
+/**
+ * One change to the attached population since the world was seeded: a node
+ * emptied (`fruitId` -1) or refilled by regrowth with a fruit the host built.
+ *
+ * Attached fruit is deterministic from the seed and never travels in a
+ * snapshot, which is right for 458 fruit at 15 Hz and wrong the moment a
+ * branch regrows: each peer used to regrow on its own clock with its own ids,
+ * so after a few minutes two players stood under the same tree looking at
+ * different apples, and a joiner arriving late saw fruit the host had sold
+ * an hour ago. This log is how the host's attached population reaches
+ * everyone else — as a sequence of node changes, compacted per node for a
+ * late joiner and streamed by sequence number after that.
+ */
+export interface NodeChange {
+  seq: number;
+  plantId: number;
+  nodeIndex: number;
+  fruitId: number;
+  species: string;
+  variant: string | null;
+  sizeRoll: number;
+}
+/** How many recent node changes a snapshot may carry before a client resyncs. */
+export const NODE_LOG_RING = 96;
 
 interface HabitatSpec {
   landmark: string;
@@ -146,6 +172,14 @@ export class FruitSystem implements System {
   net: NetGate | null = null;
   /** Fruit whose static collider is currently enabled. */
   private nearbyIds = new Set<number>();
+  /** Highest node-change sequence number known here (issued or applied). */
+  nodeSeq = 0;
+  /** The recent tail of node changes, for the wire. Newest last. */
+  private nodeLog: NodeChange[] = [];
+  /** Latest change per node — everything a late joiner needs, bounded by node count. */
+  private nodeDelta = new Map<string, NodeChange>();
+  /** Fruit a node change freed that no snapshot has yet placed or dropped. */
+  freedByLog = new Set<number>();
   activationRadius = 42;
   wind = new THREE.Vector3(0.6, 0, 0.35).normalize().multiplyScalar(2.2);
 
@@ -272,6 +306,25 @@ export class FruitSystem implements System {
       return n;
     });
     d.addAction('plant.shake', (plantId: number, strength: number) => this.shake(plantId, strength, -1));
+    /** Regrow every emptied branch now, ignoring the timer and the
+     *  don't-pop-in-someone's-face guard. Host only; a client has no say. */
+    d.addAction('fruit.regrowNow', () => {
+      if (!this.authoritative) return 0;
+      let n = 0;
+      for (const r of this.regrow.splice(0)) {
+        const plant = this.plants.get(r.plantId);
+        if (plant && this.growFruitAt(plant, r.nodeIndex, r.species, undefined, true)) n++;
+      }
+      return n;
+    });
+    d.addAction('fruit.nodeOf', (plantId: number, nodeIndex: number) =>
+      this.plants.get(plantId)?.nodes[nodeIndex]?.fruitId ?? null);
+    d.addAction('fruit.nodeSeq', () => this.nodeSeq);
+    d.addAction('fruit.attachedIds', () => {
+      const out: number[] = [];
+      for (const f of this.fruits.values()) if (f.state === 'attached') out.push(f.id);
+      return out.sort((a, b) => a - b);
+    });
     d.addAction('plant.nearest', (x: number, y: number, z: number, type?: string,
       withFruit = false) => {
       let best: Plant | null = null; let bestD = Infinity;
@@ -381,11 +434,18 @@ export class FruitSystem implements System {
     }
   }
 
-  private growFruitAt(plant: Plant, nodeIndex: number, speciesId: string): Fruit | null {
+  /**
+   * Grow a fruit into a node. `given` rebuilds one the host already rolled
+   * (a client mirroring regrowth); `log` records the change for the wire.
+   */
+  private growFruitAt(plant: Plant, nodeIndex: number, speciesId: string,
+    given?: { id: number; variantId: string | null; sizeRoll: number }, log = false): Fruit | null {
     const node = plant.nodes[nodeIndex];
     if (!node || node.fruitId >= 0) return null;
-    const variantId = this.rollVariant();
-    const f = new Fruit(this.g.physics, this.g.newId(), speciesId, variantId, this.rng.next());
+    const variantId = given ? given.variantId : this.rollVariant();
+    const id = given ? given.id : this.g.newId();
+    if (given) this.g.reserveId(id);
+    const f = new Fruit(this.g.physics, id, speciesId, variantId, given ? given.sizeRoll : this.rng.next());
     f.attachTo({
       plantId: plant.id, nodeIndex,
       position: node.world.clone(), quaternion: node.quat.clone(),
@@ -400,6 +460,7 @@ export class FruitSystem implements System {
     }
     node.fruitId = f.id;
     this.fruits.set(f.id, f);
+    if (log) this.logNode(plant.id, nodeIndex, f);
     return f;
   }
 
@@ -486,7 +547,109 @@ export class FruitSystem implements System {
           plantId: at.plantId, nodeIndex: at.nodeIndex, species: f.species,
           readyAt: this.g.clock.elapsed + this.rng.range(95, 190),
         });
+        this.logNode(at.plantId, at.nodeIndex, null);
       }
+    }
+  }
+
+  /**
+   * A blast is a change to bodies the host simulates. On a client the
+   * cannon's bang, kick and FOV punch all still happen — they are the
+   * player's — but the fruit only moves when the host says so.
+   */
+  blast(center: THREE.Vector3, radius: number, strength: number, upBias: number): number {
+    if (!this.authoritative) { this.net!.requestBlast(center, radius, strength, upBias); return 0; }
+    return this.g.physics.explode(center, radius, strength, upBias).length;
+  }
+
+  // ---- the attached population, for the wire --------------------------------
+  private logNode(plantId: number, nodeIndex: number, f: Fruit | null): void {
+    const change: NodeChange = {
+      seq: ++this.nodeSeq, plantId, nodeIndex,
+      fruitId: f ? f.id : -1, species: f ? f.species : '',
+      variant: f?.variant?.id ?? null, sizeRoll: f ? +f.sizeRoll.toFixed(4) : 0,
+    };
+    this.recordNode(change);
+  }
+
+  private recordNode(change: NodeChange): void {
+    this.nodeLog.push(change);
+    if (this.nodeLog.length > NODE_LOG_RING) this.nodeLog.shift();
+    this.nodeDelta.set(`${change.plantId}:${change.nodeIndex}`, change);
+  }
+
+  /** Changes after `seq`, or null if they have scrolled out of the ring. */
+  nodeChangesSince(seq: number): NodeChange[] | null {
+    if (seq >= this.nodeSeq) return [];
+    const first = this.nodeLog[0];
+    if (!first || first.seq > seq + 1) return null;
+    return this.nodeLog.filter((c) => c.seq > seq);
+  }
+
+  /** Everything that differs from the seed, one entry per node. */
+  nodeManifest(): { seq: number; changes: NodeChange[] } {
+    return { seq: this.nodeSeq, changes: [...this.nodeDelta.values()] };
+  }
+
+  /**
+   * Apply node changes from the host, in order. Returns false on a gap, which
+   * means the caller must ask for the manifest.
+   *
+   * A change is recorded here too, with the host's own sequence number, so a
+   * client promoted to host carries on the log from where the old host left
+   * it rather than starting a new one nobody else can follow.
+   */
+  applyNodeChanges(changes: NodeChange[]): boolean {
+    for (const c of changes) {
+      if (c.seq <= this.nodeSeq) continue;
+      if (c.seq > this.nodeSeq + 1) return false;
+      this.applyNode(c);
+      this.nodeSeq = c.seq;
+      this.recordNode(c);
+    }
+    return true;
+  }
+
+  /** A full picture of the attached population, for a joiner or after a gap. */
+  applyNodeManifest(seq: number, changes: NodeChange[]): void {
+    // The host's numbering replaces ours outright. A peer that played solo
+    // before joining has a log of its own, and keeping its higher sequence
+    // would make every later change from the host look already applied.
+    this.nodeLog.length = 0;
+    this.nodeDelta.clear();
+    for (const c of changes) {
+      this.applyNode(c);
+      this.recordNode(c);
+    }
+    this.nodeSeq = seq;
+  }
+
+  private applyNode(c: NodeChange): void {
+    const plant = this.plants.get(c.plantId);
+    const node = plant?.nodes[c.nodeIndex];
+    if (!plant || !node) return;
+    if (node.fruitId === c.fruitId) return;
+    // Whatever hangs there now is not what the host has there.
+    if (node.fruitId >= 0) {
+      const old = this.fruits.get(node.fruitId);
+      if (old && old.state === 'attached') {
+        this.releaseAttachment(old);
+        // Bodiless and loose: the snapshot either places it (the host has
+        // it loose or in hands) or, by not mentioning it, says it is gone.
+        this.freedByLog.add(old.id);
+      }
+      node.fruitId = -1;
+    }
+    if (c.fruitId >= 0) {
+      this.freedByLog.delete(c.fruitId);
+      const existing = this.fruits.get(c.fruitId);
+      if (existing) this.remove(existing);
+      this.growFruitAt(plant, c.nodeIndex, c.species, {
+        id: c.fruitId, variantId: c.variant, sizeRoll: c.sizeRoll,
+      });
+      // The host has grown it; nothing here should grow a second one.
+      const i = this.regrow.findIndex((r) => r.plantId === c.plantId && r.nodeIndex === c.nodeIndex);
+      if (i >= 0) this.regrow.splice(i, 1);
     }
   }
 
@@ -718,7 +881,9 @@ export class FruitSystem implements System {
   }
 
   private updateRegrowth(): void {
-    if (!this.regrow.length) return;
+    // Regrowth is the host's to roll. A client keeps the queue — it takes
+    // over if it is ever promoted — but grows nothing on its own clock.
+    if (!this.regrow.length || !this.authoritative) return;
     const now = this.g.clock.elapsed;
     for (let i = this.regrow.length - 1; i >= 0; i--) {
       const r = this.regrow[i];
@@ -734,7 +899,7 @@ export class FruitSystem implements System {
         this.regrow.push(r);
         continue;
       }
-      this.growFruitAt(plant, r.nodeIndex, r.species);
+      this.growFruitAt(plant, r.nodeIndex, r.species, undefined, true);
     }
   }
 

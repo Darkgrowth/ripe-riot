@@ -1,19 +1,26 @@
 import * as THREE from 'three';
 import type { Game, System } from '@/core/Game';
 import type { Fruit } from '@/fruit/Fruit';
-import type { FruitSystem, NetGate } from '@/fruit/FruitSystem';
+import type { FruitSystem, NetGate, NodeChange } from '@/fruit/FruitSystem';
+import { FRUIT_IDS, VARIANTS } from '@/fruit/FruitDefs';
 import type { Economy } from '@/systems/Economy';
 import type { InteractionSystem } from '@/interaction/InteractionSystem';
+import type { Shop } from '@/systems/Shop';
+import type { ToolInventory } from '@/tools/ToolInventory';
+import type { LegendaryHarvest, LegendaryNet, LegendaryNetState } from '@/systems/LegendaryHarvest';
 import type { Sunpatch } from '@/world/Sunpatch';
 import { BroadcastTransport, type NetMessage, type PeerId, type Transport } from './Transport';
-import { FruitAuthority, DENY_TEXT, type Deny } from './FruitAuthority';
+import { FruitAuthority, DENY_TEXT, clamp01, type Deny } from './FruitAuthority';
 import { makePlayerRig, SUIT_PRESETS, type PlayerRig } from '@/player/PlayerRig';
 import { damp } from '@/core/MathUtils';
 
 /** What a client is allowed to ask the host to do. */
 export type IntentKind =
   | 'detach' | 'pick' | 'throw' | 'stow' | 'drop' | 'sell'
-  | 'shove' | 'shake' | 'blast' | 'spawn';
+  | 'shove' | 'shake' | 'blast' | 'spawn'
+  | 'buy'
+  | 'lcut' | 'ltether' | 'luntether'
+  | 'resync';
 
 export interface Intent {
   kind: IntentKind;
@@ -29,8 +36,15 @@ export interface Intent {
   vel?: [number, number, number];
   power?: number;
   strength?: number;
+  radius?: number;
+  upBias?: number;
   /** What broke the stem: 'hand' is held to hand reach, tools are not. */
   cause?: string;
+  /** Shop item, for `buy`. */
+  itemId?: string;
+  /** Vine anchor index, for `lcut`; rope length, for `ltether`. */
+  vine?: number;
+  len?: number;
 }
 
 /** What a client is waiting to hear back about, and how to undo it. */
@@ -42,6 +56,7 @@ interface Pending {
   /** The branch a predicted pick came off, so a refusal can put it back. */
   plantId: number;
   nodeIndex: number;
+  itemId?: string;
   at: number;
 }
 
@@ -76,16 +91,29 @@ type FruitPacket = [
   sizeRoll: number, inflate: number, damage: number, owner: number,
 ];
 
-const SPECIES_ORDER = ['apple', 'orange', 'coconut', 'banana', 'watermelon', 'puffmelon', 'vinebomb'];
-const VARIANT_ORDER = ['', 'huge', 'tiny', 'pale', 'black', 'glowing', 'ancient', 'unstable', 'golden'];
+/**
+ * Species and variants travel as indices into these. Derived from the
+ * registries, not written out by hand: a hand-written list silently mapped
+ * every species it did not know to index -1, which decodes as 'apple' — so
+ * the first fruit anyone adds for Island 2 would have replicated as an apple
+ * on every client and passed every check that only looked at the host.
+ */
+const SPECIES_ORDER: string[] = FRUIT_IDS;
+const VARIANT_ORDER: string[] = ['', ...VARIANTS.map((v) => v.id)];
 const STATE_ORDER = ['attached', 'free', 'carried', 'stowed', 'gone'];
 
 const SNAPSHOT_HZ = 15;
 const PLAYER_HZ = 20;
 /** Fastest a client may claim to have thrown something, in m/s. */
 const MAX_RELEASE_SPEED = 45;
+/** How far from where they said they stand a client may claim to let go. */
+const MAX_RELEASE_OFFSET = 6;
+/** Hardest blast a client may ask for: a full-charge cannon is 1.0. */
+const MAX_BLAST_POWER = 1.6;
 /** A prediction the host never answers is given back after this long. */
 const PENDING_TIMEOUT = 4;
+/** Minimum gap between a client's requests for the full attached manifest. */
+const RESYNC_INTERVAL = 1.5;
 
 const _v = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
@@ -94,33 +122,42 @@ const _v2 = new THREE.Vector3();
  * Host-authoritative co-op.
  *
  * The split, stated once: the host owns the WORLD — which fruit exists, whose
- * hands it is in, what it is worth and when it is gone. Every client owns
- * exactly one thing, its own player, which it simulates locally and reports.
- * Everything else a client does is an INTENT: a request naming the fruit it
+ * hands it is in, what it is worth and when it is gone, what the shed has
+ * sold and where the legendary is in its sequence. Every client owns exactly
+ * one thing, its own player, which it simulates locally and reports.
+ * Everything else a client does is an INTENT: a request naming the thing it
  * means, validated against the host's ledger (`FruitAuthority`) and either
  * applied or refused with a reason.
  *
  * Clients PREDICT the cheap, reversible half so the game still feels local —
  * a picked fruit is in your hands on the frame the key went down — and
  * reconcile to the host's answer, which arrives either as a targeted refusal
- * or as the next snapshot. Nothing that creates money is predicted.
+ * or as the next snapshot. Nothing that creates or destroys money is
+ * predicted: a sale and a purchase each cost one round trip.
  *
- * What is deliberately not here yet: delta compression, NAT traversal, and
- * host migration that carries the ledger with it (a client promoted to host
- * rebuilds only its own holdings).
+ * What is deliberately not here yet: delta compression and NAT traversal.
+ * Host migration carries what the promoted client could see — its mirror of
+ * the ledger, the node log it applied — which is everything but the old
+ * host's pending intents.
  */
-export class MultiplayerAuthority implements System, NetGate {
+export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
   readonly name = 'net';
   private g!: Game;
   private fruitSys!: FruitSystem;
   private economy!: Economy;
   private interaction!: InteractionSystem;
   private world!: Sunpatch;
+  private shop: Shop | null = null;
+  private tools: ToolInventory | null = null;
+  private legendary: LegendaryHarvest | null = null;
   transport: Transport | null = null;
   peers: PeerId[] = [];
   /** Lowest peer id is the host; deterministic and needs no election round. */
   isHost = true;
   hostId: PeerId = '';
+  /** True once another peer has answered our hello: we know what session this is. */
+  established = false;
+  private connectedAt = 0;
   connected = false;
   playerName = 'Harvester';
   suit = 0;
@@ -150,11 +187,14 @@ export class MultiplayerAuthority implements System, NetGate {
   private pendingFruit = new Set<number>();
   /** Fruit we have asked to sell: no snapshot may bring these back. */
   private pendingSell = new Set<number>();
+  /** Host: the node-log sequence each peer has told us it has applied. */
+  private nodeAck = new Map<PeerId, number>();
+  private lastResync = -Infinity;
   private nextRid = 1;
   /** The last refusal this host issued. Diagnostic: a denial that is correct
    *  and a denial that is a bug look identical from the client's side. */
   lastDeny = '';
-  stats = { sent: 0, received: 0, intents: 0, denied: 0, snapshotBytes: 0 };
+  stats = { sent: 0, received: 0, intents: 0, denied: 0, snapshotBytes: 0, manifests: 0 };
 
   init(g: Game): void {
     this.g = g;
@@ -162,8 +202,12 @@ export class MultiplayerAuthority implements System, NetGate {
     this.economy = g.get<Economy>('economy');
     this.interaction = g.get<InteractionSystem>('interaction');
     this.world = g.get<Sunpatch>('world');
-    // The gate that makes stems and shakes host-only, everywhere at once.
+    this.shop = g.has('shop') ? g.get<Shop>('shop') : null;
+    this.tools = g.has('tools') ? g.get<ToolInventory>('tools') : null;
+    this.legendary = g.has('legendary') ? g.get<LegendaryHarvest>('legendary') : null;
+    // The gate that makes stems, shakes and blasts host-only, everywhere at once.
     this.fruitSys.net = this;
+    if (this.legendary) this.legendary.net = this;
 
     this.authority = new FruitAuthority({
       fruit: this.fruitSys,
@@ -177,6 +221,8 @@ export class MultiplayerAuthority implements System, NetGate {
       multiplierFor: (f) => (g.has('scoring')
         ? g.get<{ multiplierFor(f: Fruit): number }>('scoring').multiplierFor(f) : 1),
       emit: (name, payload) => { (g.bus.emit as (n: string, p: unknown) => void)(name, payload); },
+      priceOf: (id) => this.shop?.priceOf(id) ?? null,
+      plantAt: (id) => this.fruitSys.plants.get(id)?.position ?? null,
     });
 
     // A melon that bursts is as gone as one that was sold, and for the same
@@ -197,6 +243,7 @@ export class MultiplayerAuthority implements System, NetGate {
       pending: this.pending.size,
       lastDeny: this.lastDeny,
       owned: this.isHost ? this.authority.entries().length : this.mirrorOwner.size,
+      nodeSeq: this.fruitSys.nodeSeq,
       ...this.stats,
       ...this.authority.stats,
     }));
@@ -226,6 +273,7 @@ export class MultiplayerAuthority implements System, NetGate {
     g.debug?.addAction('net.holdings', () => this.authority.allHoldings().map((h) => ({
       peer: h.peer, carried: h.carried, basket: [...h.basket],
       pos: [+h.pos.x.toFixed(2), +h.pos.y.toFixed(2), +h.pos.z.toFixed(2)],
+      capacity: h.capacity, bought: [...h.bought], ropegun: h.hasRopeGun,
     })));
     g.debug?.addAction('net.sold', (id: number) => this.authority.isSold(id));
     g.debug?.addAction('net.pending', () => this.pending.size);
@@ -238,9 +286,12 @@ export class MultiplayerAuthority implements System, NetGate {
     this.connected = true;
     this.off.push(transport.onMessage((m) => this.onMessage(m)));
     this.off.push(transport.onPeerChange((p) => this.onPeers(p)));
+    this.established = false;
+    this.connectedAt = performance.now();
+    this.hostId = transport.id;
     this.onPeers(transport.peers());
     this.adoptLocalHoldings();
-    transport.send({ t: 'hello', name: this.playerName, suit: this.suit });
+    transport.send({ t: 'hello', name: this.playerName, suit: this.suit, host: this.hostId, est: false, age: 0 });
     this.g.bus.emit('ui:toast', {
       text: 'Co-op session open', sub: `You are ${this.isHost ? 'hosting' : 'joining'}`, ms: 2600,
     });
@@ -258,34 +309,77 @@ export class MultiplayerAuthority implements System, NetGate {
     this.transport = null;
     this.connected = false;
     this.isHost = true;
+    this.established = false;
     this.peers = [];
     this.authority.reset();
     this.mirrorOwner.clear();
     this.pending.clear();
+    this.pendingFruit.clear();
     this.pendingSell.clear();
     this.knownRemoteFruit.clear();
+    this.nodeAck.clear();
+    if (this.shop) this.shop.pendingBuy = null;
   }
 
   private onPeers(peers: PeerId[]): void {
     this.peers = peers;
     const me = this.transport?.id ?? '';
-    // Deterministic host selection: everyone sorts the same list the same way.
-    const all = [me, ...peers].sort();
-    this.hostId = all[0];
-    const wasHost = this.isHost;
-    this.isHost = this.hostId === me;
-    if (wasHost !== this.isHost) {
-      // The ledger belongs to whoever is host. A promoted client starts with a
-      // clean one holding only what it can see for itself: its own hands.
-      this.authority.reset();
-      if (this.isHost) this.adoptLocalHoldings();
-      this.g.bus.emit('ui:toast', {
-        text: this.isHost ? 'You are now the host' : 'Host changed', ms: 2400,
-      });
-    }
+    // A newcomer does not elect. Until somebody has answered its hello it
+    // does not know whether it is joining a session or starting one, and the
+    // one thing it must never do is decide it is in charge of a world it has
+    // not been told about yet.
+    if (!this.established && peers.length) return;
+    const all = [me, ...peers];
+    // The incumbent keeps the session. Lowest-id election only decides who
+    // starts a session, and who takes over when the host leaves: "lowest id
+    // wins" on every change handed the whole world to whichever fresh page
+    // happened to roll a small id, which is host migration TO an empty world.
+    if (!all.includes(this.hostId)) this.hostId = [...all].sort()[0];
+    this.applyHost();
     // Forget peers that have gone, and give back everything they were holding.
     for (const [id, r] of this.remotes) {
       if (!peers.includes(id)) { this.dropPeer(id, r.name); }
+    }
+  }
+
+  /**
+   * Somebody told us who is hosting. `theirAge` is how long they have been
+   * connected, in ms; whoever was here first is the session, and a page that
+   * just opened joins it rather than founding a rival with a smaller id.
+   */
+  private learnHost(claimed: PeerId, theirEstablished: boolean, theirAge: number): void {
+    if (this.established) return;
+    const me = this.me;
+    const myAge = performance.now() - this.connectedAt;
+    if (theirEstablished || theirAge > myAge + 500) {
+      // Joining a session that exists: whoever they say is host, is.
+      this.hostId = claimed;
+    } else if (myAge > theirAge + 500) {
+      // They are joining us. Our claim stands, whatever it is.
+    } else {
+      // Two fresh pages found each other at once: the tie goes to the id.
+      this.hostId = [me, claimed].sort()[0];
+    }
+    this.established = true;
+    this.applyHost();
+  }
+
+  private get age(): number { return performance.now() - this.connectedAt; }
+
+  private applyHost(): void {
+    const me = this.me;
+    const wasHost = this.isHost;
+    this.isHost = this.hostId === me;
+    if (wasHost !== this.isHost) {
+      // The ledger belongs to whoever is host. A promoted client starts from
+      // what it could see: the mirror of the old ledger from the last
+      // snapshot, plus its own hands. Anything owned by a peer that is no
+      // longer here is spilled by `dropPeer` a few lines down.
+      this.authority.reset();
+      if (this.isHost) { this.adoptMirror(); this.adoptLocalHoldings(); }
+      this.g.bus.emit('ui:toast', {
+        text: this.isHost ? 'You are now the host' : 'Host changed', ms: 2400,
+      });
     }
   }
 
@@ -301,6 +395,7 @@ export class MultiplayerAuthority implements System, NetGate {
     const r = this.remotes.get(id);
     if (r) { this.destroyRemote(r); this.remotes.delete(id); }
     this.peers = this.peers.filter((p) => p !== id);
+    this.nodeAck.delete(id);
     if (!this.isHost) return;
     const { released } = this.authority.forgetPeer(id);
     this.g.bus.emit('ui:toast', {
@@ -320,23 +415,60 @@ export class MultiplayerAuthority implements System, NetGate {
     if (this.interaction.carriedId >= 0) {
       this.authority.noteLocalCarry(me, this.interaction.carriedId);
     }
+    // What this player has already bought is what the ledger enforces.
+    for (const id of this.shop?.purchased ?? []) this.authority.noteBought(me, id);
+    for (const id of this.tools?.owned ?? []) {
+      if (this.shop?.priceOf(id)) this.authority.noteBought(me, id);
+    }
+  }
+
+  /**
+   * A promoted client's first ledger: the last snapshot's picture of who held
+   * what, and where they stood. Without this every other player's hands were
+   * simply forgotten — their fruit stayed 'carried' with no owner on the new
+   * host, untargetable and unsellable, and their next stow was refused as
+   * 'not yours'.
+   */
+  private adoptMirror(): void {
+    for (const [id, peer] of this.mirrorOwner) {
+      const f = this.fruitSys.get(id);
+      if (!f || (f.state !== 'carried' && f.state !== 'stowed')) continue;
+      const r = this.remotes.get(peer);
+      if (r) this.authority.notePosition(peer, r.targetPos.x, r.targetPos.y, r.targetPos.z, r.name);
+      if (f.state === 'carried') this.authority.noteLocalCarry(peer, id);
+      else this.authority.noteLocalStow(peer, id);
+    }
+    this.mirrorOwner.clear();
   }
 
   // ---- messaging ----------------------------------------------------------
   private onMessage(m: NetMessage): void {
     this.stats.received++;
     switch (m.t) {
-      case 'hello':
+      case 'hello': {
+        // Two fresh pages saying hello to each other in the same instant: the
+        // hello itself carries their claim, so neither has to wait for a
+        // helloBack that names the other.
         this.ensureRemote(m.from!, String(m.name ?? 'Harvester'), Number(m.suit ?? 0));
-        // Reply so the newcomer learns about us immediately.
-        this.transport?.send({ t: 'helloBack', name: this.playerName, suit: this.suit }, m.from);
+        this.learnHost(String(m.host ?? m.from), m.est === true, Number(m.age ?? 0));
+        // Reply so the newcomer learns about us, and who is hosting.
+        this.transport?.send({
+          t: 'helloBack', name: this.playerName, suit: this.suit,
+          host: this.hostId, est: true, age: this.age,
+        }, m.from);
         if (this.isHost) {
           this.authority.holdingFor(m.from!, String(m.name ?? 'Harvester'));
+          // The attached population first, so the snapshot that follows can
+          // place or drop whatever the manifest freed.
+          this.sendManifest(m.from);
+          this.nodeAck.set(m.from!, this.fruitSys.nodeSeq);
           this.sendSnapshot(m.from);
         }
         break;
+      }
       case 'helloBack':
         this.ensureRemote(m.from!, String(m.name ?? 'Harvester'), Number(m.suit ?? 0));
+        this.learnHost(String(m.host ?? m.from), m.est === true, Number(m.age ?? 0));
         break;
       case 'bye': {
         const leaving = this.remotes.get(m.from!);
@@ -349,14 +481,21 @@ export class MultiplayerAuthority implements System, NetGate {
       case 'intent':
         if (this.isHost) this.applyIntent(m.intent as Intent, m.from!);
         break;
+      // Only the host's word is the world. A page that has just opened is
+      // briefly host of nobody, and nothing it says in that window counts.
       case 'result':
-        this.onResult(m);
+        if (m.from === this.hostId) this.onResult(m);
         break;
       case 'snapshot':
-        if (!this.isHost) this.applySnapshot(m);
+        if (!this.isHost && m.from === this.hostId) this.applySnapshot(m);
+        break;
+      case 'manifest':
+        if (!this.isHost && m.from === this.hostId) {
+          this.fruitSys.applyNodeManifest(Number(m.nseq ?? 0), (m.changes ?? []) as NodeChange[]);
+        }
         break;
       case 'economy':
-        if (!this.isHost) this.syncMoney(Number(m.money ?? 0));
+        if (!this.isHost && m.from === this.hostId) this.syncEconomy(Number(m.money ?? 0));
         break;
       case 'event':
         // Cosmetic, host-originated: toasts, celebrations, stunt chips.
@@ -366,7 +505,18 @@ export class MultiplayerAuthority implements System, NetGate {
     }
   }
 
-  private syncMoney(money: number): void {
+  /** Money, and the discovery tier that gates the shed, are the host's. */
+  private syncEconomy(money: number, tier?: number, points?: number): void {
+    if (typeof points === 'number') this.economy.discoveryPoints = points;
+    if (typeof tier === 'number' && tier !== this.economy.discoveryTier) {
+      const rose = tier > this.economy.discoveryTier;
+      this.economy.discoveryTier = tier;
+      if (rose) {
+        this.g.bus.emit('ui:toast', {
+          text: `DISCOVERY TIER ${tier}`, sub: 'New equipment available at the shed', kind: 'gold', ms: 4200,
+        });
+      }
+    }
     if (money === this.economy.money) return;
     this.economy.money = money;
     this.g.bus.emit('money:changed', { money, delta: 0, reason: 'sync' });
@@ -477,6 +627,18 @@ export class MultiplayerAuthority implements System, NetGate {
     this.send({ kind: 'shove', fruitId, dir: [+dir.x.toFixed(3), +dir.y.toFixed(3), +dir.z.toFixed(3)] });
   }
 
+  /** Ask the host to sell us something. Nothing is spent until it answers. */
+  requestBuy(itemId: string): void {
+    this.send({ kind: 'buy', itemId },
+      { kind: 'buy', fruitId: -1, ids: [], plantId: -1, nodeIndex: -1, itemId });
+  }
+
+  /** The local player (host or solo) bought something; the ledger enforces it. */
+  noteBought(itemId: string): void {
+    if (!this.connected || !this.isHost) return;
+    this.authority.noteBought(this.me, itemId);
+  }
+
   // ---- NetGate, for FruitSystem -------------------------------------------
   requestDetach(fruitId: number, cause = 'hand'): void {
     if (!this.connected || this.isHost) return;
@@ -488,12 +650,33 @@ export class MultiplayerAuthority implements System, NetGate {
     this.send({ kind: 'shake', plantId, strength });
   }
 
+  requestBlast(center: THREE.Vector3, radius: number, strength: number, upBias: number): void {
+    if (!this.connected || this.isHost) return;
+    this.send({
+      kind: 'blast', at: [+center.x.toFixed(2), +center.y.toFixed(2), +center.z.toFixed(2)],
+      radius: +radius.toFixed(2), power: +strength.toFixed(2), upBias: +upBias.toFixed(2),
+    });
+  }
+
+  // ---- LegendaryNet, for the King Melon -----------------------------------
+  anyoneHasRopeGun(): boolean { return this.isHost && this.authority.anyoneHasRopeGun(); }
+
+  requestLegendary(intent: { kind: 'lcut' | 'ltether' | 'luntether'; vine?: number;
+    at?: [number, number, number]; len?: number }): void {
+    if (!this.connected || this.isHost) return;
+    // A cut is the one that can be refused for a reason the player must hear.
+    const track = intent.kind === 'lcut'
+      ? { kind: intent.kind, fruitId: -1, ids: [], plantId: -1, nodeIndex: -1 } : undefined;
+    this.send(intent, track);
+  }
+
   // ---- host: applying intents ---------------------------------------------
   private applyIntent(intent: Intent, from: PeerId): void {
     if (!intent || from !== intent.playerId) return;
     this.stats.intents++;
     const rid = intent.rid ?? -1;
     const fid = intent.fruitId ?? -1;
+    const near = (x: number, y: number, z: number, range: number) => this.authority.nearPeer(from, x, y, z, range);
     let deny: Deny | null = null;
 
     switch (intent.kind) {
@@ -508,15 +691,23 @@ export class MultiplayerAuthority implements System, NetGate {
         break;
       case 'drop':
       case 'throw': {
-        const at = intent.at
-          ? _v.set(intent.at[0], intent.at[1], intent.at[2])
-          : _v.copy(this.authority.holdingFor(from).pos);
+        const h = this.authority.holdingFor(from);
+        _v.copy(h.pos);
+        // Where they say they let go has to be within arm's reach of where
+        // they say they stand; otherwise a drop is a teleport onto the pad.
+        if (intent.at) {
+          _v2.set(intent.at[0], intent.at[1], intent.at[2]);
+          if (_v2.distanceTo(h.pos) <= MAX_RELEASE_OFFSET) _v.copy(_v2); else _v.y += 1.2;
+        } else {
+          _v.y += 1.2;
+        }
         _v2.set(intent.vel?.[0] ?? 0, intent.vel?.[1] ?? 0, intent.vel?.[2] ?? 0);
         // A client decides how hard it threw, because the throw curve is one
         // implementation and duplicating it here is how two of them drift
         // apart. It does not decide how hard that is ALLOWED to be.
+        if (!Number.isFinite(_v2.lengthSq())) _v2.set(0, 0, 0);
         if (_v2.length() > MAX_RELEASE_SPEED) _v2.setLength(MAX_RELEASE_SPEED);
-        deny = this.authority.release(from, fid, at, _v2);
+        deny = this.authority.release(from, fid, _v, _v2);
         break;
       }
       case 'sell': {
@@ -524,7 +715,17 @@ export class MultiplayerAuthority implements System, NetGate {
         deny = res.deny;
         if (deny) { this.stats.denied++; this.lastDeny = `sell:${deny}`; }
         this.reply(from, rid, intent.kind, deny, {
-          fruitId: fid, ids: res.ids, count: res.count, total: res.total,
+          fruitId: fid, ids: res.ids, count: res.count, total: res.total, values: res.values,
+        });
+        if (!deny) this.sendSnapshot();
+        return;
+      }
+      case 'buy': {
+        const res = this.authority.buy(from, String(intent.itemId ?? ''));
+        deny = res.deny;
+        if (deny) { this.stats.denied++; this.lastDeny = `buy:${deny}`; }
+        this.reply(from, rid, intent.kind, deny, {
+          itemId: intent.itemId, cost: res.cost, money: this.economy.money,
         });
         if (!deny) this.sendSnapshot();
         return;
@@ -545,13 +746,32 @@ export class MultiplayerAuthority implements System, NetGate {
         if (_v.lengthSq() > 1e-6) this.interaction.applyShove(f, _v.normalize());
         break;
       }
-      case 'blast':
-        if (intent.at) {
-          this.g.physics.explode(
-            new THREE.Vector3(intent.at[0], intent.at[1], intent.at[2]),
-            4.0, 12 * (intent.power ?? 1));
-        }
+      case 'blast': {
+        if (!intent.at) break;
+        const [x, y, z] = intent.at;
+        // A cannon reaches 13 m; anything further is not a shot from here.
+        if (!near(x, y, z, 20)) { deny = 'out-of-reach'; break; }
+        this.g.physics.explode(new THREE.Vector3(x, y, z),
+          clamp01(intent.radius ?? 4, 8), clamp01(intent.power ?? 1, 22 * MAX_BLAST_POWER),
+          clamp01(intent.upBias ?? 0.3, 1));
         break;
+      }
+      // `null` is success here, so no `??` on these: it reads null as "no
+      // answer" and turned every cut and tether the host had just made into
+      // a refusal on the wire.
+      case 'lcut':
+        deny = this.legendary ? this.legendary.remoteCut(intent.vine ?? -1, near) : 'no-fruit';
+        break;
+      case 'ltether':
+        if (!intent.at) { deny = 'out-of-reach'; break; }
+        deny = this.legendary ? this.legendary.remoteTether(intent.at, intent.len ?? 0, near) : 'no-fruit';
+        break;
+      case 'luntether':
+        if (intent.at) this.legendary?.remoteUntether(intent.at);
+        break;
+      case 'resync':
+        this.sendManifest(from);
+        return;
       default: break;
     }
 
@@ -583,10 +803,24 @@ export class MultiplayerAuthority implements System, NetGate {
       for (const id of asked) this.pendingSell.delete(id);
       if (ok) {
         this.interaction.settleSale((m.ids ?? []) as number[],
-          Number(m.count ?? 0), Number(m.total ?? 0));
+          Number(m.count ?? 0), Number(m.total ?? 0), (m.values ?? []) as number[]);
       } else {
         this.interaction.saleRefused(why);
       }
+      return;
+    }
+    if (kind === 'buy') {
+      const itemId = String(m.itemId ?? p?.itemId ?? '');
+      if (ok) {
+        this.syncEconomy(Number(m.money ?? this.economy.money));
+        this.shop?.grant(itemId);
+      } else {
+        this.shop?.refused(itemId, why);
+      }
+      return;
+    }
+    if (kind === 'lcut') {
+      if (!ok) this.legendary?.refuse(m.reason as Deny);
       return;
     }
     if (ok || !p) return;
@@ -618,6 +852,8 @@ export class MultiplayerAuthority implements System, NetGate {
       if (p.kind === 'sell') {
         for (const id of p.ids) this.pendingSell.delete(id);
         this.interaction.saleRefused('no answer');
+      } else if (p.kind === 'buy') {
+        this.shop?.refused(p.itemId ?? '', 'the host never answered');
       } else if (p.fruitId >= 0) {
         this.interaction.forfeit(p.fruitId, 'the host never answered');
       }
@@ -641,6 +877,10 @@ export class MultiplayerAuthority implements System, NetGate {
       cx: held ? +held.position.x.toFixed(2) : 0,
       cy: held ? +held.position.y.toFixed(2) : 0,
       cz: held ? +held.position.z.toFixed(2) : 0,
+      // Owning a rope gun opens the legendary; the host cannot see our slots.
+      rg: this.tools?.owned.has('ropegun') ? 1 : 0,
+      // How much of the attached population's log we have applied.
+      ns: this.fruitSys.nodeSeq,
     });
     this.stats.sent++;
   }
@@ -656,7 +896,9 @@ export class MultiplayerAuthority implements System, NetGate {
     r.lastSeen = performance.now();
     if (!this.isHost) return;
 
-    this.authority.notePosition(from, Number(m.x), Number(m.y), Number(m.z), r.name);
+    const h = this.authority.notePosition(from, Number(m.x), Number(m.y), Number(m.z), r.name);
+    h.hasRopeGun = Number(m.rg ?? 0) === 1;
+    this.nodeAck.set(from, Number(m.ns ?? 0));
     // A fruit's carrier owns its transform while they carry it — but only
     // because the host said they could, and only for as long as the ledger
     // agrees. An id we do not have booked out to them moves nothing.
@@ -671,8 +913,9 @@ export class MultiplayerAuthority implements System, NetGate {
   private packFruit(peers: PeerId[]): FruitPacket[] {
     const out: FruitPacket[] = [];
     for (const f of this.fruitSys.fruits.values()) {
-      // Attached fruit is deterministic from the world seed on every client, so
-      // only fruit that has been disturbed needs to travel.
+      // Attached fruit is deterministic from the world seed on every client,
+      // and its changes travel in the node log, so only fruit that has been
+      // disturbed needs to travel here.
       if (f.state === 'attached' || f.state === 'gone') continue;
       const owner = this.authority.ownerOf(f.id);
       out.push([
@@ -690,6 +933,30 @@ export class MultiplayerAuthority implements System, NetGate {
     return out;
   }
 
+  /** The node log a snapshot should carry: what the slowest peer lacks. */
+  private nodeLogFor(to?: PeerId): NodeChange[] {
+    let ack = Infinity;
+    if (to) ack = this.nodeAck.get(to) ?? 0;
+    else for (const p of this.peers) ack = Math.min(ack, this.nodeAck.get(p) ?? 0);
+    if (!Number.isFinite(ack)) return [];
+    const since = this.fruitSys.nodeChangesSince(ack);
+    if (since) return since;
+    // Scrolled out of the ring: the laggard needs the whole picture. It will
+    // ack the manifest's sequence in its next player packet.
+    this.sendManifest(to);
+    return [];
+  }
+
+  private sendManifest(to?: PeerId): void {
+    if (!this.transport || !this.isHost) return;
+    const m = this.fruitSys.nodeManifest();
+    // `nseq`, not `seq`: the transport stamps its own message counter on
+    // `seq`, and the first version shipped the manifest under a number that
+    // was really "the thirteenth message this page has sent".
+    this.transport.send({ t: 'manifest', nseq: m.seq, changes: m.changes }, to);
+    this.stats.manifests++;
+  }
+
   private sendSnapshot(to?: PeerId): void {
     if (!this.transport || !this.isHost) return;
     const peers = [this.me, ...this.peers];
@@ -699,6 +966,11 @@ export class MultiplayerAuthority implements System, NetGate {
       peers,
       gone: this.authority.goneIds(),
       money: this.economy.money,
+      tier: this.economy.discoveryTier,
+      pts: this.economy.discoveryPoints,
+      nseq: this.fruitSys.nodeSeq,
+      nlog: this.nodeLogFor(to),
+      leg: this.legendary?.netState() ?? null,
     };
     this.transport.send(msg, to);
     this.stats.sent++;
@@ -711,13 +983,22 @@ export class MultiplayerAuthority implements System, NetGate {
     const me = this.me;
     const seen = new Set<number>();
 
-    // Tombstones first: a fruit the host has destroyed must not be recreated
+    // The attached population first: anything a node change frees is placed
+    // or dropped by the fruit list that follows.
+    const nlog = (m.nlog ?? []) as NodeChange[];
+    const nseq = Number(m.nseq ?? 0);
+    if (!this.fruitSys.applyNodeChanges(nlog) || this.fruitSys.nodeSeq < nseq) {
+      this.requestResync();
+    }
+
+    // Tombstones next: a fruit the host has destroyed must not be recreated
     // by anything later in this same message.
     for (const id of (m.gone ?? []) as number[]) {
       const f = this.fruitSys.get(id);
       if (f) { this.interaction.reconcile(f, 'gone', false); this.fruitSys.remove(f); }
       this.mirrorOwner.delete(id);
       this.knownRemoteFruit.delete(id);
+      this.fruitSys.freedByLog.delete(id);
     }
 
     for (const p of list) {
@@ -732,7 +1013,7 @@ export class MultiplayerAuthority implements System, NetGate {
 
       let f = this.fruitSys.get(id);
       if (!f) {
-        f = this.fruitSys.spawnReplica(id, SPECIES_ORDER[sp] ?? 'apple',
+        f = this.fruitSys.spawnReplica(id, SPECIES_ORDER[sp] ?? SPECIES_ORDER[0],
           VARIANT_ORDER[va] || null, sizeRoll);
       }
       const state = (STATE_ORDER[st] ?? 'free') as Fruit['state'];
@@ -757,8 +1038,26 @@ export class MultiplayerAuthority implements System, NetGate {
       this.fruitSys.remove(f);
       this.mirrorOwner.delete(id);
     }
+    // Fruit the node log took off a branch and this snapshot does not place
+    // anywhere is fruit the host no longer has: sold, burst, or long gone.
+    for (const id of this.fruitSys.freedByLog) {
+      if (seen.has(id) || this.pendingFruit.has(id) || this.pendingSell.has(id)) continue;
+      const f = this.fruitSys.get(id);
+      if (f) { this.interaction.reconcile(f, 'gone', false); this.fruitSys.remove(f); }
+    }
+    this.fruitSys.freedByLog.clear();
     this.knownRemoteFruit = seen;
-    this.syncMoney(Number(m.money ?? this.economy.money));
+    this.syncEconomy(Number(m.money ?? this.economy.money),
+      typeof m.tier === 'number' ? m.tier : undefined,
+      typeof m.pts === 'number' ? m.pts : undefined);
+    if (m.leg) this.legendary?.applyNet(m.leg as LegendaryNetState);
+  }
+
+  private requestResync(): void {
+    const now = this.g.clock.elapsed;
+    if (now - this.lastResync < RESYNC_INTERVAL) return;
+    this.lastResync = now;
+    this.send({ kind: 'resync' });
   }
 
   // ---- remote avatars -----------------------------------------------------
@@ -795,7 +1094,9 @@ export class MultiplayerAuthority implements System, NetGate {
       this.playerTimer = 0;
       this.sendPlayerPacket();
     }
-    if (this.isHost) {
+    // A host of nobody has nobody to tell; a newcomer that has not yet been
+    // told who hosts must not broadcast its own empty world in the meantime.
+    if (this.isHost && this.established) {
       this.snapshotTimer += dt;
       if (this.snapshotTimer >= 1 / SNAPSHOT_HZ) {
         this.snapshotTimer = 0;

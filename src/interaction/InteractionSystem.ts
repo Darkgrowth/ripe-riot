@@ -725,9 +725,19 @@ export class InteractionSystem implements System {
    * The host has settled a sale we asked for: drop those fruit locally and let
    * the broadcast economy carry the money. Called only on a client.
    */
-  settleSale(ids: number[], count: number, total: number): void {
+  settleSale(ids: number[], count: number, total: number, values: number[] = []): void {
     this.pendingSells = Math.max(0, this.pendingSells - 1);
     const sold = new Set(ids);
+    // The harvest book listens for sales. On the host the economy emits
+    // these; here the host's valuation arrives with the answer, so the
+    // client's records grow by what it actually sold.
+    ids.forEach((id, i) => {
+      const f = this.fruitSys.get(id);
+      if (!f) return;
+      this.g.bus.emit('fruit:sold', {
+        fruitId: id, species: f.species, value: values[i] ?? 0, quality: f.quality, mass: f.mass,
+      });
+    });
     if (this.carried && sold.has(this.carried.fruit.id)) this.carried = null;
     this.basket.items = this.basket.items.filter((f) => !sold.has(f.id));
     this.basket.massCarried = this.basket.items.reduce((m, f) => m + f.mass, 0);

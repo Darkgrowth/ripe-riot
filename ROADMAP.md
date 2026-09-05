@@ -10,9 +10,9 @@ frame-time clamp (no slow motion at low frame rates), latched input edges that
 survive stepless frames on high-refresh displays, typed event bus, seeded RNG,
 system registry, profiling, debug API, Playwright harness that advances the
 world by forced fixed steps rather than wall-clock time, numeric frame triage,
-contact sheets, geometry validation, 9 gameplay scenarios (256 checks), a
-two-client multiplayer test (11 checks) and a startup check that reads the
-presented canvas.
+contact sheets, geometry validation, 9 gameplay scenarios (266 checks), a
+two-client multiplayer authority suite (103 checks) and a startup check that
+reads the presented canvas.
 
 **Player entry** — the spawn is a pose derived from the built dock (position,
 yaw and pitch together, one code path shared by boot, respawn and the tests):
@@ -118,6 +118,21 @@ King Melon's rind also went from two greens that averaged to canopy colour at
 range to a pale stripe over a dark rind, so the legendary reads as a
 watermelon from the dock rather than as one more tree.
 
+**Authority pass** — the shed and the King Melon brought inside the host
+boundary. Purchases are a host-validated intent (price, tier and balance
+checked once, spent once, granted on the answer; simultaneous buyers get
+exactly one shaker between them); the ledger knows each peer's basket
+upgrade; the discovery tier travels with the money. The legendary runs on the
+host and pays once: clients mirror phase, vines, transform and tethers, send
+cuts and tethers as intents, and a client's rope gun opens the encounter. The
+attached population is replicated as a sequence-numbered log of node changes
+with a compacted manifest for joiners, so regrowth and late joins no longer
+split the island into per-peer versions. Host election prefers the incumbent
+and a promoted client inherits the ledger from its mirror. Intents are ranged
+and clamped. Found and fixed on the way: the King Melon was not completable by
+a player at all — rope-gun ropes never counted as tethers, and a rope fired at
+the hanging (fixed) melon anchored to a point in the air.
+
 ## Next, in order
 
 1. **More impact VFX** — water splash, rope dust, sale sparkle. The shard
@@ -125,9 +140,14 @@ watermelon from the dock rather than as one more tree.
 2. **Music** — light exploration bed, discovery sting, legendary escalation.
    The sting hooks already exist as events.
 3. **WebRTC transport** — the interface is done; this is signalling plus ICE.
-4. **Prediction and reconciliation** for client-side fruit interaction. Clients
-   currently see a round-trip delay on their own picks.
-5. **Save/load round-trip test** through a real page reload.
+   Use reliable, ordered data channels: the node log and the intent stream
+   both assume delivery in order.
+4. **Ropes as shared state.** Only the legendary's tethers are replicated. A
+   client's rope gun rope on an ordinary fruit exists on that client alone,
+   so a tethered watermelon on the host is a free one on the client. The
+   tether mirror in `LegendaryHarvest` is the shape to generalise.
+5. **Save/load round-trip test** through a real page reload. In co-op every
+   peer saves its own copy of the shared pot.
 6. **Mid-tier tools** — harpoon, portable winch, sticky anchor, bounce charge,
    large catch net. All are compositions of existing systems.
 7. **Full Sunpatch content** — cave orchard interior, secret spawns, the rest of
@@ -164,5 +184,10 @@ solo path that widens the margin rather than changing the script.
   needs pooling before there are dozens.
 - **CPU/GPU sway must be kept in step by hand.** The shader and
   `PlantSystem.swayOffset` implement the same curve twice, by necessity.
-- **No prediction on client fruit interaction** (see item 5).
+- **A client's harvest book only learns from sales.** Discovery fires on
+  `fruit:detached`, which the host emits and a client never does; the tier is
+  synced from the host, but a client's own records of species seen are not.
+- **A peer that played solo and then joins keeps its solo world.** The
+  manifest reconciles the attached population to the host's, but loose fruit
+  and money from the solo session are neither wiped nor merged.
 - **Boat is scenery.** It sells the arrival; it does not yet sail or upgrade.

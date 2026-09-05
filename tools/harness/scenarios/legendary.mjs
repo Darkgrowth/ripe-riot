@@ -32,17 +32,89 @@ export async function run(g, t) {
   st = await g.state();
   t.eq(st.legendary.phase, 'tether', 'owning a rope gun advances to TETHER');
 
-  // --- tethering
-  await g.standAt(info.home[0] + 18, info.home[2] + 16, 0, 1.2);
-  await g.wait(0.4);
+  // --- tethering, the way a player does it: rope gun, then pin the near end.
+  //
+  // This path was broken in the shipped slice. The legendary kept its own
+  // tether list that only the debug action below ever appended to, so a
+  // player could rope the melon four times and still be told to restrain
+  // it; and because the melon hangs FIXED until the first cut, the rope gun
+  // anchored its line to a point in the air where the surface had been, so
+  // when the melon fell the rope stayed up there holding nothing.
+  await g.standAt(info.home[0] + 18, info.home[2] + 4, 0, 1.2);
+  await g.call('tool.select', 'ropegun');
+  await g.faceTo(info.home[0], info.home[1], info.home[2]);
+  await g.wait(0.3);
+  await g.call('tool.fire');
+  await g.wait(0.3);
+  st = await g.state();
+  t.eq(st.legendary.held, 1, 'a rope fired at the melon is in the player\'s hands');
+  t.eq(st.legendary.tethers, 0, 'and a rope in your hands is not a tether');
+  const ropeToMelon = await g.page.evaluate(() => {
+    const ropes = window.__GAME.get('ropes');
+    const leg = window.__GAME.get('legendary');
+    for (const r of ropes.ropes.values()) {
+      if (r.b.ownerId === leg.id && r.heldByPlayer) return r.b.handle === leg.body.handle;
+    }
+    return null;
+  });
+  t.eq(ropeToMelon, true, 'the rope is tied to the melon\'s body, not to a point in the air');
+  // Pin the near end to the ground: a tap of the secondary button.
+  await g.look((await g.state()).player.yaw, -1.25);
+  await g.wait(0.1);
+  await g.call('tool.secondary', true);
+  await g.wait(0.05);
+  await g.call('tool.secondary', false);
+  await g.wait(0.3);
+  st = await g.state();
+  t.eq(st.legendary.tethers, 1, 'pinning the near end turns the rope into a tether');
+  t.eq(st.legendary.held, 0, 'and it leaves the player\'s hands');
+
+  // --- the cut gate reads the tethers it can see. One is not enough to cut
+  // past two vines, and the refusal names the rule.
+  await g.call('legendary.cut', 2);
+  await g.wait(1.5);
+  st = await g.state();
+  t.eq(st.legendary.vines, 2, 'two vines cut on one tether');
+  t.eq(st.legendary.tethers, 1, 'and the pinned rope survives the melon sagging onto it');
+  // Float the player 3 m under a point a third of the way along a remaining
+  // vine and look at it, the way someone on the ravine wall would. The aim
+  // needs the vine within 7 m; the anchors sit far above the ground.
+  const aimAt = await g.page.evaluate(() => {
+    const leg = window.__GAME.get('legendary');
+    const ropes = window.__GAME.get('ropes');
+    const V = Object.getPrototypeOf(leg.extractionPad).constructor;
+    const a = new V(), b = new V();
+    ropes.endpoints(leg.vines[0], a, b);
+    const p = a.clone().lerp(b, 0.33);
+    return [p.x, p.y, p.z];
+  });
+  await g.tp(aimAt[0], aimAt[1] - 3, aimAt[2] + 2);
+  await g.faceTo(aimAt[0], aimAt[1], aimAt[2]);
+  await g.wait(0.1);
+  const gate = await g.call('legendary.cutLooking');
+  st = await g.state();
+  t.eq(gate, 'restrain-first', 'cutting a third vine on one tether is refused, by name');
+  t.eq(st.legendary.vines, 2, 'and the vine is still there');
+
+  // A second tether, from the debug path, which builds the same rope a pin does.
+  await g.standAt(info.home[0] - 16, info.home[2] + 14, 0, 1.2);
+  await g.wait(0.3);
   const tetheredOk = await g.call('legendary.tether');
   t.ok(tetheredOk, 'a tether can be attached from a sensible distance');
+  st = await g.state();
+  t.gte(st.legendary.tethers, 2, 'two tethers attached');
+  t.note(`tethers ${st.legendary.tethers}/${st.legendary.required}`);
+  // Put the vines back so the sequence below reads the same as before.
+  await g.call('legendary.reset');
+  await g.wait(0.5);
+  await g.standAt(info.home[0] + 18, info.home[2] + 16, 0, 1.2);
+  await g.wait(0.3);
+  await g.call('legendary.tether');
   await g.standAt(info.home[0] - 16, info.home[2] + 14, 0, 1.2);
   await g.wait(0.3);
   await g.call('legendary.tether');
   st = await g.state();
-  t.gte(st.legendary.tethers, 2, 'two tethers attached');
-  t.note(`tethers ${st.legendary.tethers}/${st.legendary.required}`);
+  t.gte(st.legendary.tethers, 2, 'two tethers attached for the run');
 
   // --- cutting: each cut must actually remove a vine
   await g.call('legendary.cut', 1);

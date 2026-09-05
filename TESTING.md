@@ -125,10 +125,10 @@ visible by reading the code that produced them.
 | `ropes` | a rope actually holds a load at its length, reports correct tension, winches in, pays out, and snaps past its rating |
 | `tools` | shaker drops fruit; the net as a timed swing — a swing timed to the apple's arrival catches it and awards MID-AIR HARVEST, a swing made too early catches nothing and registers a miss, a press during recovery is not a swing, holding the button flails on the same clock; ground nets; rope gun restrains the player; air cannon launches fruit and shoves the player, self-launch |
 | `progression` | discovery, records, rare variants, shop purchase and tier gating, Puff Melon inflation and drift, Vinebomb launch |
-| `legendary-king-melon` | four vines hold it still, gating on the rope gun, tethering, each cut, the 20 m drop, recovery to the pad, payout, and resetting for another attempt |
+| `legendary-king-melon` | four vines hold it still, gating on the rope gun, tethering the way a player does it (a rope fired at the hanging melon is tied to its body and is a leash until its near end is pinned, at which point it is a tether), the cut gate refusing a third cut on one tether by name, each cut, the 20 m drop, recovery to the pad, payout, and resetting for another attempt |
 | `carry` | the carry classification table; the local copy leaving the world batch when picked up and returning when dropped; the tool stowing itself while the hands are full; a Puff Melon inflating from medium to large in hand and then leaving by itself past 1.10 m; oversized fruit refused, shoved, and prompted for; the aim highlight lighting the right instance |
 
-Current status: **9/9 scenarios, 256 checks** plus **60/60 multiplayer checks**.
+Current status: **9/9 scenarios, 266 checks** plus **103/103 multiplayer checks**.
 Typecheck and production build are clean.
 
 ## The multiplayer suite tests authority, not connectivity
@@ -160,6 +160,24 @@ somebody else is carrying; a peer that leaves while carrying has its fruit
 spilled where it stood rather than orphaned; and rejoining duplicates neither
 the money nor the fruit, with both peers holding the same set of loose fruit by
 id.
+
+After the rejoin it goes on to the things that used to live outside the
+boundary: both peers hold exactly the same attached fruit by id after a late
+join and again after the host strips and regrows a tree, and a client regrows
+nothing on its own; a client with no money is refused a catch net and gets
+none, a client with money asks rather than buying, the host grants the tool
+to the client and not to itself, spends the price once and both peers see the
+balance, a repeat request charges nothing, two players buying the last
+affordable shaker at once leaves exactly one of them with it and the pot
+spent once, and the ledger honours a client's Deep Basket; a client's rope
+gun opens the King Melon on a host that has none, the host builds the
+client's tethers and the client sees them acknowledged, the client's cuts are
+made by the host and mirrored back, both peers are in the same phase with
+their melons within 4 m of each other while the client's copy stays fixed,
+and after the client leaves mid-encounter and the host finishes it, the
+returning peer joins as a client (the incumbent keeps the session), sees the
+legendary completed, the payout in the pot exactly once, and the tier it
+earned.
 
 Two of the three failures on the first run were the test measuring the wrong
 thing. The third was real, and worth writing down: **the range check treated

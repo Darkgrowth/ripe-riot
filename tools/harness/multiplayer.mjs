@@ -181,6 +181,11 @@ try {
 
   /** Why the host last said no. Empty when it has not refused anything. */
   const whyRefused = async () => `last refusal "${(await host.state()).net.lastDeny}"`;
+  const whyRefusedOn = async (page) => `last refusal "${(await page.state()).net.lastDeny}"`;
+  const firstMismatch = (x, y) => {
+    for (let i = 0; i < Math.max(x.length, y.length); i++) if (x[i] !== y[i]) return `at ${i}: ${x[i]} vs ${y[i]}`;
+    return 'none';
+  };
 
   /** An attached apple both peers already agree about, by id. */
   async function findAttachedApple(near = [-24, 8, 22]) {
@@ -479,6 +484,208 @@ try {
   const stateOnClient = (await nowClient.call('fruit.info', carriedIntoTheDark)).state;
   ok(stateOnHost === stateOnClient, 'and both peers agree what state it is in',
     `${stateOnHost} vs ${stateOnClient}`);
+
+  const nowHostId = await nowHost.call('net.id');
+  const nowClientId = await nowClient.call('net.id');
+
+  // =====================================================================
+  // THE ATTACHED POPULATION
+  // =====================================================================
+  // "Both peers know the same attached fruit by the same id" has to stay
+  // true for the life of a session, not just at boot. Regrowth used to run
+  // on every peer's own clock with its own ids, and a late joiner saw fruit
+  // the host had sold long ago. The rejoin above IS a late join.
+  const attachedH0 = await nowHost.call('fruit.attachedIds');
+  const attachedC0 = await nowClient.call('fruit.attachedIds');
+  ok(attachedH0.length > 300, 'the island still has most of its fruit on the branch',
+    `${attachedH0.length} attached on the host`);
+  ok(JSON.stringify(attachedH0) === JSON.stringify(attachedC0),
+    'after a rejoin both peers hold exactly the same attached fruit, by id',
+    `host ${attachedH0.length}, client ${attachedC0.length}, first mismatch ${firstMismatch(attachedH0, attachedC0)}`);
+
+  // The host strips a tree and regrows it; the client must end up with the
+  // host's new fruit under the host's ids, and none of its own.
+  const orchardTree = await nowHost.call('plant.nearest', -24, 8, 22, 'appleTree', true);
+  await nowHost.call('plant.shake', orchardTree.id, 3.0);
+  await sleep(SETTLE);
+  await nowHost.call('fruit.despawnAllFree');
+  await sleep(SETTLE);
+  const regrown = await nowHost.call('fruit.regrowNow');
+  ok(regrown > 0, 'the host regrows the branches it emptied', `${regrown} regrown`);
+  await sleep(SETTLE);
+  const attachedH1 = await nowHost.call('fruit.attachedIds');
+  const attachedC1 = await nowClient.call('fruit.attachedIds');
+  ok(JSON.stringify(attachedH1) === JSON.stringify(attachedC1),
+    'regrown fruit appears on the client under the host\'s ids',
+    `host ${attachedH1.length}, client ${attachedC1.length}, first mismatch ${firstMismatch(attachedH1, attachedC1)}`);
+  ok((await nowClient.call('fruit.regrowNow')) === 0, 'a client regrows nothing on its own');
+
+  // =====================================================================
+  // THE SHED
+  // =====================================================================
+  // Money is shared and the host owns it. A client's purchase used to spend
+  // the shared pot locally and be overwritten by the next snapshot: a free
+  // tool with extra steps.
+  await nowHost.call('economy.set', 0);
+  await sleep(SETTLE);
+  const netCost = (await nowHost.call('shop.list')).find((e) => e.id === 'net').cost;
+
+  const broke = await nowClient.call('shop.buy', 'net');
+  await sleep(SETTLE);
+  ok(!broke.ok, 'a client with no money is refused a catch net', JSON.stringify(broke));
+  ok(!(await nowClient.state()).tools.owned.includes('net'), 'and does not get one anyway');
+  ok((await nowHost.state()).economy.money === 0, 'and the pot is untouched');
+
+  await nowHost.call('economy.set', netCost + 40);
+  await sleep(SETTLE);
+  const asked = await nowClient.call('shop.buy', 'net');
+  ok(asked.requested === true, 'a client with money asks the host rather than buying locally',
+    JSON.stringify(asked));
+  await sleep(SETTLE);
+  ok((await nowClient.state()).tools.owned.includes('net'), 'the host grants the catch net to the client');
+  ok(!(await nowHost.state()).tools.owned.includes('net'), 'and not to itself — tools are per player');
+  ok((await nowHost.state()).economy.money === 40, 'the host spends the price once',
+    `$${(await nowHost.state()).economy.money}`);
+  ok((await nowClient.state()).economy.money === 40, 'and the client sees the same balance',
+    `$${(await nowClient.state()).economy.money}`);
+  const clientHolding = (await nowHost.call('net.holdings')).find((h) => h.peer === nowClientId);
+  ok(clientHolding && clientHolding.bought.includes('net'), 'the ledger records who bought what',
+    JSON.stringify(clientHolding?.bought));
+  ok((await nowClient.state()).shop.pendingBuy === null, 'nothing is left pending on the client');
+
+  // A second request for the same thing pays nothing.
+  await nowHost.call('economy.set', netCost * 2);
+  await sleep(SETTLE);
+  await nowClient.page.evaluate(() => { window.__GAME.get('net').requestBuy('net'); });
+  await sleep(SETTLE);
+  ok((await nowHost.state()).economy.money === netCost * 2,
+    'buying something you already own charges nothing', `$${(await nowHost.state()).economy.money}`);
+
+  // Simultaneous: money for exactly one tree shaker, both players reach for it.
+  const shakerCost = (await nowHost.call('shop.list')).find((e) => e.id === 'shaker').cost;
+  await nowHost.call('economy.set', shakerCost);
+  await sleep(SETTLE);
+  await Promise.all([
+    nowHost.call('shop.buy', 'shaker'),
+    nowClient.call('shop.buy', 'shaker'),
+  ]);
+  await sleep(SETTLE);
+  const hostHasShaker = (await nowHost.state()).tools.owned.includes('shaker');
+  const clientHasShaker = (await nowClient.state()).tools.owned.includes('shaker');
+  ok(hostHasShaker !== clientHasShaker, 'two players buying the last affordable shaker at once: exactly one gets it',
+    `host ${hostHasShaker}, client ${clientHasShaker}`);
+  ok((await nowHost.state()).economy.money === 0, 'and the pot is spent exactly once',
+    `$${(await nowHost.state()).economy.money}`);
+  ok((await nowClient.state()).economy.money === 0, 'which both peers agree on');
+
+  // Per-player upgrades are enforced by the host: a client's Deep Basket has
+  // to be known to the ledger or its tenth apple is refused.
+  const basketCost = (await nowHost.call('shop.list')).find((e) => e.id === 'bigBasket').cost;
+  await nowHost.call('economy.set', basketCost);
+  await sleep(SETTLE);
+  await nowClient.call('shop.buy', 'bigBasket');
+  await sleep(SETTLE);
+  const upgraded = (await nowHost.call('net.holdings')).find((h) => h.peer === nowClientId);
+  ok(upgraded && upgraded.capacity === 16, 'the host\'s ledger honours a client\'s Deep Basket',
+    `capacity ${upgraded?.capacity}`);
+  ok((await nowClient.state()).economy.tier === (await nowHost.state()).economy.tier,
+    'both peers agree on the discovery tier');
+
+  // =====================================================================
+  // THE KING MELON
+  // =====================================================================
+  // The legendary used to be simulated and paid on every peer independently.
+  // One completion is one payout, and the client's melon is where the host's
+  // melon is.
+  await nowHost.call('legendary.reset');
+  await sleep(SETTLE);
+  const legInfo = await nowHost.call('legendary.info');
+  ok((await nowClient.state()).legendary.phase === 'prepare', 'the client mirrors the reset');
+
+  // The CLIENT owns the rope gun; the host has none. The host must still
+  // open the encounter, because it is the client who can do the work.
+  await nowClient.call('tool.give', 'ropegun');
+  await sleep(SETTLE);
+  ok((await nowHost.state()).legendary.phase === 'tether',
+    'a client\'s rope gun opens the encounter on the host',
+    (await nowHost.state()).legendary.phase);
+  ok((await nowClient.state()).legendary.phase === 'tether', 'and the client sees the phase');
+
+  await stand(nowClient, legInfo.home[0] + 18, legInfo.home[2] + 16);
+  await nowClient.call('legendary.tether');
+  await sleep(ROUND_TRIP);
+  await stand(nowClient, legInfo.home[0] - 16, legInfo.home[2] + 14);
+  await nowClient.call('legendary.tether');
+  await sleep(SETTLE);
+  ok((await nowHost.state()).legendary.tethers === 2, 'the host builds the client\'s two tethers',
+    `${(await nowHost.state()).legendary.tethers} on the host, ${await whyRefusedOn(nowHost)}`);
+  ok((await nowClient.state()).legendary.tethers === 2, 'and the client sees both acknowledged',
+    `${(await nowClient.state()).legendary.tethers} on the client`);
+
+  await nowHost.call('economy.set', 0);
+  await sleep(SETTLE);
+  const lifetimeBeforeDrop = (await nowHost.state()).economy.lifetime;
+  // Cut from the client. `legendary.cut` on a client sends the intent the E
+  // key would; nothing is cut locally until the host says so.
+  await nowClient.call('legendary.cut', 2);
+  await sleep(SETTLE);
+  ok((await nowHost.state()).legendary.vines === 2, 'the client\'s cuts are made by the host',
+    `${(await nowHost.state()).legendary.vines} vines on the host, ${await whyRefusedOn(nowHost)}`);
+  ok((await nowClient.state()).legendary.vines === 2, 'and mirrored back');
+  ok((await nowHost.state()).legendary.tethers === 2,
+    'the tethers survive the melon sagging onto them after the second cut',
+    `${(await nowHost.state()).legendary.tethers} on the host`);
+  await nowClient.call('legendary.cut', 2);
+  await sleep(SETTLE);
+  ok((await nowHost.state()).legendary.vines === 0, 'all four cut through the client',
+    `${(await nowHost.state()).legendary.vines} vines, ${(await nowHost.state()).legendary.tethers} tethers, ${await whyRefusedOn(nowHost)}`);
+  await sleep(4000);
+  const hostLeg = (await nowHost.state()).legendary;
+  const clientLeg = (await nowClient.state()).legendary;
+  ok(['drop', 'recover', 'complete'].includes(hostLeg.phase), 'the host runs the drop',
+    `host phase ${hostLeg.phase}`);
+  ok(clientLeg.phase === hostLeg.phase, 'and the client is in the same phase', `client ${clientLeg.phase}`);
+  const melonGap = Math.hypot(...hostLeg.pos.map((v, i) => v - clientLeg.pos[i]));
+  ok(melonGap < 4, 'the client\'s melon is where the host\'s melon is',
+    `${melonGap.toFixed(1)} m apart, host ${hostLeg.pos.join(', ')} client ${clientLeg.pos.join(', ')}`);
+  ok(clientLeg.fixed === true, 'the client does not simulate the melon itself');
+
+  // The client leaves mid-encounter; the host finishes it; the client comes
+  // back to a completed legendary and exactly one payout.
+  await nowClient.call('net.disconnect');
+  await sleep(1500);
+  // The haul itself is the solo scenario's business (it shoves the melon
+  // downhill and tolerates not arriving). This is about the payout, so once
+  // the melon is at rest the host places it on the pad.
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const s = (await nowHost.state()).legendary;
+    if (s.phase === 'recover' || s.phase === 'complete' || s.phase === 'failed') break;
+    await sleep(700);
+  }
+  if ((await nowHost.state()).legendary.phase === 'recover') {
+    await nowHost.call('legendary.place', legInfo.pad[0], legInfo.pad[1] + 5.8, legInfo.pad[2]);
+  }
+  await sleep(3500);
+  const done = (await nowHost.state()).legendary;
+  const payout = done.paid;
+  ok(done.phase === 'complete', 'the host completes the legendary', `phase ${done.phase}`);
+  if (done.phase === 'complete') {
+    const econ = (await nowHost.state()).economy;
+    ok(payout > 5000, 'and it pays a legendary amount', `$${payout}`);
+    ok(econ.money === payout, 'once', `$${econ.money} vs $${payout}`);
+    ok(econ.lifetime - lifetimeBeforeDrop === payout, 'credited once', `+$${econ.lifetime - lifetimeBeforeDrop}`);
+    await nowClient.call('net.connect', room, 0);
+    await sleep(3200);
+    const back = await nowClient.state();
+    ok(back.net.isHost === false, 'the returning peer joins as a client; the incumbent keeps the session');
+    ok(back.legendary.phase === 'complete', 'the returning peer sees the legendary completed',
+      back.legendary.phase);
+    ok(back.economy.money === payout, 'with the payout in the shared pot, and not a second one',
+      `$${back.economy.money}`);
+    ok(back.economy.tier === (await nowHost.state()).economy.tier,
+      'and the unlock the legendary earned', `tier ${back.economy.tier}`);
+    ok(back.legendary.paid === payout, 'and agrees what it paid');
+  }
 
   const errs = [...a.consoleErrors, ...b.consoleErrors]
     .filter((e) => !/DevTools|deprecat|ReadPixels|GPU stall/i.test(e));
