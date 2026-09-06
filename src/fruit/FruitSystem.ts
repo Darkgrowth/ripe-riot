@@ -255,6 +255,13 @@ export class FruitSystem implements System {
         damage: +f.damage.toFixed(3), quality: f.quality, value: f.value(),
         speed: +f.speed.toFixed(2), peakSpeed: +f.maxSpeedSinceDetach.toFixed(2),
         inflate: +f.inflate.toFixed(2),
+        // The two halves of the migration story, side by side: what this
+        // peer's own body is doing, and what the host last said it was doing.
+        // On a replica the first is all zeros and the second is not; on a
+        // promoted host they have to agree, or the fruit was rebuilt at rest.
+        hasBody: !!f.body,
+        vel: [+f.velocity.x.toFixed(2), +f.velocity.y.toFixed(2), +f.velocity.z.toFixed(2)],
+        netVel: [+f.netVel.x.toFixed(2), +f.netVel.y.toFixed(2), +f.netVel.z.toFixed(2)],
         travelled: +f.travelled.toFixed(2), peak: +f.peakHeight.toFixed(2),
         stuck: f.stuck, stuckHands: +f.stuckHands.toFixed(2),
         traits: f.traits.map((t) => t.id),
@@ -830,6 +837,35 @@ export class FruitSystem implements System {
   }
 
   /**
+   * Take over the physics of every fruit this peer was only drawing.
+   *
+   * Called once, by the promotion path, at the instant a client becomes the
+   * host. Every LOOSE fruit gets a real body at the transform and velocity the
+   * last snapshot reported; everything attached, carried, stowed or gone is
+   * left alone, because those states are body-less on a host too — attached
+   * fruit has a static collider the activation sweep manages, and carried or
+   * stowed fruit has none by design.
+   *
+   * Species-agnostic on purpose. A reconstructed Boulder Plum, Gluefruit or
+   * Spikefruit is rebuilt by exactly the same call as an apple, out of the
+   * descriptor the replica has been carrying since it arrived.
+   */
+  adoptAuthority(): { loose: number; rebuilt: number; failed: number } {
+    let loose = 0, rebuilt = 0, failed = 0;
+    for (const f of this.fruits.values()) {
+      if (f.state !== 'free') continue;
+      loose++;
+      if (f.body) continue;                  // already ours; nothing to rebuild
+      if (f.adoptRemoteBody()) rebuilt++; else failed++;
+    }
+    // A client keeps a log of node changes it has applied but not yet placed.
+    // As host there is nobody left to place them, and the set only ever means
+    // "something the next snapshot must account for".
+    this.freedByLog.clear();
+    return { loose, rebuilt, failed };
+  }
+
+  /**
    * Move a local fruit to the state the host says it is in.
    *
    * The transitions are not interchangeable with assigning `f.state`: coming
@@ -839,7 +875,16 @@ export class FruitSystem implements System {
    * simulating.
    */
   applyRemoteState(f: Fruit, want: Fruit['state']): void {
-    if (f.state === want) return;
+    if (f.state === want) {
+      // Already in the right state, but possibly still SIMULATED here. That
+      // happens when this peer was the host a moment ago — two clients can
+      // promote at once from different views of who is left, and one of them
+      // then learns the other won. Two machines integrating the same melon is
+      // worse than neither: both advance it, the snapshot corrects one of them
+      // fifteen times a second, and the fruit stutters between two futures.
+      if (want === 'free') this.handBack(f);
+      return;
+    }
     if (f.state === 'attached') this.releaseAttachment(f);
     switch (want) {
       case 'carried': f.pickUp(-1); break;
@@ -847,10 +892,27 @@ export class FruitSystem implements System {
       case 'gone': this.remove(f); break;
       default:
         // Free, but simulated by the host: strip any body we happen to hold.
-        if (f.body) f.pickUp(-1);
+        this.handBack(f);
         f.state = 'free';
         break;
     }
+  }
+
+  /**
+   * Give a loose fruit's physics back to whoever is the host, keeping the
+   * motion it had. The exact inverse of `Fruit.adoptRemoteBody`, and the
+   * reason a peer can change roles in either direction without the fruit
+   * either freezing or being simulated twice.
+   */
+  private handBack(f: Fruit): void {
+    if (!f.body) return;
+    const v = f.body.linvel();
+    const w = f.body.angvel();
+    f.netVel.set(v.x, v.y, v.z);
+    f.netAngVel.set(w.x, w.y, w.z);
+    this.g.physics.removeBody(f.body, f.colliders);
+    f.body = null;
+    f.colliders.length = 0;
   }
 
   /** Local-only bookkeeping for a stem the host broke: free the node, drop the

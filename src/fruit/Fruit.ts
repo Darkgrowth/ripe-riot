@@ -93,6 +93,17 @@ export class Fruit implements PhysicsOwner {
   private lastTravelSample = new THREE.Vector3();
   /** Set while any tool has a hold of it. */
   heldBy = -1;
+  /**
+   * The velocity the host last reported for this fruit, in world space.
+   *
+   * A replica has no body, so this is the only record of the fact that it was
+   * MOVING — and it is the difference between a promoted host that picks a
+   * rolling melon up mid-roll and one that drops it, from rest, wherever the
+   * last snapshot happened to catch it. Meaningless on a fruit this peer
+   * simulates: there the body is the truth.
+   */
+  netVel = new THREE.Vector3();
+  netAngVel = new THREE.Vector3();
   /** Speed at the end of the previous fixed step, for impact detection. */
   private prevSpeed = 0;
   /** Velocity lost in the most recent step. The honest measure of an impact. */
@@ -218,17 +229,19 @@ export class Fruit implements PhysicsOwner {
     ctx.emit('fruit:detached', { fruitId: this.id, species: this.species, cause, playerId });
   }
 
-  private createBody(vel?: THREE.Vector3): void {
+  private createBody(vel?: THREE.Vector3): RBody {
     const p = this.physics;
-    this.body = p.createDynamic(this.position, {
+    const body = p.createDynamic(this.position, {
       quat: this.quaternion,
       linearDamping: this.def.linearDamping,
       angularDamping: this.def.angularDamping,
       ccd: this.mass > 8 || this.radius < 0.18,
     });
+    this.body = body;
     this.rebuildCollider();
-    if (vel) this.body.setLinvel({ x: vel.x, y: vel.y, z: vel.z }, true);
+    if (vel) body.setLinvel({ x: vel.x, y: vel.y, z: vel.z }, true);
     this.prevSpeed = vel ? vel.length() : 0;
+    return body;
   }
 
   /** Rebuild the collider after size changes (inflation, variants). */
@@ -313,6 +326,45 @@ export class Fruit implements PhysicsOwner {
       this.body.setAngvel({ x: angular.x, y: angular.y, z: angular.z }, true);
     }
     this.lastTravelSample.copy(this.position);
+  }
+
+  /**
+   * Become the simulated copy of a fruit this peer was only drawing.
+   *
+   * A client's loose fruit is a PICTURE: species, variant, roll, damage, a
+   * transform and the velocity the host last reported, with no body behind
+   * any of it. When this peer is promoted to host, that picture has to become
+   * a physical object in the same frame — same id, same mass, same place,
+   * still moving — or it freezes where the last snapshot left it and no rope,
+   * hand, shove or blast can ever touch it again.
+   *
+   * Deliberately builds the body through the same `createBody` that `detach`
+   * and `release` use, so a reconstructed fruit rejoins the ordinary physics
+   * and instancing path with nothing special about it afterwards. Nothing
+   * here knows what species it is holding: everything that differs between a
+   * plum and a King Melon already lives in `def`, `variant` and `sizeRoll`,
+   * which the replica was built from.
+   */
+  adoptRemoteBody(): boolean {
+    if (this.state !== 'free' || this.body || this.destroyed) return false;
+    // `stick` refuses to fasten a fruit that already believes it is stuck, and
+    // a replica carries that belief over the wire without a body to back it.
+    const wasStuck = this.stuck;
+    this.stuck = false;
+    const body = this.createBody(this.netVel.lengthSq() > 1e-6 ? this.netVel : undefined);
+    if (this.netAngVel.lengthSq() > 1e-6) {
+      body.setAngvel({ x: this.netAngVel.x, y: this.netAngVel.y, z: this.netAngVel.z }, true);
+    }
+    // The flight record restarts here. What it did under the old host is that
+    // host's measurement, and adding to `travelled` from a sample taken on
+    // another machine is worse than starting clean.
+    this.lastTravelSample.copy(this.position);
+    if (this.detachedAt < 0) this.detachPosition.copy(this.position);
+    if (this.position.y > this.peakHeight) this.peakHeight = this.position.y;
+    // A gluefruit the old host had fastened is fastened here too — a fixed
+    // body, not a dynamic one that slides off the cliff it was stuck to.
+    if (wasStuck) this.stick();
+    return true;
   }
 
   /** Into the basket: no body, no draw. */

@@ -11,8 +11,10 @@ survive stepless frames on high-refresh displays, typed event bus, seeded RNG,
 system registry, profiling, debug API, Playwright harness that advances the
 world by forced fixed steps rather than wall-clock time, numeric frame triage,
 contact sheets, geometry validation, 10 gameplay scenarios (322 checks), a
-two-client multiplayer authority suite (127 checks), a startup check that
-reads the presented canvas, and a fresh-save playthrough with a stopwatch.
+two-client multiplayer authority suite (127 checks), a repeatable
+host-migration suite (163 checks over three migrations and a legendary), a
+startup check that reads the presented canvas, and a fresh-save playthrough
+with a stopwatch.
 
 **Player entry** — the spawn is a pose derived from the built dock (position,
 yaw and pitch together, one code path shared by boot, respawn and the tests):
@@ -77,8 +79,9 @@ and stow/draw transitions.
 panning, a limiter, and layered surf/wind ambience that responds to altitude.
 
 **Multiplayer** — transport abstraction, same-machine BroadcastChannel
-transport, deterministic host election, player replication with posed remote
-rigs, fruit replication, shared economy, client intents.
+transport, deterministic host election, host migration that rebuilds the
+world's physics rather than only its ledger, player replication with posed
+remote rigs, fruit replication, shared economy, client intents.
 
 **Save** — opt-in per-system serialisation, autosave, versioned blob.
 
@@ -147,6 +150,22 @@ fruit. Peers leaving take their ropes with them; late joiners see what is
 out; snaps are announced to the owner. The legendary's bespoke tether
 mirroring is gone — a tether is a rope like any other.
 
+**Host migration pass** — the last serious hole in co-op. A promoted client
+inherited a ledger and no PHYSICS: a client's loose fruit is a body-less
+picture by design, so every free melon on the island froze the moment the host
+left. Promotion is now one reusable path — inherit the tombstones, the old
+ledger and our own hands, spill whatever is booked to somebody who has gone,
+build a real dynamic body for every loose fruit at the transform *and velocity*
+the last snapshot reported (six new numbers on the wire, and the reason a
+rolling melon keeps rolling), adopt the ropes, un-fix the King Melon and settle
+every request the departed host will never answer. Nothing in it knows what
+species it is holding. Election happens on the goodbye rather than three and a
+half seconds later; ropes a departed peer merely MADE are re-keyed rather than
+dropped; a rejoining ex-host no longer keeps ghosts of fruit sold while it was
+away. Measured by `migration.mjs`, which promotes each machine in turn and
+asserts every fruit id is in exactly one of attached / loose / carried / basket
+/ sold.
+
 **First chapter pass** — Sunpatch as a game rather than a slice. Three
 back-country fruit with one physical rule each (Boulder Plum, Gluefruit,
 Spikefruit), placed as an escalation with rare-variant pockets in the far
@@ -169,18 +188,14 @@ stopwatch. Numbers in TESTING.md.
 3. **WebRTC transport** — the interface is done; this is signalling plus ICE.
    Use reliable, ordered data channels: the node log, the intent stream and
    the rope list all assume delivery in order.
-4. **Host migration with loose fruit.** A promoted client's replicas of free
-   fruit have no bodies and nothing gives them any; they freeze where they
-   were. Ropes migrate (mirrors become the new host's), the ledger migrates,
-   the loose fruit does not yet.
-5. **Save/load round-trip test** through a real page reload. In co-op every
+4. **Save/load round-trip test** through a real page reload. In co-op every
    peer saves its own copy of the shared pot.
-6. **Mid-tier tools** — harpoon, portable winch, sticky anchor, bounce charge,
+5. **Mid-tier tools** — harpoon, portable winch, sticky anchor, bounce charge,
    large catch net. All are compositions of existing systems, and the shared
    rope layer is the base a harpoon and a winch sit on.
-7. **Full Sunpatch content** — cave orchard interior, secret spawns, the rest of
+6. **Full Sunpatch content** — cave orchard interior, secret spawns, the rest of
    the landmark dressing.
-8. **Weather and time** — day/night, wind events, rain surfaces. `TimeSystem`
+7. **Weather and time** — day/night, wind events, rain surfaces. `TimeSystem`
     and `WeatherSystem` are named in the brief and not yet written; wind is
     currently a vector on `FruitSystem`.
 

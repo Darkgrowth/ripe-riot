@@ -16,6 +16,8 @@ node tools/harness/run-tests.mjs ropes legendary    # by name
 node tools/harness/feel.mjs          # numbers for how each interaction feels
 node tools/harness/feel.mjs throw hit               # by section
 node tools/harness/multiplayer.mjs   # two real clients over a real transport
+node tools/harness/migration.mjs     # the host walks out: does the fruit notice?
+node tools/harness/migration.mjs 5   # ... five times, promoting each peer in turn
 node tools/harness/startup-check.mjs # what the player sees when they press play
 node tools/harness/carry-check.mjs   # how much of the frame a carried fruit takes
 node tools/harness/net-check.mjs     # the catch net's four phases, and the King Melon from the ravine
@@ -139,7 +141,8 @@ melon leaves DROP on its own, completes, unlocks Gale Grove, raises the flag
 on the boat, and the unlock survives a save round-trip and a reset.
 
 Current status: **10/10 scenarios, 322 checks** plus **127/127 multiplayer
-checks**. Typecheck and production build are clean.
+checks** and **163/163 host-migration checks**. Typecheck and production build
+are clean.
 
 Isolation between scenarios now also resets discovery points, the harvest
 book and the progression flags. The `backcountry` scenario found three new
@@ -205,6 +208,67 @@ host's rope remains; a yank past the rating parts the rope on the host and
 the client's copy goes; a client that disconnects while tethered takes its
 rope with it and leaves the host's; and a late joiner sees the host's active
 rope as a mirror, which goes when the host clears it.
+
+## Host migration is its own suite, and it runs several times
+
+`migration.mjs` answers one question: **when the host leaves, can a player tell
+which machine took over by watching the fruit?** It is separate from
+`multiplayer.mjs` because a migration is the one thing worth repeating — the
+departed peer rejoins, the incumbent keeps the session, and the next run
+promotes the other machine, so `migration.mjs 5` exercises both directions. A
+bug that only bites when the promoted peer is the one that was carrying
+something is exactly the bug that ships.
+
+Nothing in it calls a promotion method. The migration is caused the way a
+player causes one — the host's page disconnects — and everything after it is
+read back through the same debug surface the multiplayer suite uses.
+
+Each run builds a real fixture and then pulls the host out from under it: a
+coconut in flight, a melon hanging on a rope the HOST made, a melon roped by
+the CLIENT's own gun, an apple in the survivor's hands, one in its basket, one
+in the departing host's hands, and one it sold on its way out. Then it asserts,
+in order: the survivor is promoted in a couple of hundred milliseconds rather
+than after the transport's three-and-a-half-second liveness timeout; the
+promotion reports what it rebuilt and NO loose fruit on the new host is a
+body-less picture; the flying coconut still exists, has a real dynamic body at
+the mass the old host had for it, is still travelling at the horizontal speed
+it was travelling at, and keeps moving; the hanging melon is still hanging,
+with tension on a line that survived exactly once and is nobody's mirror; the
+client's own rope-gun line comes through unchanged; nothing still claims to
+belong to the peer that left; what the survivor was carrying is still in its
+hands and still booked to it, its basket survives, the departing host's fruit
+is spilled where it was standing and belongs to nobody, and the sold fruit
+stays sold with its tombstone inherited. Then conservation — **no id in two
+buckets, and every fruit off its branch before the migration is off its branch
+after, and no others** — then picking the spilled fruit up, dropping it,
+selling it, being paid exactly once and nothing the second time, and finally a
+late joiner that sees exactly the fruit the host has, none of it twice, at the
+same balance, with a sell intent for a fruit the OLD host sold refused.
+
+The legendary gets its own migration: the client tethers and cuts all four
+vines, the host walks out mid-drop, and the promoted peer must stop holding the
+melon fixed and start simulating it, keep the phase, the cuts, the tethers and
+the transform, complete it, pay exactly once on the machine that took over,
+unlock Gale Grove, and hand the returning peer a finished encounter with one
+payout in the pot.
+
+Three findings from writing it, none of which were visible by reading:
+
+- **A spill at the drop-off went into the sea.** `spill` placed a departed
+  peer's fruit at the TERRAIN height under their feet, and the sell pad stands
+  on the dock over several metres of water, so everything the host was carrying
+  when it left was deleted by the next step as sunk. It now spills at their
+  feet.
+- **Fruit that comes to rest on the pad sells itself**, which is a feature and
+  which made the first version of the carried-fruit check pass for the wrong
+  reason. The fixture now has the host step off the pad before it leaves.
+- **A 0.2 m coconut arriving at 44 m/s moves 0.73 m per fixed step and goes
+  through the island**, and is then deleted as sunk. It has CCD only above 8 kg
+  or below 0.18 m radius. The test throws its coconut UP instead, which buys
+  airtime without buying arrival speed; the tunnelling itself is left alone,
+  since a coconut off a palm arrives at about a third of that.
+
+## What the multiplayer suite found the first time
 
 Two of the three failures on the first run were the test measuring the wrong
 thing. The third was real, and worth writing down: **the range check treated

@@ -403,14 +403,33 @@ export class RopeSystem implements System {
     return null;
   }
 
-  /** Host: everything a departed peer was holding comes down with them. */
+  /**
+   * Host: what a departed peer's ropes become.
+   *
+   * A rope with that player on one END comes down with them: it would
+   * otherwise hold a melon to a point in the air where somebody used to be
+   * standing. A rope they merely MADE, between two things that are both still
+   * here, is part of the world and stays — a line pinning a melon to a rock
+   * tower is the same line whether or not the person who fired it is still in
+   * the session, and dropping every one of them at a host migration is how a
+   * King Melon that four people spent ten minutes restraining ends up on the
+   * ravine floor. It is re-keyed to us, because a shared rope has to be
+   * somebody's to travel, and it keeps its ends, its length and its load.
+   */
   removeOwnedBy(peer: string): number {
     let n = 0;
     for (const r of [...this.ropes.values()]) {
-      if (r.net?.owner === peer || r.a.peer === peer || r.b.peer === peer) {
-        this.remove(r.id, 'gone');
-        n++;
+      const onThem = r.a.peer === peer || r.b.peer === peer;
+      if (!onThem && r.net?.owner !== peer) continue;
+      if (!onThem && this.net) {
+        r.net = {
+          owner: this.net.me, cid: r.id, mirror: false,
+          acked: true, bornAt: this.g.clock.elapsed,
+        };
+        continue;
       }
+      this.remove(r.id, 'gone');
+      n++;
     }
     return n;
   }
@@ -429,6 +448,30 @@ export class RopeSystem implements System {
       if (!r.net) continue;
       r.net.mirror = false;
       r.net.acked = true;
+    }
+    this.refreshRestraint();
+  }
+
+  /**
+   * Recompute how restrained each roped fruit is, from the ropes that exist.
+   *
+   * `create` writes restraint only on the peer that SIMULATES the fruit, so a
+   * client's mirror of somebody else's rope never wrote any. A promoted host
+   * simulates all of them at once, and a Vinebomb sitting on two lines that
+   * believes it is unrestrained launches at full speed the moment anything
+   * touches it — a rope that visibly holds it doing nothing at all.
+   */
+  refreshRestraint(): void {
+    const roped = new Map<number, number>();
+    for (const r of this.ropes.values()) {
+      for (const end of [r.a, r.b]) {
+        if (end.kind !== 'fruit') continue;
+        roped.set(end.ownerId, (roped.get(end.ownerId) ?? 0) + 1);
+      }
+    }
+    for (const [id, n] of roped) {
+      const f = this.fruitSys.get(id);
+      if (f) f.restraint = Math.min(0.95, n * 0.42);
     }
   }
 

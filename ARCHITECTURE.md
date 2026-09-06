@@ -456,9 +456,75 @@ simultaneous start. Nothing a peer says while it is briefly "host of nobody"
 counts: snapshots, manifests and results are only applied from the peer the
 receiver believes is host, and a host broadcasts no snapshot until it has been
 established. When the host does leave, the survivors elect lowest-id among
-themselves and the promoted client seeds its ledger from its mirror of the old
-one — who held what, and where they stood — so nobody else's hands are
-forgotten; the departed host's own fruit is spilled where it stood.
+themselves — on the `bye` itself, not three and a half seconds later when the
+transport's liveness timer notices, because a session with no authority is a
+session where every loose fruit on the island is standing still.
+
+**A promotion rebuilds the physics, not just the ledger.** This was the last
+serious hole in co-op and it is worth stating plainly: a client's loose fruit
+is a PICTURE. `spawnReplica` builds it with no body on purpose — the host owns
+the physics — so a promoted client inherited a world in which every loose
+fruit was a visual-only replica that no rope, hand, shove or blast could ever
+touch again. It looked like the fruit had frozen, because it had.
+
+`MultiplayerAuthority.promote()` is the one place that fixes it, and the order
+is the argument:
+
+1. **tombstones**, seeded from the `gone` ids this peer saw as a client, so
+   nothing sold or burst can be resurrected by anything below;
+2. **the mirror of the old ledger**, so fruit in other players' hands stays in
+   their hands;
+3. **our own hands, basket and purchases** — per-player upgrades ride on the
+   player packet (`bt`) for exactly this reason, or a new host would refuse a
+   Deep Basket its ninth apple;
+4. **orphans**: anything still booked to a peer who is not here is spilled back
+   through the same recovery path a disconnect uses;
+5. **`FruitSystem.adoptAuthority()`** — a real dynamic body for every loose
+   fruit, at the transform, damage, inflation and VELOCITY the last snapshot
+   reported. Velocity is why the fruit packet carries six more numbers than it
+   used to: without them a melon rolling down the ravine is reconstructed at
+   rest wherever the snapshot caught it, which is precisely the thing a player
+   can see. `Fruit.adoptRemoteBody()` goes through the same `createBody` that
+   `detach` and `release` use, so a reconstructed fruit rejoins the ordinary
+   physics and instancing path with nothing special about it; a stuck gluefruit
+   comes back fixed, not sliding off the cliff it was stuck to;
+6. **the ropes**, which resolve by fruit id and therefore find exactly the
+   bodies step 5 built. Restraint is recomputed, because `create` writes it
+   only on the peer that simulates the fruit and a mirror never did;
+7. **the legendary**, whose melon a client holds *fixed* and a host must not —
+   a fixed melon under a promoted host is two and a half tonnes hanging in the
+   air that nothing will ever move again. Tethers are re-armed for the drop for
+   the same reason: the ratings the old host raised live on the old host's
+   copies;
+8. **our own pending requests**, settled here rather than left to time out and
+   loudly forfeit a pick this peer has just legitimised as the authority.
+
+`Fruit.adoptRemoteBody` has an inverse, `FruitSystem.handBack`, which runs when
+a snapshot describes a loose fruit this peer is still simulating. Two machines
+integrating one melon is worse than neither: both advance it, the snapshot
+corrects one of them fifteen times a second, and the fruit stutters between two
+futures.
+
+**A departed peer's ropes are not all the same rope.** A line with that player
+on one END goes with them — it would otherwise hold a melon to a point in the
+air where somebody used to be standing. A line they merely MADE, between two
+things that are both still here, is world state and is re-keyed to the new
+host: dropping every one of them at a migration is how a King Melon that four
+people spent ten minutes restraining ends up on the ravine floor.
+
+**The first snapshot after connecting sweeps wider than the rest.** The
+ordinary sweep can only forget fruit it was told about, and a peer that has
+just joined was told about nothing — so a page that hosted, left and came back
+kept every fruit the new host had sold or burst while it was away, as ghosts
+only it could see. On the first snapshot, anything disturbed that the host does
+not list at all is dropped. Same rule the ropes already follow when they leave
+a session: what the host does not have is not part of this world.
+
+Two smaller things this pass fixed because the migration test walked into them:
+a spill now lands at the departing player's FEET rather than at the terrain
+under them, which on the dock is several metres of seawater and deleted
+everything they were carrying as sunk; and `forgetPeer` will not take a fruit
+out of somebody else's live hands just because a stale holding still names it.
 
 **Intents are ranged and clamped.** A shake must name a plant near the peer, a
 blast must land within cannon reach at no more than a full charge, a release

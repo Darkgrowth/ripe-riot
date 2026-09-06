@@ -197,6 +197,28 @@ export class FruitAuthority {
   /** Ids removed recently, newest last. Sent with every snapshot. */
   goneIds(): number[] { return this.recentGone; }
 
+  /**
+   * Seed a promoted host's tombstones from what it saw as a client.
+   *
+   * Every snapshot carries the host's recent `gone` list, and a client that
+   * has been applying them knows which fruit was sold or burst. Without this
+   * a promotion starts a world with no memory of any of that: a sell intent
+   * naming a melon the last host already paid for would find no tombstone,
+   * and the one rule the ledger exists to keep — money is created once per
+   * fruit — would be broken by a disconnect.
+   */
+  adoptTombstones(ids: Iterable<number>): number {
+    let n = 0;
+    for (const id of ids) {
+      if (this.tombstones.has(id)) continue;
+      this.tombstones.add(id);
+      this.recentGone.push(id);
+      n++;
+    }
+    while (this.recentGone.length > 64) this.recentGone.shift();
+    return n;
+  }
+
   private noteGone(fruitId: number): void {
     this.tombstones.add(fruitId);
     this.recentGone.push(fruitId);
@@ -337,7 +359,14 @@ export class FruitAuthority {
   private spill(f: Fruit, h: Holding, index: number): void {
     const a = index * 1.1;
     f.position.set(h.pos.x + Math.cos(a) * 0.5, 0, h.pos.z + Math.sin(a) * 0.5);
-    f.position.y = this.hooks.groundAt(f.position.x, f.position.z) + f.radius + 0.12;
+    // At their FEET, not at the terrain under their feet. The two are the same
+    // almost everywhere and are not the same on the dock, where the terrain is
+    // several metres of seawater: a player who disconnects standing on the
+    // drop-off pad — the one place everybody stands — had everything they were
+    // carrying placed below the waterline, where the next step deleted it as
+    // sunk. Whatever they were standing on will catch it.
+    const ground = this.hooks.groundAt(f.position.x, f.position.z);
+    f.position.y = Math.max(ground, h.pos.y) + f.radius + 0.12;
     // `release` only accepts a carried fruit, and a basketed one is `stowed`.
     if (f.state !== 'carried') f.state = 'carried';
     f.release(_v.set(0, 0, 0));
@@ -461,6 +490,13 @@ export class FruitAuthority {
     let n = 0;
     for (let i = 0; i < owned.length; i++) {
       const id = owned[i];
+      // Their own record of what they held can drift from the ledger's — most
+      // often on a promoted host, whose picture of the old session and whose
+      // picture of its OWN hands can name the same fruit for one frame. A
+      // fruit somebody else currently owns is not this peer's to drop, and
+      // taking it out of live hands is worse than leaving a stale entry.
+      const holder = this.owner.get(id);
+      if (holder !== undefined && holder !== peer) continue;
       this.owner.delete(id);
       const f = this.hooks.fruit.get(id);
       if (!f || f.state === 'gone') continue;

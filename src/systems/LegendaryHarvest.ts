@@ -445,12 +445,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
       // the melon if its anchor is above it, swing it toward the rim if the
       // anchor is below, which is the failure the design wants to be funny.
       const high = this.tethers.filter((r) => this.tetherIsHigh(r)).length;
-      for (const tether of this.tethers) {
-        tether.maxTension = 1e9;
-        this.ropes.endpoints(tether, _a, _b);
-        this.ropes.setLength(tether.id, Math.max(tether.minLength, _a.distanceTo(_b)));
-        this.ropes.setReel(tether.id, 3.2);
-      }
+      this.armTethers();
       this.g.bus.emit('ui:celebrate', {
         title: 'LOWER IT',
         sub: high >= this.requiredTethers ? 'THE ROPES ARE HOLDING — FOR NOW'
@@ -561,6 +556,63 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     if (deny) return deny;
     this.cutVine(this.vines[i]);
     return null;
+  }
+
+  /**
+   * Take the slack out of every tether and rate it for two and a half tonnes.
+   *
+   * Shared by the drop itself and by a host promoted into one: the ratings the
+   * old host raised at `beginDrop` live on the OLD HOST'S copies of the ropes,
+   * and a promoted client's own tethers are still rated for a watermelon.
+   */
+  private armTethers(): void {
+    for (const tether of this.tethers) {
+      tether.maxTension = 1e9;
+      this.ropes.endpoints(tether, _a, _b);
+      this.ropes.setLength(tether.id, Math.max(tether.minLength, _a.distanceTo(_b)));
+      this.ropes.setReel(tether.id, 3.2);
+    }
+  }
+
+  /**
+   * Promoted to host in the middle of the encounter.
+   *
+   * Everything the encounter is ABOUT arrives in the snapshot and has already
+   * been applied: the phase, which vines are cut, where the melon is, what it
+   * paid, which attempt this is. One thing does not, and cannot: a client
+   * holds the melon as a FIXED body and teleports it wherever the host says,
+   * because the real one is two and a half tonnes that only the host solves.
+   * A fixed melon under a promoted host is a legendary fruit hanging in the
+   * air that no rope, shove or winch will ever move again.
+   *
+   * Nothing here re-runs a phase. `complete` pays in exactly one place and
+   * guards on the phase it has already reached, so a promotion during the
+   * payout inherits it rather than repeating it.
+   */
+  adoptAuthority(): void {
+    if (!this.authoritative || !this.body) return;
+    // Draw from the body again, not from the host's last reported transform.
+    this.hasRemoteTarget = false;
+    this.remoteGen = -1;
+    this.syncTethers();
+    const moving = this.phase === 'drop' || this.phase === 'recover';
+    if (moving || this.cutVines > 0) {
+      if (this.body.isFixed()) this.body.setBodyType(RAPIER.RigidBodyType.Dynamic, true);
+      this.body.wakeUp();
+    }
+    if (moving) {
+      // The damping `beginDrop` set, which a client never had cause to apply.
+      this.body.setLinearDamping(0.12);
+      this.body.setAngularDamping(0.35);
+    }
+    if (this.phase === 'drop') {
+      // How long it has already been falling was the old host's measurement.
+      // Restarting the clock only delays the eight-second "it is down"
+      // fallback; the stillness test is what normally ends the phase.
+      this.dropStart = this.g.clock.elapsed;
+      this.restStart = -1;
+      this.armTethers();
+    }
   }
 
   /** Where the melon is, for ranging a rope aimed at it. */

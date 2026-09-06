@@ -117,6 +117,13 @@ interface RemoteState {
  * snapshot's own peer list, or -1 for a fruit nobody is holding. `flags` bit 0
  * is a gluefruit stuck fast; `stuckHands` is how long it will still refuse to
  * leave the hands holding it, which the holder's own client enforces.
+ *
+ * The six velocity numbers are the ones a client has no other way to know. A
+ * replica has no body, so its motion is invisible to it — and the instant a
+ * client is promoted it has to build a real body for every loose fruit in the
+ * world. Without these, a melon rolling down the ravine would be reconstructed
+ * at rest wherever the last snapshot caught it, which is exactly the thing a
+ * player CAN see. Zero for anything that is not loose.
  */
 type FruitPacket = [
   id: number, species: number, variant: number, state: number,
@@ -124,6 +131,7 @@ type FruitPacket = [
   qx: number, qy: number, qz: number, qw: number,
   sizeRoll: number, inflate: number, damage: number, owner: number,
   flags: number, stuckHands: number,
+  vx: number, vy: number, vz: number, wx: number, wy: number, wz: number,
 ];
 
 const END_WORLD = 0, END_FRUIT = 1, END_LEGENDARY = 2, END_HAND = 3;
@@ -155,9 +163,13 @@ const MAX_BLAST_POWER = 1.6;
 const PENDING_TIMEOUT = 4;
 /** Minimum gap between a client's requests for the full attached manifest. */
 const RESYNC_INTERVAL = 1.5;
+/** How many of the host's `gone` ids a client remembers, against a promotion. */
+const SEEN_GONE_MAX = 256;
 
 const _v = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
+/** Stands in for a body's velocity on fruit that has no body. */
+const ZERO3 = { x: 0, y: 0, z: 0 };
 
 /**
  * Host-authoritative co-op.
@@ -231,6 +243,18 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   private pendingSell = new Set<number>();
   /** Host: the node-log sequence each peer has told us it has applied. */
   private nodeAck = new Map<PeerId, number>();
+  /** Client: fruit the host has said is gone, inherited as tombstones if we
+   *  are ever promoted. Bounded; the oldest fall off. */
+  private seenGone = new Set<number>();
+  /** Whether we have applied a snapshot since connecting. The first one is
+   *  the moment this peer's world becomes the session's world. */
+  private joinedSnapshot = false;
+  /** The last transform we saw for a peer that has left, so a promotion that
+   *  lands a moment later knows where to put back what they were holding. */
+  private departedAt = new Map<PeerId, THREE.Vector3>();
+  /** What the last promotion had to reconstruct. Diagnostic, for the probe:
+   *  "the fruit froze" and "there was no fruit to freeze" look identical. */
+  lastPromotion: { loose: number; rebuilt: number; spilled: number; at: number } | null = null;
   private lastResync = -Infinity;
   private nextRid = 1;
   /** The last refusal this host issued. Diagnostic: a denial that is correct
@@ -324,6 +348,38 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     })));
     g.debug?.addAction('net.sold', (id: number) => this.authority.isSold(id));
     g.debug?.addAction('net.pending', () => this.pending.size);
+    /** What the last host migration had to rebuild, if this peer was promoted. */
+    g.debug?.addAction('net.promotion', () => this.lastPromotion);
+    /**
+     * Every fruit this peer knows, bucketed by where it is. The conservation
+     * check the migration tests are built on: an id belongs to exactly one of
+     * these, and the same id must never appear in two of them.
+     */
+    g.debug?.addAction('net.census', () => {
+      const owned = new Map<number, PeerId>(this.isHost
+        ? this.authority.entries() : [...this.mirrorOwner.entries()]);
+      const attached: number[] = [], loose: number[] = [], carried: number[] = [];
+      const basket: number[] = [], frozen: number[] = [];
+      for (const f of this.fruitSys.fruits.values()) {
+        if (f.state === 'attached') { attached.push(f.id); continue; }
+        if (f.state === 'gone') continue;
+        if (f.state === 'carried') { carried.push(f.id); continue; }
+        if (f.state === 'stowed') { basket.push(f.id); continue; }
+        loose.push(f.id);
+        // A loose fruit with no body on the authority is the exact failure
+        // this whole pass exists to make impossible: a picture of a fruit
+        // that nobody is simulating.
+        if (this.isHost && !f.body) frozen.push(f.id);
+      }
+      const sort = (a: number[]) => a.sort((x, y) => x - y);
+      return {
+        isHost: this.isHost,
+        attached: sort(attached), loose: sort(loose),
+        carried: sort(carried), basket: sort(basket), frozen: sort(frozen),
+        owners: [...owned.entries()].map(([id, peer]) => ({ id, peer })),
+        gone: this.isHost ? [...this.authority.goneIds()] : [...this.seenGone],
+      };
+    });
     /** Every shared rope this peer knows, by wire identity, for the suite. */
     g.debug?.addAction('net.ropes', () => this.ropeSummary());
   }
@@ -393,28 +449,42 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     this.pendingSell.clear();
     this.knownRemoteFruit.clear();
     this.nodeAck.clear();
+    this.seenGone.clear();
+    this.departedAt.clear();
+    this.joinedSnapshot = false;
+    this.lastPromotion = null;
     if (this.shop) this.shop.pendingBuy = null;
   }
 
   private onPeers(peers: PeerId[]): void {
     this.peers = peers;
-    const me = this.transport?.id ?? '';
     // A newcomer does not elect. Until somebody has answered its hello it
     // does not know whether it is joining a session or starting one, and the
     // one thing it must never do is decide it is in charge of a world it has
     // not been told about yet.
     if (!this.established && peers.length) return;
-    const all = [me, ...peers];
-    // The incumbent keeps the session. Lowest-id election only decides who
-    // starts a session, and who takes over when the host leaves: "lowest id
-    // wins" on every change handed the whole world to whichever fresh page
-    // happened to roll a small id, which is host migration TO an empty world.
-    if (!all.includes(this.hostId)) this.hostId = [...all].sort()[0];
-    this.applyHost();
+    this.electHost();
     // Forget peers that have gone, and give back everything they were holding.
     for (const [id, r] of this.remotes) {
       if (!peers.includes(id)) { this.dropPeer(id, r.name); }
     }
+  }
+
+  /**
+   * Who is hosting, given who is here.
+   *
+   * The incumbent keeps the session. Lowest-id election only decides who
+   * starts a session, and who takes over when the host leaves: "lowest id
+   * wins" on every change handed the whole world to whichever fresh page
+   * happened to roll a small id, which is host migration TO an empty world.
+   *
+   * Deterministic from the peer list alone, so every remaining peer reaches
+   * the same answer without a round of messages about it.
+   */
+  private electHost(): void {
+    const all = [this.me, ...this.peers];
+    if (!all.includes(this.hostId)) this.hostId = [...all].sort()[0];
+    this.applyHost();
   }
 
   /**
@@ -446,24 +516,124 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   private get age(): number { return performance.now() - this.connectedAt; }
 
   private applyHost(): void {
-    const me = this.me;
     const wasHost = this.isHost;
-    this.isHost = this.hostId === me;
-    if (wasHost !== this.isHost) {
-      // The ledger belongs to whoever is host. A promoted client starts from
-      // what it could see: the mirror of the old ledger from the last
-      // snapshot, plus its own hands. Anything owned by a peer that is no
-      // longer here is spilled by `dropPeer` a few lines down.
-      this.authority.reset();
-      if (this.isHost) {
-        this.adoptMirror();
-        this.adoptLocalHoldings();
-        // The ropes we were only drawing are now ours to solve and to part.
-        this.ropes.adoptMirrors();
+    this.isHost = this.hostId === this.me;
+    if (wasHost === this.isHost) return;
+    // The ledger belongs to whoever is host.
+    this.authority.reset();
+    if (this.isHost) { this.promote(); return; }
+    this.g.bus.emit('ui:toast', { text: 'Host changed', ms: 2400 });
+  }
+
+  /**
+   * Become the host of a session that already existed.
+   *
+   * A promotion has to leave the world INDISTINGUISHABLE from the one the old
+   * host was running, because everybody else is still standing in it. Four
+   * things have to agree by the time this returns, and not a frame later: the
+   * ledger (who owns what), the fruit system (what exists, in which state),
+   * the physics world (what is actually simulating) and the ropes (what is
+   * tied to what). A player should not be able to tell which machine took
+   * over by watching the fruit.
+   *
+   * The order is the argument:
+   *
+   *  1. tombstones, so nothing sold or burst can be resurrected by anything
+   *     below;
+   *  2. the mirror of the old ledger, so the fruit in other players' hands
+   *     stays in their hands;
+   *  3. our own hands, basket and purchases, which the old ledger booked to us
+   *     and this one has just forgotten;
+   *  4. anything still booked to a peer who is NOT here, spilled back into the
+   *     world through the ordinary recovery path;
+   *  5. a real physics body for every loose fruit — the whole point: until now
+   *     they were pictures of fruit somebody else was simulating;
+   *  6. the ropes, which resolve by fruit id and therefore find exactly the
+   *     bodies step 5 just built;
+   *  7. the legendary, whose melon a client holds fixed and a host must not;
+   *  8. our own requests to a host that has gone, which nobody will answer.
+   */
+  private promote(): void {
+    this.authority.adoptTombstones(this.seenGone);
+    // Everybody still here, at the last place we saw them. Every zone check
+    // the ledger makes is measured from these, and a peer the new host thinks
+    // is standing at the origin has its next sale refused as "not at the
+    // drop-off" for a reason nobody in the room could work out.
+    for (const r of this.remotes.values()) {
+      this.authority.notePosition(r.id, r.targetPos.x, r.targetPos.y, r.targetPos.z, r.name);
+    }
+    this.adoptMirror();
+    this.adoptLocalHoldings();
+    const spilled = this.releaseOrphans();
+    const { rebuilt, loose } = this.fruitSys.adoptAuthority();
+    this.ropes.adoptMirrors();
+    this.legendary?.adoptAuthority();
+    this.settleOnPromotion();
+    this.lastPromotion = { loose, rebuilt, spilled, at: this.g.clock.elapsed };
+    const bits: string[] = [];
+    if (rebuilt) bits.push(`${rebuilt} loose fruit picked up mid-flight`);
+    if (spilled) bits.push(`${spilled} dropped where they were standing`);
+    this.g.bus.emit('ui:toast', {
+      text: 'You are now the host', sub: bits.length ? bits.join(' · ') : undefined, ms: 2600,
+    });
+  }
+
+  /**
+   * Fruit the ledger books to somebody who is not in the session.
+   *
+   * The case this exists for is the ordinary one: the host says goodbye, its
+   * `bye` reaches us before the transport's liveness timer has noticed it is
+   * gone, and by the time we are the host its avatar has already been
+   * forgotten — so the loop in `onPeers` that normally spills a departed
+   * player's hands finds nothing left to spill. Stating the rule once here
+   * makes both orderings safe: the ledger may only name peers who are here,
+   * and everything else comes back to the world down the same path a
+   * disconnect uses.
+   */
+  private releaseOrphans(): number {
+    const live = new Set<PeerId>([this.me, ...this.peers]);
+    const stale = new Set<PeerId>();
+    for (const [, peer] of this.authority.entries()) if (!live.has(peer)) stale.add(peer);
+    for (const h of this.authority.allHoldings()) if (!live.has(h.peer)) stale.add(h.peer);
+    let n = 0;
+    for (const peer of stale) n += this.authority.forgetPeer(peer).released;
+    return n;
+  }
+
+  /**
+   * A promoted host cannot be waiting for an answer: the peer that owed it one
+   * has gone.
+   *
+   * Settled here rather than left to `expirePending`, which would forfeit — a
+   * few seconds later, and loudly — a pick this peer has just legitimised as
+   * the authority, taking the fruit back out of its own hands for no reason a
+   * player could follow. A sale is the exception worth telling them about: it
+   * genuinely did not happen, and the fruit is still in the basket.
+   */
+  private settleOnPromotion(): void {
+    for (const [rid, p] of [...this.pending]) {
+      this.settle(rid);
+      if (p.kind === 'sell') {
+        for (const id of p.ids) this.pendingSell.delete(id);
+        this.interaction.saleRefused('the host left mid-sale');
+      } else if (p.kind === 'buy') {
+        this.shop?.refused(p.itemId ?? '', 'the host left');
       }
-      this.g.bus.emit('ui:toast', {
-        text: this.isHost ? 'You are now the host' : 'Host changed', ms: 2400,
-      });
+    }
+    this.pending.clear();
+    this.pendingFruit.clear();
+    this.pendingSell.clear();
+  }
+
+  /** Ids the host has told us are gone. A promotion inherits these as
+   *  tombstones rather than starting a world where sold fruit can come back. */
+  private noteSeenGone(id: number): void {
+    if (this.seenGone.has(id)) return;
+    this.seenGone.add(id);
+    // Insertion-ordered, so deleting the first key evicts the oldest.
+    if (this.seenGone.size > SEEN_GONE_MAX) {
+      const oldest = this.seenGone.values().next();
+      if (!oldest.done) this.seenGone.delete(oldest.value);
     }
   }
 
@@ -477,9 +647,21 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
    */
   private dropPeer(id: PeerId, name: string): void {
     const r = this.remotes.get(id);
-    if (r) { this.destroyRemote(r); this.remotes.delete(id); }
+    if (r) {
+      // Where they were standing, kept past the avatar. If we are promoted a
+      // moment from now, this is where the fruit in their hands comes back to
+      // the world — rather than the world origin, which is the sea.
+      this.departedAt.set(id, r.targetPos.clone());
+      this.destroyRemote(r);
+      this.remotes.delete(id);
+    }
     this.peers = this.peers.filter((p) => p !== id);
     this.nodeAck.delete(id);
+    // The HOST said goodbye. Elect its replacement now rather than waiting for
+    // the transport's liveness timer to notice: three and a half seconds with
+    // nobody simulating is three and a half seconds of every loose fruit on
+    // the island standing still, which is the one thing a player can see.
+    if (id === this.hostId) this.electHost();
     if (!this.isHost) return;
     const { released } = this.authority.forgetPeer(id);
     // Their ropes go too: a rope tied to a player who is not there any more
@@ -491,6 +673,16 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     this.g.bus.emit('ui:toast', {
       text: `${name} left`, sub: bits.length ? bits.join(' · ') : undefined, ms: 2400,
     });
+  }
+
+  /** Everything the shed has sold this player, as one wire-sized string. */
+  private purchasedList(): string {
+    const out: string[] = [];
+    for (const id of this.shop?.purchased ?? []) out.push(id);
+    for (const id of this.tools?.owned ?? []) {
+      if (!out.includes(id) && this.shop?.priceOf(id)) out.push(id);
+    }
+    return out.join(',');
   }
 
   /** Tell the ledger what this peer's own player is already holding. */
@@ -522,7 +714,13 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       const f = this.fruitSys.get(id);
       if (!f || (f.state !== 'carried' && f.state !== 'stowed')) continue;
       const r = this.remotes.get(peer);
-      if (r) this.authority.notePosition(peer, r.targetPos.x, r.targetPos.y, r.targetPos.z, r.name);
+      // Where to consider this player to be standing: their avatar if they are
+      // still here, the last place we saw them if they have just left, and the
+      // fruit's own position as a last resort — which for something in their
+      // hands IS where those hands were, and is a far better place to put it
+      // back than the origin the ledger would otherwise use.
+      const at = r ? r.targetPos : this.departedAt.get(peer) ?? f.position;
+      this.authority.notePosition(peer, at.x, at.y, at.z, r?.name);
       if (f.state === 'carried') this.authority.noteLocalCarry(peer, id);
       else this.authority.noteLocalStow(peer, id);
     }
@@ -1176,6 +1374,13 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       cz: held ? +held.position.z.toFixed(2) : 0,
       // Owning a rope gun opens the legendary; the host cannot see our slots.
       rg: this.tools?.owned.has('ropegun') ? 1 : 0,
+      // What the shed has sold us. Purchases are per-player and the host is
+      // the one that enforces them, so a NEW host that inherited a ledger
+      // without them would refuse a Deep Basket its ninth apple and let the
+      // same tool be bought — and paid for — twice. Cheap enough to restate
+      // continuously, which makes it true again the frame after a migration
+      // rather than whenever somebody next opens the shed.
+      bt: this.purchasedList(),
       // How much of the attached population's log we have applied.
       ns: this.fruitSys.nodeSeq,
     });
@@ -1195,6 +1400,13 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
 
     const h = this.authority.notePosition(from, Number(m.x), Number(m.y), Number(m.z), r.name);
     h.hasRopeGun = Number(m.rg ?? 0) === 1;
+    // Purchases this peer says it has. Only ever ADDS: the ledger is what
+    // stops a second sale of the same item, and a client claiming to own
+    // something buys it nothing it has not already paid for — the money was
+    // spent through `buy`, here, on whichever host was running at the time.
+    for (const id of String(m.bt ?? '').split(',')) {
+      if (id && !h.bought.has(id) && this.shop?.priceOf(id)) this.authority.noteBought(from, id);
+    }
     this.nodeAck.set(from, Number(m.ns ?? 0));
     // A fruit's carrier owns its transform while they carry it — but only
     // because the host said they could, and only for as long as the ledger
@@ -1215,6 +1427,12 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       // disturbed needs to travel here.
       if (f.state === 'attached' || f.state === 'gone') continue;
       const owner = this.authority.ownerOf(f.id);
+      // Only a loose fruit has a body, and only a loose fruit is ever rebuilt
+      // from this packet by a promotion. The rest travel as six zeros, which
+      // JSON spends six bytes each on and nothing else in the game reads.
+      const moving = f.state === 'free' && f.body ? f.body : null;
+      const v = moving ? moving.linvel() : ZERO3;
+      const w = moving ? moving.angvel() : ZERO3;
       out.push([
         f.id,
         SPECIES_ORDER.indexOf(f.species),
@@ -1226,6 +1444,8 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
         +f.sizeRoll.toFixed(4), +f.inflate.toFixed(3), +f.damage.toFixed(3),
         owner ? peers.indexOf(owner) : -1,
         f.stuck ? 1 : 0, +f.stuckHands.toFixed(1),
+        +v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2),
+        +w.x.toFixed(2), +w.y.toFixed(2), +w.z.toFixed(2),
       ]);
     }
     return out;
@@ -1298,11 +1518,12 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       this.mirrorOwner.delete(id);
       this.knownRemoteFruit.delete(id);
       this.fruitSys.freedByLog.delete(id);
+      this.noteSeenGone(id);
     }
 
     for (const p of list) {
       const [id, sp, va, st, x, y, z, qx, qy, qz, qw, sizeRoll, inflate, damage, ownerIdx,
-        flags = 0, stuckHands = 0] = p;
+        flags = 0, stuckHands = 0, vx = 0, vy = 0, vz = 0, wx = 0, wy = 0, wz = 0] = p;
       seen.add(id);
       // A request about this fruit is still in flight, so this picture of it
       // predates the request and cannot be used to correct it. The host's
@@ -1323,6 +1544,11 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       if (f.damage !== damage) { f.damage = damage; f.refreshTint(); }
       f.stuck = (flags & 1) !== 0;
       f.stuckHands = stuckHands;
+      // How fast the host says it is going. Kept whether or not this peer is
+      // drawing it from the snapshot, because it is only ever read at the one
+      // moment this peer has to build the body itself: a promotion.
+      if (state === 'free') { f.netVel.set(vx, vy, vz); f.netAngVel.set(wx, wy, wz); }
+      else { f.netVel.set(0, 0, 0); f.netAngVel.set(0, 0, 0); }
       // Whoever is carrying a fruit draws it; the snapshot does not get to
       // fight the local carry spring for the transform of a fruit in my hands.
       if (!mine || state !== 'carried') {
@@ -1339,6 +1565,27 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       this.interaction.reconcile(f, 'gone', false);
       this.fruitSys.remove(f);
       this.mirrorOwner.delete(id);
+    }
+    // Our FIRST picture of this session sweeps wider: not just the fruit we
+    // were told about and have since lost, but everything disturbed that the
+    // host does not list at all.
+    //
+    // The sweep above can only forget what it already knew, and a peer that
+    // has just joined knows nothing — so a page that hosted, left and came
+    // back kept every fruit the new host had sold or burst while it was away,
+    // as ghosts only it could see. The `gone` ring covers the recent ones and
+    // is sixty-four deep; this covers the rest, and it is the same rule the
+    // ropes already follow when they leave a session: what the host does not
+    // have is not part of this world.
+    if (!this.joinedSnapshot) {
+      this.joinedSnapshot = true;
+      for (const f of [...this.fruitSys.fruits.values()]) {
+        if (f.state === 'attached' || f.state === 'gone') continue;
+        if (seen.has(f.id) || this.pendingFruit.has(f.id) || this.pendingSell.has(f.id)) continue;
+        this.interaction.reconcile(f, 'gone', false);
+        this.fruitSys.remove(f);
+        this.mirrorOwner.delete(f.id);
+      }
     }
     // Fruit the node log took off a branch and this snapshot does not place
     // anywhere is fruit the host no longer has: sold, burst, or long gone.
