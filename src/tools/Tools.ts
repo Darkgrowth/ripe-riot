@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { Tool, type ToolDef } from './ToolBase';
 import type { Fruit } from '@/fruit/Fruit';
-import type { RopeSystem, Rope } from '@/systems/RopeSystem';
+import { HAND_OFFSET, type RopeSystem, type Rope, type RopeEnd } from '@/systems/RopeSystem';
 import { QueryMask, Groups } from '@/physics/Layers';
 import { Palette } from '@/render/Palette';
 import { clamp } from '@/core/MathUtils';
@@ -13,6 +13,7 @@ const _dir = new THREE.Vector3();
 const _pos = new THREE.Vector3();
 const _right = new THREE.Vector3();
 const _up = new THREE.Vector3();
+const _q = new THREE.Quaternion();
 
 // ---------------------------------------------------------------------------
 // HAND PICKER — the one you start with
@@ -492,7 +493,9 @@ export class CatchNet extends Tool {
       if (speed > 5.5 && f.position.y > this.player.position.y + 0.4) {
         this.game.bus.emit('stunt:candidate', { fruitId: f.id, kind: 'midAir' });
       }
-      inter.pickUp(f);
+      // The hoop is not a hand: a spikefruit or a gluefruit caught in the
+      // netting goes straight to the basket without touching anyone.
+      if (!inter.pickUp(f, 'net')) continue;
       inter.stowHeld();
       break; // one per step, so a burst of fruit reads as a sequence of catches
     }
@@ -525,7 +528,10 @@ export class RopeGun extends Tool {
     id: 'ropegun', label: 'Rope Gun', icon: '🪝',
     description: 'Tethers you to anything. Right-click to pin the near end, hold to winch.',
     tagline: 'Fruit picking was not supposed to require a harpoon. This is the warm-up.',
-    cost: 720, tier: 1,
+    // Measured (tools/harness/playthrough.mjs): at $720 the gun sat behind
+    // eight minutes of beach runs after the shaker; at $650 it is about a
+    // trip and a half of coconuts, which is the pace the rest of the hour keeps.
+    cost: 650, tier: 1,
   };
 
   private ropes!: RopeSystem;
@@ -563,48 +569,72 @@ export class RopeGun extends Tool {
   override onPrimary(down: boolean): void {
     if (!down || this.cooldown > 0) return;
     const p = this.player;
-    const hit = this.game.physics.raycast(
-      p.eyePosition.clone(), this.aim(_dir), this.range, QueryMask.interact, p.body);
-    if (!hit) {
+    const target = this.aimTarget();
+    if (!target) {
       this.game.bus.emit('ui:toast', { text: 'Nothing in range', ms: 1200 });
       return;
     }
     this.cooldown = 0.35;
 
-    // A fixed body is a world point as far as a rope cares — except the
-    // legendary, which hangs FIXED until its first vine is cut. A rope pinned
-    // to the melon's surface in world space held nothing when it fell: the
-    // line stayed up in the air and the melon went without it.
-    const targetBody = hit.body && (!hit.body.isFixed() || hit.owner?.kind === 'legendary') ? hit.body : null;
-    const owner = hit.owner;
-    // Local anchor on a moving target, world point on static geometry.
-    let bLocal: THREE.Vector3;
-    if (targetBody) {
-      const t = targetBody.translation();
-      bLocal = _v.set(hit.point.x - t.x, hit.point.y - t.y, hit.point.z - t.z).clone();
-    } else {
-      bLocal = hit.point.clone();
-    }
-
     const rope = this.ropes.create(
-      { body: p.body, local: new THREE.Vector3(0, 1.2, 0), ownerId: p.id },
-      { body: targetBody, local: bLocal, ownerId: owner?.id ?? -1 },
-      Math.max(2.5, hit.distance * 1.12),
-      { heldByPlayer: true, maxTension: 4200 },
+      { kind: 'player', local: HAND_OFFSET.clone(), ownerId: p.id },
+      target.end,
+      Math.max(2.5, target.distance * 1.12),
+      { maxTension: 4200 },
     );
     this.mine.push(rope);
     while (this.mine.length > this.maxRopes) {
       const old = this.mine.shift();
-      if (old) this.ropes.remove(old.id);
-    }
-    // Anything tethered resists a Vinebomb launch.
-    if (owner?.kind === 'fruit') {
-      const f = this.ctx.fruit.get(owner.id);
-      if (f) f.restraint = Math.min(0.95, f.restraint + 0.42);
+      if (old) this.ropes.remove(old.id, 'released');
     }
     this.game.playerCamera.addRecoil(0, 0.012);
-    this.game.bus.emit('audio:sfx', { name: 'ropeFire', position: hit.point });
+    this.game.bus.emit('audio:sfx', { name: 'ropeFire', position: target.point });
     this.game.bus.emit('tool:fired', { toolId: this.def.id, power: 0.7 });
+  }
+
+  /**
+   * What the gun is pointed at, as a rope end.
+   *
+   * Two searches, and the nearer wins: the physics ray, and a ray against the
+   * fruit spheres themselves. The second exists for co-op — a client has no
+   * collider for a fruit the host is simulating, so the physics ray alone
+   * would let it rope a tree but never the watermelon lying under it — and it
+   * makes the gun a little more forgiving for everyone.
+   *
+   * A fixed body is a world point as far as a rope cares, with two exceptions
+   * that are the same exception: a fruit on its branch, which will come down
+   * and take the rope with it, and the legendary, which hangs fixed until its
+   * first vine is cut. Both are tied BY IDENTITY, not by where they were.
+   */
+  private aimTarget(): { end: RopeEnd; distance: number; point: THREE.Vector3 } | null {
+    const p = this.player;
+    const eye = p.eyePosition.clone();
+    this.aim(_dir);
+    const hit = this.game.physics.raycast(eye, _dir, this.range, QueryMask.interact, p.body);
+    const fr = this.ctx.fruit.rayFruit(eye, _dir, this.range);
+    const fruitFirst = fr && (!hit || fr.distance <= hit.distance + 0.05);
+    if (fruitFirst && fr) {
+      const f = fr.fruit;
+      const local = fr.point.clone().sub(f.position).applyQuaternion(_q.copy(f.quaternion).invert());
+      if (local.length() > f.radius) local.setLength(f.radius);
+      return { end: { kind: 'fruit', local, ownerId: f.id }, distance: fr.distance, point: fr.point };
+    }
+    if (!hit) return null;
+    if (hit.owner?.kind === 'legendary' && hit.body) {
+      const t = hit.body.translation();
+      const r = hit.body.rotation();
+      const local = hit.point.clone().sub(_v.set(t.x, t.y, t.z))
+        .applyQuaternion(_q.set(r.x, r.y, r.z, r.w).invert());
+      return { end: { kind: 'legendary', local, ownerId: hit.owner.id }, distance: hit.distance, point: hit.point };
+    }
+    if (hit.owner?.kind === 'fruit') {
+      const f = this.ctx.fruit.get(hit.owner.id);
+      if (f) {
+        const local = hit.point.clone().sub(f.position).applyQuaternion(_q.copy(f.quaternion).invert());
+        return { end: { kind: 'fruit', local, ownerId: f.id }, distance: hit.distance, point: hit.point };
+      }
+    }
+    return { end: { kind: 'world', local: hit.point.clone(), ownerId: -1 }, distance: hit.distance, point: hit.point };
   }
 
   /**
@@ -628,35 +658,19 @@ export class RopeGun extends Tool {
   private pinNearEnd(): void {
     const rope = this.mine[this.mine.length - 1];
     if (!rope) { this.game.bus.emit('ui:toast', { text: 'No rope to pin', ms: 1200 }); return; }
-    const p = this.player;
-    const hit = this.game.physics.raycast(
-      p.eyePosition.clone(), this.aim(_dir), this.range, QueryMask.interact, p.body);
-    if (!hit) return;
-    // Rebuild the rope with the far end kept and the near end pinned.
+    const target = this.aimTarget();
+    if (!target) return;
+    // Rebuild the rope with the far end kept and the near end pinned. In
+    // co-op that is one release and one create on the wire, which is exactly
+    // what it is.
     const far = rope.b;
     const len = rope.length;
-    this.ropes.remove(rope.id);
+    this.ropes.remove(rope.id, 'released');
     const idx = this.mine.indexOf(rope);
-    // A fixed body is a world point as far as a rope cares — except the
-    // legendary, which hangs FIXED until its first vine is cut. A rope pinned
-    // to the melon's surface in world space held nothing when it fell: the
-    // line stayed up in the air and the melon went without it.
-    const targetBody = hit.body && (!hit.body.isFixed() || hit.owner?.kind === 'legendary') ? hit.body : null;
-    let aLocal: THREE.Vector3;
-    if (targetBody) {
-      const t = targetBody.translation();
-      aLocal = new THREE.Vector3(hit.point.x - t.x, hit.point.y - t.y, hit.point.z - t.z);
-    } else {
-      aLocal = hit.point.clone();
-    }
-    const fresh = this.ropes.create(
-      { body: targetBody, local: aLocal, ownerId: hit.owner?.id ?? -1 },
-      { body: far.body, local: far.local, ownerId: far.ownerId },
-      len, { maxTension: 5200 },
-    );
+    const fresh = this.ropes.create(target.end, far, len, { maxTension: 5200 });
     if (idx >= 0) this.mine[idx] = fresh; else this.mine.push(fresh);
     this.game.bus.emit('ui:toast', { text: 'Rope anchored', kind: 'good', ms: 1400 });
-    this.game.bus.emit('audio:sfx', { name: 'ropeAnchor', position: hit.point });
+    this.game.bus.emit('audio:sfx', { name: 'ropeAnchor', position: target.point });
   }
 
   override step(dt: number, held: { primary: boolean; secondary: boolean }): void {
@@ -696,7 +710,7 @@ export class RopeGun extends Tool {
     // Cutting loose under load should feel like letting go of something, not
     // like a line vanishing from the scene.
     const loaded = clamp(rope.tension / 3000, 0, 1);
-    this.ropes.remove(rope.id);
+    this.ropes.remove(rope.id, 'released');
     this.game.bus.emit('audio:sfx', {
       name: 'ropeSnap', volume: 0.25 + loaded * 0.45, pitch: 1.35 - loaded * 0.35,
     });

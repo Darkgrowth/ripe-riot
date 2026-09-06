@@ -61,6 +61,20 @@ export class Sunpatch implements System {
     });
   }
 
+  /**
+   * The island board at the shed, and the flag on the boat: the two things
+   * in the world that change when the King Melon is done. A reward that only
+   * happens on the HUD did not happen.
+   */
+  setNextIslandOpen(open: boolean): void {
+    const b = this.built;
+    if (!b) return;
+    b.boatFlag.visible = open;
+    const mat = b.islandBoard.material as THREE.MeshStandardMaterial;
+    const want = open ? b.islandBoardOpen : b.islandBoardLocked;
+    if (mat.map !== want) { mat.map = want; mat.needsUpdate = true; }
+  }
+
   /** Where fruit is sold. */
   get sellPad(): THREE.Vector3 { return this.built.sellPad; }
   get sellRadius(): number { return this.built.sellRadius; }

@@ -44,6 +44,9 @@ function build(species: string): THREE.BufferGeometry {
     case 'puffmelon': return puffmelon();
     case 'vinebomb': return vinebomb();
     case 'banana': return banana();
+    case 'boulderplum': return boulderplum();
+    case 'gluefruit': return gluefruit();
+    case 'spikefruit': return spikefruit();
     default: return apple();
   }
 }
@@ -276,6 +279,84 @@ function banana(): THREE.BufferGeometry {
   stalk.translate(0, 0.5, 0);
   parts.push(paint(stalk, C(0x6b5426)));
   return must(mergeGeometries(parts, false), 'banana');
+}
+
+function boulderplum(): THREE.BufferGeometry {
+  // Faceted like a river stone and coloured like a bruise: it has to read as
+  // "heavy" from across the hill farm, before anyone has tried to lift it.
+  const body = new THREE.IcosahedronGeometry(0.5, 1);
+  lumpy(body, 0.03, 6, 5);
+  body.scale(1, 0.96, 1);
+  const slate = C(0x4b3a5e), facet = C(0x7a6690), bloom = C(0x9c86b8);
+  const painted = paintBy(body, (x, y, z, out) => {
+    const n = Math.sin(x * 9 + 1) * Math.cos(z * 7 - 2) * Math.sin(y * 11);
+    out.copy(slate).lerp(facet, THREE.MathUtils.clamp(0.45 + n * 0.6, 0, 1) * 0.7);
+    // A frosted bloom on the top, the way plums have.
+    out.lerp(bloom, THREE.MathUtils.clamp(y / 0.5, 0, 1) * 0.28);
+  });
+  const s = stem(0.14, 0.03, C(0x4a3320), 0.3);
+  s.translate(0, 0.44, 0);
+  return must(mergeGeometries([painted, s], false), 'boulderplum');
+}
+
+function gluefruit(): THREE.BufferGeometry {
+  // Amber, glossy, and dripping: three small drops hang off the underside so
+  // it looks sticky before it has stuck to anything.
+  const body = new THREE.SphereGeometry(0.5, 16, 12);
+  body.scale(1, 0.86, 1);
+  dimple(body, 0.06, 3);
+  const amber = C(0xe3a12c), amberDark = C(0xb2711a), gloss = C(0xf8d37a);
+  const painted = paintBy(body, (x, y, z, out) => {
+    const side = (x * 0.7 + z * 0.7) / 0.5;
+    out.copy(amberDark).lerp(amber, THREE.MathUtils.clamp(0.5 + side * 0.5, 0, 1));
+    out.lerp(gloss, THREE.MathUtils.clamp(side * 0.45 + y * 0.6, 0, 0.5));
+  });
+  const parts: THREE.BufferGeometry[] = [painted];
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2 + 0.6;
+    const drip = new THREE.ConeGeometry(0.065, 0.18, 6);
+    drip.rotateX(Math.PI);
+    drip.translate(Math.cos(a) * 0.2, -0.42, Math.sin(a) * 0.2);
+    parts.push(paint(drip, C(0xc7801a)));
+  }
+  const s = stem(0.12, 0.02, C(0x6b4b2a));
+  s.translate(0, 0.38, 0);
+  parts.push(s);
+  return must(mergeGeometries(parts, false), 'gluefruit');
+}
+
+function spikefruit(): THREE.BufferGeometry {
+  // A dark core inside a shell of pale spikes. The spikes reach the unit
+  // radius, so the collider sphere is the tips, not the flesh.
+  const core = new THREE.SphereGeometry(0.34, 12, 9);
+  const green = C(0x2f6b3a), greenDark = C(0x1e4527);
+  const parts: THREE.BufferGeometry[] = [paintBy(core, (x, y, z, out) => {
+    out.copy(greenDark).lerp(green, THREE.MathUtils.clamp(0.5 + y * 1.2, 0, 1));
+  })];
+  const tip = C(0xd9d2a3), base = C(0x5a6b3a);
+  const n = 16;
+  const up = new THREE.Vector3(0, 1, 0);
+  const dir = new THREE.Vector3();
+  const q = new THREE.Quaternion();
+  for (let i = 0; i < n; i++) {
+    // Fibonacci sphere: evenly spread, never two spikes on top of each other.
+    const y = 1 - (i + 0.5) / n * 2;
+    const r = Math.sqrt(1 - y * y);
+    const a = i * 2.39996;
+    dir.set(Math.cos(a) * r, y, Math.sin(a) * r);
+    const h = 0.2;
+    const spike = new THREE.ConeGeometry(0.075, h, 5);
+    spike.translate(0, 0.30 + h / 2, 0);
+    q.setFromUnitVectors(up, dir);
+    spike.applyQuaternion(q);
+    const flat = spike.toNonIndexed();
+    spike.dispose();
+    parts.push(paintBy(flat, (x, yy, z, out) => {
+      const d = Math.hypot(x, yy, z);
+      out.copy(base).lerp(tip, THREE.MathUtils.clamp((d - 0.3) / 0.2, 0, 1));
+    }));
+  }
+  return must(mergeGeometries(parts, false), 'spikefruit');
 }
 
 export function disposeFruitGeometry(): void {

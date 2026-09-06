@@ -12,6 +12,11 @@ import {
   BASKET_CAPACITY, BASKET_MAX_ITEM_MASS,
   canHandCarry, carryClassFor, refusalReason, type CarryClass,
 } from './CarryRules';
+import { STICK_HANDS_HIT, STICK_HANDS_PICK } from '@/fruit/FruitTraits';
+
+/** How a fruit came into the hands. The host is told, because the net may
+ *  take what bare hands may not and a gluefruit that HIT you sticks longer. */
+export type PickCause = 'hand' | 'net' | 'stuck';
 
 /** Anything the player can carry in their hands. Fruit for now; crates later. */
 export interface Carried {
@@ -61,7 +66,11 @@ export class InteractionSystem implements System {
 
   /** What the player is currently looking at, if anything. */
   target: Fruit | null = null;
-  targetKind: 'fruit' | 'sell' | 'shop' | 'shake' | 'shove' | null = null;
+  targetKind: 'fruit' | 'sell' | 'shop' | 'shake' | 'shove' | 'spiky' | null = null;
+  /** Game time of the last "it will not let go" toast, so it does not spam. */
+  private stuckToastAt = -9;
+  /** Times the local player has been pricked, for the harness. */
+  pricks = 0;
   private targetPlantId = -1;
   promptText: string | null = null;
 
@@ -122,21 +131,25 @@ export class InteractionSystem implements System {
       carriedId: this.carried?.fruit.id ?? -1,
       basketIds: this.basket.items.map((f) => f.id),
       pendingSells: this.pendingSells,
+      stuckHands: this.carried ? +this.carried.fruit.stuckHands.toFixed(2) : 0,
+      pricks: this.pricks,
     }));
     g.debug?.addAction('interact', () => this.tryInteract());
     g.debug?.addAction('throw', (power = 1) => this.throwHeld(power));
-    g.debug?.addAction('drop', () => this.dropHeld());
+    /** The harness's drop is a reset, so it lets go of anything — gluefruit included. */
+    g.debug?.addAction('drop', () => this.dropHeld(true));
     g.debug?.addAction('carry.class', (diameter: number, mass: number) =>
       carryClassFor(diameter, mass));
-    g.debug?.addAction('pickup', (id: number) => {
+    g.debug?.addAction('pickup', (id: number, cause: PickCause = 'hand') => {
       const f = this.fruitSys.get(id);
-      return f ? this.pickUp(f) : false;
+      return f ? this.pickUp(f, cause) : false;
     });
     g.debug?.addAction('shove', (id?: number) => {
       const f = id === undefined ? this.target : this.fruitSys.get(id);
       return f ? this.shove(f) : false;
     });
     g.debug?.addAction('sell', () => this.sellAll());
+    g.debug?.addAction('stow', () => this.stowHeld());
     g.debug?.addAction('basket.list', () => this.basket.items.map((f) => ({
       id: f.id, species: f.species, quality: f.quality, value: f.value(),
     })));
@@ -157,10 +170,11 @@ export class InteractionSystem implements System {
     this.updateSellPad(dt);
 
     if (this.g.player.state !== 'active') {
-      if (this.carried) this.dropHeld();
+      if (this.carried) this.dropHeld(true);
       return;
     }
 
+    this.catchStickyHits();
     if (input.interactPressed) this.tryInteract();
     // The mouse buttons belong to the equipped tool (ToolInventory routes them);
     // this system only owns E, and the state of what is in your hands.
@@ -217,7 +231,33 @@ export class InteractionSystem implements System {
     // resolved by the solver, and the solver's idea of "resolved" for a 1.7 m
     // ball against a person is to fire one of them across the island.
     const clearance = PLAYER_RADIUS + f.radius + 0.9;
-    f.position.copy(p.eyePosition).addScaledVector(_dir, clearance);
+    // …and into ROOM. Handed back straight ahead regardless, a melon that
+    // inflated beside an apple tree went into the canopy and sat there
+    // touching two trunks and two attached apples at once — a cage of fixed
+    // colliders the solver cannot push a ball out of — at 78% of the frame,
+    // going nowhere. Each candidate spot is checked two ways, because each
+    // check is blind to something: the ray misses thin trunks beside its
+    // line and the sphere overlap only sees colliders that have an owner.
+    // Ahead, behind, either side; failing all of those, straight up.
+    _eye.copy(p.eyePosition);
+    let found = false;
+    for (const turn of [0, Math.PI, Math.PI / 2, -Math.PI / 2]) {
+      _v2.copy(_dir).applyAxisAngle(UP_AXIS, turn);
+      if (this.g.physics.raycast(_eye, _v2, clearance + f.radius, QueryMask.solid, p.body)) continue;
+      _hold.copy(_eye).addScaledVector(_v2, clearance);
+      const g = this.world.terrain.height(_hold.x, _hold.z) + f.radius + 0.08;
+      if (_hold.y < g) _hold.y = g;
+      if (!this.roomFor(f, _hold)) continue;
+      _dir.copy(_v2);
+      f.position.copy(_hold);
+      found = true;
+      break;
+    }
+    if (!found) {
+      _dir.set(0, 0, 0);
+      f.position.copy(_eye);
+      f.position.y += f.radius + 0.6;
+    }
     const ground = this.world.terrain.height(f.position.x, f.position.z) + f.radius + 0.08;
     if (f.position.y < ground) f.position.y = ground;
     // UP, hard, and away. Handing a 1.1 m ball back to the world 1.3 m from the
@@ -249,6 +289,16 @@ export class InteractionSystem implements System {
       sub: `${f.diameter.toFixed(1)} m across — rope it, net it, or shove it home`,
       kind: 'bad', ms: 2600,
     });
+  }
+
+  /** Is there nothing but air (and the player) where this fruit would go? */
+  private roomFor(f: Fruit, at: THREE.Vector3): boolean {
+    const hits = this.g.physics.overlapSphere(at, f.radius + 0.15, QueryMask.anything, _overlap);
+    for (const o of hits) {
+      if (o === f || o.kind === 'player' || o.kind === 'ragdoll') continue;
+      return false;
+    }
+    return true;
   }
 
   /**
@@ -298,6 +348,8 @@ export class InteractionSystem implements System {
    */
   applyShove(f: Fruit, dir: THREE.Vector3, byPlayerId = -1): boolean {
     if (f.state !== 'free' || !f.body) return false;
+    // Leaning on a gluefruit peels it off whatever it was stuck to.
+    if (f.stuck) f.unstick();
     // A person puts a bounded amount of push into a shove; heavier things just
     // move less. sqrt keeps a 370 kg melon budgeable rather than immovable.
     const power = clamp(26 * Math.sqrt(Math.max(1, f.mass)) * 0.55, 18, 420);
@@ -344,6 +396,12 @@ export class InteractionSystem implements System {
       this.target = f;
       this.fruitSys.renderer.highlightId = f.id;
       const q = f.damage > 0.001 ? ` <b>${f.quality}</b>` : '';
+      if (f.hasTrait('spiked')) {
+        // The prompt is the whole lesson: the verb is missing on purpose.
+        this.targetKind = 'spiky';
+        this.promptText = `${f.displayName} — <b>too spiky to hold</b> · net it, rope it or blast it`;
+        return;
+      }
       if (!canHandCarry(f.diameter, f.mass)) {
         // Naming the obstacle is what turns "the button does nothing" into a
         // puzzle. It is also the only place the game ever teaches that shoving
@@ -406,12 +464,83 @@ export class InteractionSystem implements System {
     void dt;
   }
 
+  /**
+   * A gluefruit that hits you is yours now.
+   *
+   * Detected here, on the peer that simulates the fruit: the host for its own
+   * player, and (in `MultiplayerAuthority`) the host for everyone else's,
+   * because a client's copy of a loose fruit has no body and no speed. The
+   * claim goes through the ordinary pick path, so the ledger, the basket
+   * rule and the "hands full" logic all apply exactly as they would to a
+   * deliberate pick — it just was not deliberate.
+   */
+  private catchStickyHits(): void {
+    if (!this.fruitSys.authoritative) return;
+    const p = this.g.player;
+    if (this.carried && this.carried.fruit.stuckHands > 0) return;
+    const footY = p.position.y + PLAYER_RADIUS;
+    const headY = p.position.y + Math.max(p.height - PLAYER_RADIUS, PLAYER_RADIUS + 0.01);
+    for (const f of this.fruitSys.fruits.values()) {
+      if (f.state !== 'free' || !f.body || f.stuck || !f.hasTrait('sticky')) continue;
+      if (f.speed < 2.5) continue;
+      const cy = clamp(f.position.y, footY, headY);
+      const dx = f.position.x - p.position.x;
+      const dy = f.position.y - cy;
+      const dz = f.position.z - p.position.z;
+      const reach = f.radius + PLAYER_RADIUS + 0.22;
+      if (dx * dx + dy * dy + dz * dz > reach * reach) continue;
+      if (this.pickUp(f, 'stuck')) break;
+    }
+  }
+
+  /**
+   * Spikefruit and bare hands. The refusal is physical rather than textual:
+   * a shove backwards, the hurt vignette, a yelp, and the one sentence that
+   * names the tools that do work. It happens every time, because a player
+   * who forgets should be reminded in the same voice.
+   */
+  private prick(f: Fruit): false {
+    const p = this.g.player;
+    this.pricks++;
+    this.lastRefusal = 'spiky';
+    _dir.copy(p.position).sub(f.position).setY(0);
+    if (_dir.lengthSq() < 1e-4) p.lookDir(_dir).negate().setY(0);
+    _dir.normalize();
+    _v.copy(_dir).multiplyScalar(2.6);
+    _v.y += 1.3;
+    p.addImpulseVelocity(_v, false, 'spikefruit');
+    // The bonk path already owns the camera, the vignette and the thud.
+    this.g.bus.emit('player:hit', { momentum: 95, fromAbove: false, point: f.position.clone() });
+    this.g.bus.emit('ui:toast', {
+      text: 'OW', sub: `${f.displayName}. Net it, rope it, or blast it to the shed.`, kind: 'bad', ms: 2400,
+    });
+    // Leaning on it still moves it a little, the way leaning on anything does.
+    if (f.state === 'free' && f.body) {
+      f.applyImpulse(_v2.copy(_dir).multiplyScalar(-f.mass * 1.4).setY(f.mass * 0.6));
+    }
+    return false;
+  }
+
+  /** Something in the hands refuses to leave them. Says so, not too often. */
+  private stuckRefusal(f: Fruit): void {
+    const now = this.g.clock.elapsed;
+    if (now - this.stuckToastAt < 0.7) return;
+    this.stuckToastAt = now;
+    this.g.playerCamera.addRecoil(0, -0.008);
+    this.g.bus.emit('audio:sfx', { name: 'netCatch', volume: 0.3, pitch: 0.55 });
+    this.g.bus.emit('ui:toast', {
+      text: `${f.displayName} — it is not letting go`,
+      sub: `${f.stuckHands.toFixed(1)} s`, kind: 'bad', ms: 1200,
+    });
+  }
+
   // ---- actions ------------------------------------------------------------
   tryInteract(): boolean {
     if (this.targetKind === 'sell') {
       const r = this.sellAll();
       return r.count > 0 || !!r.requested;
     }
+    if (this.targetKind === 'spiky' && this.target) return this.prick(this.target);
     if (this.targetKind === 'shove' && this.target) return this.shove(this.target);
     if (this.targetKind === 'shake' && this.targetPlantId >= 0) {
       const dropped = this.fruitSys.shake(this.targetPlantId, 0.55, this.g.player.id);
@@ -444,11 +573,18 @@ export class InteractionSystem implements System {
     return false;
   }
 
-  pickUp(f: Fruit): boolean {
+  pickUp(f: Fruit, cause: PickCause = 'hand'): boolean {
     // Re-picking what you are already holding would stow it and immediately
     // take it back out, which reads as "the pick key did nothing".
     if (this.carried?.fruit === f) return false;
     if (f.state === 'stowed' || f.state === 'gone') return false;
+    // The two hand rules. A spikefruit is never touched; the net's hoop is
+    // not a hand. And a gluefruit in the hands keeps them until it is done.
+    if (cause !== 'net' && f.hasTrait('spiked')) return this.prick(f);
+    if (this.carried && this.carried.fruit.stuckHands > 0) {
+      return this.refusePick(f, 'hands full',
+        `${this.carried.fruit.displayName} is stuck to you for ${this.carried.fruit.stuckHands.toFixed(1)} s`);
+    }
     // Size is checked BEFORE the stem, so a Puff Melon that has already
     // inflated on the bush is refused rather than torn free and then dropped.
     if (!canHandCarry(f.diameter, f.mass)) {
@@ -487,7 +623,7 @@ export class InteractionSystem implements System {
     // below then runs LOCALLY so the fruit is in your hands on the frame the
     // key went down, and the host's answer either confirms that silently or
     // arrives as a `deny` that runs `forfeit` and takes it back out again.
-    const claim = this.net ? this.net.requestPick(f) : 'apply';
+    const claim = this.net ? this.net.requestPick(f, cause) : 'apply';
     if (claim === 'refuse') {
       return this.refusePick(f, 'someone else has it', 'Wait for them to put it down');
     }
@@ -524,6 +660,18 @@ export class InteractionSystem implements System {
     };
     this.net?.noteCarry(f.id);
     this.lastRefusal = null;
+    if (f.hasTrait('sticky')) {
+      // The same numbers the host writes, so the two clocks agree.
+      f.stuckHands = cause === 'stuck' ? STICK_HANDS_HIT : cause === 'net' ? 0 : STICK_HANDS_PICK;
+      if (f.stuckHands > 0) {
+        this.g.bus.emit('audio:sfx', { name: 'netCatch', volume: 0.45, pitch: 0.5, position: f.position.clone() });
+        this.g.bus.emit('ui:toast', {
+          text: cause === 'stuck' ? `${f.displayName} — it stuck to you` : `${f.displayName} — stuck to your hands`,
+          sub: cause === 'stuck' ? 'You are holding it now. Nobody asked you.' : 'It comes off in a moment. Or at the shed.',
+          kind: 'bad', ms: 2400,
+        });
+      }
+    }
     this.holdPoint(this.lastHold, this.carried.heavy, f.radius);
     // Start the spring displaced by where the fruit actually was, so it flies
     // into the hand from the branch.
@@ -560,6 +708,7 @@ export class InteractionSystem implements System {
   stowHeld(): boolean {
     if (!this.carried) return false;
     const f = this.carried.fruit;
+    if (f.stuckHands > 0) { this.stuckRefusal(f); return false; }
     if (f.mass > this.basket.maxItemMass) return false;
     if (this.basket.items.length >= this.basket.capacity) {
       this.g.bus.emit('ui:toast', { text: 'Basket is full', kind: 'bad', ms: 1600 });
@@ -580,9 +729,13 @@ export class InteractionSystem implements System {
     return true;
   }
 
-  dropHeld(): void {
+  /** Let go. `force` is for the moments the hands stop being yours: a
+   *  knockdown, a reset. A gluefruit otherwise has a say in this. */
+  dropHeld(force = false): void {
     if (!this.carried) return;
     const f = this.carried.fruit;
+    if (!force && f.stuckHands > 0) { this.stuckRefusal(f); return; }
+    if (force) f.stuckHands = 0;
     this.releasePoint(f);
     _v.copy(this.g.player.velocity).multiplyScalar(0.6);
     this.letGo(f, _v);
@@ -650,6 +803,7 @@ export class InteractionSystem implements System {
   throwHeld(power = 1): void {
     if (!this.carried) return;
     const f = this.carried.fruit;
+    if (f.stuckHands > 0) { this.stuckRefusal(f); return; }
     this.releasePoint(f);
     // Heavier fruit leaves your hands slower. A watermelon is a shot put.
     //
@@ -807,6 +961,8 @@ export class InteractionSystem implements System {
     } else if (state === 'carried') {
       if (inBasket >= 0) this.basket.items.splice(inBasket, 1);
       if (!inHand) {
+        // Whatever displaced it locally is somebody else's story now.
+        if (this.carried) this.carried = null;
         this.carried = {
           fruit: f, heavy: f.mass > this.basket.maxItemMass,
           cls: carryClassFor(f.diameter, f.mass),
@@ -814,6 +970,15 @@ export class InteractionSystem implements System {
         this.holdPoint(this.lastHold, this.carried.heavy, f.radius);
         this.handLag.set(0, 0, 0);
         this.handLagVel.set(0, 0, 0);
+        // A gluefruit the host put in our hands: the host saw it hit us.
+        if (f.hasTrait('sticky') && f.stuckHands > 0) {
+          this.g.bus.emit('audio:sfx', { name: 'netCatch', volume: 0.45, pitch: 0.5 });
+          this.g.playerCamera.addRecoil(0, -0.02);
+          this.g.bus.emit('ui:toast', {
+            text: `${f.displayName} — it stuck to you`,
+            sub: 'You are holding it now. Nobody asked you.', kind: 'bad', ms: 2400,
+          });
+        }
       }
     } else if (state === 'stowed') {
       if (inHand) this.carried = null;
@@ -947,3 +1112,5 @@ export class InteractionSystem implements System {
 }
 
 const _v2 = new THREE.Vector3();
+const UP_AXIS = new THREE.Vector3(0, 1, 0);
+const _overlap: import('@/physics/PhysicsWorld').PhysicsOwner[] = [];

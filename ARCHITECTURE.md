@@ -24,7 +24,7 @@ order, so a system may resolve anything registered before it.
 
 ```
 world → economy → fruit → ragdoll → interaction → ropes → scoring
-      → tools → shop → book → legendary → audio → net → save → ui
+      → tools → shop → book → legendary → progress → audio → net → save → ui
 ```
 
 ### The loop
@@ -68,12 +68,16 @@ the solver integrates the impulses they apply.
 
 **The route is a ground treatment, not a corridor.** `Terrain.ROUTE` is a
 fifteen-point polyline from the dock, past the shop, up into the orchard, with a
-half-width that opens out at the sell pad. `pathWeight(x, z)` answers "how much
-is this point on the route", and three separate systems consult it: the terrain
+half-width that opens out at the sell pad, and `ROUTE_HILL` continues out of
+the back of the orchard, up the one 29-degree shoulder of the hill, across the
+hill farm and down to the ravine rim. `pathWeight(x, z)` answers "how much
+is this point on a route", and three separate systems consult it: the terrain
 tints toward packed earth, the clutter layer keeps off it, and the tree scatter
 refuses to plant on it. The height function is not touched at all, so nothing
 about traversal, collision or the authored pads changes — and the way ahead is
-readable without hanging a marker in the sky.
+readable without hanging a marker in the sky. The waypoints were chosen from
+`tools/harness/geo-probe.mjs`, which prints heights and slopes along a
+candidate line, not from coordinates that looked plausible.
 
 **Clutter is instanced, clumped, and never collidable.** `world/Dressing.ts`
 places ~2,100 pieces of grass, bush, fern, flower, stone and driftwood for nine
@@ -138,6 +142,42 @@ the end of a rope is a tug rather than a teleport. Snapping is judged on
 tension smoothed over ~0.15 s: arresting a walking player inside one step is
 23 kN on paper, more than any rope is rated for, and the first version of this
 parted the rope on the first taut step.
+
+**Rope ends are identities, resolved every step.** An end is `world` (a
+point), `fruit` (an id and an offset in the fruit's frame), `legendary`,
+`player` (this peer's) or `peer` (another peer's, known by reported position).
+Nothing caches a body: a fruit changes bodies across its life — a static
+collider on the branch, a dynamic one loose, none in a hand — and the first
+rope system tied a line fired at an apple on the tree to the point in the air
+where its surface had been, so when the apple came down the rope stayed up.
+Resolving by id follows it, and it also removes the whole class of "held a
+`RigidBody` across its removal" faults, because there is nothing to hold.
+
+Each resolved end carries an inverse mass, and that number is where the
+co-op authority story for ropes lives. A body this peer simulates gets its
+real inverse mass and gets pushed. A body some OTHER peer simulates — a
+replica fruit on a client, a remote player on the host — also gets its real
+inverse mass, so the impulse split is identical on both machines, but nothing
+here pushes it; the peer that owns it applies that share. A client tethered to
+a watermelon therefore feels 22/(22+82) of the tug and the host's watermelon
+gets 82/(22+82) of it, which is what would happen if both bodies were in one
+world. Only the host parts a shared rope; a client's copy would snap at the
+wrong moment against a stand-in.
+
+**A rope's wire identity is `(owner, cid)`.** The maker's peer id and the
+maker's own rope id. Nobody ever re-keys a rope its tools already hold: the
+host's ropes use its rope ids as cids, a client's local rope keeps its id and
+the host files its copy under the client's number, and the snapshot lists
+every shared rope as `[owner, cid, endA, endB, length]`. A client matches its
+own by cid and only follows the host's length; everyone else's it mirrors. A
+rope the host stops listing is gone — except one of the client's own that the
+host has not acknowledged yet, which is still in the post and outlives the
+snapshot that crossed it. Snaps travel as their own message so the owner
+hears the line part. Vines are not shared at all: every peer grows them from
+the seed and the legendary cuts them by bitmask, which is cheaper and was
+already correct. The legendary's tethers, which used to be mirrored by anchor
+proximity through a pair of dedicated intents, are now just ropes on the
+melon, counted on every peer the same way.
 
 **Explosions iterate bodies rather than shape-querying.** Measured,
 `intersectionsWithShape` reliably returned only the terrain even when centred on
@@ -281,6 +321,34 @@ coordinates written next to it, and is the single path used by boot, respawn and
 the tests. The coordinates that shipped were 4.9 m off the side of the deck, so
 the player fell onto the sand and — since nothing set a yaw — faced whatever
 direction yaw 0 happens to be.
+
+**Hand rules are species rules, enforced twice.** Whether a fruit may be
+taken by hand is decided by the same trait check on every peer — `spiked`
+means never, `sticky` means it keeps the hands for a while — and the host's
+`claim` applies it again to a client's request, carrying the pick's cause
+(`hand`, `net`, `stuck`) so the net may take what hands may not and a
+gluefruit that HIT someone holds on longer than one they reached for. The
+"it hit you" detection lives on whichever peer simulates the fruit: the host
+for its own player in `InteractionSystem` and for everyone else's in
+`MultiplayerAuthority`, because a client's copy of a loose fruit has no body
+and no speed. What a client learns from the snapshot is a fruit in its hands
+with a `stuckHands` clock, and it refuses to let go for exactly that long.
+
+**Progression is a system with no mechanics in it.** `systems/Progression.ts`
+listens to the events the loop already emits — purchases, sales, discoveries,
+the legendary's phases — and adds the connective tissue: the one line after a
+purchase that turns the tool into a plan, the King Melon explained on first
+approach, a banner for a new best sale, and the island unlock a beat after the
+legendary pays. Everything it says is written down once per save so a
+returning player is not re-taught, and it records the game time of each
+first-ever milestone, which is what the playthrough harness reads.
+
+**Saves load.** They were written for months — on a 45 s autosave and on
+unload — and nothing ever read them back, so every session was a fresh one.
+`SaveSystem.init` now restores the autosave slot before the UI exists, and the
+UI reads the restored balance when it comes up. `?fresh` on the URL skips it,
+and the harness driver always adds it, so a test page that saved on close
+cannot hand its money to the next page in the same browser context.
 
 ## Multiplayer
 

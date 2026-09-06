@@ -16,27 +16,24 @@ export type LegendaryPhase = 'prepare' | 'tether' | 'detach' | 'drop' | 'recover
 const PHASES: LegendaryPhase[] = ['prepare', 'tether', 'detach', 'drop', 'recover', 'complete', 'failed'];
 
 const VINE_COLOR = new THREE.Color().setHex(0x4e8a2e, THREE.SRGBColorSpace);
-const MELON_MASS = 2600;
+export const MELON_MASS = 2600;
 const MELON_RADIUS = KING_MELON_RADIUS;
-const PAYOUT = 9500;
+export const PAYOUT = 9500;
 /** How far a tether's anchor may be from the melon, for both peers' sanity. */
-const TETHER_RANGE = 46;
-/** Rating of a tether the host builds for a remote peer's pinned rope. */
-const REMOTE_TETHER_RATING = 5200;
+export const TETHER_RANGE = 46;
 
 const _v = new THREE.Vector3();
 const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
-const _at = new THREE.Vector3();
 const _eye = new THREE.Vector3();
 const _dir = new THREE.Vector3();
 
 /**
  * The legendary's state as it travels. Deliberately the minimum two peers
  * need to AGREE about: which phase, which vines are left, where the melon is,
- * where the tethers are anchored, and whether it has paid out. Nothing
- * cosmetic — the client draws its own vines, sways its own ropes and plays
- * its own sounds off these.
+ * and whether it has paid out. Nothing cosmetic — the client draws its own
+ * vines and plays its own sounds off these. The tethers are not here at all
+ * any more: they are ropes, and ropes travel as ropes.
  */
 export interface LegendaryNetState {
   /** Index into PHASES. */
@@ -45,8 +42,6 @@ export interface LegendaryNetState {
   vm: number;
   p: [number, number, number];
   q: [number, number, number, number];
-  /** Tether anchors and lengths: [x, y, z, len]. */
-  t: Array<[number, number, number, number]>;
   req: number;
   /** Dollars paid on completion, 0 until then. */
   paid: number;
@@ -58,8 +53,7 @@ export interface LegendaryNetState {
 export interface LegendaryNet {
   readonly authoritative: boolean;
   anyoneHasRopeGun(): boolean;
-  requestLegendary(intent: { kind: 'lcut' | 'ltether' | 'luntether'; vine?: number;
-    at?: [number, number, number]; len?: number }): void;
+  requestLegendary(intent: { kind: 'lcut'; vine: number }): void;
 }
 
 /**
@@ -86,8 +80,10 @@ export interface LegendaryNet {
  * that is a tether; a rope you are still holding is a leash, and it says so.
  *
  * In co-op the HOST runs this state machine and pays once. Clients mirror the
- * state in `LegendaryNetState`, send cuts and tethers as intents, and keep
- * their melon fixed where the host says it is.
+ * state in `LegendaryNetState`, send cuts as intents, and keep their melon
+ * fixed where the host says it is. Tethers need nothing special: a rope on
+ * the melon is a shared rope like any other, so a client's pin arrives on the
+ * host as a rope and the host counts it the same way it counts its own.
  */
 export class LegendaryHarvest implements System, PhysicsOwner {
   readonly name = 'legendary';
@@ -112,6 +108,8 @@ export class LegendaryHarvest implements System, PhysicsOwner {
   requiredTethers = 2;
   cutVines = 0;
   restStart = -1;
+  /** Game time the last vine went; the drop has a clock of its own. */
+  private dropStart = -1;
   completedAt = -1;
   lastPayout = 0;
   generation = 0;
@@ -127,12 +125,10 @@ export class LegendaryHarvest implements System, PhysicsOwner {
   private remoteTarget = new THREE.Vector3();
   private remoteQuat = new THREE.Quaternion();
   private hasRemoteTarget = false;
-  /** Client: cosmetic copies of other peers' tethers, by anchor key. */
-  private mirrors = new Map<string, Rope>();
-  /** Client: local ropes reported to the host, and whether it has agreed. */
-  private reported = new Map<number, { key: string; at: THREE.Vector3; acked: boolean }>();
   /** Client: the newest state applied, for the probe. */
   private remoteGen = -1;
+  /** Game time the player first came near enough to be told what this is. */
+  firstSightAt = -1;
 
   init(g: Game): void {
     this.g = g;
@@ -166,6 +162,8 @@ export class LegendaryHarvest implements System, PhysicsOwner {
       fixed: this.body ? this.body.isFixed() : null,
       inPad: this.inExtraction(),
       distanceToPad: this.body ? +this.distanceToPad().toFixed(1) : null,
+      highTethers: this.tethers.filter((r) => this.tetherIsHigh(r)).length,
+      firstSight: +this.firstSightAt.toFixed(1),
     }));
     /** Cut the next vine, skipping the aim but not the authority: on a
      *  client this asks the host, exactly as the E key would. */
@@ -293,11 +291,13 @@ export class LegendaryHarvest implements System, PhysicsOwner {
       // of slack; only the shortest ever engaged, and the melon simply
       // pendulumed seventeen metres down around it.
       const length = anchor.distanceTo(_v.copy(km).add(attach));
+      // Vines are grown by every peer from the seed and cut by bitmask, so
+      // they never travel as ropes.
       const rope = this.ropes.create(
-        { body: null, local: anchor.clone(), ownerId: -1 },
-        { body: this.body, local: attach, ownerId: this.id },
+        { kind: 'world', local: anchor.clone(), ownerId: -1 },
+        { kind: 'legendary', local: attach, ownerId: this.id },
         length,
-        { color: VINE_COLOR, radius: 0.32, cuttable: true, maxTension: 1e9 },
+        { color: VINE_COLOR, radius: 0.32, cuttable: true, maxTension: 1e9, shared: false },
       );
       this.vines.push(rope);
       this.vineIdx.push(i);
@@ -308,17 +308,18 @@ export class LegendaryHarvest implements System, PhysicsOwner {
   }
 
   reset(): void {
-    for (const v of this.vines) this.ropes.remove(v.id);
-    for (const t of this.tethers) this.ropes.remove(t.id);
-    for (const m of this.mirrors.values()) this.ropes.remove(m.id);
-    this.mirrors.clear();
-    this.reported.clear();
+    for (const v of this.vines) this.ropes.remove(v.id, 'cut');
+    // Every rope on the melon goes with it: tethers, leashes, other peers'
+    // copies of both. On a client the host's snapshot would drop the shared
+    // ones anyway; doing it here means a new attempt starts clean at once.
+    for (const r of this.ropes.attachedTo(this.id)) this.ropes.remove(r.id, 'gone', !this.authoritative);
     this.vines.length = 0;
     this.vineIdx.length = 0;
     this.tethers.length = 0;
     this.lastTetherCount = 0;
     this.cutVines = 0;
     this.restStart = -1;
+    this.dropStart = -1;
     this.lastPayout = 0;
     this.phase = 'prepare';
     this.generation++;
@@ -392,7 +393,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     if (i < 0) return;
     this.vines.splice(i, 1);
     this.vineIdx.splice(i, 1);
-    this.ropes.remove(vine.id);
+    this.ropes.remove(vine.id, 'cut');
     this.cutVines++;
     if (this.authoritative) {
       if (this.body?.isFixed()) this.body.setBodyType(RAPIER.RigidBodyType.Dynamic, true);
@@ -427,6 +428,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
    */
   private beginDrop(): void {
     this.setPhase('drop');
+    this.dropStart = this.g.clock.elapsed;
     if (this.body) {
       this.body.setLinearDamping(0.12);
       this.body.setAngularDamping(0.35);
@@ -435,17 +437,30 @@ export class LegendaryHarvest implements System, PhysicsOwner {
       // The encounter takes the ropes over. A rope gun's line is rated for a
       // watermelon, not two and a half tonnes; what "enough tethers" buys is
       // that together they hold, and pay out rather than part.
+      //
+      // They are also winched TAUT at this moment. A rope with slack in it
+      // does nothing until the melon has fallen through the slack, and a rope
+      // to a low anchor never reaches the end of it at all; taking the slack
+      // up is what makes a tether do something from the first metre — lower
+      // the melon if its anchor is above it, swing it toward the rim if the
+      // anchor is below, which is the failure the design wants to be funny.
+      const high = this.tethers.filter((r) => this.tetherIsHigh(r)).length;
       for (const tether of this.tethers) {
         tether.maxTension = 1e9;
+        this.ropes.endpoints(tether, _a, _b);
+        this.ropes.setLength(tether.id, Math.max(tether.minLength, _a.distanceTo(_b)));
         this.ropes.setReel(tether.id, 3.2);
       }
       this.g.bus.emit('ui:celebrate', {
-        title: 'LOWER IT', sub: 'THE ROPES ARE HOLDING — FOR NOW', kind: 'legendary',
+        title: 'LOWER IT',
+        sub: high >= this.requiredTethers ? 'THE ROPES ARE HOLDING — FOR NOW'
+          : high > 0 ? 'ONE ROPE IS BELOW IT. HOLD ON.' : 'EVERY ROPE IS BELOW IT. HOLD ON.',
+        kind: 'legendary',
       });
     } else {
       for (const tether of this.tethers) {
         this.g.bus.emit('rope:snapped', { ropeId: tether.id });
-        this.ropes.remove(tether.id);
+        this.ropes.remove(tether.id, 'snapped');
       }
       this.tethers.length = 0;
       this.g.bus.emit('audio:sfx', { name: 'ropeSnap', volume: 1 });
@@ -458,15 +473,13 @@ export class LegendaryHarvest implements System, PhysicsOwner {
   /**
    * Wire a restraining rope from where the player stands to the melon. The
    * debug path; a player does the same thing with the rope gun and a pin.
+   * On a client this is an ordinary shared rope: it goes to the host as a
+   * rope request and comes back counted.
    */
   attachTetherFromPlayer(): boolean {
     if (!this.body) return false;
     const p = this.g.player;
     const at = p.position.clone().setY(p.position.y + 0.6);
-    if (!this.authoritative) {
-      this.net!.requestLegendary({ kind: 'ltether', at: [at.x, at.y, at.z], len: 0 });
-      return true;
-    }
     const rope = this.makeTether(at, 0, 1e9);
     if (!rope) {
       this.g.bus.emit('ui:toast', { text: 'Too far to tether', ms: 1600 });
@@ -483,8 +496,8 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     const dist = _v.set(t.x, t.y, t.z).distanceTo(at);
     if (dist > TETHER_RANGE) return null;
     return this.ropes.create(
-      { body: null, local: at.clone(), ownerId: -1 },
-      { body: this.body, local: new THREE.Vector3(0, 0, 0), ownerId: this.id },
+      { kind: 'world', local: at.clone(), ownerId: -1 },
+      { kind: 'legendary', local: new THREE.Vector3(0, 0, 0), ownerId: this.id },
       length > 0 ? length : Math.max(6, dist * 1.05),
       { maxTension: rating, radius: 0.09 },
     );
@@ -493,13 +506,14 @@ export class LegendaryHarvest implements System, PhysicsOwner {
   /**
    * Read the tethers off the rope system.
    *
-   * A rope counts when it ends on the melon, is not a vine, is not one of a
-   * client's cosmetic mirrors, and is not still in a player's hands.
+   * A rope counts when it ends on the melon, is not a vine, and is not still
+   * in somebody's hands — this player's or anyone else's. Runs on every peer:
+   * a client counts its own pins and its copies of the host's, so the
+   * "TETHER 2 / 2" toast lands on the machine of the person who pinned it.
    */
   private syncTethers(): void {
-    const mirrored = new Set([...this.mirrors.values()].map((m) => m.id));
     this.tethers = this.ropes.attachedTo(this.id).filter((r) =>
-      !this.vines.includes(r) && !r.heldByPlayer && !mirrored.has(r.id));
+      !this.vines.includes(r) && !r.heldByPlayer);
     // A counted tether is the encounter's to hold or to part. A rope gun's
     // line is rated for a watermelon, and two and a half tonnes sagging onto
     // it after the second cut snapped it before the drop it was there for —
@@ -513,12 +527,26 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     this.lastTetherCount = n;
     if (this.phase !== 'tether' && this.phase !== 'detach') return;
     if (grew) {
+      // Say where the newest one is anchored, because it decides what the
+      // rope will DO: a rope cannot lower a thing from below it.
+      const newest = this.tethers[this.tethers.length - 1];
+      const high = this.tetherIsHigh(newest);
       this.g.bus.emit('ui:toast', {
         text: `TETHER ${n} / ${this.requiredTethers}`,
-        sub: n >= this.requiredTethers ? 'Enough to try it' : 'Not enough yet',
-        kind: 'good', ms: 2400,
+        sub: (high ? 'Anchored above it — this one can lower it. ' : 'Anchored below it — this one will swing it. ')
+          + (n >= this.requiredTethers ? 'Enough to try.' : 'Not enough yet.'),
+        kind: high ? 'good' : 'info', ms: 3200,
       });
     }
+  }
+
+  /** Is this tether's fixed end above the melon's centre? Only such a rope
+   *  can take the melon's weight; a rope from below can only pull it sideways. */
+  private tetherIsHigh(r: Rope): boolean {
+    if (!this.body) return false;
+    const end = r.a.kind === 'legendary' ? r.b : r.a;
+    if (!this.ropes.endPoint(end, _a)) return false;
+    return _a.y > this.body.translation().y + 1.0;
   }
 
   // ---- co-op: host side ---------------------------------------------------
@@ -535,36 +563,10 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     return null;
   }
 
-  /** A client pinned a rope to the melon; build the same tether here. */
-  remoteTether(at: [number, number, number], length: number,
-    near: (x: number, y: number, z: number, range: number) => boolean): Deny | null {
-    if (this.phase !== 'prepare' && this.phase !== 'tether' && this.phase !== 'detach') return 'wrong-phase';
-    if (!near(at[0], at[1], at[2], TETHER_RANGE)) return 'out-of-reach';
-    _at.set(at[0], at[1], at[2]);
-    // One tether per anchor: a resend is the same rope, not a second one.
-    if (this.tetherNear(_at)) return null;
-    const rope = this.makeTether(_at, clamp(length, 0, TETHER_RANGE * 1.2), REMOTE_TETHER_RATING);
-    if (!rope) return 'out-of-reach';
-    this.syncTethers();
-    return null;
-  }
-
-  /** A client let go of a pinned rope. */
-  remoteUntether(at: [number, number, number]): void {
-    const r = this.tetherNear(_at.set(at[0], at[1], at[2]));
-    if (r) { this.ropes.remove(r.id); this.syncTethers(); }
-  }
-
-  /** The tether anchored within 2 m of a point. `at` must not be `_a` or `_b`:
-   *  `endpoints` writes into both, and the first version passed the query in
-   *  `_a`, compared every anchor with itself, and found every tether "near". */
-  private tetherNear(at: THREE.Vector3): Rope | null {
-    for (const r of this.tethers) {
-      this.ropes.endpoints(r, _a, _b);
-      const anchor = r.b.ownerId === this.id ? _a : _b;
-      if (anchor.distanceTo(at) < 2.0) return r;
-    }
-    return null;
+  /** Where the melon is, for ranging a rope aimed at it. */
+  get position(): THREE.Vector3 {
+    const t = this.body?.translation() ?? this.homePosition;
+    return _v.set(t.x, t.y, t.z);
   }
 
   /** The state a client needs. Sent with every snapshot. */
@@ -573,17 +575,11 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     const q = this.body?.rotation() ?? { x: 0, y: 0, z: 0, w: 1 };
     let vm = 0;
     for (const i of this.vineIdx) vm |= 1 << i;
-    const tethers: LegendaryNetState['t'] = [];
-    for (const r of this.tethers) {
-      this.ropes.endpoints(r, _a, _b);
-      const anchor = r.b.ownerId === this.id ? _a : _b;
-      tethers.push([+anchor.x.toFixed(1), +anchor.y.toFixed(1), +anchor.z.toFixed(1), +r.length.toFixed(1)]);
-    }
     return {
       ph: PHASES.indexOf(this.phase), vm,
       p: [+t.x.toFixed(2), +t.y.toFixed(2), +t.z.toFixed(2)],
       q: [+q.x.toFixed(3), +q.y.toFixed(3), +q.z.toFixed(3), +q.w.toFixed(3)],
-      t: tethers, req: this.requiredTethers, paid: this.lastPayout, gen: this.generation,
+      req: this.requiredTethers, paid: this.lastPayout, gen: this.generation,
     };
   }
 
@@ -610,7 +606,6 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     this.hasRemoteTarget = true;
     this.body.setTranslation({ x: s.p[0], y: s.p[1], z: s.p[2] }, false);
     this.body.setRotation({ x: s.q[0], y: s.q[1], z: s.q[2], w: s.q[3] }, false);
-    this.mirrorTethers(s.t);
     const phase = PHASES[s.ph] ?? 'prepare';
     if (phase !== this.phase) {
       const was = this.phase;
@@ -621,70 +616,6 @@ export class LegendaryHarvest implements System, PhysicsOwner {
       }
     }
     this.lastPayout = s.paid;
-  }
-
-  /**
-   * Keep the local ropes on the melon in agreement with the host's tethers.
-   *
-   * Three populations meet here: ropes this player pinned (reported to the
-   * host, drawn locally already), the host's tethers that came from other
-   * players (mirrored as cosmetic ropes), and ropes the host has snapped
-   * (removed locally when they stop appearing).
-   */
-  private mirrorTethers(list: LegendaryNetState['t']): void {
-    const keys = new Set<string>();
-    const anchors: Array<{ key: string; at: THREE.Vector3; len: number }> = [];
-    for (const [x, y, z, l] of list) {
-      const at = new THREE.Vector3(x, y, z);
-      const key = anchorKey(at);
-      keys.add(key);
-      anchors.push({ key, at, len: l });
-    }
-    // Match our own reported ropes by anchor proximity.
-    const matched = new Set<string>();
-    for (const [ropeId, rep] of this.reported) {
-      const hit = anchors.find((a) => a.at.distanceTo(rep.at) < 2.5);
-      if (hit) { rep.acked = true; matched.add(hit.key); continue; }
-      if (rep.acked) {
-        // The host had it and no longer does: it parted up there.
-        this.ropes.remove(ropeId);
-        this.reported.delete(ropeId);
-      }
-    }
-    // Mirrors for everyone else's.
-    for (const a of anchors) {
-      if (matched.has(a.key) || this.mirrors.has(a.key)) continue;
-      const rope = this.makeTether(a.at, a.len, 1e9);
-      if (rope) this.mirrors.set(a.key, rope);
-    }
-    for (const [key, rope] of this.mirrors) {
-      if (!keys.has(key)) { this.ropes.remove(rope.id); this.mirrors.delete(key); }
-    }
-    this.tethers = [...this.mirrors.values(),
-      ...[...this.reported].filter(([, r]) => r.acked).map(([id]) => this.ropes.ropes.get(id))
-        .filter((r): r is Rope => !!r)];
-  }
-
-  /** Client: tell the host about ropes pinned to the melon, and ropes let go. */
-  private reportTethers(): void {
-    const mirrored = new Set([...this.mirrors.values()].map((m) => m.id));
-    const local = this.ropes.attachedTo(this.id).filter((r) =>
-      !this.vines.includes(r) && !r.heldByPlayer && !mirrored.has(r.id));
-    for (const r of local) {
-      if (this.reported.has(r.id)) continue;
-      this.ropes.endpoints(r, _a, _b);
-      const anchor = (r.b.ownerId === this.id ? _a : _b).clone();
-      this.reported.set(r.id, { key: anchorKey(anchor), at: anchor, acked: false });
-      this.net!.requestLegendary({
-        kind: 'ltether', at: [+anchor.x.toFixed(2), +anchor.y.toFixed(2), +anchor.z.toFixed(2)],
-        len: +r.length.toFixed(2),
-      });
-    }
-    for (const [ropeId, rep] of this.reported) {
-      if (this.ropes.ropes.has(ropeId)) continue;
-      this.reported.delete(ropeId);
-      this.net!.requestLegendary({ kind: 'luntether', at: [rep.at.x, rep.at.y, rep.at.z] });
-    }
   }
 
   // ---- phases -------------------------------------------------------------
@@ -753,10 +684,10 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     void dt;
 
     if (!this.authoritative) {
-      // A client: aim, ask, and mirror. The host decides everything else.
+      // A client: aim, ask, and count. The host decides everything else.
       this.lookingAtVine = this.findVineUnderCrosshair();
       if (this.lookingAtVine && this.g.input.frame.interactPressed) this.tryCut();
-      this.reportTethers();
+      this.syncTethers();
       return;
     }
 
@@ -773,15 +704,24 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     const speed = len(this.body.linvel());
 
     if (this.phase === 'drop') {
+      const now = this.g.clock.elapsed;
+      const grounded = t.y - this.world.terrain.height(t.x, t.z) < MELON_RADIUS + 1.6;
       if (speed < 1.2) {
-        this.restStart = this.restStart < 0 ? this.g.clock.elapsed : this.restStart;
-        if (this.g.clock.elapsed - this.restStart > 1.0) {
-          this.setPhase('recover');
-          // Cut it loose so it can be pushed, rolled and winched to the pad.
-          for (const tether of this.tethers) this.ropes.remove(tether.id);
-          this.tethers.length = 0;
-        }
+        this.restStart = this.restStart < 0 ? now : this.restStart;
       } else {
+        this.restStart = -1;
+      }
+      // Down is down. It used to need a full second of stillness, and a melon
+      // that four people are already shoving — or one swinging on a low
+      // tether — never gets one; the phase stayed DROP with the ropes still
+      // on it and nobody could tell why nothing counted.
+      const settled = this.restStart >= 0 && now - this.restStart > 1.0;
+      const downLongEnough = grounded && now - this.dropStart > 8;
+      if (settled || downLongEnough) {
+        this.setPhase('recover');
+        // Cut it loose so it can be pushed, rolled and winched to the pad.
+        for (const tether of this.tethers) this.ropes.remove(tether.id, 'released');
+        this.tethers.length = 0;
         this.restStart = -1;
       }
     }
@@ -828,12 +768,13 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     if (this.lookingAtVine) {
       this.g.bus.emit('ui:prompt', { text: '<b>E</b> Cut the vine' });
     } else if (this.phase === 'prepare' && dist < 40) {
-      this.g.bus.emit('ui:prompt', { text: 'You will need a <b>Rope Gun</b> for this' });
+      this.g.bus.emit('ui:prompt', { text: 'You will need a <b>Rope Gun</b> for this — Merv sells one' });
     } else if ((this.phase === 'tether' || this.phase === 'detach') && this.heldRopesToMelon().length) {
       // The one thing the encounter has to teach: a rope in your hands is a
-      // leash, and a leash does not restrain two and a half tonnes.
+      // leash, and a leash does not restrain two and a half tonnes. The
+      // second thing: rock ABOVE the melon, the towers the vines hang from.
       this.g.bus.emit('ui:prompt', {
-        text: `Pin the rope to rock — <b>right-click</b> · tethers <b>${this.tethers.length}/${this.requiredTethers}</b>`,
+        text: `Pin the rope to the rock towers <b>above</b> it — <b>right-click</b> · tethers <b>${this.tethers.length}/${this.requiredTethers}</b>`,
       });
     } else if (this.phase === 'recover' && dist < 40) {
       const d = this.distanceToPad();
@@ -872,7 +813,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
 }
 
 const PHASE_BLURB: Partial<Record<LegendaryPhase, { title: string; sub: string }>> = {
-  tether: { title: 'PHASE 1 — RESTRAIN IT', sub: 'Rope it, then pin the rope to rock — a rope in your hands is a leash' },
+  tether: { title: 'PHASE 1 — RESTRAIN IT', sub: 'Rope it, then pin the rope to the rock towers above it — a rope in your hands is a leash' },
   detach: { title: 'PHASE 2 — CUT THE VINES', sub: 'Every cut puts more load on the rest' },
   drop: { title: 'PHASE 3 — CONTROL THE DROP', sub: 'Two and a half tonnes, going where it wants' },
   recover: { title: 'PHASE 4 — GET IT TO THE PAD', sub: 'Push, rope, winch, or shout at it' },
@@ -880,11 +821,6 @@ const PHASE_BLURB: Partial<Record<LegendaryPhase, { title: string; sub: string }
 
 function len(v: { x: number; y: number; z: number }): number {
   return Math.hypot(v.x, v.y, v.z);
-}
-
-/** A stable key for a tether anchor, tolerant of wire rounding. */
-function anchorKey(v: THREE.Vector3): string {
-  return `${Math.round(v.x / 2)}:${Math.round(v.y / 2)}:${Math.round(v.z / 2)}`;
 }
 
 /** Shortest distance from a ray to a segment, used for aiming at vines. */

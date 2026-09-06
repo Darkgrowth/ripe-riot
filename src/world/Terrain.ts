@@ -28,6 +28,22 @@ export const ROUTE: ReadonlyArray<readonly [number, number, number]> = [
   [-10.5, 28.0, 3.8], [-17.0, 25.0, 4.2], [-24.0, 22.0, 5.0],
 ];
 
+/**
+ * The second track: out of the back of the orchard, up the one walkable
+ * shoulder of the central hill (29 degrees at its worst — measured, not
+ * hoped), across the hill farm and down to the ravine rim where the King
+ * Melon hangs. It is the island's escalation drawn on the ground: apples
+ * behind you, watermelons and Boulder Plums beside you, the legendary ahead.
+ * It is narrower than the first because fewer people walk it.
+ */
+export const ROUTE_HILL: ReadonlyArray<readonly [number, number, number]> = [
+  [-24.0, 22.0, 4.0], [-27.0, 12.0, 3.0], [-29.0, 2.0, 2.8], [-31.0, -8.0, 2.8],
+  [-33.0, -18.0, 3.0], [-36.0, -30.0, 3.8], [-30.0, -38.0, 3.0], [-22.0, -44.0, 2.8],
+  [-13.0, -49.0, 2.8], [-5.0, -51.5, 3.2],
+];
+
+const ROUTES = [ROUTE, ROUTE_HILL];
+
 export interface BiomeWeights { sand: number; grass: number; rock: number; dirt: number; }
 
 /** A circular region whose height is pulled toward a target — used to carve
@@ -118,23 +134,26 @@ export class Terrain {
    * the route and pays two comparisons instead of thirty.
    */
   pathWeight(x: number, z: number): number {
-    if (x < ROUTE_BOX.minX || x > ROUTE_BOX.maxX ||
-        z < ROUTE_BOX.minZ || z > ROUTE_BOX.maxZ) return 0;
     let best = 0;
-    for (let i = 0; i < ROUTE.length - 1; i++) {
-      const [x1, z1, w1] = ROUTE[i];
-      const [x2, z2, w2] = ROUTE[i + 1];
-      const vx = x2 - x1, vz = z2 - z1;
-      const len2 = vx * vx + vz * vz;
-      let t = len2 > 0 ? ((x - x1) * vx + (z - z1) * vz) / len2 : 0;
-      t = clamp(t, 0, 1);
-      const d = Math.hypot(x - (x1 + vx * t), z - (z1 + vz * t));
-      const w = w1 + (w2 - w1) * t;
-      // Wander the edge so the route is a worn track, not a painted stripe.
-      const wobble = fbm2(x * 0.16, z * 0.16, 2, this.seed + 77) * 0.9;
-      const wt = smoothstep(w * 1.5 + wobble, w * 0.5, d);
-      if (wt > best) best = wt;
-      if (best > 0.999) break;
+    for (let r = 0; r < ROUTES.length; r++) {
+      const box = ROUTE_BOXES[r];
+      if (x < box.minX || x > box.maxX || z < box.minZ || z > box.maxZ) continue;
+      const route = ROUTES[r];
+      for (let i = 0; i < route.length - 1; i++) {
+        const [x1, z1, w1] = route[i];
+        const [x2, z2, w2] = route[i + 1];
+        const vx = x2 - x1, vz = z2 - z1;
+        const len2 = vx * vx + vz * vz;
+        let t = len2 > 0 ? ((x - x1) * vx + (z - z1) * vz) / len2 : 0;
+        t = clamp(t, 0, 1);
+        const d = Math.hypot(x - (x1 + vx * t), z - (z1 + vz * t));
+        const w = w1 + (w2 - w1) * t;
+        // Wander the edge so the route is a worn track, not a painted stripe.
+        const wobble = fbm2(x * 0.16, z * 0.16, 2, this.seed + 77) * 0.9;
+        const wt = smoothstep(w * 1.5 + wobble, w * 0.5, d);
+        if (wt > best) best = wt;
+        if (best > 0.999) return best;
+      }
     }
     return best;
   }
@@ -307,18 +326,18 @@ export class Terrain {
   }
 }
 
-/** Bounding box of ROUTE, padded by the widest half-width. Used to reject the
- *  ~95% of the island that is nowhere near the route in two comparisons. */
-const ROUTE_BOX = (() => {
+/** Bounding box of each route, padded by its widest half-width. Used to reject
+ *  the ~90% of the island that is nowhere near a route in two comparisons. */
+const ROUTE_BOXES = ROUTES.map((route) => {
   let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity, pad = 0;
-  for (const [x, z, w] of ROUTE) {
+  for (const [x, z, w] of route) {
     minX = Math.min(minX, x); maxX = Math.max(maxX, x);
     minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
     pad = Math.max(pad, w);
   }
   pad = pad * 1.5 + 2;
   return { minX: minX - pad, maxX: maxX + pad, minZ: minZ - pad, maxZ: maxZ + pad };
-})();
+});
 
 const _n = new THREE.Vector3();
 const _c = new THREE.Color();

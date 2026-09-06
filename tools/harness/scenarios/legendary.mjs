@@ -53,11 +53,11 @@ export async function run(g, t) {
     const ropes = window.__GAME.get('ropes');
     const leg = window.__GAME.get('legendary');
     for (const r of ropes.ropes.values()) {
-      if (r.b.ownerId === leg.id && r.heldByPlayer) return r.b.handle === leg.body.handle;
+      if (r.b.ownerId === leg.id && r.heldByPlayer) return r.b.kind === 'legendary';
     }
     return null;
   });
-  t.eq(ropeToMelon, true, 'the rope is tied to the melon\'s body, not to a point in the air');
+  t.eq(ropeToMelon, true, 'the rope is tied to the melon itself, not to a point in the air');
   // Pin the near end to the ground: a tap of the secondary button.
   await g.look((await g.state()).player.yaw, -1.25);
   await g.wait(0.1);
@@ -169,29 +169,66 @@ export async function run(g, t) {
   t.ok(['drop', 'recover', 'complete', 'failed'].includes(st.legendary.phase),
     'the sequence reaches a settled phase');
 
+  // --- it comes to rest, and the encounter says so.
+  //
+  // The drop used to need a full second of stillness before it would call
+  // the melon landed, and anything that kept it moving — a team already
+  // shoving it, a swing on a low tether, this very loop nudging it every
+  // 0.7 s — held the phase at DROP with the tethers still on. Down is down
+  // now: a grounded melon is in RECOVER within eight seconds regardless.
+  let phase = (await g.state()).legendary.phase;
+  for (let i = 0; i < 40 && phase === 'drop'; i++) {
+    await g.wait(0.4);
+    phase = (await g.state()).legendary.phase;
+  }
+  t.ok(phase !== 'drop', 'a landed melon leaves the DROP phase on its own', `phase ${phase}`);
+  t.eq((await g.state()).legendary.tethers, 0, 'and the tethers are cut loose for the haul');
+
   // --- recovery: shove it into the pad and confirm the payout
-  if (st.legendary.phase !== 'complete' && st.legendary.phase !== 'failed') {
-    for (let attempt = 0; attempt < 26; attempt++) {
+  if (phase === 'recover') {
+    for (let attempt = 0; attempt < 20; attempt++) {
       const s = await g.state();
       if (s.legendary.phase === 'complete' || s.legendary.phase === 'failed') break;
       const [px, , pz] = s.legendary.pos;
       const dx = info.pad[0] - px;
       const dz = info.pad[2] - pz;
       const d = Math.hypot(dx, dz) || 1;
-      // Standing in for a team winching it along with rope guns.
-      await g.call('legendary.nudge', (dx / d) * 5.5, 1.6, (dz / d) * 5.5);
-      await g.wait(0.7);
+      // Standing in for a team shoving and winching it along.
+      await g.call('legendary.nudge', (dx / d) * 4.0, 1.2, (dz / d) * 4.0);
+      await g.wait(0.9);
     }
-    const done = await g.state();
-    t.note(`after guiding: phase ${done.legendary.phase}, ${done.legendary.distanceToPad} m from the pad`);
-    if (done.legendary.phase === 'complete') {
-      t.gt(done.economy.money, 5000, 'completing the legendary pays a legendary amount');
-      t.note(`payout $${done.economy.money}`);
-    } else {
-      t.lt(done.legendary.distanceToPad, 90, 'the melon stays somewhere recoverable');
-      t.note('did not reach the pad within the nudge budget; recoverable state held');
-    }
+    const guided = await g.state();
+    t.note(`after guiding: phase ${guided.legendary.phase}, ${guided.legendary.distanceToPad} m from the pad`);
   }
+  if ((await g.state()).legendary.phase === 'recover') {
+    // The haul itself is physics and terrain; the payout is a rule. Stand the
+    // melon on the pad, which is what a successful haul ends with.
+    t.note('placing the melon on the pad to stand in for the last of the haul');
+    await g.call('legendary.place', info.pad[0], info.pad[1] + 5.8, info.pad[2]);
+    await g.wait(3.0);
+  }
+  const done = await g.state();
+  t.eq(done.legendary.phase, 'complete', 'the King Melon completes');
+  t.gt(done.economy.money, 5000, 'completing the legendary pays a legendary amount');
+  t.note(`payout $${done.economy.money}`);
+
+  // --- the payoff: the next island. Announced a beat after the banner.
+  await g.wait(4.0);
+  const prog = (await g.state()).progress;
+  t.ok(prog.nextIsland, 'completing the King Melon unlocks the next island');
+  t.ok(prog.islands.includes('galegrove'), 'by name: Gale Grove');
+  const flag = await g.page.evaluate(() => window.__GAME.get('world').built.boatFlag.visible);
+  t.ok(flag, 'and the flag goes up on the boat');
+  // …and it is progress, so it survives a save.
+  await g.call('save.write', 'legendary-test');
+  await g.call('progress.reset');
+  t.ok(!(await g.state()).progress.nextIsland, 'a reset locks it again');
+  t.ok(!(await g.page.evaluate(() => window.__GAME.get('world').built.boatFlag.visible)),
+    'and takes the flag down');
+  await g.call('save.read', 'legendary-test');
+  t.ok((await g.state()).progress.nextIsland, 'and a save round-trip restores the unlock');
+  await g.call('save.clear', 'legendary-test');
+  await g.call('progress.reset');
 
   // --- and it must be resettable, because players will fail this
   await g.call('legendary.reset');
@@ -199,4 +236,5 @@ export async function run(g, t) {
   const reset = await g.state();
   t.eq(reset.legendary.vines, 4, 'the legendary resets cleanly for another attempt');
   t.eq(reset.legendary.cut, 0, 'with the cut count cleared');
+  t.eq(reset.ropes.count, 4, 'and nothing but the four vines is left on the melon');
 }

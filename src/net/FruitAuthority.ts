@@ -5,6 +5,7 @@ import type { Economy } from '@/systems/Economy';
 import {
   BASKET_CAPACITY, BASKET_MAX_ITEM_MASS, DEEP_BASKET_CAPACITY, DEEP_BASKET_MAX_ITEM_MASS,
 } from '@/interaction/CarryRules';
+import { STICK_HANDS_HIT, STICK_HANDS_PICK } from '@/fruit/FruitTraits';
 import type { PeerId } from './Transport';
 
 /**
@@ -41,7 +42,10 @@ export type Deny =
   | 'locked'
   | 'too-expensive'
   | 'wrong-phase'
-  | 'restrain-first';
+  | 'restrain-first'
+  | 'spiky'
+  | 'hands-stuck'
+  | 'rope-limit';
 
 export const DENY_TEXT: Record<Deny, string> = {
   'no-fruit': 'that fruit is gone',
@@ -61,6 +65,9 @@ export const DENY_TEXT: Record<Deny, string> = {
   'too-expensive': 'not enough money',
   'wrong-phase': 'not now',
   'restrain-first': 'restrain it first',
+  'spiky': 'it is covered in spikes',
+  'hands-stuck': 'your hands are full of gluefruit',
+  'rope-limit': 'too many ropes out',
 };
 
 /** What the host knows about one player's hands. */
@@ -280,7 +287,7 @@ export class FruitAuthority {
    * writes the ledger and the second reads it and is refused. There is no
    * window in between because there is no await in between.
    */
-  claim(peer: PeerId, fruitId: number): Deny | null {
+  claim(peer: PeerId, fruitId: number, cause = 'hand'): Deny | null {
     const f = this.hooks.fruit.get(fruitId);
     if (!f || this.tombstones.has(fruitId)) return this.no('no-fruit');
     if (f.state === 'stowed' || f.state === 'gone') return this.no('wrong-state');
@@ -288,6 +295,13 @@ export class FruitAuthority {
     if (other && other !== peer) return this.no('held-by-other');
     const h = this.holdingFor(peer);
     if (!this.inRange(h, f)) return this.no('out-of-reach');
+    // The hand rules the client already applied, enforced once more here so a
+    // client that skipped them gets the same answer everyone else does.
+    if (f.hasTrait('spiked') && cause !== 'net') return this.no('spiky');
+    if (h.carried >= 0 && h.carried !== fruitId) {
+      const held = this.hooks.fruit.get(h.carried);
+      if (held && held.stuckHands > 0) return this.no('hands-stuck');
+    }
     if (f.state === 'attached') {
       if (f.def.attachStrength > 6.0) return this.no('needs-tool');
       this.hooks.fruit.detachAuthoritative(f, 'remote-hand', -1);
@@ -297,6 +311,9 @@ export class FruitAuthority {
     // exactly this locally, so mirroring it here keeps the two baskets equal.
     if (h.carried >= 0 && h.carried !== fruitId) this.makeRoom(h);
     f.pickUp(-1);
+    if (f.hasTrait('sticky')) {
+      f.stuckHands = cause === 'stuck' ? STICK_HANDS_HIT : cause === 'net' ? 0 : STICK_HANDS_PICK;
+    }
     this.owner.set(fruitId, peer);
     h.carried = fruitId;
     this.stats.claims++;
@@ -337,6 +354,8 @@ export class FruitAuthority {
     if (this.owner.get(fruitId) !== peer) return this.no('not-yours');
     if (!f) { this.forget(fruitId, peer); return this.no('no-fruit'); }
     if (f.state !== 'carried') { this.forget(fruitId, peer); return this.no('wrong-state'); }
+    // A gluefruit decides when it lets go, not the hand holding it.
+    if (f.stuckHands > 0) return this.no('hands-stuck');
     f.position.copy(at);
     const ground = this.hooks.groundAt(at.x, at.z) + f.radius * 0.9;
     if (f.position.y < ground) f.position.y = ground;
@@ -354,6 +373,7 @@ export class FruitAuthority {
     // the fruit this player picked up next. Agreeing twice is not an error.
     if (f.state === 'stowed' && this.holdingFor(peer).basket.includes(fruitId)) return null;
     if (f.state !== 'carried') return this.no('wrong-state');
+    if (f.stuckHands > 0) return this.no('hands-stuck');
     const h = this.holdingFor(peer);
     if (f.mass > h.maxItemMass) return this.no('too-heavy');
     if (h.basket.length >= h.capacity) return this.no('basket-full');

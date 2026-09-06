@@ -76,6 +76,11 @@ export class HarvestBook implements System {
     })));
     g.debug?.addAction('book.open', () => { this.openPanel(); return this.open; });
     g.debug?.addAction('book.close', () => { this.close(); return this.open; });
+    /** Forget everything, for scenario isolation. */
+    g.debug?.addAction('book.reset', () => {
+      for (const id of Object.keys(FRUIT)) this.records.set(id, blank(id));
+      return this.records.size;
+    });
   }
 
   discover(species: string, variantId: string | null): void {

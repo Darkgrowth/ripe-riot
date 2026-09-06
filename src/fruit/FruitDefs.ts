@@ -35,7 +35,8 @@ export interface FruitDef {
   hint: string;
   flavour: string;
   /** Which plant type carries it. */
-  plant: 'appleTree' | 'orangeTree' | 'palm' | 'bananaPlant' | 'melonVine' | 'puffBush' | 'vinebombVine';
+  plant: 'appleTree' | 'orangeTree' | 'palm' | 'bananaPlant' | 'melonVine' | 'puffBush' | 'vinebombVine'
+    | 'boulderBush' | 'gumTree' | 'spikeShrub';
 }
 
 export const FRUIT: Record<string, FruitDef> = {
@@ -101,6 +102,40 @@ export const FRUIT: Record<string, FruitDef> = {
     dangerous: true, plant: 'vinebombVine',
     hint: 'The vine is under tension. Release it wrong and it leaves the island.',
     flavour: 'Technically a catapult that grows on a cliff.',
+  },
+  // ---- the Sunpatch back country. Three fruit, three rules, each the
+  // opposite of something the first seven taught. Appended, never inserted:
+  // species travel as their index in this table.
+  boulderplum: {
+    id: 'boulderplum', label: 'Boulder Plum', size: 0.50, sizeVar: 0.12, mass: 48,
+    fragility: 0.02, attachStrength: 5.8, baseValue: 210, weight: 30,
+    traits: ['heavy', 'roller'], habitat: ['hillFarm', 'ridge'], perPlant: [1, 2],
+    // Almost no rolling resistance: once it is going downhill, stopping it
+    // IS the harvest. It sits on the edge of what two hands will lift, so
+    // the big ones are a shove-and-rope job.
+    restitution: 0.08, friction: 0.38, linearDamping: 0.012, angularDamping: 0.02,
+    dangerous: true, plant: 'boulderBush',
+    hint: 'Grows high up. Once it starts rolling it is everybody\'s problem.',
+    flavour: 'Dense enough to have its own weather.',
+  },
+  gluefruit: {
+    id: 'gluefruit', label: 'Gluefruit', size: 0.30, sizeVar: 0.15, mass: 1.4,
+    fragility: 0.2, attachStrength: 1.6, baseValue: 58, weight: 40,
+    traits: ['sticky'], habitat: ['waterfall', 'caveOrchard'], perPlant: [3, 5],
+    restitution: 0.0, friction: 1.0, linearDamping: 0.3, angularDamping: 2.0,
+    dangerous: false, plant: 'gumTree',
+    hint: 'Down by the waterfall. Do not let it touch you.',
+    flavour: 'Adheres to surfaces, tools, and friendships.',
+  },
+  spikefruit: {
+    id: 'spikefruit', label: 'Spikefruit', size: 0.42, sizeVar: 0.15, mass: 2.9,
+    fragility: 0.15, attachStrength: 2.2, baseValue: 74, weight: 34,
+    traits: ['spiked'], habitat: ['caveOrchard', 'ridge'], perPlant: [2, 4],
+    // It does not roll: it lands, digs in, and waits for a net.
+    restitution: 0.05, friction: 0.95, linearDamping: 0.25, angularDamping: 3.0,
+    dangerous: true, plant: 'spikeShrub',
+    hint: 'Cave country. You will only try to pick it by hand once.',
+    flavour: 'Pointy on every axis.',
   },
 };
 

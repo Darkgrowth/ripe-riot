@@ -10,9 +10,9 @@ frame-time clamp (no slow motion at low frame rates), latched input edges that
 survive stepless frames on high-refresh displays, typed event bus, seeded RNG,
 system registry, profiling, debug API, Playwright harness that advances the
 world by forced fixed steps rather than wall-clock time, numeric frame triage,
-contact sheets, geometry validation, 9 gameplay scenarios (266 checks), a
-two-client multiplayer authority suite (103 checks) and a startup check that
-reads the presented canvas.
+contact sheets, geometry validation, 10 gameplay scenarios (322 checks), a
+two-client multiplayer authority suite (127 checks), a startup check that
+reads the presented canvas, and a fresh-save playthrough with a stopwatch.
 
 **Player entry** — the spawn is a pose derived from the built dock (position,
 yaw and pitch together, one code path shared by boot, respawn and the tests):
@@ -133,6 +133,33 @@ and clamped. Found and fixed on the way: the King Melon was not completable by
 a player at all — rope-gun ropes never counted as tethers, and a rope fired at
 the hanging (fixed) melon anchored to a point in the air.
 
+**Shared ropes** — every rope is host state. Rope ends are typed (world,
+fruit, legendary, this player, another peer) and resolved from identity
+every step rather than from cached bodies, so a rope tied to a fruit on the
+branch follows it when it comes down and no rope can hold a freed Rapier
+body. On the wire a rope is `(owner, cid)`: the maker's peer id and its own
+id for it, so nobody re-keys a rope its tools already hold. A client's gun
+creates a local copy and asks; the host builds its own, lists every rope in
+the snapshot, and clients mirror the rest. The half of a rope another peer
+simulates is a stand-in with the real thing's mass, so a client's player
+gets exactly its share of a tug and the host applies the other share to the
+fruit. Peers leaving take their ropes with them; late joiners see what is
+out; snaps are announced to the owner. The legendary's bespoke tether
+mirroring is gone — a tether is a rope like any other.
+
+**First chapter pass** — Sunpatch as a game rather than a slice. Three
+back-country fruit with one physical rule each (Boulder Plum, Gluefruit,
+Spikefruit), placed as an escalation with rare-variant pockets in the far
+corners; a second worn track up the hill to the ravine and fingerposts that
+name what is ahead; two fruiting palms by the shed; a WANTED poster and an
+island board on the shed; the shed telling you in words what a locked tool
+needs and what to save for; one "try this" line after every purchase; the
+King Melon explained on first approach, tethers described by whether they
+can actually lower it, the drop winching them taut, a landed melon that
+counts as landed; a next-island unlock that changes the world and survives
+the save; saves that actually load at boot; a playthrough harness with a
+stopwatch. Numbers in TESTING.md.
+
 ## Next, in order
 
 1. **More impact VFX** — water splash, rope dust, sale sparkle. The shard
@@ -140,16 +167,17 @@ the hanging (fixed) melon anchored to a point in the air.
 2. **Music** — light exploration bed, discovery sting, legendary escalation.
    The sting hooks already exist as events.
 3. **WebRTC transport** — the interface is done; this is signalling plus ICE.
-   Use reliable, ordered data channels: the node log and the intent stream
-   both assume delivery in order.
-4. **Ropes as shared state.** Only the legendary's tethers are replicated. A
-   client's rope gun rope on an ordinary fruit exists on that client alone,
-   so a tethered watermelon on the host is a free one on the client. The
-   tether mirror in `LegendaryHarvest` is the shape to generalise.
+   Use reliable, ordered data channels: the node log, the intent stream and
+   the rope list all assume delivery in order.
+4. **Host migration with loose fruit.** A promoted client's replicas of free
+   fruit have no bodies and nothing gives them any; they freeze where they
+   were. Ropes migrate (mirrors become the new host's), the ledger migrates,
+   the loose fruit does not yet.
 5. **Save/load round-trip test** through a real page reload. In co-op every
    peer saves its own copy of the shared pot.
 6. **Mid-tier tools** — harpoon, portable winch, sticky anchor, bounce charge,
-   large catch net. All are compositions of existing systems.
+   large catch net. All are compositions of existing systems, and the shared
+   rope layer is the base a harpoon and a winch sit on.
 7. **Full Sunpatch content** — cave orchard interior, secret spawns, the rest of
    the landmark dressing.
 8. **Weather and time** — day/night, wind events, rain surfaces. `TimeSystem`
@@ -175,8 +203,13 @@ solo path that widens the margin rather than changing the script.
 
 - **Frame rate is unmeasured on real hardware.** The harness runs under software
   rendering; its timings are only good for relative CPU cost. Draw call and
-  triangle counts ARE accurate: ~75 draws and ~535k triangles per frame, of
-  which the shadow pass is 34 draws and 203k triangles.
+  triangle counts ARE accurate: ~104 draws and ~745k triangles per frame after
+  the first-chapter pass (was ~75 / ~535k), of which the shadow pass is 47
+  draws and 283k triangles. The growth is three new fruit species, up to nine
+  new plant batches (three types, three shape variants each), five more
+  sign boards and the boat's pennant. The shadow pass is still the first lever;
+  giving the new bush types one shape variant instead of three would give
+  back twelve draws for a visible cost only on the ridge.
 - **Ragdoll shadows do not sway with the wind shader.** The depth material has
   no sway patch, so plant shadows are static while foliage moves. Not noticeable
   at this scale; would need a `customDepthMaterial`.
@@ -190,4 +223,9 @@ solo path that widens the margin rather than changing the script.
 - **A peer that played solo and then joins keeps its solo world.** The
   manifest reconciles the attached population to the host's, but loose fruit
   and money from the solo session are neither wiped nor merged.
-- **Boat is scenery.** It sells the arrival; it does not yet sail or upgrade.
+- **Boat is scenery.** It sells the arrival and raises a flag when Gale Grove
+  opens; it does not yet sail.
+- **Each sign is its own draw call.** Eight boards now; fine until it is not.
+- **A completed King Melon still hangs there after a reload.** The phase is
+  restored as complete and nothing offers it again, but the fruit is drawn on
+  its vines. Cosmetic, and the next island is where the attention goes.

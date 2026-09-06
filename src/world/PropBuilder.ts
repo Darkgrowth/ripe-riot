@@ -170,6 +170,8 @@ const _ds = new THREE.Vector3();
 /** Canvas-generated sign texture — no image assets to ship or licence. */
 export function signTexture(lines: string[], opts: {
   w?: number; h?: number; bg?: string; fg?: string; accent?: string; title?: string;
+  /** Multiplier on the body text size, for boards that are one short word. */
+  lineScale?: number;
 } = {}): THREE.CanvasTexture {
   const w = opts.w ?? 512;
   const h = opts.h ?? 320;
@@ -196,7 +198,8 @@ export function signTexture(lines: string[], opts: {
     c.fillText(opts.title, w / 2, y);
     y += h * 0.13;
   }
-  c.font = `800 ${Math.round(h * 0.125)}px Segoe UI, system-ui, sans-serif`;
+  c.font = `800 ${Math.round(h * 0.125 * (opts.lineScale ?? 1))}px Segoe UI, system-ui, sans-serif`;
+  if (!opts.title) y = 20;
   const step = (h - y - 26) / Math.max(1, lines.length);
   for (const line of lines) {
     c.fillText(line, w / 2, y + step * 0.75);

@@ -74,6 +74,12 @@ export interface BuiltLandmarks {
   kingMelonPos: THREE.Vector3;
   /** Vine anchor points on the ravine rim, all above the melon. */
   kingMelonAnchors: THREE.Vector3[];
+  /** The board by the counter that lists the islands, and its two faces. */
+  islandBoard: THREE.Mesh;
+  islandBoardLocked: THREE.CanvasTexture;
+  islandBoardOpen: THREE.CanvasTexture;
+  /** The pennant that goes up on the boat when the next island opens. */
+  boatFlag: THREE.Group;
 }
 
 /**
@@ -303,6 +309,32 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   b.box(0.62, 0.55, 0.5, METAL_DARK, false, [0, 1.15, -2.5]);      // outboard motor
   b.cylinder(0.06, 0.06, 0.5, 5, METAL, false, [0, 1.0, -2.9]);
   b.pop();
+  // The pennant, hidden until Sunpatch is done: a mast in the bow with a
+  // red flag on it. It is the boat saying "we are going somewhere".
+  const boatFlag = new THREE.Group();
+  boatFlag.name = 'BoatFlag';
+  {
+    const mast = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.035, 0.045, 2.6, 6),
+      new THREE.MeshStandardMaterial({ color: POST, roughness: 0.9, flatShading: true }));
+    mast.position.set(0, 1.3, 0);
+    mast.castShadow = true;
+    const flagGeo = new THREE.PlaneGeometry(0.9, 0.42);
+    flagGeo.translate(0.45, 0, 0);
+    const flag = new THREE.Mesh(flagGeo, new THREE.MeshStandardMaterial({
+      color: CANVAS_RED, roughness: 0.95, side: THREE.DoubleSide,
+    }));
+    flag.position.set(0.03, 2.3, 0);
+    flag.rotation.y = 0.9;
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 5),
+      new THREE.MeshStandardMaterial({ color: LAMP, roughness: 0.7 }));
+    tip.position.set(0, 2.62, 0);
+    boatFlag.add(mast, flag, tip);
+    const mastAt = dock.toWorld(-4.4 + Math.sin(0.22) * 1.6, 16 + Math.cos(0.22) * 1.6, deckY - 0.55 + 1.05);
+    boatFlag.position.copy(mastAt);
+    boatFlag.visible = false;
+    scene.add(boatFlag);
+  }
 
   // ---- SIGN AT THE DOCK HEAD ----------------------------------------------
   // Post and board share ONE local position. They did not: the board was built
@@ -508,13 +540,39 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     b.cylinder(0.39, 0.39, 0.10, 9, METAL_DARK, false, [0, 0.70, 0]);
     b.pop();
   }
-  // Chalkboard by the counter.
+  // The island board by the counter: the frame is built here, the face is a
+  // sign whose texture changes when the King Melon is done. It is the first
+  // place the game says there is a second island, and the place it says the
+  // second island is open.
   b.push().translate(3.3, 0, front + 2.3).rotateY(-0.55);
   b.box(0.10, 1.5, 0.10, POST, false, [-0.5, 0.75, 0]);
   b.box(0.10, 1.5, 0.10, POST, false, [0.5, 0.75, 0]);
   b.box(1.38, 1.05, 0.06, POST, false, [0, 1.15, -0.03]);
-  b.box(1.25, 0.95, 0.09, CHALK, false, [0, 1.15, 0.02]);
+  b.box(1.25, 0.95, 0.05, CHALK, false, [0, 1.15, 0.0]);
   b.pop();
+  const boardStyle = { w: 512, h: 384, bg: '#2f3a35', fg: '#f0e6c8', accent: '#556058', lineScale: 1.25 };
+  const islandBoardLocked = signTexture(['SUNPATCH  ✓', 'GALE GROVE  — LOCKED', 'bring me the King Melon'],
+    { title: 'ISLANDS', ...boardStyle });
+  const islandBoardOpen = signTexture(['SUNPATCH  ✓', 'GALE GROVE  ✓ OPEN', 'boat leaves when it floats'],
+    { title: 'ISLANDS', ...boardStyle });
+  const boardPos = new THREE.Vector3(3.3, 0, front + 2.3)
+    .add(new THREE.Vector3(0, 1.15, 0.045).applyAxisAngle(new THREE.Vector3(0, 1, 0), -0.55))
+    .applyAxisAngle(new THREE.Vector3(0, 1, 0), shopRot)
+    .add(new THREE.Vector3(shopX, shopY, shopZ));
+  const islandBoard = makeSign(boardPos, shopRot - 0.55, 1.22, 0.92, islandBoardLocked);
+  islandBoard.name = 'IslandBoard';
+  signs.push(islandBoard);
+
+  // The bounty poster, on the gable the walk from the dock faces. The first
+  // ten minutes should already know what the giant melon over the ravine is
+  // for, what it pays, and the one word that opens it.
+  signs.push(makeSign(
+    new THREE.Vector3(SW / 2 + 0.07, 1.72, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), shopRot)
+      .add(new THREE.Vector3(shopX, shopY, shopZ)),
+    shopRot + Math.PI / 2, 1.22, 1.3,
+    signTexture(['THE KING MELON', '2,600 KG. FOUR VINES.', '$9,500 REWARD', 'BRING ROPE.'],
+      { title: 'WANTED', w: 400, h: 440, bg: '#efe0bd', fg: '#3a2109', accent: '#8a2a1e' }),
+  ));
 
   // The sell pad: planked, edged in paint, under a weighing gantry.
   const sellLocal = new THREE.Vector3(0, 0, 5.4);
@@ -580,7 +638,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   b.box(0.64, 0.09, 0.09, PLANK_DARK, false, [1.0, 0.50, 0.3]);
   b.pop();
   // A fingerpost where the route forks for the orchard: signposting the loop
-  // in the world instead of on the HUD.
+  // in the world instead of on the HUD. The arms carry words now.
   b.push().translate(4.6, 0, 7.6).rotateY(-0.35);
   b.cylinder(0.10, 0.12, 2.7, 7, POST, true, [0, 1.35, 0]);
   b.push().translate(0.55, 2.28, 0).rotateY(0.9);
@@ -590,6 +648,39 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   b.box(1.1, 0.24, 0.07, PLANK_DARK, false);
   b.pop();
   b.pop();
+  {
+    const post = new THREE.Matrix4().makeTranslation(shopX, shopY, shopZ)
+      .multiply(new THREE.Matrix4().makeRotationY(shopRot))
+      .multiply(new THREE.Matrix4().makeTranslation(4.6, 0, 7.6))
+      .multiply(new THREE.Matrix4().makeRotationY(-0.35));
+    const arm = (x: number, y: number, rot: number, w: number, text: string) => {
+      const m = post.clone()
+        .multiply(new THREE.Matrix4().makeTranslation(x, y, 0))
+        .multiply(new THREE.Matrix4().makeRotationY(rot))
+        .multiply(new THREE.Matrix4().makeTranslation(0, 0, 0.045));
+      signs.push(makeSign(new THREE.Vector3().setFromMatrixPosition(m), shopRot - 0.35 + rot, w, w * 0.2,
+        signTexture([text], { w: 512, h: 104, lineScale: 3.2 })));
+    };
+    arm(0.55, 2.28, 0.9, 1.22, 'OLD ORCHARD  →');
+    arm(-0.5, 1.88, -0.5, 1.08, '←  WATERFALL');
+  }
+
+  // Waypoint boards deeper in: one at the orchard's back fence pointing up
+  // the hill, one at the top of the hill pointing at the ravine. Between them
+  // and the second worn route the island reads as a climb rather than a
+  // collection of places, and the walk to the King Melon needs no marker.
+  const fingerboard = (x: number, z: number, faceX: number, faceZ: number, lines: string[], title: string) => {
+    const y = ground(x, z);
+    b.reset().translate(x, y, z);
+    b.cylinder(0.10, 0.12, 2.5, 7, POST, true, [0, 1.25, 0]);
+    const rot = Math.atan2(faceX - x, faceZ - z);
+    const pos = new THREE.Vector3(x, y + 2.05, z).add(
+      new THREE.Vector3(Math.sin(rot), 0, Math.cos(rot)).multiplyScalar(0.09));
+    signs.push(makeSign(pos, rot, 1.6, 0.95,
+      signTexture(lines, { title, w: 512, h: 300, lineScale: 1.25 })));
+  };
+  fingerboard(-28.8, 0.7, -24, 22, ['WATERMELONS · BOULDER PLUMS', 'mind the slope'], 'HILL FARM ↑');
+  fingerboard(-24.7, -38.3, -36, -30, ['THE KING MELON', 'rope gun required'], 'THE RAVINE ↓');
   // A hand cart parked on the apron.
   b.push().translate(-5.4, 0, 6.2).rotateY(1.2);
   b.box(1.1, 0.14, 1.6, PLANK, false, [0, 0.62, 0]);
@@ -930,6 +1021,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   return {
     mesh, waterfall, signs, dock, sellPad, sellRadius: 3.2, shopCounter,
     kingMelon, kingMelonPos, kingMelonAnchors,
+    islandBoard, islandBoardLocked, islandBoardOpen, boatFlag,
   };
 }
 

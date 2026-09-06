@@ -101,7 +101,9 @@ async function attachPage(browser, ctx, quiet) {
   });
   page.on('pageerror', (e) => consoleErrors.push(`pageerror: ${e.message}`));
 
-  await page.goto(URL_BASE, { waitUntil: 'domcontentloaded' });
+  // `?fresh`: never resume a save. A page that saved on close would otherwise
+  // hand its money and tools to the next page in the same browser context.
+  await page.goto(`${URL_BASE}/?fresh=1`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(
     () => window.__RIPE_READY === true || window.__RIPE_ERROR,
     null, { timeout: 90_000 },

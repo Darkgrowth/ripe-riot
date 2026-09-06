@@ -47,6 +47,10 @@ export class Economy implements System {
     }));
     g.debug?.addAction('economy.add', (n: number) => { this.add(n, 'debug'); return this.money; });
     g.debug?.addAction('economy.set', (n: number) => { this.money = n; return this.money; });
+    /** Back to a fresh save's discovery, for scenario isolation. */
+    g.debug?.addAction('economy.resetDiscovery', () => {
+      this.discoveryPoints = 0; this.discoveryTier = 0; return 0;
+    });
   }
 
   add(amount: number, reason: string): void {

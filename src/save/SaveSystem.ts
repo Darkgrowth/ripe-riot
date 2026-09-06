@@ -34,13 +34,21 @@ export class SaveSystem implements System {
   playtime = 0;
   lastSaved = 0;
   enabled = true;
+  /** True when a previous session was restored at boot. */
+  resumed = false;
 
   init(g: Game): void {
     this.g = g;
+    // Pick up where the last session left off. Saves were written for months
+    // before anything read them back, which made every session a fresh one.
+    // `?fresh` skips it — the harness boots that way so a page that saved on
+    // close cannot leak progress into the next test.
+    const fresh = /[?&]fresh\b/.test(window.location.search);
+    if (!fresh && this.exists(this.slot)) this.resumed = this.load(this.slot);
     g.debug?.addProbe('save', () => ({
       slot: this.slot, playtime: +this.playtime.toFixed(1),
       lastSaved: +this.lastSaved.toFixed(1), has: this.exists(this.slot),
-      enabled: this.enabled,
+      enabled: this.enabled, resumed: this.resumed,
     }));
     g.debug?.addAction('save.write', (slot?: string) => this.save(slot ?? this.slot));
     g.debug?.addAction('save.read', (slot?: string) => this.load(slot ?? this.slot));

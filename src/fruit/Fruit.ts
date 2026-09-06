@@ -73,7 +73,12 @@ export class Fruit implements PhysicsOwner {
   /** Volatile charge. */
   charge = 0;
   jitterTimer = 0;
+  /** Gluefruit: fastened to whatever it landed on, as a fixed body. */
   stuck = false;
+  /** Gluefruit: seconds for which it will not leave the hands holding it. */
+  stuckHands = 0;
+  /** Whether the impact being processed was against a player. Read by traits. */
+  lastImpactOnPlayer = false;
   destroyed = false;
 
   /** Who last caused it to move — used for stunt attribution. */
@@ -258,6 +263,29 @@ export class Fruit implements PhysicsOwner {
     this.body.setAngularDamping(angular);
   }
 
+  /**
+   * Fasten to whatever it is touching. The body goes fixed rather than merely
+   * damped, so a gluefruit that hits a cliff face stays ON the cliff face and
+   * one that lands on the sell pad stays sold. Anything that wants it moving
+   * again — a hand, a shove, a rope pulled taut, a blast — calls `unstick`.
+   */
+  stick(): void {
+    if (this.stuck || !this.body || this.state !== 'free') return;
+    this.stuck = true;
+    this.body.setLinvel({ x: 0, y: 0, z: 0 }, false);
+    this.body.setAngvel({ x: 0, y: 0, z: 0 }, false);
+    this.body.setBodyType(RAPIER.RigidBodyType.Fixed, true);
+  }
+
+  unstick(): void {
+    if (!this.stuck) return;
+    this.stuck = false;
+    if (this.body) {
+      this.body.setBodyType(RAPIER.RigidBodyType.Dynamic, true);
+      this.body.wakeUp();
+    }
+  }
+
   /** Picked up by hand or a tool. Physics body is parked while carried. */
   pickUp(carrierId: number): void {
     if (this.state === 'gone') return;
@@ -266,6 +294,7 @@ export class Fruit implements PhysicsOwner {
     this.state = 'carried';
     this.heldBy = carrierId;
     this.lastToucherId = carrierId;
+    this.stuck = false;
     if (this.body) {
       this.physics.removeBody(this.body, this.colliders);
       this.body = null;
@@ -356,6 +385,7 @@ export class Fruit implements PhysicsOwner {
 
   // ---- per-step -----------------------------------------------------------
   step(ctx: TraitContext): void {
+    if (this.stuckHands > 0) this.stuckHands = Math.max(0, this.stuckHands - ctx.dt);
     if (this.state === 'free' && this.body) {
       const t = this.body.translation();
       const r = this.body.rotation();
@@ -418,6 +448,7 @@ export class Fruit implements PhysicsOwner {
       this.bounces++;
       this.touchedGround = true;
     }
+    this.lastImpactOnPlayer = onPlayer;
     for (const t of this.traits) t.onImpact?.(this, dv, point, UP, ctx);
     if (this.destroyed) return;
 

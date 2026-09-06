@@ -312,25 +312,70 @@ function bananaPlant(seed: number): PlantShape {
   };
 }
 
-function bush(seed: number, color: THREE.Color, radius: number, attachOnTop: number): PlantShape {
+function bush(seed: number, color: THREE.Color, radius: number, attachOnTop: number,
+  opts: { dark?: THREE.Color; light?: THREE.Color; attachY?: [number, number]; stem?: boolean } = {}): PlantShape {
   const rng = new Rng(seed);
   const parts: THREE.BufferGeometry[] = [];
   const H = radius * 1.6;
+  const dark = opts.dark ?? LEAF_DARK;
+  if (opts.stem) {
+    // A short woody trunk under the foliage, so the thing reads as a small
+    // tree rather than a hedge, and the fruit hangs from something.
+    const trunk = new THREE.CylinderGeometry(0.12, 0.18, radius * 0.9, 6);
+    trunk.translate(0, radius * 0.45, 0);
+    parts.push(dress(trunk, BARK_DARK, (y) => swayCurve(y, H) * 0.3));
+  }
   for (let i = 0; i < 4; i++) {
     const b = new THREE.IcosahedronGeometry(radius * rng.range(0.6, 1.0), 1);
     b.scale(1.1, 0.78, 1.1);
-    b.translate(rng.range(-radius, radius) * 0.6, radius * rng.range(0.4, 0.8), rng.range(-radius, radius) * 0.6);
-    parts.push(dress(b, _mix(color, LEAF_DARK, rng.next() * 0.4), (y) => swayCurve(y, H) * 0.7));
+    const lift = opts.stem ? radius * 0.5 : 0;
+    b.translate(rng.range(-radius, radius) * 0.6, lift + radius * rng.range(0.4, 0.8), rng.range(-radius, radius) * 0.6);
+    const dressed = dress(b, _mix(color, dark, rng.next() * 0.4), (y) => swayCurve(y, H) * 0.7);
+    if (opts.light) shadeByFacing(dressed, dark, opts.light, 0.55, 0.3);
+    parts.push(dressed);
   }
   const attach: THREE.Vector3[] = [];
+  const [y0, y1] = opts.attachY ?? [0.95, 1.25];
   for (let i = 0; i < attachOnTop; i++) {
     const a = (i / attachOnTop) * Math.PI * 2 + rng.range(-0.5, 0.5);
-    attach.push(new THREE.Vector3(Math.sin(a) * radius * 0.55, radius * rng.range(0.95, 1.25), Math.cos(a) * radius * 0.55));
+    attach.push(new THREE.Vector3(Math.sin(a) * radius * 0.55, radius * rng.range(y0, y1), Math.cos(a) * radius * 0.55));
   }
   const geometry = mustMerge(mergeGeometries(parts, false));
   geometry.computeVertexNormals();
   geometry.computeBoundingSphere();
-  return { geometry, attachPoints: attach, height: H, collider: null };
+  return {
+    geometry, attachPoints: attach, height: H,
+    collider: opts.stem ? { halfHeight: radius * 0.4, radius: 0.2, offset: radius * 0.45 } : null,
+  };
+}
+
+/**
+ * The Boulder Plum's nest: a squat woody stump ringed by broad dark leaves,
+ * with the fruit sitting on top at knee height. It has to look like it could
+ * hold forty-eight kilos, and like the plum would roll the moment it left.
+ */
+function boulderNest(seed: number): PlantShape {
+  const rng = new Rng(seed);
+  const parts: THREE.BufferGeometry[] = [];
+  const stump = new THREE.CylinderGeometry(0.2, 0.3, 0.5, 7);
+  stump.translate(0, 0.25, 0);
+  parts.push(dress(stump, BARK_DARK, () => 0.1));
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 9) * Math.PI * 2 + rng.range(-0.2, 0.2);
+    const r = rng.range(0.55, 1.35);
+    const leaf = new THREE.CircleGeometry(rng.range(0.42, 0.68), 5);
+    leaf.rotateX(-Math.PI / 2);
+    leaf.rotateZ(rng.range(-0.18, 0.18));
+    leaf.translate(Math.sin(a) * r, 0.1 + rng.range(0, 0.1), Math.cos(a) * r);
+    parts.push(dress(leaf, _mix(LEAF_DARK, C(0x2c5a3e), rng.next() * 0.7), () => 0.35));
+  }
+  const geometry = mustMerge(mergeGeometries(parts, false));
+  geometry.computeVertexNormals();
+  geometry.computeBoundingSphere();
+  return {
+    geometry, height: 0.9, collider: null,
+    attachPoints: [new THREE.Vector3(0, 0.76, 0), new THREE.Vector3(0.82, 0.42, 0.4)],
+  };
 }
 
 function melonVine(seed: number): PlantShape {
@@ -380,7 +425,7 @@ function vinebombVine(seed: number): PlantShape {
 
 // ---------------------------------------------------------------------------
 export type PlantType = 'appleTree' | 'orangeTree' | 'palm' | 'bananaPlant'
-  | 'melonVine' | 'puffBush' | 'vinebombVine';
+  | 'melonVine' | 'puffBush' | 'vinebombVine' | 'boulderBush' | 'gumTree' | 'spikeShrub';
 
 const SHAPE_CACHE = new Map<string, PlantShape>();
 
@@ -410,6 +455,14 @@ export function plantShape(type: PlantType, variant: number): PlantShape {
     case 'melonVine': s = melonVine(seed); break;
     case 'puffBush': s = bush(seed, BUSH, 0.95, 3); break;
     case 'vinebombVine': s = vinebombVine(seed); break;
+    case 'boulderBush': s = boulderNest(seed); break;
+    // Olive and glossy-lit, on a stem, fruit hanging at chest height.
+    case 'gumTree': s = bush(seed, C(0x8a8f38), 1.15, 4,
+      { dark: C(0x4f5a1e), light: C(0xc9c465), attachY: [0.55, 0.85], stem: true }); break;
+    // Blue-dark and low: it should look like something you would not put a
+    // hand into even before you have read the prompt.
+    case 'spikeShrub': s = bush(seed, C(0x2f6a5a), 1.0, 4,
+      { dark: C(0x173d33), light: C(0x4f9a7e), attachY: [0.7, 1.1] }); break;
     default: s = broadleaf(seed, { trunkH: 3, trunkR: 0.22, blobs: 3, blobR: 1.4,
       leaf: LEAF, leafAlt: LEAF_LIGHT, spread: 1.1, lean: 0 });
   }

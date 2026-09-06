@@ -7,20 +7,43 @@ import type { Economy } from '@/systems/Economy';
 import type { InteractionSystem } from '@/interaction/InteractionSystem';
 import type { Shop } from '@/systems/Shop';
 import type { ToolInventory } from '@/tools/ToolInventory';
-import type { LegendaryHarvest, LegendaryNet, LegendaryNetState } from '@/systems/LegendaryHarvest';
+import { TETHER_RANGE, type LegendaryHarvest, type LegendaryNet, type LegendaryNetState } from '@/systems/LegendaryHarvest';
+import { HAND_OFFSET, type RopeSystem, type RopeNet, type Rope, type RopeEnd, type RopeGone } from '@/systems/RopeSystem';
 import type { Sunpatch } from '@/world/Sunpatch';
 import { BroadcastTransport, type NetMessage, type PeerId, type Transport } from './Transport';
 import { FruitAuthority, DENY_TEXT, clamp01, type Deny } from './FruitAuthority';
 import { makePlayerRig, SUIT_PRESETS, type PlayerRig } from '@/player/PlayerRig';
-import { damp } from '@/core/MathUtils';
+import { clamp, damp } from '@/core/MathUtils';
 
 /** What a client is allowed to ask the host to do. */
 export type IntentKind =
   | 'detach' | 'pick' | 'throw' | 'stow' | 'drop' | 'sell'
   | 'shove' | 'shake' | 'blast' | 'spawn'
   | 'buy'
-  | 'lcut' | 'ltether' | 'luntether'
+  | 'lcut'
+  | 'rope'
   | 'resync';
+
+/**
+ * A rope end on the wire: kind, a reference, and three numbers.
+ *
+ *   0 world      xyz is the point
+ *   1 fruit      ref is the fruit id, xyz the offset in its frame
+ *   2 legendary  xyz the offset in the melon's frame
+ *   3 hand       ref is an index into the message's peer list (a snapshot),
+ *                or -1 for "the sender" (an intent: a client may only ever
+ *                tie a rope to itself)
+ */
+export type EndPacket = [kind: number, ref: number, x: number, y: number, z: number];
+
+/** One shared rope as the host lists it: who made it, their id for it, both
+ *  ends, and its length. Lifetime is implied by presence in the list. */
+export type RopePacket = [
+  ownerIdx: number, cid: number,
+  ak: number, aref: number, ax: number, ay: number, az: number,
+  bk: number, bref: number, bx: number, by: number, bz: number,
+  len: number,
+];
 
 export interface Intent {
   kind: IntentKind;
@@ -38,13 +61,20 @@ export interface Intent {
   strength?: number;
   radius?: number;
   upBias?: number;
-  /** What broke the stem: 'hand' is held to hand reach, tools are not. */
+  /** What broke the stem: 'hand' is held to hand reach, tools are not. For a
+   *  pick, how the fruit was taken: 'net' may take what hands may not. */
   cause?: string;
   /** Shop item, for `buy`. */
   itemId?: string;
-  /** Vine anchor index, for `lcut`; rope length, for `ltether`. */
+  /** Vine anchor index, for `lcut`. */
   vine?: number;
+  /** Rope requests: what to do, the client's id for the rope, its ends. */
+  op?: 'create' | 'release' | 'reel';
+  cid?: number;
+  ea?: EndPacket;
+  eb?: EndPacket;
   len?: number;
+  rate?: number;
 }
 
 /** What a client is waiting to hear back about, and how to undo it. */
@@ -57,6 +87,8 @@ interface Pending {
   plantId: number;
   nodeIndex: number;
   itemId?: string;
+  /** The client's id for a rope it asked the host to build. */
+  cid?: number;
   at: number;
 }
 
@@ -82,14 +114,23 @@ interface RemoteState {
  * has to be able to REBUILD the fruit — species, variant and roll give the
  * same mass, radius and traits everywhere, and a replica whose mass is a guess
  * carries wrong, values wrong and sells wrong. `owner` is an index into the
- * snapshot's own peer list, or -1 for a fruit nobody is holding.
+ * snapshot's own peer list, or -1 for a fruit nobody is holding. `flags` bit 0
+ * is a gluefruit stuck fast; `stuckHands` is how long it will still refuse to
+ * leave the hands holding it, which the holder's own client enforces.
  */
 type FruitPacket = [
   id: number, species: number, variant: number, state: number,
   x: number, y: number, z: number,
   qx: number, qy: number, qz: number, qw: number,
   sizeRoll: number, inflate: number, damage: number, owner: number,
+  flags: number, stuckHands: number,
 ];
+
+const END_WORLD = 0, END_FRUIT = 1, END_LEGENDARY = 2, END_HAND = 3;
+/** How far from where they stand a client may tie a rope to anything. */
+const ROPE_REACH = 42;
+/** Ropes one peer may have out at once, host-enforced. The gun keeps four. */
+const ROPE_LIMIT = 6;
 
 /**
  * Species and variants travel as indices into these. Derived from the
@@ -140,13 +181,14 @@ const _v2 = new THREE.Vector3();
  * the ledger, the node log it applied — which is everything but the old
  * host's pending intents.
  */
-export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
+export class MultiplayerAuthority implements System, NetGate, LegendaryNet, RopeNet {
   readonly name = 'net';
   private g!: Game;
   private fruitSys!: FruitSystem;
   private economy!: Economy;
   private interaction!: InteractionSystem;
   private world!: Sunpatch;
+  private ropes!: RopeSystem;
   private shop: Shop | null = null;
   private tools: ToolInventory | null = null;
   private legendary: LegendaryHarvest | null = null;
@@ -202,12 +244,16 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
     this.economy = g.get<Economy>('economy');
     this.interaction = g.get<InteractionSystem>('interaction');
     this.world = g.get<Sunpatch>('world');
+    this.ropes = g.get<RopeSystem>('ropes');
     this.shop = g.has('shop') ? g.get<Shop>('shop') : null;
     this.tools = g.has('tools') ? g.get<ToolInventory>('tools') : null;
     this.legendary = g.has('legendary') ? g.get<LegendaryHarvest>('legendary') : null;
     // The gate that makes stems, shakes and blasts host-only, everywhere at once.
     this.fruitSys.net = this;
     if (this.legendary) this.legendary.net = this;
+    // And the one that makes every rope the host's.
+    this.ropes.net = this;
+    this.ropes.onRemoved = (rope, why) => this.onRopeRemoved(rope, why);
 
     this.authority = new FruitAuthority({
       fruit: this.fruitSys,
@@ -244,6 +290,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
       lastDeny: this.lastDeny,
       owned: this.isHost ? this.authority.entries().length : this.mirrorOwner.size,
       nodeSeq: this.fruitSys.nodeSeq,
+      ropes: this.ropeSummary(),
       ...this.stats,
       ...this.authority.stats,
     }));
@@ -277,6 +324,25 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
     })));
     g.debug?.addAction('net.sold', (id: number) => this.authority.isSold(id));
     g.debug?.addAction('net.pending', () => this.pending.size);
+    /** Every shared rope this peer knows, by wire identity, for the suite. */
+    g.debug?.addAction('net.ropes', () => this.ropeSummary());
+  }
+
+  /** Shared ropes as (owner, cid) with what they tie, for the probe. */
+  private ropeSummary(): Array<{ owner: string; cid: number; mirror: boolean; acked: boolean;
+    a: string; b: string; len: number; mine: boolean }> {
+    const out: Array<{ owner: string; cid: number; mirror: boolean; acked: boolean;
+      a: string; b: string; len: number; mine: boolean }> = [];
+    for (const r of this.ropes.ropes.values()) {
+      if (!r.net) continue;
+      const tag = (e: RopeEnd) => (e.kind === 'fruit' ? `fruit:${e.ownerId}`
+        : e.kind === 'peer' ? `peer:${e.peer}` : e.kind);
+      out.push({
+        owner: r.net.owner, cid: r.net.cid, mirror: r.net.mirror, acked: r.net.acked,
+        a: tag(r.a), b: tag(r.b), len: +r.length.toFixed(2), mine: r.net.owner === this.me,
+      });
+    }
+    return out;
   }
 
   // ---- connection ---------------------------------------------------------
@@ -291,6 +357,12 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
     this.hostId = transport.id;
     this.onPeers(transport.peers());
     this.adoptLocalHoldings();
+    // A host of nobody, so far: tag our ropes as ours. If a hello turns us
+    // into a client, `rehome` after `learnHost` finds nothing left to do and
+    // the host learns of these ropes when it asks for... nothing: a client
+    // joining an existing session should not bring ropes into it, which is
+    // why `leaveSession` removed them on the way out of the last one.
+    this.ropes.rehome();
     transport.send({ t: 'hello', name: this.playerName, suit: this.suit, host: this.hostId, est: false, age: 0 });
     this.g.bus.emit('ui:toast', {
       text: 'Co-op session open', sub: `You are ${this.isHost ? 'hosting' : 'joining'}`, ms: 2600,
@@ -301,6 +373,9 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
     // Say goodbye explicitly. Waiting for the liveness timeout leaves a ghost
     // standing in the orchard for four seconds, which reads as a bug.
     if (this.connected) this.transport?.send({ t: 'bye' });
+    // Before `isHost` is reset: a client leaves its ropes behind, a host
+    // keeps its own and drops the tags.
+    if (this.connected) this.ropes.leaveSession(this.isHost);
     for (const f of this.off) f();
     this.off.length = 0;
     for (const r of this.remotes.values()) this.destroyRemote(r);
@@ -362,6 +437,10 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
     }
     this.established = true;
     this.applyHost();
+    // Now that we know who we are in this session, any rope we brought with
+    // us (a solo game's, a former host's) is tagged and, if we are a client,
+    // handed to the host.
+    this.ropes.rehome();
   }
 
   private get age(): number { return performance.now() - this.connectedAt; }
@@ -376,7 +455,12 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
       // snapshot, plus its own hands. Anything owned by a peer that is no
       // longer here is spilled by `dropPeer` a few lines down.
       this.authority.reset();
-      if (this.isHost) { this.adoptMirror(); this.adoptLocalHoldings(); }
+      if (this.isHost) {
+        this.adoptMirror();
+        this.adoptLocalHoldings();
+        // The ropes we were only drawing are now ours to solve and to part.
+        this.ropes.adoptMirrors();
+      }
       this.g.bus.emit('ui:toast', {
         text: this.isHost ? 'You are now the host' : 'Host changed', ms: 2400,
       });
@@ -398,10 +482,14 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
     this.nodeAck.delete(id);
     if (!this.isHost) return;
     const { released } = this.authority.forgetPeer(id);
+    // Their ropes go too: a rope tied to a player who is not there any more
+    // would hold a melon to a point in the air forever.
+    const ropes = this.ropes.removeOwnedBy(id);
+    const bits: string[] = [];
+    if (released) bits.push(`${released} fruit dropped where they stood`);
+    if (ropes) bits.push(`${ropes} rope${ropes > 1 ? 's' : ''} let go`);
     this.g.bus.emit('ui:toast', {
-      text: `${name} left`,
-      sub: released ? `${released} fruit dropped where they stood` : undefined,
-      ms: 2400,
+      text: `${name} left`, sub: bits.length ? bits.join(' · ') : undefined, ms: 2400,
     });
   }
 
@@ -497,6 +585,11 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
       case 'economy':
         if (!this.isHost && m.from === this.hostId) this.syncEconomy(Number(m.money ?? 0));
         break;
+      case 'ropegone':
+        if (!this.isHost && m.from === this.hostId) {
+          this.onRopeGone(String(m.owner ?? ''), Number(m.cid ?? -1), String(m.why ?? 'gone') as RopeGone);
+        }
+        break;
       case 'event':
         // Cosmetic, host-originated: toasts, celebrations, stunt chips.
         this.g.bus.emit(m.name as never, m.payload as never);
@@ -525,7 +618,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
   /** True when this peer may mutate authoritative state directly. */
   get authoritative(): boolean { return !this.connected || this.isHost; }
 
-  private get me(): PeerId { return this.transport?.id ?? ''; }
+  get me(): PeerId { return this.transport?.id ?? ''; }
 
   // ---- outgoing requests --------------------------------------------------
   private send(intent: Omit<Intent, 'playerId' | 'rid'>, track?: Omit<Pending, 'at'>): number {
@@ -570,7 +663,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
    *   'predict' — asked the host; go ahead locally, expect to be corrected.
    *   'refuse'  — someone else already has it, as far as anyone here knows.
    */
-  requestPick(f: Fruit): 'apply' | 'predict' | 'refuse' {
+  requestPick(f: Fruit, cause = 'hand'): 'apply' | 'predict' | 'refuse' {
     if (!this.connected) return 'apply';
     if (this.isHost) {
       const owner = this.authority.ownerOf(f.id);
@@ -579,7 +672,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
     const owner = this.mirrorOwner.get(f.id);
     if (owner && owner !== this.me) return 'refuse';
     if (this.pendingSell.has(f.id)) return 'refuse';
-    this.send({ kind: 'pick', fruitId: f.id }, {
+    this.send({ kind: 'pick', fruitId: f.id, cause }, {
       kind: 'pick', fruitId: f.id, ids: [f.id],
       plantId: f.attach?.plantId ?? -1, nodeIndex: f.attach?.nodeIndex ?? -1,
     });
@@ -661,13 +754,205 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
   // ---- LegendaryNet, for the King Melon -----------------------------------
   anyoneHasRopeGun(): boolean { return this.isHost && this.authority.anyoneHasRopeGun(); }
 
-  requestLegendary(intent: { kind: 'lcut' | 'ltether' | 'luntether'; vine?: number;
-    at?: [number, number, number]; len?: number }): void {
+  requestLegendary(intent: { kind: 'lcut'; vine: number }): void {
     if (!this.connected || this.isHost) return;
-    // A cut is the one that can be refused for a reason the player must hear.
-    const track = intent.kind === 'lcut'
-      ? { kind: intent.kind, fruitId: -1, ids: [], plantId: -1, nodeIndex: -1 } : undefined;
-    this.send(intent, track);
+    // A cut can be refused for a reason the player must hear.
+    this.send(intent, { kind: intent.kind, fruitId: -1, ids: [], plantId: -1, nodeIndex: -1 });
+  }
+
+  // ---- RopeNet, for the rope system ---------------------------------------
+  peerHands(peer: PeerId, out: THREE.Vector3): boolean {
+    const r = this.remotes.get(peer);
+    if (!r) return false;
+    out.copy(r.targetPos).add(HAND_OFFSET);
+    return true;
+  }
+
+  requestRopeCreate(rope: Rope): void {
+    if (!this.connected || this.isHost || !rope.net) return;
+    this.send({
+      kind: 'rope', op: 'create', cid: rope.net.cid,
+      ea: this.encodeEnd(rope.a, null), eb: this.encodeEnd(rope.b, null),
+      len: +rope.length.toFixed(2),
+    }, { kind: 'rope', fruitId: -1, ids: [], plantId: -1, nodeIndex: -1, cid: rope.net.cid });
+  }
+
+  requestRopeRelease(cid: number): void {
+    if (!this.connected || this.isHost) return;
+    this.send({ kind: 'rope', op: 'release', cid });
+  }
+
+  requestRopeReel(cid: number, rate: number): void {
+    if (!this.connected || this.isHost) return;
+    this.send({ kind: 'rope', op: 'reel', cid, rate: +rate.toFixed(2) });
+  }
+
+  /**
+   * A rope end for the wire. With a peer list (a snapshot) a hand is an index
+   * into it; without one (an intent) a hand is -1, "me", because a client is
+   * never allowed to tie anyone but itself.
+   */
+  private encodeEnd(e: RopeEnd, peers: PeerId[] | null): EndPacket {
+    const l = e.local;
+    const xyz: [number, number, number] = [+l.x.toFixed(2), +l.y.toFixed(2), +l.z.toFixed(2)];
+    switch (e.kind) {
+      case 'fruit': return [END_FRUIT, e.ownerId, ...xyz];
+      case 'legendary': return [END_LEGENDARY, 0, ...xyz];
+      case 'player': return [END_HAND, peers ? peers.indexOf(this.me) : -1, ...xyz];
+      case 'peer': return [END_HAND, peers ? peers.indexOf(e.peer ?? '') : -1, ...xyz];
+      default: return [END_WORLD, 0, ...xyz];
+    }
+  }
+
+  /** The inverse. `sender` is who a -1 hand means; null for a snapshot. */
+  private decodeEnd(p: EndPacket | undefined, peers: PeerId[], sender: PeerId | null): RopeEnd | null {
+    if (!p || p.length < 5) return null;
+    const [kind, ref, x, y, z] = p.map(Number);
+    if (![x, y, z].every(Number.isFinite)) return null;
+    const local = new THREE.Vector3(x, y, z);
+    switch (kind) {
+      case END_WORLD: return { kind: 'world', local, ownerId: -1 };
+      case END_FRUIT: return { kind: 'fruit', local, ownerId: ref };
+      case END_LEGENDARY:
+        return this.legendary ? { kind: 'legendary', local, ownerId: this.legendary.id } : null;
+      case END_HAND: {
+        const peer = sender && ref < 0 ? sender : peers[ref];
+        if (!peer) return null;
+        if (peer === this.me) return { kind: 'player', local, ownerId: this.g.player.id };
+        return { kind: 'peer', local, ownerId: -1, peer };
+      }
+      default: return null;
+    }
+  }
+
+  /** Host: may this peer tie a rope here? */
+  private checkRopeEnd(e: RopeEnd, from: PeerId): Deny | null {
+    switch (e.kind) {
+      case 'world':
+        return this.authority.nearPeer(from, e.local.x, e.local.y, e.local.z, ROPE_REACH) ? null : 'out-of-reach';
+      case 'fruit': {
+        const f = this.fruitSys.get(e.ownerId);
+        if (!f || this.authority.isSold(e.ownerId)) return 'no-fruit';
+        if (f.state !== 'attached' && f.state !== 'free') return 'wrong-state';
+        return this.authority.canReach(from, e.ownerId, ROPE_REACH) ? null : 'out-of-reach';
+      }
+      case 'legendary': {
+        if (!this.legendary?.body) return 'no-fruit';
+        const p = this.legendary.position;
+        return this.authority.nearPeer(from, p.x, p.y, p.z, TETHER_RANGE) ? null : 'out-of-reach';
+      }
+      case 'peer':
+        return e.peer === from ? null : 'not-yours';
+      default:
+        return 'not-yours';
+    }
+  }
+
+  /** Host: a client's rope request. */
+  private applyRope(intent: Intent, from: PeerId): Deny | null {
+    const cid = Number(intent.cid ?? -1);
+    if (!Number.isFinite(cid) || cid < 0) return 'no-fruit';
+    const existing = this.ropes.findByKey(from, cid);
+    switch (intent.op) {
+      case 'create': {
+        if (existing) return null;                      // a resend is the same rope
+        const a = this.decodeEnd(intent.ea, [], from);
+        const b = this.decodeEnd(intent.eb, [], from);
+        if (!a || !b) return 'no-fruit';
+        const bad = this.checkRopeEnd(a, from) ?? this.checkRopeEnd(b, from);
+        if (bad) return bad;
+        let owned = 0;
+        for (const r of this.ropes.ropes.values()) if (r.net?.owner === from) owned++;
+        if (owned >= ROPE_LIMIT) return 'rope-limit';
+        const held = a.kind === 'peer' || b.kind === 'peer';
+        this.ropes.create(a, b, clamp(Number(intent.len ?? 4), 0.8, 90), {
+          maxTension: held ? 4200 : 5200,
+          net: { owner: from, cid, mirror: false, acked: true, bornAt: this.g.clock.elapsed },
+        });
+        return null;
+      }
+      case 'release':
+        if (existing) this.ropes.remove(existing.id, 'released');
+        return null;
+      case 'reel':
+        if (existing) this.ropes.setReel(existing.id, clamp(Number(intent.rate ?? 0), -2.6, 3.2));
+        return null;
+      default:
+        return 'no-fruit';
+    }
+  }
+
+  /** Host: a shared rope left the world; everybody else lets go of their copy. */
+  private onRopeRemoved(rope: Rope, why: RopeGone): void {
+    if (!this.connected || !this.isHost || !rope.net) return;
+    this.transport?.send({ t: 'ropegone', owner: rope.net.owner, cid: rope.net.cid, why });
+  }
+
+  /** Client: the host says a rope is gone, and why. */
+  private onRopeGone(owner: PeerId, cid: number, why: RopeGone): void {
+    const r = this.ropes.findByKey(owner, cid);
+    if (!r) return;
+    this.ropes.remove(r.id, why, true);
+    if (why !== 'snapped') return;
+    this.g.bus.emit('rope:snapped', { ropeId: r.id });
+    if (owner === this.me) {
+      this.g.bus.emit('ui:toast', { text: 'Your rope parted', kind: 'bad', ms: 1800 });
+    }
+  }
+
+  /** Every shared rope the host holds, for the snapshot. */
+  private packRopes(peers: PeerId[]): RopePacket[] {
+    const out: RopePacket[] = [];
+    for (const r of this.ropes.ropes.values()) {
+      if (!r.shared || !r.net) continue;
+      const ownerIdx = peers.indexOf(r.net.owner);
+      if (ownerIdx < 0) continue;
+      out.push([ownerIdx, r.net.cid, ...this.encodeEnd(r.a, peers), ...this.encodeEnd(r.b, peers),
+        +r.length.toFixed(2)]);
+    }
+    return out;
+  }
+
+  /**
+   * Client: make the local ropes agree with the host's list.
+   *
+   * Our own ropes are matched by cid and only ever have their length
+   * corrected — the local copy is the one our tools hold. Everyone else's
+   * are mirrored. Anything the host no longer lists is gone, except one of
+   * ours that the host has not acknowledged yet: that one is still in the
+   * post, and the snapshot that crossed it does not get to kill it.
+   */
+  private applyRopes(list: RopePacket[], peers: PeerId[]): void {
+    const me = this.me;
+    const seen = new Set<string>();
+    for (const pk of list) {
+      const owner = peers[Number(pk[0])];
+      const cid = Number(pk[1]);
+      if (!owner || !Number.isFinite(cid)) continue;
+      seen.add(`${owner}:${cid}`);
+      const len = Number(pk[12]);
+      if (owner === me) {
+        const mine = this.ropes.ropes.get(cid);
+        if (mine?.net && !mine.net.mirror) {
+          mine.net.acked = true;
+          this.ropes.followLength(cid, len);
+        }
+        continue;
+      }
+      const existing = this.ropes.findByKey(owner, cid);
+      if (existing) { this.ropes.followLength(existing.id, len); continue; }
+      const a = this.decodeEnd(pk.slice(2, 7) as EndPacket, peers, null);
+      const b = this.decodeEnd(pk.slice(7, 12) as EndPacket, peers, null);
+      if (a && b) this.ropes.createMirror(owner, cid, a, b, len);
+    }
+    const now = this.g.clock.elapsed;
+    for (const r of [...this.ropes.ropes.values()]) {
+      if (!r.net || seen.has(`${r.net.owner}:${r.net.cid}`)) continue;
+      if (r.net.mirror) { this.ropes.remove(r.id, 'gone', true); continue; }
+      if (r.net.owner === me && r.net.acked && now - r.net.bornAt > 1.0) {
+        this.ropes.remove(r.id, 'gone', true);
+      }
+    }
   }
 
   // ---- host: applying intents ---------------------------------------------
@@ -684,7 +969,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
         deny = this.authority.detach(from, fid, (intent.cause ?? 'hand') === 'hand');
         break;
       case 'pick':
-        deny = this.authority.claim(from, fid);
+        deny = this.authority.claim(from, fid, intent.cause ?? 'hand');
         break;
       case 'stow':
         deny = this.authority.stow(from, fid);
@@ -762,13 +1047,12 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
       case 'lcut':
         deny = this.legendary ? this.legendary.remoteCut(intent.vine ?? -1, near) : 'no-fruit';
         break;
-      case 'ltether':
-        if (!intent.at) { deny = 'out-of-reach'; break; }
-        deny = this.legendary ? this.legendary.remoteTether(intent.at, intent.len ?? 0, near) : 'no-fruit';
-        break;
-      case 'luntether':
-        if (intent.at) this.legendary?.remoteUntether(intent.at);
-        break;
+      case 'rope':
+        deny = this.applyRope(intent, from);
+        if (deny) { this.stats.denied++; this.lastDeny = `rope:${intent.op}:${deny}`; }
+        if (rid >= 0) this.reply(from, rid, intent.kind, deny, { cid: intent.cid, op: intent.op });
+        if (!deny) this.sendSnapshot();
+        return;
       case 'resync':
         this.sendManifest(from);
         return;
@@ -823,6 +1107,16 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
       if (!ok) this.legendary?.refuse(m.reason as Deny);
       return;
     }
+    if (kind === 'rope') {
+      const cid = Number(m.cid ?? p?.cid ?? -1);
+      const rope = this.ropes.ropes.get(cid);
+      if (!rope?.net || rope.net.mirror) return;
+      if (ok) { rope.net.acked = true; return; }
+      // Refused: the line comes back in, and the player hears why.
+      this.ropes.remove(rope.id, 'gone', true);
+      this.g.bus.emit('ui:toast', { text: `Rope refused — ${why}`, kind: 'bad', ms: 2000 });
+      return;
+    }
     if (ok || !p) return;
 
     // Refused. Give the fruit back before the snapshot gets here, so the hand
@@ -854,6 +1148,9 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
         this.interaction.saleRefused('no answer');
       } else if (p.kind === 'buy') {
         this.shop?.refused(p.itemId ?? '', 'the host never answered');
+      } else if (p.kind === 'rope') {
+        const rope = p.cid !== undefined ? this.ropes.ropes.get(p.cid) : undefined;
+        if (rope?.net && !rope.net.acked) this.ropes.remove(rope.id, 'gone', true);
       } else if (p.fruitId >= 0) {
         this.interaction.forfeit(p.fruitId, 'the host never answered');
       }
@@ -928,6 +1225,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
         +f.quaternion.z.toFixed(3), +f.quaternion.w.toFixed(3),
         +f.sizeRoll.toFixed(4), +f.inflate.toFixed(3), +f.damage.toFixed(3),
         owner ? peers.indexOf(owner) : -1,
+        f.stuck ? 1 : 0, +f.stuckHands.toFixed(1),
       ]);
     }
     return out;
@@ -971,6 +1269,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
       nseq: this.fruitSys.nodeSeq,
       nlog: this.nodeLogFor(to),
       leg: this.legendary?.netState() ?? null,
+      ropes: this.packRopes(peers),
     };
     this.transport.send(msg, to);
     this.stats.sent++;
@@ -1002,7 +1301,8 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
     }
 
     for (const p of list) {
-      const [id, sp, va, st, x, y, z, qx, qy, qz, qw, sizeRoll, inflate, damage, ownerIdx] = p;
+      const [id, sp, va, st, x, y, z, qx, qy, qz, qw, sizeRoll, inflate, damage, ownerIdx,
+        flags = 0, stuckHands = 0] = p;
       seen.add(id);
       // A request about this fruit is still in flight, so this picture of it
       // predates the request and cannot be used to correct it. The host's
@@ -1021,6 +1321,8 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
       this.fruitSys.applyRemoteState(f, state);
       if (f.inflate !== inflate) f.setInflation(inflate);
       if (f.damage !== damage) { f.damage = damage; f.refreshTint(); }
+      f.stuck = (flags & 1) !== 0;
+      f.stuckHands = stuckHands;
       // Whoever is carrying a fruit draws it; the snapshot does not get to
       // fight the local carry spring for the transform of a fruit in my hands.
       if (!mine || state !== 'carried') {
@@ -1051,6 +1353,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
       typeof m.tier === 'number' ? m.tier : undefined,
       typeof m.pts === 'number' ? m.pts : undefined);
     if (m.leg) this.legendary?.applyNet(m.leg as LegendaryNetState);
+    if (Array.isArray(m.ropes)) this.applyRopes(m.ropes as RopePacket[], peers);
   }
 
   private requestResync(): void {
@@ -1097,10 +1400,41 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet {
     // A host of nobody has nobody to tell; a newcomer that has not yet been
     // told who hosts must not broadcast its own empty world in the meantime.
     if (this.isHost && this.established) {
+      this.stickToRemotes();
       this.snapshotTimer += dt;
       if (this.snapshotTimer >= 1 / SNAPSHOT_HZ) {
         this.snapshotTimer = 0;
         this.sendSnapshot();
+      }
+    }
+  }
+
+  /**
+   * Host: a gluefruit that hits another player is theirs now.
+   *
+   * The host is the only peer that knows how fast a loose fruit is moving,
+   * so it makes this call for everyone but itself (its own player is handled
+   * in `InteractionSystem`, which sees the same fruit with the same body).
+   * The remote is a capsule at its last reported position; the claim goes
+   * through the ledger like any other pick and the snapshot puts the fruit in
+   * their hands.
+   */
+  private stickToRemotes(): void {
+    for (const f of this.fruitSys.fruits.values()) {
+      if (f.state !== 'free' || !f.body || f.stuck || !f.hasTrait('sticky')) continue;
+      if (f.speed < 2.5) continue;
+      for (const r of this.remotes.values()) {
+        if (r.state !== 'active') continue;
+        const footY = r.targetPos.y + 0.34;
+        const headY = r.targetPos.y + Math.max(r.height - 0.34, 0.35);
+        const cy = clamp(f.position.y, footY, headY);
+        const dx = f.position.x - r.targetPos.x;
+        const dy = f.position.y - cy;
+        const dz = f.position.z - r.targetPos.z;
+        const reach = f.radius + 0.34 + 0.22;
+        if (dx * dx + dy * dy + dz * dz > reach * reach) continue;
+        if (this.authority.claim(r.id, f.id, 'stuck') === null) this.sendSnapshot();
+        break;
       }
     }
   }

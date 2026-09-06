@@ -15,19 +15,8 @@ export async function run(g, t) {
   // ground: that is the entire contract of a rope.
   const id = await g.call('fruit.spawn', 'watermelon', -24, anchorY - 2, 22);
   await g.wait(0.1);
-  const roped = await g.page.evaluate(([fruitId, ax, ay, az, len]) => {
-    const game = window.__GAME;
-    const ropes = game.get('ropes');
-    const fruit = game.get('fruit').get(fruitId);
-    if (!fruit || !fruit.body) return null;
-    const THREE = fruit.position.constructor;
-    const r = ropes.create(
-      { body: null, local: new THREE(ax, ay, az), ownerId: -1 },
-      { body: fruit.body, local: new THREE(0, 0, 0), ownerId: fruit.id },
-      len, { maxTension: 1e9 },
-    );
-    return r.id;
-  }, [id, -24, anchorY, 22, 4.0]);
+  // Ends are tied BY IDENTITY: a world point and a fruit id, never a body.
+  const roped = await g.call('rope.tieFruit', id, -24, anchorY, 22, 4.0, 1e9);
   t.ok(roped !== null, 'a rope can be created between a fixed point and a fruit');
 
   await g.wait(2.5);
@@ -72,19 +61,39 @@ export async function run(g, t) {
   await g.call('fruit.despawnAllFree');
   const heavyId = await g.call('fruit.spawn', 'watermelon', -24, anchorY - 2, 22, 'ancient');
   await g.wait(0.1);
-  await g.page.evaluate(([fruitId, ax, ay, az]) => {
-    const game = window.__GAME;
-    const fruit = game.get('fruit').get(fruitId);
-    const THREE = fruit.position.constructor;
-    game.get('ropes').create(
-      { body: null, local: new THREE(ax, ay, az), ownerId: -1 },
-      { body: fruit.body, local: new THREE(0, 0, 0), ownerId: fruit.id },
-      4.0, { maxTension: 600 },
-    );
-  }, [heavyId, -24, anchorY, 22]);
+  await g.call('rope.tieFruit', heavyId, -24, anchorY, 22, 4.0, 600);
   await g.wait(2.5);
   const snapped = (await g.state()).ropes.count;
   t.eq(snapped, 0, 'a rope past its rated tension snaps');
+
+  // --- a rope follows the fruit it is tied to, on and off the branch.
+  //
+  // The first rope system tied a line fired at an apple on the tree to a
+  // point in the air where the apple's surface was; when the apple came
+  // down the rope stayed up. Ends are resolved by fruit id every step now, so
+  // the same rope holds the same apple before and after the stem breaks.
+  await g.call('rope.clear');
+  await g.call('fruit.despawnAllFree');
+  const onTree = await g.call('fruit.nearest', -24, 10, 22, 'apple', 'attached');
+  t.ok(onTree, 'an apple is still on a branch');
+  if (onTree) {
+    const [fx, fy, fz] = onTree.pos;
+    // Anchor a short rope from well above the apple, then break the stem.
+    const followId = await g.call('rope.tieFruit', onTree.id, fx, fy + 3.0, fz, 2.4, 1e9);
+    await g.wait(0.2);
+    const before = (await g.state()).ropes.list.find((r) => r.id === followId);
+    t.ok(before && before.bk === 'fruit', 'the rope is tied to the fruit, not to a point in the air');
+    await g.call('fruit.detach', onTree.id);
+    await g.wait(2.0);
+    const after = (await g.state()).ropes.list.find((r) => r.id === followId);
+    const fallen = await g.call('fruit.info', onTree.id);
+    t.ok(after, 'the rope survives the stem breaking');
+    t.ok(fallen && fallen.state === 'free', 'and the apple is loose');
+    if (fallen) {
+      t.lt(fy + 3.0 - fallen.pos[1], 3.6, 'and hangs from the rope instead of hitting the ground');
+      t.note(`apple hangs ${(fy + 3.0 - fallen.pos[1]).toFixed(2)} m below a 2.4 m rope`);
+    }
+  }
 
   await g.call('rope.clear');
   await g.call('fruit.despawnAllFree');

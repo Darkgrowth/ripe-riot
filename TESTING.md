@@ -20,6 +20,9 @@ node tools/harness/startup-check.mjs # what the player sees when they press play
 node tools/harness/carry-check.mjs   # how much of the frame a carried fruit takes
 node tools/harness/net-check.mjs     # the catch net's four phases, and the King Melon from the ravine
 node tools/harness/hud-check.mjs     # the DOM overlay, which no canvas shot contains
+node tools/harness/playthrough.mjs   # a fresh save played with a stopwatch: the first hour as a timeline
+node tools/harness/geo-probe.mjs     # heights and slopes along a candidate route, before authoring it
+node tools/harness/rope-probe.mjs    # two clients winching one melon: what the host's rope solver sees, per step
 node tools/harness/tour.mjs          # one contact sheet of every landmark
 node tools/harness/route.mjs         # the six first-person views of the main route
 node tools/harness/detail.mjs        # three close-range frames: deck, shop, fruit
@@ -127,9 +130,22 @@ visible by reading the code that produced them.
 | `progression` | discovery, records, rare variants, shop purchase and tier gating, Puff Melon inflation and drift, Vinebomb launch |
 | `legendary-king-melon` | four vines hold it still, gating on the rope gun, tethering the way a player does it (a rope fired at the hanging melon is tied to its body and is a leash until its near end is pinned, at which point it is a tether), the cut gate refusing a third cut on one tether by name, each cut, the 20 m drop, recovery to the pad, payout, and resetting for another attempt |
 | `carry` | the carry classification table; the local copy leaving the world batch when picked up and returning when dropped; the tool stowing itself while the hands are full; a Puff Melon inflating from medium to large in hand and then leaving by itself past 1.10 m; oversized fruit refused, shoved, and prompted for; the aim highlight lighting the right instance |
+| `backcountry` | the three back-country fruit as rules: they grow, and only beyond the orchard; the ridge rolls variants; a Boulder Plum weighs what it should, is a heavy haul, rolls a long way down the hill farm's shoulder without bruising and flattens a player it rolls into; a Gluefruit sticks where it lands as a fixed body, is peeled off by a shove, holds the hands after a deliberate pick so a throw goes nowhere until it lets go, and one that hits you is in your hands for longer; a Spikefruit offers no pick, pricks whoever tries, goes into the basket through the net, sells itself on the pad and is recorded |
 
-Current status: **9/9 scenarios, 266 checks** plus **103/103 multiplayer checks**.
-Typecheck and production build are clean.
+The `ropes` scenario also proves a rope tied to an apple on the branch is
+tied to the APPLE: cut the stem and it hangs from the line. The
+`legendary-king-melon` scenario now runs to the payout and past it — a landed
+melon leaves DROP on its own, completes, unlocks Gale Grove, raises the flag
+on the boat, and the unlock survives a save round-trip and a reset.
+
+Current status: **10/10 scenarios, 322 checks** plus **127/127 multiplayer
+checks**. Typecheck and production build are clean.
+
+Isolation between scenarios now also resets discovery points, the harvest
+book and the progression flags. The `backcountry` scenario found three new
+species and raised the discovery tier for every scenario after it, which
+silently skipped the shed's tier-gating check in `progression` with a polite
+note instead of a failure.
 
 ## The multiplayer suite tests authority, not connectivity
 
@@ -179,6 +195,17 @@ returning peer joins as a client (the incumbent keeps the session), sees the
 legendary completed, the payout in the pot exactly once, and the tier it
 earned.
 
+Then the shared ropes: a client's rope gun rope exists on the host tied to
+the same fruit by id with the client's own player on the near end, and the
+client's copy is acknowledged rather than mirrored; the host ropes the same
+fruit and both peers see two ropes, the host's as a mirror on the client;
+both winch and the melon moves on the host with the client's winch applied to
+the host's copy of its rope; the client lets go and only its mirror of the
+host's rope remains; a yank past the rating parts the rope on the host and
+the client's copy goes; a client that disconnects while tethered takes its
+rope with it and leaves the host's; and a late joiner sees the host's active
+rope as a mirror, which goes when the host clears it.
+
 Two of the three failures on the first run were the test measuring the wrong
 thing. The third was real, and worth writing down: **the range check treated
 every detach as hand reach.** Because the gate sits at the bottom of
@@ -186,6 +213,19 @@ every detach as hand reach.** Because the gate sits at the bottom of
 silently broken the shaker (11 m), the rope gun and the air cannon in
 multiplayer while the hand kept working perfectly — which is exactly the sort
 of thing that ships.
+
+## Playing it with a stopwatch
+
+`playthrough.mjs` plays a fresh save the way a new player would and prints a
+timeline. It is the instrument for pacing the way `feel.mjs` is the
+instrument for feel: it prints, it never asserts, and you read it before and
+after a price or a habitat changes. Every pick, sale and purchase goes through
+the same entry points the keys use; only walking is charged by distance at
+walk speed plus a look-around allowance, because a script cannot honestly
+path around trees. The game itself records the first time of every milestone
+(`progress.milestones` in the probe), so the second half of the report is
+what the game saw rather than what the script claims. The current timeline
+is at the end of this file.
 
 ## The camera is a thing under test
 
@@ -335,6 +375,25 @@ three others.
   button, drop an apple, wait — would have passed a net with an infinite
   radius. The timing scenario that replaced it swings early on purpose and
   asserts the miss.
+- A Puff Melon that inflated in the hands beside an apple tree was handed
+  back into the canopy and sat there touching two trunk colliders and two
+  attached apples' static colliders at once: a cage of fixed shapes the
+  solver cannot push a ball out of, at 78% of the frame, going nowhere. The
+  escape now checks each candidate spot with a ray AND a sphere overlap,
+  because the ray misses thin trunks beside its line and the overlap only
+  sees colliders with an owner.
+- A King Melon that had landed stayed in the DROP phase, tethers on, for as
+  long as anything kept it moving — a team shoving it, a swing on a low
+  tether, the scenario's own nudges. It needed a full second of stillness.
+  Down is down now: a grounded melon is in RECOVER within eight seconds
+  regardless, and the scenario waits for the phase instead of racing it.
+- Two winches from opposite sides of a 22 kg melon part both lines at
+  4.2 kN. That one is correct — a grounded player is held by the
+  controller's 62 m/s² of ground acceleration, so it is a tug of war the
+  ropes lose — but the first version of the shared-rope check called it
+  "pulling together" and then measured nothing. `rope-probe.mjs` prints what
+  the host's solver sees, step by step, for the next time a rope does
+  something surprising.
 - `fruit:impact.onPlayer` is never true. Rapier reports no contact-force event
   for the kinematic player capsule, which the ragdoll's own detector documents
   and works around — but the camera thump was gated on that flag, so being hit
@@ -349,6 +408,36 @@ three others.
   same order; the first divergence would have produced a second copy of every
   replicated fruit, and the check that "a fruit spawned on the host appears on
   the client" would still have passed.
+
+## The first hour, as measured on 2026-09-06
+
+`playthrough.mjs` on a fresh save, after the first-chapter pass. Game time;
+the script picks at 0.35 s an apple and walks at 5.4 m/s, so a person is two
+to three times slower at everything but the walking. Read it as a floor.
+
+| Game time | What happened |
+|---|---|
+| 0:02 | spawn on the dock; King Melon and shed in the opening frame |
+| 0:10 | WANTED poster and island board read at the shed |
+| 0:54 | first basket of nine apples |
+| 1:03 | first physics failure: a watermelon dropped off a ladder, Bruised |
+| 1:19 | first sale, $182 |
+| 2:08 | first purchase: Catch Net, after two orchard runs |
+| 2:21 | first knockdown: a coconut from the palm by the shed |
+| 3:19 | Tree Shaker |
+| 4:19 | beach haul sold; the King Melon explained on the way past the waterfall |
+| 4:39 | first strange fruit (Gluefruit, Puff Melon) at the waterfall |
+| 6:32 | Rope Gun; the King Melon opens to TETHER |
+| 7:04 | Boulder Plum found on the hill farm |
+| 7:28 | two tethers on, four vines cut |
+| 7:34 | King Melon complete, $9,500 |
+| 7:38 | GALE GROVE UNLOCKED |
+
+Before the price change the Rope Gun landed at 12:20 behind eight minutes of
+beach runs; the script's shake-and-chase strategy was losing half its
+coconuts to the sea at about $40 a trip, and the gun was $720. It is $650 and
+the script climbs the palms now, which is what a player who met the palm by
+the shed has already learned to do.
 
 ## Not yet automated
 

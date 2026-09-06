@@ -37,8 +37,8 @@ strand you, cannot lose your basket, and has a divergence guard that stands you
 back up if the physics ever misbehaves.
 
 ### Fruit
-Data plus reusable traits, never a subclass per species. Seven species in the
-slice:
+Data plus reusable traits, never a subclass per species. Ten species on
+Sunpatch, arranged across the island as an escalation (see *Island 1*):
 
 | Fruit | Size | Mass | The rule it teaches |
 |---|---|---|---|
@@ -49,10 +49,37 @@ slice:
 | Watermelon | 0.80 m | 22 kg | detaching is the easy half |
 | Puff Melon | 0.56 m | 1.9 kg | it inflates ×3.1 and the wind takes it |
 | Vinebomb | 0.48 m | 3.6 kg | the vine is a catapult |
+| **Boulder Plum** | 0.50 m | 48 kg | once it is rolling, stopping it is the harvest |
+| **Gluefruit** | 0.30 m | 1.4 kg | it stops dead where it lands — and on whom |
+| **Spikefruit** | 0.42 m | 2.9 kg | your hands are not a tool; the net is |
+
+The three back-country fruit are each the opposite of something the first
+seven taught, and each is one rule stated physically:
+
+- **Boulder Plum.** An apple you can pick up, except it weighs forty-eight
+  kilos, sits on the edge of what two hands will lift (the big ones are a
+  shove-and-rope job), and has almost no rolling resistance. Let go on the
+  hill farm it goes all the way down; into the sea if nobody stops it. It
+  does not bruise. It flattens whoever it meets. Rope it to rock and pay the
+  rope out to walk it down; the net only deflects it; the cannon moves it
+  because the blast scales with mass. It is the King Melon in miniature.
+- **Gluefruit.** Lands and becomes a fixed body, wherever that is: the ground,
+  a cliff face, the sell pad (where it sells). A hand peels it off, a shove
+  frees it, a rope pulled taut frees it, a blast frees it. Picked up on
+  purpose it holds the hands for 1.6 s; if it HITS you it holds them for
+  four, you are carrying it whether you like it or not, and whatever you were
+  holding is on the grass. Throwing one at a teammate is a legal move. The
+  net's hoop is not a hand, so netted gluefruit goes straight to the basket.
+- **Spikefruit.** Cannot be touched. Reaching for it — E, or leaning on it —
+  pricks you: a shove backwards, the hurt vignette, "OW", and the one line
+  that names the tools that work. It does not roll; it lands and waits. The
+  net scoops it off the ground into the basket, a rope tows it, the cannon
+  fires it at the pad. The host refuses any hand claim on one that did not
+  come through a net.
 
 Traits in the registry: `heavy`, `roller`, `splitter`, `inflate`, `elastic`,
-`unstable`, `volatile`, `sticky`. Later islands' fruit (Magnapple, Ice Plum,
-Gravity Gourd, Phase Berry) are trait work, not new systems.
+`unstable`, `volatile`, `sticky`, `spiked`. Later islands' fruit (Magnapple,
+Ice Plum, Gravity Gourd, Phase Berry) are trait work, not new systems.
 
 **Quality** is Perfect / Good / Bruised / Damaged / Ruined, driven by velocity
 actually lost on impact against a per-species tolerance. Deliberately generous:
@@ -110,13 +137,39 @@ to shout at a teammate to bring the other thing.
   flails. The ring glows as something catchable closes on it, which is the
   cue. Right-click lays a ground net that softens whatever lands in it
 - **Tree Shaker** ($380) — one trunk hard, or everything nearby gently
-- **Rope Gun** ($720, tier 1) — tether, pin the near end, winch
+- **Rope Gun** ($650, tier 1) — tether, pin the near end, winch
 - **Air Cannon** ($1,450, tier 2) — charged blast that launches fruit, shakes
   trees and shoves you backwards; right-click fires down to launch yourself
 
 Tools combine systemically rather than by script. A Vinebomb fired by an air
 cannon into a catch net scores three stunt bonuses without a line of code naming
 that combination.
+
+**Ropes are shared state.** A rope fired by anyone exists for everyone — the
+host owns it, a client's rope gun sends a request, and every other peer draws
+it. Four people can rope one watermelon, and FOUR-WAY TETHER is a stunt a
+team can actually earn. A rope tied to a fruit follows it by identity: rope
+an apple on the branch, cut the stem, and the apple hangs from your line
+rather than falling past a rope that stayed tied to the air.
+
+### Progression: the first hour
+
+Nobody is handed the toolbox. The shed sells in an order the island teaches:
+
+| Step | What you have | What it opens | Roughly |
+|---|---|---|---|
+| Start | hands, basket, ladder | apples and oranges in the orchard; a coconut palm by the shed | 0 min |
+| Catch Net $260 | swing, ground net | coconuts caught rather than worn; Spikefruit and Gluefruit handled safely | ~5–8 min |
+| Tree Shaker $380 | shake | palms and whole trees come down at once | ~10 min |
+| Rope Gun $650 · tier 1 | tether, pin, winch | heavy fruit lowered under control; the King Melon opens | ~8–15 min |
+| Air Cannon $1,450 · tier 2 | blast, self-launch | fruit fired at the pad from the hill; deliberate stunts | ~30 min |
+
+Tier gates are spelled out in the shed as what they are — "FIND 2 MORE KINDS
+OF FRUIT" — and the shed's header says what to save for next. Every purchase
+is followed, a beat later, by one line that turns the tool into a plan ("TRY
+THIS: the coconut palms"). The two DECOR palms flanking the walk to the shed
+carry coconuts, so the first ladder, the first heavy fruit and the first
+person flattened by one all happen within sight of the counter.
 
 ### Stunt harvesting
 Scored from the physical record every fruit already keeps — distance travelled,
@@ -142,19 +195,50 @@ about a coconut.
 ### Island 1 — Sunpatch
 Compact authored island, ~260 m across. Dock (spawn), Shop Shed, Old Orchard,
 Palm Beach, Waterfall Basin, Hill Farm, Cave Orchard, High Ridge, The Ravine.
-113 plants, 458 fruit at start, regrowing on a 95–190 s timer.
+~130 plants, ~520 fruit at start, regrowing on a 95–190 s timer.
+
+The geography is the difficulty curve. Two worn tracks are drawn on the
+ground itself: dock → shed → orchard, and orchard → up the hill farm → the
+ravine rim. Fingerposts at the shed, the orchard's back fence and the top of
+the hill name what is ahead. Fruit gets stranger with distance and height:
+
+| Where | What grows | What it asks for |
+|---|---|---|
+| shed, orchard | apples, oranges, watermelons, two coconut palms | hands, ladder |
+| palm beach | coconuts, bananas | net, shaker |
+| waterfall basin | bananas, Puff Melons, Gluefruit, Vinebombs | net, wind sense |
+| hill farm | watermelons, apples, Puff Melons, Boulder Plums | rope gun |
+| cave orchard | coconuts, oranges, Spikefruit, Gluefruit | net |
+| high ridge | Puff Melons, Boulder Plums, Spikefruit | boots, nerve |
+| the ravine | the King Melon | everything |
+
+The far corners pay better: the rare-variant roll is ×1.3 at the waterfall,
+×1.4 on the hill farm, ×2 in the cave orchard and ×2.6 on the ridge. Golden
+anything is a reason to climb.
 
 ### Legendary — THE KING MELON
 Visible from most of the island from the first minute, which is the point.
-Explicitly not a health bar; every phase is a physical problem.
+The WANTED poster on the shed gable says what it is and what it pays
+before the first apple is sold; the first time the walk brings you within
+seventy metres, the game says the rest: 2,600 kg, four vines, and whether you
+own the one tool that opens it. Explicitly not a health bar; every phase is a
+physical problem.
 
-1. **PREPARE** — you need a rope gun
-2. **TETHER** — restrain it; each rope bleeds off the fall
+1. **PREPARE** — you need a rope gun; the shed sells one at tier 1
+2. **TETHER** — rope it, then pin the rope to rock. WHICH rock matters and
+   the toast says so: a rope anchored on the towers above the melon can lower
+   it; a rope anchored below can only swing it. Both count toward the gate.
 3. **DETACH** — cut four vines; each cut shifts the load onto the rest
-4. **DROP** — 2,600 kg falls 20 m at 20 m/s. Enough tethers and it lowers under
-   control; too few and they part
-5. **RECOVER** — get it to the extraction pad, downhill along the ravine
+4. **DROP** — 2,600 kg falls. With enough tethers they are winched taut at
+   the moment of release and pay out at 3 m/s: high anchors lower it, low
+   anchors drag it toward the rim with whoever is standing in the way. Too
+   few and they part.
+5. **RECOVER** — down is down: once it is grounded the ropes are cut loose
+   and it is pushed, roped and winched to the extraction pad at the bottom
+   of the notch
 6. **PAYOUT** — $9,500 plus a bonus per tether used
+7. **GALE GROVE UNLOCKED** — a beat after the payout banner. The island board
+   at the shed changes, a pennant goes up on the boat, and the save remembers.
 
 Solo runs the same problem on a reduced tether requirement, not a separate
 script. Failure is soft: if it goes in the sea it regrows.
@@ -165,14 +249,22 @@ Knocked out → get up. Fruit destroyed → lose its value, it regrows. Equipmen
 never lost. No permanent inventory wipes, no permanent team-killing, no
 griefing that deletes progression.
 
-## First 30 minutes (target)
+## The first hour (measured)
 
-0:00 arrive by terrible boat, read a sign that says PICK FRUIT / SELL FRUIT /
-BUY BETTER STUFF · 0:02 pick apples · 0:04 sell them · 0:05 buy something ·
-0:08 reach the palms, someone gets flattened · 0:12 find a watermelon, drop it,
-learn what quality means · 0:15 buy the catch net · 0:18 a Puff Melon inflates
-and leaves · 0:20 chaotic chase, mid-air recovery, STUNT BONUS · 0:25 see the
-King Melon over the ravine and understand the rest of the game.
+`tools/harness/playthrough.mjs` plays a fresh save with a stopwatch: every
+pick, sale and purchase goes through the same entry points the keys use, and
+only walking is charged by distance. The targets were first fun interaction
+under five minutes, first meaningful purchase under ten, first weird fruit
+under fifteen, the King Melon aspirational from the start and achievable
+without a grind. See TESTING.md for the current timeline; the design intent
+in one line each:
+
+0:00 arrive, King Melon and shed in the opening frame · 0:01 the WANTED poster
+· 0:02 apples · first watermelon dropped off a ladder · first sale · a coconut
+from the palm by the shed, on somebody · the Catch Net · the shaker and the
+beach · the waterfall and the first strange fruit · the Rope Gun and the
+melon opening · up the hill track, the Boulder Plum, the melon explained ·
+two tethers, four cuts, the drop, the haul, $9,500 · GALE GROVE UNLOCKED.
 
 ## Deferred (designed, not built)
 

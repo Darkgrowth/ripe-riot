@@ -96,6 +96,8 @@ export class UIManager implements System {
     });
 
     this.renderSlots();
+    // A restored save changed the money before this listener existed.
+    if (g.has('economy')) this.onMoney(g.get<Economy>('economy').money, 0);
   }
 
   // ---- persistent ---------------------------------------------------------
@@ -322,7 +324,11 @@ export class UIManager implements System {
       // look prompt says so — and putting them down never was: Q and the stow
       // click existed from the first build and appeared nowhere on screen.
       const canStow = f.mass <= basket.maxItemMass && basket.items.length < basket.capacity;
-      parts.push(`<span class="keys">${canStow ? '<b>RMB</b> basket · ' : ''}<b>LMB</b> throw · <b>Q</b> drop</span>`);
+      if (f.stuckHands > 0) {
+        parts.push(`<span class="keys"><b>STUCK</b> ${f.stuckHands.toFixed(1)} s</span>`);
+      } else {
+        parts.push(`<span class="keys">${canStow ? '<b>RMB</b> basket · ' : ''}<b>LMB</b> throw · <b>Q</b> drop</span>`);
+      }
     }
     if (basket.items.length) {
       parts.push(`🧺 ${basket.items.length}/${basket.capacity} · $${inter.basketValue()}`);

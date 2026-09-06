@@ -85,6 +85,12 @@ function enrich(g) {
       await g.call('fruit.despawnAllFree').catch(() => {});
       await g.call('basket.clear').catch(() => {});
       await g.call('economy.set', 0).catch(() => {});
+      // Discovery is progression, and progression leaked: a scenario that
+      // found three new species raised the tier for every scenario after it,
+      // which quietly skipped the shed's tier-gating check.
+      await g.call('economy.resetDiscovery').catch(() => {});
+      await g.call('book.reset').catch(() => {});
+      await g.call('progress.reset').catch(() => {});
       await g.call('wind.set', 1, 0.4, 2.2).catch(() => {});
       await g.attachCam();
       // Park on the flat orchard terrace and let the player settle.

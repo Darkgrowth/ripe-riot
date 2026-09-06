@@ -1,25 +1,57 @@
 import * as THREE from 'three';
-import RAPIER from '@dimforge/rapier3d-compat';
 import type { Game, System } from '@/core/Game';
 import type { RBody } from '@/physics/PhysicsWorld';
+import type { FruitSystem } from '@/fruit/FruitSystem';
 import { Palette } from '@/render/Palette';
 import { clamp } from '@/core/MathUtils';
 
+/**
+ * What a rope end is tied to.
+ *
+ *   world      a fixed point in space (a pin on rock, a vine anchor)
+ *   fruit      a fruit, by id, whether it is on the branch or loose
+ *   legendary  the King Melon's body
+ *   player     THIS peer's own player
+ *   peer       another peer's player, known only by reported position
+ *
+ * Ends are resolved from these every step rather than from cached bodies.
+ * Two reasons. Holding a Rapier body across its removal calls into freed WASM
+ * memory and poisons every later physics call — the first rope system learned
+ * that the hard way. And a fruit changes bodies during its life: a static
+ * collider on the branch, a dynamic one once it is loose, none in someone's
+ * hands. A rope fired at an apple on the tree used to stay tied to a point in
+ * the air when the apple came down; resolving by fruit id follows it.
+ */
+export type RopeEndKind = 'world' | 'fruit' | 'legendary' | 'player' | 'peer';
+
 export interface RopeEnd {
-  /** null means "pinned to the world at `point`". */
-  body: RBody | null;
-  /**
-   * Rapier handle for `body`. Bodies are re-resolved from this every step:
-   * holding a RigidBody across its removal (a tethered fruit gets sold, a
-   * plant is despawned) means calling into freed WASM memory, which surfaces
-   * as "recursive use of an object" from wasm-bindgen and poisons every
-   * subsequent physics call.
-   */
-  handle?: number;
-  /** Anchor in the body's local frame, or world space if body is null. */
+  kind: RopeEndKind;
+  /** World point for 'world'; an offset in the target's local frame otherwise. */
   local: THREE.Vector3;
-  /** Which fruit/entity this end is holding, for gameplay queries. */
+  /** Gameplay id of the thing held: fruit id, legendary id, local player id, else -1. */
   ownerId: number;
+  /** Transport id of the player, for 'peer' ends. */
+  peer?: string;
+}
+
+/**
+ * How a rope is known on the wire. Ropes are identified by WHO MADE THEM and
+ * THEIR OWN ID for it — `(owner, cid)` — so a peer never has to re-key a rope
+ * it has already handed to its tools. The host's own ropes use its rope ids
+ * as cids. A `mirror` is this peer's cosmetic copy of a rope some other peer
+ * owns; it is never solved against anything this peer simulates except its
+ * own player, and it is never reported back.
+ */
+export interface RopeNetId {
+  owner: string;
+  cid: number;
+  mirror: boolean;
+  /** Client: the host has acknowledged this rope, so its absence from a
+   *  snapshot means it is gone rather than not yet arrived. */
+  acked: boolean;
+  /** Game time it was made, so a just-fired rope survives the snapshot that
+   *  crossed its request in the post. */
+  bornAt: number;
 }
 
 export interface Rope {
@@ -28,7 +60,6 @@ export interface Rope {
   b: RopeEnd;
   length: number;
   restLength: number;
-  joint: RAPIER.ImpulseJoint | null;
   /** Ropes snap above this tension so nothing can be trivially trivialised. */
   maxTension: number;
   tension: number;
@@ -44,7 +75,7 @@ export interface Rope {
   reelRate: number;
   minLength: number;
   broken: boolean;
-  /** Set for ropes the player is personally holding. */
+  /** One end is in somebody's hands (this player's or a remote one's). */
   heldByPlayer: boolean;
   color: THREE.Color;
   /** Drawn radius. Vines are much thicker than rope. */
@@ -57,6 +88,41 @@ export interface Rope {
   creak: number;
   /** Seconds until this rope may report another tug on the player. */
   tugCool: number;
+  /** Travels to other peers. Vines do not: both peers grow them from the seed. */
+  shared: boolean;
+  net?: RopeNetId;
+}
+
+/** What the rope system needs from the network layer. Null in single player. */
+export interface RopeNet {
+  readonly authoritative: boolean;
+  readonly connected: boolean;
+  readonly me: string;
+  /** Where a remote player's hands are. False if that peer is gone. */
+  peerHands(peer: string, out: THREE.Vector3): boolean;
+  requestRopeCreate(rope: Rope): void;
+  requestRopeRelease(cid: number): void;
+  requestRopeReel(cid: number, rate: number): void;
+}
+
+export type RopeGone = 'released' | 'snapped' | 'gone' | 'cut';
+
+/** The resolved state of one end, for this step. */
+interface EndState {
+  alive: boolean;
+  pos: THREE.Vector3;
+  vel: THREE.Vector3;
+  /** A dynamic body this peer simulates and may push. */
+  body: RBody | null;
+  /** The local player: pushed through the controller, not through Rapier. */
+  player: boolean;
+  /** For the impulse split. 0 is immovable. A movable thing simulated by
+   *  ANOTHER peer still has its real inverse mass here, so this peer applies
+   *  only its own share of the correction to the end it owns. */
+  invMass: number;
+  /** A gluefruit stuck fast: immovable until pulled hard enough. */
+  stuck: boolean;
+  fruitId: number;
 }
 
 const SEGMENTS = 12;
@@ -66,6 +132,17 @@ const _mid = new THREE.Vector3();
 const _q = new THREE.Quaternion();
 const _n = new THREE.Vector3();
 const _imp = new THREE.Vector3();
+const _v3 = new THREE.Vector3();
+const _pull = new THREE.Vector3();
+const _ea: EndState = newEndState();
+const _eb: EndState = newEndState();
+
+function newEndState(): EndState {
+  return {
+    alive: false, pos: new THREE.Vector3(), vel: new THREE.Vector3(), body: null,
+    player: false, invMass: 0, stuck: false, fruitId: -1,
+  };
+}
 
 /**
  * Ropes as maximum-distance constraints rather than chains of jointed segments.
@@ -75,18 +152,36 @@ const _imp = new THREE.Vector3();
  * its most interesting (a two-tonne melon on four tethers). One constraint plus
  * a drawn catenary gives the same gameplay — goes taut, transmits force, can be
  * winched, can snap — and stays stable under load.
+ *
+ * In co-op every rope is shared state and the HOST owns it. A client's rope
+ * gun creates a local rope and asks; the host builds the same rope, and from
+ * then on the client's copy follows the host's length and lifetime. What the
+ * client still solves locally is the one end it owns — its own player — so a
+ * leash tugs on the frame it goes taut rather than a round trip later. The
+ * other end is a stand-in with the real thing's mass, so the client's player
+ * gets exactly the share of the correction it would get if both bodies were
+ * here, and the host applies the other share to the fruit.
  */
 export class RopeSystem implements System {
   readonly name = 'ropes';
   private g!: Game;
+  private fruitSys!: FruitSystem;
+  private legendary: { body: RBody | null; id: number; authoritative: boolean } | null = null;
   ropes = new Map<number, Rope>();
   private group = new THREE.Group();
   private meshes = new Map<number, THREE.Mesh>();
   private material!: THREE.MeshStandardMaterial;
   private materials = new Map<string, THREE.MeshStandardMaterial>();
+  /** Installed by MultiplayerAuthority. Null in single player. */
+  net: RopeNet | null = null;
+  /** Host: told whenever a shared rope leaves the world, and why. */
+  onRemoved: ((rope: Rope, why: RopeGone) => void) | null = null;
+  /** Last reel rate sent to the host per rope, for throttling. */
+  private sentReel = new Map<number, { rate: number; at: number }>();
 
   init(g: Game): void {
     this.g = g;
+    this.fruitSys = g.get<FruitSystem>('fruit');
     this.group.name = 'Ropes';
     g.renderer.scene.add(this.group);
     this.material = new THREE.MeshStandardMaterial({
@@ -96,60 +191,112 @@ export class RopeSystem implements System {
 
     g.debug?.addProbe('ropes', () => ({
       count: this.ropes.size,
+      shared: [...this.ropes.values()].filter((r) => r.shared).length,
+      mirrors: [...this.ropes.values()].filter((r) => r.net?.mirror).length,
       taut: [...this.ropes.values()].filter((r) => r.tension > 0.05).length,
       list: [...this.ropes.values()].map((r) => {
         this.endPoint(r.a, _a); this.endPoint(r.b, _b);
         return {
           id: r.id, len: +r.length.toFixed(2), dist: +_a.distanceTo(_b).toFixed(2),
           tension: +r.tension.toFixed(0), a: r.a.ownerId, b: r.b.ownerId,
+          ak: r.a.kind, bk: r.b.kind, held: r.heldByPlayer,
+          owner: r.net?.owner ?? null, cid: r.net?.cid ?? null,
+          mirror: r.net?.mirror ?? false, acked: r.net?.acked ?? null,
         };
       }),
     }));
     g.debug?.addAction('rope.count', () => this.ropes.size);
     g.debug?.addAction('rope.clear', () => { const n = this.ropes.size; this.clear(); return n; });
+    /** Ropes whose ends are at least one of `kinds`, by id, for the suites. */
+    g.debug?.addAction('rope.on', (ownerId: number) => this.attachedTo(ownerId).map((r) => r.id));
+    /** Tie a fruit to a world point, the way the debug and the tests do. */
+    g.debug?.addAction('rope.tieFruit', (fruitId: number, x: number, y: number, z: number,
+      len: number, maxTension = 1e9) => {
+      const r = this.create(
+        { kind: 'world', local: new THREE.Vector3(x, y, z), ownerId: -1 },
+        { kind: 'fruit', local: new THREE.Vector3(0, 0, 0), ownerId: fruitId },
+        len, { maxTension },
+      );
+      return r.id;
+    });
+    g.debug?.addAction('rope.reel', (id: number, rate: number) => { this.setReel(id, rate); return rate; });
+    g.debug?.addAction('rope.release', (id: number) => { this.remove(id, 'released'); return this.ropes.size; });
   }
 
+  private get leg(): { body: RBody | null; id: number; authoritative: boolean } | null {
+    if (!this.legendary && this.g.has('legendary')) {
+      this.legendary = this.g.get<{ body: RBody | null; id: number; authoritative: boolean }>('legendary');
+    }
+    return this.legendary;
+  }
+
+  /** True when this peer decides rope lifetimes. Always true in single player. */
+  get authoritative(): boolean { return !this.net || this.net.authoritative; }
+  private get isClient(): boolean { return !!this.net && this.net.connected && !this.net.authoritative; }
+
   /**
-   * Create a rope between two ends. Either end may be a world point (body null),
-   * which is how a rope gets pinned to terrain or a cliff.
+   * Create a rope between two ends.
+   *
+   * Shared ropes (the default) exist on every peer: on the host directly, on
+   * a client as a local copy plus a request the host answers by building its
+   * own. Pass `shared: false` for things every peer grows for itself, like
+   * the legendary's vines.
    */
   create(a: RopeEnd, b: RopeEnd, length: number, opts: {
-    maxTension?: number; minLength?: number; color?: THREE.Color; heldByPlayer?: boolean;
-    radius?: number; cuttable?: boolean;
+    maxTension?: number; minLength?: number; color?: THREE.Color;
+    radius?: number; cuttable?: boolean; shared?: boolean; net?: RopeNetId;
   } = {}): Rope {
     const id = this.g.newId();
-    const aBody = a.body ?? this.pin(a.local);
-    const bBody = b.body ?? this.pin(b.local);
-    const aLocal = a.body ? a.local : ZERO;
-    const bLocal = b.body ? b.local : ZERO;
-
+    const shared = opts.shared ?? true;
     const rope: Rope = {
       id,
-      a: { body: aBody, handle: aBody.handle, local: aLocal.clone(), ownerId: a.ownerId },
-      b: { body: bBody, handle: bBody.handle, local: bLocal.clone(), ownerId: b.ownerId },
-      length, restLength: length, joint: null,
+      a: { kind: a.kind, local: a.local.clone(), ownerId: a.ownerId, peer: a.peer },
+      b: { kind: b.kind, local: b.local.clone(), ownerId: b.ownerId, peer: b.peer },
+      length, restLength: length,
       maxTension: opts.maxTension ?? 2600,
       tension: 0,
       tensionAvg: 0,
       reelRate: 0,
       minLength: opts.minLength ?? 0.8,
       broken: false,
-      heldByPlayer: opts.heldByPlayer ?? false,
+      heldByPlayer: isHand(a) || isHand(b),
       color: opts.color ?? Palette.rope,
       radius: opts.radius ?? 0.045,
       cuttable: opts.cuttable ?? false,
       taut: false,
       creak: 0,
       tugCool: 0,
+      shared,
+      net: opts.net,
     };
+    if (shared && !rope.net && this.net?.connected) {
+      rope.net = {
+        owner: this.net.me, cid: id, mirror: false,
+        acked: this.net.authoritative, bornAt: this.g.clock.elapsed,
+      };
+    }
     this.ropes.set(id, rope);
     this.makeMesh(rope);
+    // A rope on a fruit restrains it: a Vinebomb on a line does not launch as
+    // hard. Host-side state, so only the peer that owns the fruit writes it.
+    if (this.fruitSys.authoritative) {
+      for (const end of [a, b]) {
+        if (end.kind !== 'fruit') continue;
+        const f = this.fruitSys.get(end.ownerId);
+        if (f) f.restraint = Math.min(0.95, f.restraint + 0.42);
+      }
+    }
     this.g.bus.emit('rope:attached', { ropeId: id, aId: a.ownerId, bId: b.ownerId });
+    if (rope.net && !rope.net.mirror && this.isClient) this.net!.requestRopeCreate(rope);
     return rope;
   }
 
-  private pin(worldPoint: THREE.Vector3): RBody {
-    return this.g.physics.createFixed(worldPoint);
+  /** Client: a cosmetic copy of a rope some other peer owns. */
+  createMirror(owner: string, cid: number, a: RopeEnd, b: RopeEnd, length: number): Rope {
+    return this.create(a, b, length, {
+      maxTension: 1e9,
+      net: { owner, cid, mirror: true, acked: true, bornAt: this.g.clock.elapsed },
+    });
   }
 
   /** Materials are cached per colour: a handful at most, all flat-shaded. */
@@ -182,7 +329,21 @@ export class RopeSystem implements System {
   /** Change a rope's length over time. Negative reels in. */
   setReel(id: number, rate: number): void {
     const r = this.ropes.get(id);
-    if (r) r.reelRate = rate;
+    if (!r) return;
+    r.reelRate = rate;
+    // A client winches its own copy for feel and tells the host, which winches
+    // the real one. The ramp calls this every step; the host does not need
+    // sixty messages a second to follow a number that moves smoothly.
+    if (r.net && !r.net.mirror && this.isClient) {
+      const last = this.sentReel.get(id);
+      const now = this.g.clock.elapsed;
+      const changed = !last || Math.abs(last.rate - rate) > 0.2
+        || (rate === 0) !== (last.rate === 0) || now - last.at > 0.5;
+      if (changed) {
+        this.sentReel.set(id, { rate, at: now });
+        this.net!.requestRopeReel(r.net.cid, rate);
+      }
+    }
   }
 
   setLength(id: number, length: number): void {
@@ -191,26 +352,38 @@ export class RopeSystem implements System {
     r.length = clamp(length, r.minLength, r.restLength * 3);
   }
 
-  remove(id: number): void {
+  /** Client: the host's word on how long one of our ropes is. */
+  followLength(id: number, length: number): void {
     const r = this.ropes.get(id);
     if (!r) return;
-    // Pinned ends own a fixed body each; clean those up too, if still present.
-    const world = this.g.physics.world;
-    if (r.a.ownerId === -1 && r.a.handle !== undefined) {
-      const pinA = world.getRigidBody(r.a.handle);
-      if (pinA) this.g.physics.removeBody(pinA);
-    }
-    if (r.b.ownerId === -1 && r.b.handle !== undefined) {
-      const pinB = world.getRigidBody(r.b.handle);
-      if (pinB) this.g.physics.removeBody(pinB);
-    }
+    // Only correct real drift: fighting the local winch every 66 ms for a
+    // few centimetres reads as a stutter on the line.
+    if (Math.abs(r.length - length) > 0.3) r.length = length;
+  }
+
+  /**
+   * Remove a rope. `why` is what the other peers hear: a snap is a sound and
+   * a toast, a release is silent.
+   */
+  remove(id: number, why: RopeGone = 'released', fromHost = false): void {
+    const r = this.ropes.get(id);
+    if (!r) return;
     const mesh = this.meshes.get(id);
     if (mesh) { this.group.remove(mesh); mesh.geometry.dispose(); this.meshes.delete(id); }
     this.ropes.delete(id);
+    this.sentReel.delete(id);
+    if (!r.net) return;
+    if (r.net.mirror) return;
+    if (this.isClient) {
+      // Ours, and we let go: the host has to let go of the real one too.
+      if (!fromHost) this.net!.requestRopeRelease(r.net.cid);
+    } else if (this.onRemoved) {
+      this.onRemoved(r, why);
+    }
   }
 
   clear(): void {
-    for (const id of [...this.ropes.keys()]) this.remove(id);
+    for (const id of [...this.ropes.keys()]) this.remove(id, 'gone');
   }
 
   /** Every rope currently attached to a given entity id. */
@@ -220,6 +393,167 @@ export class RopeSystem implements System {
       if (r.a.ownerId === ownerId || r.b.ownerId === ownerId) out.push(r);
     }
     return out;
+  }
+
+  /** A shared rope by its wire identity. */
+  findByKey(owner: string, cid: number): Rope | null {
+    for (const r of this.ropes.values()) {
+      if (r.net && r.net.owner === owner && r.net.cid === cid) return r;
+    }
+    return null;
+  }
+
+  /** Host: everything a departed peer was holding comes down with them. */
+  removeOwnedBy(peer: string): number {
+    let n = 0;
+    for (const r of [...this.ropes.values()]) {
+      if (r.net?.owner === peer || r.a.peer === peer || r.b.peer === peer) {
+        this.remove(r.id, 'gone');
+        n++;
+      }
+    }
+    return n;
+  }
+
+  /** Every cosmetic copy goes; used when leaving a session. */
+  dropMirrors(): void {
+    for (const r of [...this.ropes.values()]) if (r.net?.mirror) this.remove(r.id, 'gone', true);
+  }
+
+  /**
+   * Promoted to host: the mirrors were somebody's real ropes and now they are
+   * ours to keep, and our own ropes need no acknowledgement any more.
+   */
+  adoptMirrors(): void {
+    for (const r of this.ropes.values()) {
+      if (!r.net) continue;
+      r.net.mirror = false;
+      r.net.acked = true;
+    }
+  }
+
+  /**
+   * Leaving a session. The ropes were the host's: a client that leaves
+   * leaves them behind, all of them, because the host has already dropped
+   * its copies and a local line to a fruit nobody else agrees about is a
+   * ghost. A host that leaves keeps its own ropes — going solo is seamless
+   * for the peer that was already the authority — but they stop being
+   * anybody's on the wire until `rehome` tags them for the next session.
+   */
+  leaveSession(wasHost: boolean): void {
+    for (const r of [...this.ropes.values()]) {
+      if (!r.net) continue;
+      if (!wasHost || r.net.mirror) { this.remove(r.id, 'gone', true); continue; }
+      r.net = undefined;
+    }
+    this.sentReel.clear();
+  }
+
+  /**
+   * Joining a session with ropes already out (a host that played solo first,
+   * or one that hosted, left and came back): every shared rope without a
+   * wire identity becomes ours, and if we are a client the host is asked to
+   * build each one.
+   */
+  rehome(): void {
+    if (!this.net?.connected) return;
+    for (const r of this.ropes.values()) {
+      if (!r.shared || r.net) continue;
+      r.net = {
+        owner: this.net.me, cid: r.id, mirror: false,
+        acked: this.net.authoritative, bornAt: this.g.clock.elapsed,
+      };
+      if (this.isClient) this.net.requestRopeCreate(r);
+    }
+  }
+
+  // ---- resolution ---------------------------------------------------------
+  /**
+   * Where an end is right now, and what may be pushed to move it.
+   *
+   * The whole authority story for ropes is in the `invMass` this returns. A
+   * body this peer simulates gets its real inverse mass and gets pushed. A
+   * body some other peer simulates (a replica fruit on a client, a remote
+   * player on the host) ALSO gets its real inverse mass — so the split is the
+   * same on both machines — but nothing here pushes it; the peer that owns it
+   * applies that share. An immovable thing gets zero.
+   */
+  private resolve(end: RopeEnd, out: EndState): EndState {
+    out.alive = true;
+    out.body = null;
+    out.player = false;
+    out.invMass = 0;
+    out.stuck = false;
+    out.fruitId = -1;
+    out.vel.set(0, 0, 0);
+    switch (end.kind) {
+      case 'world':
+        out.pos.copy(end.local);
+        return out;
+      case 'player': {
+        const p = this.g.player;
+        out.pos.copy(p.position).add(end.local);
+        if (p.state === 'active') {
+          out.player = true;
+          out.invMass = 1 / PLAYER_MASS;
+          out.vel.copy(p.velocity);
+        }
+        return out;
+      }
+      case 'peer': {
+        if (!this.net || !end.peer || !this.net.peerHands(end.peer, out.pos)) {
+          out.alive = false;
+          return out;
+        }
+        out.invMass = 1 / PLAYER_MASS;
+        return out;
+      }
+      case 'fruit': {
+        const f = this.fruitSys.get(end.ownerId);
+        if (!f || f.state === 'gone' || f.state === 'carried' || f.state === 'stowed') {
+          out.alive = false;
+          return out;
+        }
+        out.fruitId = f.id;
+        out.pos.copy(end.local).applyQuaternion(f.quaternion).add(f.position);
+        out.stuck = f.stuck;
+        if (f.body && f.state === 'free') {
+          if (f.stuck) return out;                       // fixed until pulled free
+          out.body = f.body;
+          out.invMass = 1 / Math.max(0.001, f.body.mass());
+          const v = f.body.linvel();
+          out.vel.set(v.x, v.y, v.z);
+        } else if (f.state === 'free' && !this.fruitSys.authoritative && !f.stuck) {
+          // The host simulates it; we only take our share of the correction.
+          out.invMass = 1 / Math.max(0.001, f.mass);
+        }
+        // Attached fruit is part of the tree as far as a rope knows.
+        return out;
+      }
+      case 'legendary': {
+        const leg = this.leg;
+        const body = leg?.body ?? null;
+        if (!leg || !body) { out.alive = false; return out; }
+        const t = body.translation();
+        const r = body.rotation();
+        _q.set(r.x, r.y, r.z, r.w);
+        out.pos.copy(end.local).applyQuaternion(_q).add(_v3.set(t.x, t.y, t.z));
+        if (!leg.authoritative) {
+          // A client's melon is a fixed body moved to where the host says;
+          // the real one is two and a half tonnes that the host is solving.
+          out.invMass = 1 / Math.max(1, body.mass() || MELON_MASS_FALLBACK);
+        } else if (!body.isFixed()) {
+          out.body = body;
+          out.invMass = 1 / Math.max(1, body.mass());
+          const v = body.linvel();
+          out.vel.set(v.x, v.y, v.z);
+        }
+        return out;
+      }
+      default:
+        out.alive = false;
+        return out;
+    }
   }
 
   /**
@@ -236,20 +570,15 @@ export class RopeSystem implements System {
    */
   fixedStep(dt: number): void {
     const invDt = 1 / dt;
-    const world = this.g.physics.world;
     for (const r of [...this.ropes.values()]) {
-      // Re-resolve both ends. Either can vanish between steps.
-      const bodyA = r.a.handle !== undefined ? world.getRigidBody(r.a.handle) : null;
-      const bodyB = r.b.handle !== undefined ? world.getRigidBody(r.b.handle) : null;
-      if (!bodyA || !bodyB) { this.remove(r.id); continue; }
-      r.a.body = bodyA;
-      r.b.body = bodyB;
+      const A = this.resolve(r.a, _ea);
+      const B = this.resolve(r.b, _eb);
+      // Either end can vanish between steps: the fruit was sold, the peer left.
+      if (!A.alive || !B.alive) { this.remove(r.id, 'gone', !this.authoritative); continue; }
       if (r.tugCool > 0) r.tugCool = Math.max(0, r.tugCool - dt);
 
       if (r.reelRate !== 0) this.setLength(r.id, r.length + r.reelRate * dt);
-      this.endPoint(r.a, _a);
-      this.endPoint(r.b, _b);
-      _n.copy(_b).sub(_a);
+      _n.copy(B.pos).sub(A.pos);
       const dist = _n.length();
       const slack = r.length - dist;
       if (dist < 1e-5 || slack >= 0) {
@@ -259,16 +588,14 @@ export class RopeSystem implements System {
       }
       _n.multiplyScalar(1 / dist);
 
-      // The player is a kinematic body as far as Rapier is concerned, which
-      // would make them an immovable anchor: a rope tied to a player could
-      // hold a melon but never pull the player, and "tethered to a falling
-      // two-tonne melon" is half the reason the rope gun exists. Treat the
-      // player as a movable mass whose velocity lives on the controller.
-      const playerA = this.isPlayer(bodyA);
-      const playerB = this.isPlayer(bodyB);
-      const invMassA = playerA ? 1 / PLAYER_MASS : movable(bodyA) ? 1 / Math.max(0.001, bodyA.mass()) : 0;
-      const invMassB = playerB ? 1 / PLAYER_MASS : movable(bodyB) ? 1 / Math.max(0.001, bodyB.mass()) : 0;
-      const invSum = invMassA + invMassB;
+      // A gluefruit stuck to something comes free when a rope pulls on it
+      // hard enough — the other end has to be able to pull, not just hang.
+      if (this.fruitSys.authoritative && -slack > 0.12) {
+        if (A.stuck && (B.player || B.invMass > 0 || B.body)) this.unstickFruit(A.fruitId);
+        if (B.stuck && (A.player || A.invMass > 0 || A.body)) this.unstickFruit(B.fruitId);
+      }
+
+      const invSum = A.invMass + B.invMass;
       if (invSum <= 0) {
         r.tension = 0; r.tensionAvg *= TENSION_DECAY;
         this.setTaut(r, false);
@@ -276,9 +603,7 @@ export class RopeSystem implements System {
       }
 
       // Separation speed along the rope, positive when it is being pulled apart.
-      const va = playerA ? this.g.player.velocity : bodyA.linvel();
-      const vb = playerB ? this.g.player.velocity : bodyB.linvel();
-      const vSep = (vb.x - va.x) * _n.x + (vb.y - va.y) * _n.y + (vb.z - va.z) * _n.z;
+      const vSep = (B.vel.x - A.vel.x) * _n.x + (B.vel.y - A.vel.y) * _n.y + (B.vel.z - A.vel.z) * _n.z;
 
       // Baumgarte term pulls out the overshoot without letting the rope snap
       // taut in a single step, which would fling everything attached to it.
@@ -292,24 +617,25 @@ export class RopeSystem implements System {
       }
 
       _imp.copy(_n).multiplyScalar(j);
-      if (playerA) this.pullPlayer(_imp, 1 / PLAYER_MASS, r);
-      else if (invMassA > 0) bodyA.applyImpulseAtPoint({ x: _imp.x, y: _imp.y, z: _imp.z },
-        { x: _a.x, y: _a.y, z: _a.z }, true);
-      if (playerB) this.pullPlayer(_imp, -1 / PLAYER_MASS, r);
-      else if (invMassB > 0) bodyB.applyImpulseAtPoint({ x: -_imp.x, y: -_imp.y, z: -_imp.z },
-        { x: _b.x, y: _b.y, z: _b.z }, true);
+      if (A.player) this.pullPlayer(_imp, 1 / PLAYER_MASS, r);
+      else if (A.body) A.body.applyImpulseAtPoint({ x: _imp.x, y: _imp.y, z: _imp.z },
+        { x: A.pos.x, y: A.pos.y, z: A.pos.z }, true);
+      if (B.player) this.pullPlayer(_imp, -1 / PLAYER_MASS, r);
+      else if (B.body) B.body.applyImpulseAtPoint({ x: -_imp.x, y: -_imp.y, z: -_imp.z },
+        { x: B.pos.x, y: B.pos.y, z: B.pos.z }, true);
 
       r.tension = j * invDt;
       r.tensionAvg += (r.tension - r.tensionAvg) * (1 - TENSION_DECAY);
       // A player leaning on a rope pinned to the world cannot part it: the
       // controller's ground acceleration is a feel number (62 m/s^2, 5 kN on
       // 82 kg), not a force a person can produce. Snapping needs a real load
-      // on the other end.
-      const leaning = (playerA && invMassB === 0) || (playerB && invMassA === 0);
-      if (r.tensionAvg > r.maxTension && !leaning) {
+      // on the other end. And only the host parts a shared rope: a client's
+      // copy has a stand-in on one end and would snap at the wrong moment.
+      const leaning = (A.player && B.invMass === 0) || (B.player && A.invMass === 0);
+      const mayPart = this.authoritative && !r.net?.mirror;
+      if (mayPart && r.tensionAvg > r.maxTension && !leaning) {
         this.g.bus.emit('rope:snapped', { ropeId: r.id });
-        this.g.bus.emit('audio:sfx', { name: 'ropeSnap' });
-        this.remove(r.id);
+        this.remove(r.id, 'snapped');
         continue;
       }
       // Going taut is an EDGE, not a die roll. The old code played a strain
@@ -335,6 +661,11 @@ export class RopeSystem implements System {
     }
   }
 
+  private unstickFruit(id: number): void {
+    const f = this.fruitSys.get(id);
+    if (f?.stuck) f.unstick();
+  }
+
   /** Announce the slack/taut edge once, with a little hysteresis. */
   private setTaut(r: Rope, taut: boolean): void {
     if (taut === r.taut) return;
@@ -343,11 +674,6 @@ export class RopeSystem implements System {
     if (!taut && r.tension > TAUT_N * 0.35) return;
     r.taut = taut;
     this.g.bus.emit('rope:taut', { ropeId: r.id, taut, tension: r.tension });
-  }
-
-  private isPlayer(b: RBody): boolean {
-    const p = this.g.player;
-    return p.state === 'active' && b.handle === p.body.handle;
   }
 
   /** A rope impulse on the player becomes a velocity change on the controller,
@@ -380,14 +706,11 @@ export class RopeSystem implements System {
     if (wanted > p.ragdollImpactSpeed) p.onHardImpact?.(wanted, 'rope');
   }
 
-  private endPoint(end: RopeEnd, out: THREE.Vector3): THREE.Vector3 {
-    const body = end.handle !== undefined
-      ? this.g.physics.world.getRigidBody(end.handle) : null;
-    if (!body) return out.copy(end.local);
-    const t = body.translation();
-    const r = body.rotation();
-    _q.set(r.x, r.y, r.z, r.w);
-    return out.copy(end.local).applyQuaternion(_q).add(_v3.set(t.x, t.y, t.z));
+  /** World position of an end right now. Writes `out`; false if it is gone. */
+  endPoint(end: RopeEnd, out: THREE.Vector3): boolean {
+    const s = this.resolve(end, _ea);
+    out.copy(s.pos);
+    return s.alive;
   }
 
   frameUpdate(): void {
@@ -409,10 +732,11 @@ export class RopeSystem implements System {
     }
   }
 
-  /** World-space endpoints, for hit-testing a rope the player is looking at. */
+  /** World-space endpoints, for hit-testing a rope the player is looking at.
+   *  Writes into both arguments; never pass a vector the caller still needs. */
   endpoints(rope: Rope, a: THREE.Vector3, b: THREE.Vector3): void {
-    this.endPoint(rope.a, _a); a.copy(_a);
-    this.endPoint(rope.b, _b); b.copy(_b);
+    this.endPoint(rope.a, a);
+    this.endPoint(rope.b, b);
   }
 
   dispose(): void {
@@ -423,16 +747,14 @@ export class RopeSystem implements System {
   }
 }
 
-/** Fixed and kinematic bodies are immovable anchors as far as a rope knows. */
-function movable(b: RBody): boolean {
-  return !b.isFixed() && !b.isKinematic();
-}
+function isHand(e: RopeEnd): boolean { return e.kind === 'player' || e.kind === 'peer'; }
 
-const ZERO = new THREE.Vector3(0, 0, 0);
-const _v3 = new THREE.Vector3();
-const _pull = new THREE.Vector3();
 /** What a rope thinks a harvester weighs. Matches the character controller. */
-const PLAYER_MASS = 82;
+export const PLAYER_MASS = 82;
+/** Where a rope ties to a person: chest height above the feet. */
+export const HAND_OFFSET = new THREE.Vector3(0, 1.2, 0);
+/** A client's melon body reports no mass while fixed; the real one weighs this. */
+const MELON_MASS_FALLBACK = 2600;
 /** Largest velocity change one step may put on the player, m/s. */
 const MAX_PLAYER_YANK = 9;
 /** Velocity change in one step worth reporting as a tug the player felt. */

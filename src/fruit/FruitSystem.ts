@@ -62,6 +62,12 @@ interface HabitatSpec {
   plants: Array<{ type: PlantType; count: number; scale?: [number, number] }>;
   /** Extra vertical offset, for vines that hang from above. */
   lift?: number;
+  /**
+   * Multiplier on the rare-variant rate for everything planted here. The
+   * far, high and hidden corners of the island pay better than the orchard
+   * by the dock, which is what makes walking there worth the walk.
+   */
+  rare?: number;
 }
 
 /** Which plant grows which fruit. */
@@ -73,9 +79,19 @@ const PLANT_FRUIT: Record<PlantType, string | null> = {
   melonVine: 'watermelon',
   puffBush: 'puffmelon',
   vinebombVine: 'vinebomb',
+  boulderBush: 'boulderplum',
+  gumTree: 'gluefruit',
+  spikeShrub: 'spikefruit',
 };
 
-/** Sunpatch's authored planting plan. */
+/**
+ * Sunpatch's authored planting plan, arranged as an escalation: the route
+ * from the dock reaches the orchard first (apples, oranges, a few melons),
+ * the beach second (coconuts, which hurt), and everything stranger is
+ * inland and uphill from there — the waterfall for things that float and
+ * stick, the hill farm for things that weigh, the cave and the ridge for
+ * things you cannot touch, and the ravine for the one thing you came for.
+ */
 const HABITATS: HabitatSpec[] = [
   // Scale ranges are deliberately wide. The shipped orchard used the default
   // 0.85-1.2, and thirty trees within 30% of one height read as a plantation
@@ -85,22 +101,26 @@ const HABITATS: HabitatSpec[] = [
     { type: 'orangeTree', count: 10, scale: [0.8, 1.32] },
     { type: 'melonVine', count: 5 },
   ] },
-  { landmark: 'hillFarm', plants: [
+  { landmark: 'hillFarm', rare: 1.4, plants: [
     { type: 'appleTree', count: 8, scale: [0.85, 1.4] },
     { type: 'melonVine', count: 5 }, { type: 'puffBush', count: 4 },
+    { type: 'boulderBush', count: 3 },
   ] },
   { landmark: 'palmBeach', plants: [
     { type: 'palm', count: 17, scale: [0.8, 1.45] },
     { type: 'bananaPlant', count: 6 },
   ] },
-  { landmark: 'caveOrchard', plants: [
+  { landmark: 'caveOrchard', rare: 2.0, plants: [
     { type: 'palm', count: 7 }, { type: 'orangeTree', count: 4 },
+    { type: 'spikeShrub', count: 4 }, { type: 'gumTree', count: 2 },
   ] },
-  { landmark: 'waterfall', plants: [
+  { landmark: 'waterfall', rare: 1.3, plants: [
     { type: 'bananaPlant', count: 7 }, { type: 'puffBush', count: 5 },
+    { type: 'gumTree', count: 4 },
   ] },
-  { landmark: 'ridge', plants: [
-    { type: 'puffBush', count: 5 },
+  { landmark: 'ridge', rare: 2.6, plants: [
+    { type: 'puffBush', count: 5 }, { type: 'boulderBush', count: 2 },
+    { type: 'spikeShrub', count: 3 },
   ] },
 ];
 
@@ -113,15 +133,19 @@ const HABITATS: HabitatSpec[] = [
  * simply never have `growOn` called on them — no fruit, no colliderful change
  * to the harvest loop, no new system.
  */
-const DECOR: Array<{ type: PlantType; x: number; z: number; scale: number }> = [
+const DECOR: Array<{ type: PlantType; x: number; z: number; scale: number; fruit?: boolean }> = [
   // Shoreline either side of the dock head.
   { type: 'palm', x: 66.5, z: 55.0, scale: 1.25 },
   { type: 'palm', x: 64.0, z: 51.5, scale: 1.10 },
   { type: 'palm', x: 51.0, z: 70.5, scale: 1.20 },
   { type: 'palm', x: 47.0, z: 67.0, scale: 1.05 },
   // Framing the walk up to the shop, set back off the path on both sides.
-  { type: 'palm', x: 52.5, z: 63.5, scale: 1.15 },
-  { type: 'palm', x: 53.5, z: 46.0, scale: 1.30 },
+  // These two CARRY coconuts: the first heavy fruit a new player meets should
+  // be within sight of the shed, so the first time somebody climbs a ladder
+  // and drops one on a friend happens in the first ten minutes, not on the
+  // far side of the island.
+  { type: 'palm', x: 52.5, z: 63.5, scale: 1.15, fruit: true },
+  { type: 'palm', x: 53.5, z: 46.0, scale: 1.30, fruit: true },
   { type: 'bananaPlant', x: 43.5, z: 60.5, scale: 1.15 },
   { type: 'bananaPlant', x: 47.5, z: 45.5, scale: 1.00 },
   // The long middle stretch.
@@ -180,6 +204,8 @@ export class FruitSystem implements System {
   private nodeDelta = new Map<string, NodeChange>();
   /** Fruit a node change freed that no snapshot has yet placed or dropped. */
   freedByLog = new Set<number>();
+  /** Rare-variant multiplier of the habitat each plant was planted in. */
+  private rareByPlant = new Map<number, number>();
   activationRadius = 42;
   wind = new THREE.Vector3(0.6, 0, 0.35).normalize().multiplyScalar(2.2);
 
@@ -230,6 +256,8 @@ export class FruitSystem implements System {
         speed: +f.speed.toFixed(2), peakSpeed: +f.maxSpeedSinceDetach.toFixed(2),
         inflate: +f.inflate.toFixed(2),
         travelled: +f.travelled.toFixed(2), peak: +f.peakHeight.toFixed(2),
+        stuck: f.stuck, stuckHands: +f.stuckHands.toFixed(2),
+        traits: f.traits.map((t) => t.id),
       };
     });
     // Inflation is normally a race against a two-thirds-of-a-second animation,
@@ -360,15 +388,16 @@ export class FruitSystem implements System {
     for (const h of HABITATS) {
       const lm = this.world.at(h.landmark);
       for (const spec of h.plants) {
-        this.scatter(spec.type, lm.position, lm.radius, spec.count, spec.scale);
+        this.scatter(spec.type, lm.position, lm.radius, spec.count, spec.scale, h.rare ?? 1);
       }
     }
-    // Decorative planting: no fruit, so no growOn.
+    // Decorative planting: no fruit, so no growOn — except the two marked.
     for (const d of DECOR) {
       const y = this.world.terrain.height(d.x, d.z);
       if (y < 1.0) continue;
-      this.plants.plant(this.g.newId(), d.type, new THREE.Vector3(d.x, y, d.z),
+      const p = this.plants.plant(this.g.newId(), d.type, new THREE.Vector3(d.x, y, d.z),
         this.rng, { scale: d.scale });
+      if (d.fruit) this.growOn(p);
     }
     // Hanging vinebomb vines at authored cliff sites.
     for (const [x, z] of VINEBOMB_SITES) {
@@ -384,11 +413,11 @@ export class FruitSystem implements System {
   }
 
   private scatter(type: PlantType, center: THREE.Vector3, radius: number, count: number,
-    scaleRange?: [number, number]): void {
+    scaleRange?: [number, number], rare = 1): void {
     const terrain = this.world.terrain;
     let placed = 0;
     let attempts = 0;
-    const minGap = type === 'palm' ? 4.2 : type === 'melonVine' ? 2.4 : 4.6;
+    const minGap = type === 'palm' ? 4.2 : type === 'melonVine' || type === 'boulderBush' ? 2.4 : 4.6;
     const placedPts: THREE.Vector3[] = [];
     while (placed < count && attempts < count * 60) {
       attempts++;
@@ -415,6 +444,7 @@ export class FruitSystem implements System {
       const scale = scaleRange ? this.rng.range(scaleRange[0], scaleRange[1]) : undefined;
       const plant = this.plants.plant(this.g.newId(), type, _v.clone(), this.rng,
         scale !== undefined ? { scale } : {});
+      if (rare !== 1) this.rareByPlant.set(plant.id, rare);
       this.growOn(plant);
       placed++;
     }
@@ -442,7 +472,7 @@ export class FruitSystem implements System {
     given?: { id: number; variantId: string | null; sizeRoll: number }, log = false): Fruit | null {
     const node = plant.nodes[nodeIndex];
     if (!node || node.fruitId >= 0) return null;
-    const variantId = given ? given.variantId : this.rollVariant();
+    const variantId = given ? given.variantId : this.rollVariant(this.rareByPlant.get(plant.id) ?? 1);
     const id = given ? given.id : this.g.newId();
     if (given) this.g.reserveId(id);
     const f = new Fruit(this.g.physics, id, speciesId, variantId, given ? given.sizeRoll : this.rng.next());
@@ -456,7 +486,12 @@ export class FruitSystem implements System {
     f.syncToAttachment();
     if (f.hasTrait('elastic')) {
       f.tension = this.rng.range(13, 21);
-      f.tensionDir.set(this.rng.range(-0.4, 0.4), 1, this.rng.range(-0.4, 0.4)).normalize();
+      // Always some sideways in it. Two independent draws could land near
+      // zero together and fire the fruit straight up into its own vine,
+      // which is a launch nobody sees and a stunt nobody can attempt.
+      const ang = this.rng.range(0, Math.PI * 2);
+      const lat = this.rng.range(0.35, 0.6);
+      f.tensionDir.set(Math.cos(ang) * lat, 1, Math.sin(ang) * lat).normalize();
     }
     node.fruitId = f.id;
     this.fruits.set(f.id, f);
@@ -464,8 +499,8 @@ export class FruitSystem implements System {
     return f;
   }
 
-  private rollVariant(): string | null {
-    if (!this.rng.chance(VARIANT_RATE)) return null;
+  private rollVariant(rateMul = 1): string | null {
+    if (!this.rng.chance(Math.min(0.5, VARIANT_RATE * rateMul))) return null;
     return this.rng.weighted(VARIANTS.map((v) => v.id), VARIANTS.map((v) => v.weight));
   }
 
@@ -511,6 +546,33 @@ export class FruitSystem implements System {
       if (score > bestScore) { bestScore = score; best = f; }
     }
     return best;
+  }
+
+  /**
+   * The first fruit along a ray, by its sphere rather than by its collider.
+   *
+   * Exists because a client has no collider for fruit the host simulates, so
+   * a physics ray from a client's rope gun can hit a tree and never the
+   * watermelon lying under it. Attached and free fruit both count; nothing in
+   * anyone's hands does.
+   */
+  rayFruit(origin: THREE.Vector3, dir: THREE.Vector3, maxDist: number):
+    { fruit: Fruit; distance: number; point: THREE.Vector3 } | null {
+    let best: Fruit | null = null;
+    let bestT = maxDist;
+    for (const f of this.fruits.values()) {
+      if (f.state !== 'attached' && f.state !== 'free') continue;
+      _v.copy(f.position).sub(origin);
+      const along = _v.dot(dir);
+      if (along < 0 || along - f.radius > bestT) continue;
+      const perp2 = _v.lengthSq() - along * along;
+      const r = f.radius + 0.06;
+      if (perp2 > r * r) continue;
+      const t = along - Math.sqrt(Math.max(0, r * r - perp2));
+      if (t < bestT) { bestT = Math.max(0, t); best = f; }
+    }
+    if (!best) return null;
+    return { fruit: best, distance: bestT, point: origin.clone().addScaledVector(dir, bestT) };
   }
 
   // ---- actions ------------------------------------------------------------
@@ -559,6 +621,12 @@ export class FruitSystem implements System {
    */
   blast(center: THREE.Vector3, radius: number, strength: number, upBias: number): number {
     if (!this.authoritative) { this.net!.requestBlast(center, radius, strength, upBias); return 0; }
+    // A blast is the one thing that peels a stuck gluefruit off a cliff from
+    // a distance; the radial impulse skips fixed bodies, so free them first.
+    const r2 = radius * radius;
+    for (const f of this.fruits.values()) {
+      if (f.stuck && f.body && f.position.distanceToSquared(center) <= r2) f.unstick();
+    }
     return this.g.physics.explode(center, radius, strength, upBias).length;
   }
 

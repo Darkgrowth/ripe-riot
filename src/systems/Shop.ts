@@ -162,7 +162,7 @@ export class Shop implements System {
     if (entry.owned) return { ok: false, reason: 'already owned' };
     if (entry.locked) {
       this.g.bus.emit('ui:toast', {
-        text: 'Not yet', sub: `Needs Discovery Tier ${entry.tier}`, kind: 'bad', ms: 2200,
+        text: 'Not yet', sub: `${entry.label}: ${this.unlockText(entry.tier).toLowerCase()}`, kind: 'bad', ms: 2600,
       });
       return { ok: false, reason: 'locked' };
     }
@@ -241,6 +241,27 @@ export class Shop implements System {
     this.g.bus.emit('shop:closed', {});
   }
 
+  /**
+   * What a locked item wants, in words a player can act on. "Tier 1" is a
+   * number about the shed; "find two more kinds of fruit" is a walk.
+   */
+  unlockText(tier: number): string {
+    const need = tier * 100 - this.economy.discoveryPoints;
+    if (need <= 0) return 'UNLOCKED';
+    const kinds = Math.max(1, Math.ceil(need / 34));
+    return `FIND ${kinds} MORE KIND${kinds > 1 ? 'S' : ''} OF FRUIT`;
+  }
+
+  /** The one line at the top of the shed: what to save for, and what it takes. */
+  nextUp(items: ShopEntry[]): string {
+    const money = this.economy.money;
+    const next = items.find((e) => !e.owned);
+    if (!next) return 'Merv has nothing left to sell you. Go and get the melon.';
+    if (next.locked) return `Next: ${next.label} — ${this.unlockText(next.tier).toLowerCase()}, then $${next.cost}`;
+    if (!next.affordable) return `Next: ${next.label} — $${(next.cost - money).toLocaleString('en-US')} more`;
+    return `${next.label} is within reach — $${next.cost}`;
+  }
+
   private render(): void {
     if (!this.panel) return;
     const items = this.catalogue();
@@ -248,8 +269,9 @@ export class Shop implements System {
       <div class="card">
         <h2>MERV'S SUPPLY</h2>
         <p class="hint">$${this.economy.money.toLocaleString('en-US')} available
-          &nbsp;·&nbsp; Discovery Tier ${this.economy.discoveryTier}
+          &nbsp;·&nbsp; ${this.economy.discoveryPoints} discovery
           &nbsp;·&nbsp; Esc to close</p>
+        <p class="next">${this.nextUp(items)}</p>
         <div class="shop-grid">
           ${items.map((e) => `
             <div class="shop-item ${e.owned ? 'owned' : ''} ${e.locked || (!e.affordable && !e.owned) ? 'locked' : ''}"
@@ -257,7 +279,7 @@ export class Shop implements System {
               <div class="name">${e.icon} ${e.label}</div>
               <div class="desc">${e.description}</div>
               <div class="cost ${!e.affordable && !e.owned ? 'cant' : ''}">
-                ${e.owned ? 'OWNED' : e.locked ? `TIER ${e.tier} REQUIRED` : `$${e.cost}`}
+                ${e.owned ? 'OWNED' : e.locked ? this.unlockText(e.tier) : `$${e.cost}`}
               </div>
               <div class="tagline">${e.tagline}</div>
             </div>`).join('')}

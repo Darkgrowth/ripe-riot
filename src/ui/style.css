@@ -234,7 +234,9 @@ html, body {
   padding: 22px 26px; box-shadow: var(--shadow);
 }
 .panel h2 { margin: 0 0 4px; font-size: 26px; letter-spacing: 1.5px; color: var(--gold); }
-.panel .hint { margin: 0 0 18px; font-size: 12px; opacity: 0.6; letter-spacing: 1px; text-transform: uppercase; }
+.panel .hint { margin: 0 0 10px; font-size: 12px; opacity: 0.6; letter-spacing: 1px; text-transform: uppercase; }
+/* The shed's one piece of advice: what to save for next. */
+.panel .next { margin: 0 0 16px; font-size: 14px; color: var(--gold); opacity: 0.92; }
 .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
 .shop-item {
   background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);

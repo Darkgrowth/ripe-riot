@@ -687,6 +687,167 @@ try {
     ok(back.legendary.paid === payout, 'and agrees what it paid');
   }
 
+  // =====================================================================
+  // SHARED ROPES
+  // =====================================================================
+  // A rope fired by anyone exists for everyone: the host builds a client's
+  // rope from its request, lists every rope in the snapshot, and everybody
+  // else draws it. Nothing here touches the rope system directly on the
+  // client side except through the tool and the debug actions that stand
+  // in for its buttons.
+  const roper = nowClient;
+  // Ids are read afresh: the client rejoined during the legendary section,
+  // and a rejoin mints a new transport id.
+  const roperId = await roper.call('net.id');
+  const hostIdNow = await nowHost.call('net.id');
+  await nowHost.call('rope.clear');
+  await roper.call('rope.clear');
+  await nowHost.call('fruit.despawnAllFree');
+  await sleep(SETTLE);
+
+  /** Turn a peer to look at a world point, from where it stands. */
+  async function faceTo(page, x, y, z) {
+    const s = await page.state();
+    const [px2, py2, pz2] = s.player.pos;
+    const dx = x - px2, dy = y - (py2 + 1.6), dz = z - pz2;
+    await page.look(Math.atan2(-dx, -dz), Math.atan2(dy, Math.hypot(dx, dz)));
+  }
+  const ropesOn = async (page, fruitId) => (await page.call('net.ropes')).filter((r) => r.b === `fruit:${fruitId}` || r.a === `fruit:${fruitId}`);
+
+  const melon = await nowHost.call('fruit.spawn', 'watermelon', -24, 9, 22);
+  await sleep(SETTLE);
+  const mpos = (await nowHost.call('fruit.info', melon)).pos;
+  // Both on the SAME side, a couple of metres apart. From opposite sides
+  // two winches are a tug of war: a grounded player is held by the
+  // controller's 62 m/s^2 of ground acceleration, a 22 kg melon cannot
+  // move both of them, and the lines part at 4.2 kN — which is the right
+  // answer, and was measured (tools/harness/rope-probe.mjs), but is not the
+  // thing this check is about.
+  await stand(roper, mpos[0] + 4.5, mpos[2] + 1.2);
+  await stand(nowHost, mpos[0] + 4.5, mpos[2] - 1.2);
+  await roper.call('tool.give', 'ropegun');
+  await roper.call('tool.select', 'ropegun');
+  await faceTo(roper, mpos[0], mpos[1], mpos[2]);
+  await sleep(300);
+  // The client has no collider for this fruit at all — the host simulates
+  // it — so the gun has to find it by its sphere. If it does not, the rope
+  // ties to the ground behind the melon and every check below fails.
+  await roper.call('tool.fire');
+  await sleep(SETTLE);
+  const onHost1 = await ropesOn(nowHost, melon);
+  ok(onHost1.length === 1 && onHost1[0].owner === roperId,
+    'a client\'s rope gun rope exists on the host, tied to the same fruit by id',
+    `host sees ${JSON.stringify(await nowHost.call('net.ropes'))}, ${await whyRefusedOn(nowHost)}`);
+  ok(onHost1[0]?.a === `peer:${roperId}`, 'with the client\'s own player on the near end',
+    onHost1[0]?.a);
+  const onClient1 = await ropesOn(roper, melon);
+  ok(onClient1.length === 1 && onClient1[0].mine && onClient1[0].acked,
+    'and the client\'s own copy is acknowledged, not mirrored', JSON.stringify(onClient1));
+
+  // The host ropes the same fruit from the other side.
+  await nowHost.call('tool.give', 'ropegun');
+  await nowHost.call('tool.select', 'ropegun');
+  await faceTo(nowHost, mpos[0], mpos[1], mpos[2]);
+  await sleep(300);
+  await nowHost.call('tool.fire');
+  await sleep(SETTLE);
+  const onClient2 = await ropesOn(roper, melon);
+  ok(onClient2.length === 2, 'two players rope the same fruit and both see two ropes', `client sees ${onClient2.length}`);
+  ok(onClient2.some((r) => r.owner === hostIdNow && r.mirror),
+    'the host\'s rope appears on the client as a mirror');
+  ok((await ropesOn(nowHost, melon)).length === 2, 'and the host has both');
+
+  // Pulling together: both winch from the same side, and the melon comes to
+  // them. Two lines reeling in is twice the pull, not a contest.
+  const restPos = (await nowHost.call('fruit.info', melon)).pos;
+  const mineOnClient = onClient2.find((r) => r.mine);
+  const mineOnHost = (await ropesOn(nowHost, melon)).find((r) => r.owner === hostIdNow);
+  await roper.call('rope.reel', mineOnClient.cid, -0.9);
+  await nowHost.call('rope.reel', mineOnHost.cid, -0.9);
+  await sleep(1500);
+  await roper.call('rope.reel', mineOnClient.cid, 0);
+  await nowHost.call('rope.reel', mineOnHost.cid, 0);
+  await sleep(SETTLE);
+  const pulledHost = (await nowHost.call('fruit.info', melon)).pos;
+  const pulledClient = (await roper.call('fruit.info', melon)).pos;
+  const dragged = Math.hypot(pulledHost[0] - restPos[0], pulledHost[2] - restPos[2]);
+  ok(dragged > 0.4, 'winching together drags the melon toward both of them on the host', `${dragged.toFixed(2)} m`);
+  ok(pulledHost[0] > restPos[0] + 0.2, 'in their direction', `x ${restPos[0].toFixed(2)} -> ${pulledHost[0].toFixed(2)}`);
+  ok(Math.hypot(pulledClient[0] - pulledHost[0], pulledClient[2] - pulledHost[2]) < 1.5,
+    'and the client sees it where the host has it');
+  const hostCopy = (await ropesOn(nowHost, melon)).find((r) => r.owner === roperId);
+  const clientCopy = (await ropesOn(roper, melon)).find((r) => r.mine);
+  ok(hostCopy && clientCopy, 'both lines survive a gentle pull',
+    `host has ${hostCopy ? 'it' : 'nothing'}, client has ${clientCopy ? 'it' : 'nothing'}`);
+  ok(hostCopy && clientCopy && Math.abs(hostCopy.len - clientCopy.len) < 0.6,
+    'the client\'s winch is applied to the host\'s copy of its rope', `host ${hostCopy?.len} m, client ${clientCopy?.len} m`);
+  ok(hostCopy && hostCopy.len < 4.5, 'and the host\'s copy is shorter than it was', `${hostCopy?.len} m`);
+
+  // One releases.
+  await roper.call('rope.release', mineOnClient.cid);
+  await sleep(SETTLE);
+  ok((await ropesOn(nowHost, melon)).every((r) => r.owner !== roperId),
+    'a client letting go removes its rope on the host');
+  ok((await ropesOn(roper, melon)).length === 1 && (await ropesOn(roper, melon))[0].mirror,
+    'and the client keeps only its mirror of the host\'s rope');
+
+  // A rope parts on the host, and the owner hears about it. The melon was
+  // just dragged to the players' feet; step back to a sensible range first.
+  const nowAt = (await nowHost.call('fruit.info', melon)).pos;
+  await stand(roper, nowAt[0] + 4.5, nowAt[2] + 0.5);
+  await roper.call('tool.select', 'ropegun');
+  await faceTo(roper, nowAt[0], nowAt[1], nowAt[2]);
+  await sleep(300);
+  await roper.call('tool.fire');
+  await sleep(SETTLE);
+  ok((await ropesOn(nowHost, melon)).some((r) => r.owner === roperId), 'the client ropes it again',
+    `host ropes ${JSON.stringify(await ropesOn(nowHost, melon))}, ${await whyRefusedOn(nowHost)}`);
+  // Hit the melon away from the client hard enough that a 4200 N line cannot hold it.
+  await nowHost.call('fruit.impulse', melon, -22 * 70, 22 * 12, 0);
+  await sleep(SETTLE);
+  ok((await ropesOn(nowHost, melon)).every((r) => r.owner !== roperId),
+    'a yank past the rope\'s rating parts it on the host');
+  ok((await ropesOn(roper, melon)).every((r) => !r.mine),
+    'and the client\'s copy is gone too');
+
+  // Disconnecting while tethered.
+  await nowHost.call('fruit.despawnAllFree');
+  await sleep(SETTLE);
+  const melon2 = await nowHost.call('fruit.spawn', 'watermelon', -24, 9, 22);
+  await sleep(SETTLE);
+  const m2 = (await nowHost.call('fruit.info', melon2)).pos;
+  await stand(roper, m2[0] + 4.5, m2[2]);
+  await roper.call('tool.select', 'ropegun');
+  await faceTo(roper, m2[0], m2[1], m2[2]);
+  await sleep(300);
+  await roper.call('tool.fire');
+  await sleep(SETTLE);
+  ok((await ropesOn(nowHost, melon2)).some((r) => r.owner === roperId), 'the client is tethered to a fruit');
+  await stand(nowHost, m2[0] - 4.5, m2[2]);
+  await nowHost.call('tool.select', 'ropegun');
+  await faceTo(nowHost, m2[0], m2[1], m2[2]);
+  await sleep(300);
+  await nowHost.call('tool.fire');
+  await sleep(SETTLE);
+  await roper.call('net.disconnect');
+  await sleep(2600);
+  const afterLeaveRopes = await ropesOn(nowHost, melon2);
+  ok(afterLeaveRopes.every((r) => r.owner !== roperId), 'when they disconnect, their rope goes with them');
+  ok(afterLeaveRopes.some((r) => r.owner === hostIdNow), 'and the host\'s own rope stays');
+  ok((await roper.call('net.ropes')).length === 0,
+    'and the client, now solo, has let go of the ropes that were the session\'s');
+
+  // A late joiner sees the ropes that are already out.
+  await roper.call('net.connect', room, 0);
+  await sleep(3200);
+  ok((await roper.state()).net.isHost === false, 'the returning peer joins as a client');
+  const lateRopes = await ropesOn(roper, melon2);
+  ok(lateRopes.length === 1 && lateRopes[0].mirror && lateRopes[0].owner === hostIdNow,
+    'a late joiner sees the host\'s active rope as a mirror', JSON.stringify(lateRopes));
+  await nowHost.call('rope.clear');
+  await sleep(SETTLE);
+  ok((await roper.call('net.ropes')).length === 0, 'and when the host clears its ropes the mirror goes');
+
   const errs = [...a.consoleErrors, ...b.consoleErrors]
     .filter((e) => !/DevTools|deprecat|ReadPixels|GPU stall/i.test(e));
   ok(errs.length === 0, 'no console errors across either client', errs.slice(0, 3).join(' | '));

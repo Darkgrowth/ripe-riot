@@ -192,20 +192,36 @@ const volatile: FruitTrait = {
   },
 };
 
-/** Sticky fruit adheres to whatever it lands on. Placeholder physics for now. */
+/**
+ * Gluefruit. Adheres to whatever it lands on — ground, cliff, tree, sell pad —
+ * and to whoever it lands on. The surface half is here: on the first real
+ * impact with the world the body goes fixed where it is. The hands half lives
+ * in the interaction layer, because "you are holding it now, whether you like
+ * it or not" is a rule about hands rather than about the fruit.
+ */
 const sticky: FruitTrait = {
   id: 'sticky',
-  onImpact(f, dv) {
-    if (dv > 1.2 && f.body) {
-      f.body.setLinearDamping(6.0);
-      f.body.setAngularDamping(6.0);
-      f.stuck = true;
-    }
+  onImpact(f, dv, point, _n, ctx) {
+    if (f.stuck || f.lastImpactOnPlayer || dv < 1.6 || !f.body) return;
+    f.stick();
+    ctx.emit('audio:sfx', { name: 'netCatch', position: point.clone(), volume: 0.35, pitch: 0.6 });
   },
 };
 
+/** Seconds a gluefruit that lands on you refuses to leave your hands. */
+export const STICK_HANDS_HIT = 4.0;
+/** …and one you picked up on purpose. You knew what it was. */
+export const STICK_HANDS_PICK = 1.6;
+
+/**
+ * Spikefruit. Nothing here moves: the whole identity is a rule about hands —
+ * they cannot touch it — and the interaction layer owns that. The marker is
+ * what the rule keys on, and what the host checks a client's pick against.
+ */
+const spiked: FruitTrait = { id: 'spiked' };
+
 const REGISTRY = new Map<string, FruitTrait>();
-for (const t of [heavy, roller, splitter, inflate, elastic, unstable, volatile, sticky]) {
+for (const t of [heavy, roller, splitter, inflate, elastic, unstable, volatile, sticky, spiked]) {
   REGISTRY.set(t.id, t);
 }
 

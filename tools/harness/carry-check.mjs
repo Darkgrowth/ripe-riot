@@ -128,12 +128,29 @@ await withGame(async (g) => {
   ensureOut(SUB);
 
   // A clear, flat, well-lit spot with the island in front of it, so the
-  // composition numbers mean something. The hill farm looks out over the
-  // orchard and the sea.
+  // composition numbers mean something — chosen from a few candidates rather
+  // than fixed, because the orchard's trees move whenever the planting plan
+  // changes, and the shipped spot ended up with an apple tree two metres in
+  // front of it: the escaping melon went into the canopy and the oversized
+  // apple landed among the attached ones.
   await g.call('tool.give', 'basket').catch(() => {});
-  const h = await g.terrainHeight(-6, 26);
-  await g.tp(-6, h + 1.4, 26);
-  await g.look(0.6, -0.05);
+  let spot = null;
+  for (const [cx, cz] of [[-6, 26], [-1, 30], [4, 33], [-11, 22], [10, 37]]) {
+    const h = await g.terrainHeight(cx, cz);
+    await g.tp(cx, h + 1.4, cz);
+    await g.look(0.6, -0.05);
+    await g.simulate(0.4);
+    const ahead = await g.probeLook(9);
+    const clear = await g.page.evaluate(([x, y, z]) => {
+      const V3 = window.__GAME.renderer.camera.position.constructor;
+      // Nothing with an owner (plants, fruit) within 4 m of chest height.
+      return window.__GAME.physics.overlapSphere(new V3(x, y + 1.2, z), 4.0, 0xffffffff)
+        .filter((o) => o.kind !== 'player').length === 0;
+    }, [cx, h, cz]);
+    if ((!ahead.hit || ahead.distance > 9) && clear) { spot = [cx, cz]; break; }
+  }
+  if (!spot) throw new Error('no clear spot for the carry check');
+  console.log(`standing at ${spot.join(', ')}`);
   await g.wait(0.6);
 
   const base = await measure(g);
@@ -276,7 +293,10 @@ await withGame(async (g) => {
   check(pre.carrying?.cls === 'large', 'at 1.09 m across it is a heavy two-hand haul',
     String(pre.carrying?.cls));
   await g.call('fruit.inflate', puff, 2.05, true);
-  await g.wait(0.4);
+  // Forced steps from here on: the escape is MOTION, and at this render size
+  // under software GL a quarter of a second of wall clock can hold no fixed
+  // step at all, which read as "the melon hangs in front of the lens".
+  await g.simulate(0.4);
   const post = (await g.state()).interaction;
   check(!post.carrying, 'and one step past the limit it leaves the hands');
 
@@ -295,7 +315,7 @@ await withGame(async (g) => {
     return { gone: false, pct: +(deg / 68 * 100).toFixed(1), dist: +d.toFixed(2), r };
   };
   const leaving = [];
-  for (let i = 0; i < 3; i++) { leaving.push(await subtends()); await g.wait(0.25); }
+  for (let i = 0; i < 3; i++) { leaving.push(await subtends()); await g.simulate(0.25); }
   console.log('  leaving: ' + leaving.map((l) => `${l.dist} m / ${l.pct}% of FOV`).join('  ->  '));
   check(leaving.every((l) => l.gone || l.pct < 62), 'the escaping melon never owns the frame',
     leaving.map((l) => `${l.pct}%`).join(', '));
@@ -347,25 +367,32 @@ await withGame(async (g) => {
   // nothing about prompts. An Ancient Apple is oversized by WEIGHT (82 kg in a
   // 0.73 m package), sits exactly where it lands, and exercises the same rule.
   await g.call('fruit.despawnAllFree');
+  // Clock held from here to the end of the block: an 82 kg sphere dropped
+  // onto a flat-shaded trimesh picks up a slow roll off the facet seams, and
+  // in the real seconds a 1280x720 software frame costs between two
+  // round-trips it rolled out of the aim cone. The world moves in forced
+  // steps only, the way the scenario runner does it.
+  await g.pause(true);
   const heavy = await g.call('fruit.spawn', 'apple', px + 1.4, py + 0.6, pz - 1.6, 'ancient', 0.5);
-  await g.wait(1.4);
+  await g.simulate(1.4);
   const hInfo = await g.call('fruit.info', heavy);
   check(await g.call('carry.class', hInfo.size, hInfo.mass) === 'oversized',
     'an Ancient Apple is oversized by weight alone', `${hInfo.mass} kg, ${hInfo.size} m`);
   await faceTo(g, hInfo.pos[0], hInfo.pos[1], hInfo.pos[2]);
-  await g.wait(0.35);
+  await g.simulate(0.35);
   const aim = (await g.state()).interaction;
   check(aim.targetKind === 'shove', 'aiming at it offers a shove', String(aim.targetKind));
   check((aim.prompt ?? '').toLowerCase().includes('shove'), 'and says so', aim.prompt ?? '');
   const restBefore = (await g.call('fruit.info', heavy)).pos.slice();
   await g.call('interact');
-  await g.wait(0.7);
+  await g.simulate(0.7);
   const restAfter = await g.call('fruit.info', heavy);
   check(!(await g.state()).interaction.carrying, 'pressing E does not put it in your hands');
   check(Math.hypot(restAfter.pos[0] - restBefore[0], restAfter.pos[2] - restBefore[2]) > 0.15,
     'pressing E shoves it instead');
   results.push({ file: await g.shot('92-oversized', SUB), label: 'oversized, refused',
     note: aim.prompt ? aim.prompt.replace(/<[^>]+>/g, '') : '' });
+  await g.pause(false);
 
   // ---- highlight ----------------------------------------------------------
   console.log('\n--- aiming ---');
