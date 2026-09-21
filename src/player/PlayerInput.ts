@@ -78,6 +78,7 @@ export class PlayerInput {
 
   constructor(canvas: HTMLElement) {
     this.canvas = canvas;
+    this.canvas.tabIndex = 0;
     this.bind();
   }
 
@@ -133,7 +134,9 @@ export class PlayerInput {
         this.keys.clear(); this.buttons.clear();
       }
     });
-    on(window, 'contextmenu', (e) => { if (this.pointerLocked) e.preventDefault(); });
+    // RMB is a game control on the canvas whether or not pointer lock has
+    // completed. Keep unrelated browser/UI surfaces outside this ownership.
+    on(this.canvas, 'contextmenu', (e) => e.preventDefault());
   }
 
   requestLock(): void {

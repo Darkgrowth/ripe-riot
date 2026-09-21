@@ -265,6 +265,24 @@ html, body {
   border: 2px solid rgba(255, 255, 255, 0.12); border-radius: 14px;
   padding: 22px 26px; box-shadow: var(--shadow);
 }
+.shop-panel .card {
+  width: min(1180px, 88vw); padding: clamp(26px, 2.4vh, 34px) clamp(30px, 2.6vw, 42px);
+}
+.panel.shop-panel h2 { font-size: clamp(30px, 2.6vh, 36px); margin-bottom: 6px; }
+.panel.shop-panel .hint { font-size: clamp(13px, 1.15vh, 15px); margin-bottom: 14px; opacity: 0.72; }
+.shop-next {
+  display: flex; align-items: baseline; gap: 14px; margin: 0 0 20px;
+  padding: 11px 14px; border-left: 4px solid var(--gold); border-radius: 6px;
+  background: rgba(255, 204, 68, 0.09);
+}
+.shop-next span { color: var(--gold); font-size: clamp(12px, 1.05vh, 14px); font-weight: 900; letter-spacing: 1.3px; }
+.shop-next strong { color: #fff3c4; font-size: clamp(16px, 1.45vh, 19px); }
+.shop-panel .shop-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: clamp(14px, 1.4vh, 18px); }
+.shop-panel .shop-item { padding: clamp(16px, 1.5vh, 20px); }
+.shop-panel .shop-item .name { font-size: clamp(17px, 1.55vh, 20px); margin-bottom: 6px; }
+.shop-panel .shop-item .desc { font-size: clamp(13px, 1.22vh, 15px); line-height: 1.42; min-height: 39px; }
+.shop-panel .shop-item .cost { font-size: clamp(14px, 1.3vh, 17px); margin-top: 10px; }
+.shop-panel .shop-item .tagline { font-size: clamp(12px, 1.08vh, 14px); margin-top: 6px; }
 .panel h2 { margin: 0 0 4px; font-size: 26px; letter-spacing: 1.5px; color: var(--gold); }
 .panel .hint { margin: 0 0 10px; font-size: 12px; opacity: 0.6; letter-spacing: 1px; text-transform: uppercase; }
 /* The shed's one piece of advice: what to save for next. */

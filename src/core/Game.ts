@@ -81,7 +81,7 @@ export class Game {
     this.renderer = new Renderer(canvas);
     this.input = new PlayerInput(canvas);
     this.player = new PlayerController(this.physics, this.newId(), spawn);
-    this.playerCamera = new PlayerCamera(this.renderer.camera);
+    this.playerCamera = new PlayerCamera(this.renderer.camera, this.physics);
   }
 
   async initSystems(): Promise<void> {

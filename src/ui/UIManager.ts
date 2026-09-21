@@ -30,6 +30,7 @@ export class UIManager implements System {
   private toastNodes: Array<{ el: HTMLElement; until: number }> = [];
   private stuntNodes: Array<{ el: HTMLElement; until: number }> = [];
   private lastPrompt: string | null = null;
+  private promptCandidate: { text: string; priority: number } | null = null;
   private hasControlled = false;
   private audioSettings: ReturnType<typeof createAudioSettings> | null = null;
 
@@ -80,7 +81,7 @@ export class UIManager implements System {
     g.bus.on('money:changed', (p) => this.onMoney(p.money, p.delta));
     g.bus.on('ui:toast', (p) => this.toast(p.text, p.sub, p.kind, p.ms));
     g.bus.on('ui:celebrate', (p) => this.celebrate(p.title, p.sub, p.kind));
-    g.bus.on('ui:prompt', (p) => this.setPrompt(p.text));
+    g.bus.on('ui:prompt', (p) => this.offerPrompt(p.text, p.priority));
     g.bus.on('stunt:awarded', (p) => this.stunt(p.label, p.multiplier));
     // A discovery is the strongest single moment in the loop and it used to be
     // the quietest: two handlers wrote the same banner over each other (this one
@@ -137,6 +138,31 @@ export class UIManager implements System {
     this.els.prompt.innerHTML = text ?? '';
     this.els.prompt.classList.toggle('show', !!text);
     this.els.crosshair.classList.toggle('wide', !!text);
+  }
+
+  /**
+   * Prompt emitters describe what they have; the HUD decides what the player
+   * should see. Keeping the first candidate on a tie preserves the immediate
+   * aimed interaction, which runs before broader world context systems.
+   */
+  private offerPrompt(text: string | null, priority: 'hint' | 'context' | 'action' = 'action'): void {
+    if (!text) return;
+    const rank = priority === 'action' ? 3 : priority === 'context' ? 2 : 1;
+    if (!this.promptCandidate || rank > this.promptCandidate.priority) {
+      this.promptCandidate = { text, priority: rank };
+    }
+  }
+
+  private modalOpen(): boolean {
+    return ['shop', 'book'].some(name =>
+      this.g.has(name) && this.g.get<{ open: boolean }>(name).open);
+  }
+
+  /** Resolve after every system has offered its candidate for this frame. */
+  lateUpdate(): void {
+    const blocked = this.g.player.state !== 'active' || !this.g.input.enabled || this.modalOpen();
+    this.setPrompt(blocked ? null : (this.promptCandidate?.text ?? null));
+    this.promptCandidate = null;
   }
 
   /** Rebuilt whenever the tool inventory changes. */
@@ -309,8 +335,7 @@ export class UIManager implements System {
   private updateEntryHint(): void {
     const controlled = document.pointerLockElement === this.g.renderer.canvas;
     if (controlled) this.hasControlled = true;
-    const panelOpen = ['shop', 'book'].some(name =>
-      this.g.has(name) && this.g.get<{ open: boolean }>(name).open);
+    const panelOpen = this.modalOpen();
     const hidden = controlled || panelOpen;
     if (this.els.entryHint.hidden !== hidden) this.els.entryHint.hidden = hidden;
     const title = this.hasControlled ? 'Click to return' : 'Click to play';

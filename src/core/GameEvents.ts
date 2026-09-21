@@ -64,7 +64,7 @@ export interface GameEventMap {
 
   'ui:toast': { text: string; sub?: string; kind?: 'info' | 'good' | 'bad' | 'gold'; ms?: number };
   'ui:celebrate': { title: string; sub?: string; kind?: 'discovery' | 'record' | 'stunt' | 'legendary' };
-  'ui:prompt': { text: string | null };
+  'ui:prompt': { text: string | null; priority?: 'hint' | 'context' | 'action' };
 
   'audio:sfx': { name: string; position?: THREE.Vector3; volume?: number; pitch?: number };
   'island:event': { id: number; kind: 'windfall' | 'coconuts' | 'order';

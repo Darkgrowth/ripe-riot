@@ -1,10 +1,14 @@
 import * as THREE from 'three';
 import { clamp, damp, lerp } from '@/core/MathUtils';
 import type { PlayerController } from './PlayerController';
+import type { PhysicsWorld } from '@/physics/PhysicsWorld';
+import { QueryMask } from '@/physics/Layers';
 
 const _q = new THREE.Quaternion();
 const _e = new THREE.Euler(0, 0, 0, 'YXZ');
 const _v = new THREE.Vector3();
+const _f = new THREE.Vector3();
+const _cameraRay = new THREE.Vector3();
 
 interface Shake { amp: number; freq: number; left: number; total: number; }
 
@@ -28,7 +32,7 @@ export class PlayerCamera {
   bobStrength = 1;
   enabled = true;
 
-  constructor(camera: THREE.PerspectiveCamera) {
+  constructor(camera: THREE.PerspectiveCamera, private physics: PhysicsWorld) {
     this.camera = camera;
   }
 
@@ -43,7 +47,13 @@ export class PlayerCamera {
   }
 
   setRagdoll(on: boolean, anchor: THREE.Object3D | null = null): void {
-    this.ragdollAnchor = anchor;
+    if (on && anchor) {
+      this.ragdollAnchor = anchor;
+      // The local body becomes visible on this same frame. Enter the safe
+      // chase pose immediately rather than spending several frames blending
+      // through the newly spawned head and torso.
+      this.ragdollBlend = 1;
+    }
     this.ragdollTarget = on ? 1 : 0;
   }
   private ragdollTarget = 0;
@@ -84,6 +94,7 @@ export class PlayerCamera {
     this.roll = damp(this.roll, targetRoll, 10, dt);
 
     this.ragdollBlend = damp(this.ragdollBlend, this.ragdollTarget, 9, dt);
+    if (this.ragdollTarget === 0 && this.ragdollBlend < 0.001) this.ragdollAnchor = null;
 
     // --- compose
     const eye = player.eyePosition;
@@ -93,8 +104,33 @@ export class PlayerCamera {
 
     if (this.ragdollBlend > 0.001 && this.ragdollAnchor) {
       const a = this.ragdollAnchor.getWorldPosition(new THREE.Vector3());
-      // Pull back and up a little so the tumble is legible instead of nauseating.
-      a.y += 0.35;
+      // The anchor is the physical head. Following it at zero horizontal
+      // distance put the first-person camera inside the local face and torso
+      // whenever the joints folded. Hold a compact chase view instead: the
+      // body still tumbles visibly, while the viewpoint stays outside it.
+      player.forward(_f);
+      const origin = a.clone();
+      a.addScaledVector(_f, -1.35).addScaledVector(THREE.Object3D.DEFAULT_UP, 0.9);
+      // Ravine walls and steep slopes can sit directly behind a falling
+      // player. Shorten the chase arm before it crosses solid world geometry.
+      _cameraRay.copy(a).sub(origin);
+      const cameraDistance = _cameraRay.length();
+      if (cameraDistance > 0.001) {
+        _cameraRay.multiplyScalar(1 / cameraDistance);
+        const hit = this.physics.raycast(origin, _cameraRay, cameraDistance, QueryMask.solid, null);
+        if (hit && hit.distance >= 0.65) {
+          a.copy(origin).addScaledVector(_cameraRay, hit.distance - 0.16);
+        } else if (hit) {
+          // If the head is already against the ravine wall, shortening the
+          // rear arm would put the lens back inside the body. Rise above the
+          // tumble instead; open sky is the safer local escape direction.
+          _cameraRay.copy(THREE.Object3D.DEFAULT_UP);
+          const upDistance = 1.35;
+          const upHit = this.physics.raycast(origin, _cameraRay, upDistance, QueryMask.solid, null);
+          a.copy(origin).addScaledVector(_cameraRay,
+            upHit ? Math.max(0.65, upHit.distance - 0.16) : upDistance);
+        }
+      }
       _v.lerp(a, this.ragdollBlend);
     }
 

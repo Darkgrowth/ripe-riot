@@ -343,7 +343,7 @@ export class PlayerRagdoll implements System, PhysicsOwner {
       part.mesh.position.set(t.x + _v.x, t.y + _v.y, t.z + _v.z);
       part.mesh.quaternion.copy(_q);
       if (part.name === 'head') {
-        // Camera rides just behind the head so the tumble is legible.
+        // The camera derives a stable chase offset from this physical anchor.
         this.anchor.position.set(t.x, t.y + 0.1, t.z);
       }
     }

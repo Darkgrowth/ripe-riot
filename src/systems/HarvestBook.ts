@@ -154,6 +154,7 @@ export class HarvestBook implements System {
 
   openPanel(): void {
     if (this.open) return;
+    if (this.g.has('shop') && this.g.get<{ open: boolean }>('shop').open) return;
     this.open = true;
     this.g.input.enabled = false;
     document.exitPointerLock?.();
@@ -168,7 +169,8 @@ export class HarvestBook implements System {
     this.open = false;
     this.panel?.remove();
     this.panel = null;
-    this.g.input.enabled = true;
+    const anotherModal = this.g.has('shop') && this.g.get<{ open: boolean }>('shop').open;
+    this.g.input.enabled = !anotherModal;
   }
 
   private render(): void {

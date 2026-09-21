@@ -87,6 +87,8 @@ export class Shop implements System {
   pendingBuy: string | null = null;
   private panel: HTMLElement | null = null;
   private net: MultiplayerAuthority | null = null;
+  private previousFocus: HTMLElement | null = null;
+  private restorePointerLock = false;
 
   init(g: Game): void {
     this.g = g;
@@ -223,13 +225,22 @@ export class Shop implements System {
   // ---- panel --------------------------------------------------------------
   openPanel(): void {
     if (this.open) return;
+    if (this.g.has('book') && this.g.get<{ open: boolean }>('book').open) return;
     this.open = true;
     this.g.input.enabled = false;
+    this.previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    this.restorePointerLock = document.pointerLockElement === this.g.renderer.canvas;
     document.exitPointerLock?.();
     this.panel = document.createElement('div');
-    this.panel.className = 'panel';
+    this.panel.className = 'panel shop-panel';
+    this.panel.setAttribute('role', 'dialog');
+    this.panel.setAttribute('aria-modal', 'true');
+    this.panel.setAttribute('aria-label', "Merv's Supply");
+    this.panel.tabIndex = -1;
+    this.panel.addEventListener('contextmenu', (e) => e.preventDefault());
     document.getElementById('ui-root')!.appendChild(this.panel);
     this.render();
+    this.panel.focus({ preventScroll: true });
     this.g.bus.emit('shop:opened', {});
   }
 
@@ -238,7 +249,13 @@ export class Shop implements System {
     this.open = false;
     this.panel?.remove();
     this.panel = null;
-    this.g.input.enabled = true;
+    const anotherModal = this.g.has('book') && this.g.get<{ open: boolean }>('book').open;
+    this.g.input.enabled = !anotherModal;
+    const focus = this.previousFocus?.isConnected ? this.previousFocus : this.g.renderer.canvas;
+    focus.focus({ preventScroll: true });
+    if (this.restorePointerLock && !anotherModal) this.g.input.requestLock();
+    this.previousFocus = null;
+    this.restorePointerLock = false;
     this.g.bus.emit('shop:closed', {});
   }
 
@@ -258,8 +275,8 @@ export class Shop implements System {
     const money = this.economy.money;
     const next = items.find((e) => !e.owned);
     if (!next) return 'Merv has nothing left to sell you. Go and get the melon.';
-    if (next.locked) return `Next: ${next.label} — ${this.unlockText(next.tier).toLowerCase()}, then $${next.cost}`;
-    if (!next.affordable) return `Next: ${next.label} — $${(next.cost - money).toLocaleString('en-US')} more`;
+    if (next.locked) return `${next.label} — ${this.unlockText(next.tier).toLowerCase()}, then $${next.cost}`;
+    if (!next.affordable) return `${next.label} — $${(next.cost - money).toLocaleString('en-US')} more`;
     return `${next.label} is within reach — $${next.cost}`;
   }
 
@@ -272,7 +289,7 @@ export class Shop implements System {
         <p class="hint">$${this.economy.money.toLocaleString('en-US')} available
           &nbsp;·&nbsp; ${this.economy.discoveryPoints} discovery
           &nbsp;·&nbsp; Esc to close</p>
-        <p class="next">${this.nextUp(items)}</p>
+        <div class="shop-next"><span>NEXT PURCHASE</span><strong>${this.nextUp(items)}</strong></div>
         <div class="shop-grid">
           ${items.map((e) => `
             <div class="shop-item ${e.owned ? 'owned' : ''} ${e.locked || (!e.affordable && !e.owned) ? 'locked' : ''}"
@@ -313,7 +330,7 @@ export class Shop implements System {
     if (this.open || !this.nearCounter) return;
     const inter = this.g.get<InteractionSystem>('interaction');
     if (!inter.promptText) {
-      this.g.bus.emit('ui:prompt', { text: '<b>E</b> Browse the shed' });
+      this.g.bus.emit('ui:prompt', { text: '<b>E</b> Browse the shed', priority: 'action' });
     }
   }
 

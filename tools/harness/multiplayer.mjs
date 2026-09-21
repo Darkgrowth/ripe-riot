@@ -88,6 +88,25 @@ try {
       `avatar at ${r.pos.join(', ')}`);
   }
 
+  // A local camera fix must not erase the body other players see. Remote
+  // avatars are separate rigs driven by the replicated player state.
+  await client.call('ragdoll.trigger', 18, 'multiplayer-visibility');
+  await sleep(420);
+  const remoteRagdoll = await host.page.evaluate(() => {
+    const net = window.__GAME.get('net');
+    const r = [...net.remotes.values()][0];
+    return r ? {
+      state: r.state,
+      rootVisible: r.rig.root.visible,
+      visibleParts: r.rig.parts.filter((p) => p.visible).length,
+    } : null;
+  });
+  ok(remoteRagdoll?.state === 'ragdoll', 'a remote player receives the ragdoll state', JSON.stringify(remoteRagdoll));
+  ok(remoteRagdoll?.rootVisible && remoteRagdoll.visibleParts === 6,
+    'all six remote avatar parts remain visible during the fall', JSON.stringify(remoteRagdoll));
+  await client.call('ragdoll.recover');
+  await sleep(220);
+
   // --- fruit replication: the host drops one, the client must see it
   await host.call('fruit.despawnAllFree');
   await client.call('fruit.despawnAllFree');

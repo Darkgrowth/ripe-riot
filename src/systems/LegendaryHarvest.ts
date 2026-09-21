@@ -321,6 +321,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     this.restStart = -1;
     this.dropStart = -1;
     this.lastPayout = 0;
+    this.firstSightAt = -1;
     this.phase = 'prepare';
     this.generation++;
     if (this.body) this.g.physics.removeBody(this.body);
@@ -735,10 +736,11 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     if (!this.body) return;
     void dt;
 
+    const canInteract = this.g.player.state === 'active' && this.g.input.enabled;
     if (!this.authoritative) {
       // A client: aim, ask, and count. The host decides everything else.
-      this.lookingAtVine = this.findVineUnderCrosshair();
-      if (this.lookingAtVine && this.g.input.frame.interactPressed) this.tryCut();
+      this.lookingAtVine = canInteract ? this.findVineUnderCrosshair() : null;
+      if (canInteract && this.lookingAtVine && this.g.input.frame.interactPressed) this.tryCut();
       this.syncTethers();
       return;
     }
@@ -748,8 +750,8 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     if (this.phase === 'prepare' || this.phase === 'tether' || this.phase === 'detach') {
       const hasRope = this.tools.owned.has('ropegun') || !!this.net?.anyoneHasRopeGun();
       if (this.phase === 'prepare' && hasRope) this.setPhase('tether');
-      this.lookingAtVine = this.findVineUnderCrosshair();
-      if (this.lookingAtVine && this.g.input.frame.interactPressed) this.tryCut();
+      this.lookingAtVine = canInteract ? this.findVineUnderCrosshair() : null;
+      if (canInteract && this.lookingAtVine && this.g.input.frame.interactPressed) this.tryCut();
     }
 
     const t = this.body.translation();
@@ -818,20 +820,27 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     const dist = Math.hypot(t.x - p.position.x, t.z - p.position.z);
     if (dist > 60) return;
     if (this.lookingAtVine) {
-      this.g.bus.emit('ui:prompt', { text: '<b>E</b> Cut the vine' });
+      this.g.bus.emit('ui:prompt', { text: '<b>E</b> Cut the vine', priority: 'action' });
     } else if (this.phase === 'prepare' && dist < 40) {
-      this.g.bus.emit('ui:prompt', { text: 'You will need a <b>Rope Gun</b> for this — Merv sells one' });
+      if (this.firstSightAt < 0) this.firstSightAt = this.g.clock.elapsed;
+      if (this.g.clock.elapsed - this.firstSightAt < 4.5) {
+        this.g.bus.emit('ui:prompt', {
+          text: 'You will need a <b>Rope Gun</b> for this — Merv sells one', priority: 'hint',
+        });
+      }
     } else if ((this.phase === 'tether' || this.phase === 'detach') && this.heldRopesToMelon().length) {
       // The one thing the encounter has to teach: a rope in your hands is a
       // leash, and a leash does not restrain two and a half tonnes. The
       // second thing: rock ABOVE the melon, the towers the vines hang from.
       this.g.bus.emit('ui:prompt', {
         text: `Pin the rope to the rock towers <b>above</b> it — <b>right-click</b> · tethers <b>${this.tethers.length}/${this.requiredTethers}</b>`,
+        priority: 'context',
       });
     } else if (this.phase === 'recover' && dist < 40) {
       const d = this.distanceToPad();
       this.g.bus.emit('ui:prompt', {
         text: `Get it to the pad — <b>${d.toFixed(0)} m</b>`,
+        priority: 'context',
       });
     }
   }

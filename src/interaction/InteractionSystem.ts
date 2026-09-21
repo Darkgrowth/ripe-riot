@@ -186,7 +186,7 @@ export class InteractionSystem implements System {
 
   frameUpdate(dt: number): void {
     this.updateHeldTransform(dt);
-    this.g.bus.emit('ui:prompt', { text: this.promptText });
+    this.g.bus.emit('ui:prompt', { text: this.promptText, priority: 'action' });
   }
 
   /**
