@@ -41,7 +41,7 @@ const PROMOTE_BUDGET = 2500;
 let a, b;
 try {
   console.log('opening two clients...');
-  a = await openGame({ width: 400, height: 225, headless: true, quiet: true });
+  a = await openGame({ width: 400, height: 225, headless: true, quiet: true, islandActivities: false, drawFrames: false });
   b = await openSecondClient(a);
 
   const room = 'mig' + Math.floor(Math.random() * 1e6);

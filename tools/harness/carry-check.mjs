@@ -412,7 +412,7 @@ await withGame(async (g) => {
     for (const e of g.consoleErrors.slice(0, 8)) console.log('  ', e);
   }
   check(real.length === 0, 'no console errors', `${real.length} logged`);
-}, { headless: true, width: 1280, height: 720, quiet: true });
+}, { headless: true, width: 1280, height: 720, quiet: true, islandActivities: false });
 
 const sheet = await contactSheet(results, path.join('capture', SUB, '_sheet.png'), {
   cols: 3, thumbW: 420, title: 'RIPE RIOT — first-person carry states',

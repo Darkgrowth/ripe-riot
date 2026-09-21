@@ -5,6 +5,7 @@ import type { Sunpatch } from '@/world/Sunpatch';
 import type { InteractionSystem } from '@/interaction/InteractionSystem';
 import type { MultiplayerAuthority } from '@/net/MultiplayerAuthority';
 import { DEEP_BASKET_CAPACITY, DEEP_BASKET_MAX_ITEM_MASS } from '@/interaction/CarryRules';
+import { toolIconMarkup } from '@/ui/ToolIcons';
 
 export interface ShopEntry {
   id: string;
@@ -276,7 +277,7 @@ export class Shop implements System {
           ${items.map((e) => `
             <div class="shop-item ${e.owned ? 'owned' : ''} ${e.locked || (!e.affordable && !e.owned) ? 'locked' : ''}"
                  data-id="${e.id}">
-              <div class="name">${e.icon} ${e.label}</div>
+              <div class="name">${toolIconMarkup(e.id, e.icon)} ${e.label}</div>
               <div class="desc">${e.description}</div>
               <div class="cost ${!e.affordable && !e.owned ? 'cant' : ''}">
                 ${e.owned ? 'OWNED' : e.locked ? this.unlockText(e.tier) : `$${e.cost}`}
@@ -301,8 +302,10 @@ export class Shop implements System {
 
     if (this.nearCounter && !this.open && this.g.input.frame.interactPressed) {
       const inter = this.g.get<InteractionSystem>('interaction');
-      // Selling wins if the player is carrying goods; browsing is the fallback.
-      if (!inter.carried && inter.basket.items.length === 0) this.openPanel();
+      // Interaction runs first and may have emptied the basket on this same
+      // press. Preserve its selected action instead of reopening the shop
+      // immediately after a sale and releasing the player's pointer lock.
+      if (inter.targetKind !== 'sell' && !inter.carried && inter.basket.items.length === 0) this.openPanel();
     }
   }
 

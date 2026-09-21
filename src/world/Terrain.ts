@@ -2,6 +2,14 @@ import * as THREE from 'three';
 import { fbm2, smoothstep, clamp } from '@/core/MathUtils';
 import { Palette } from '@/render/Palette';
 import { Mats } from '@/render/Materials';
+import { orchardProofWeight } from './VisualProof';
+const PROOF_GROUND = new THREE.Color().setHex(0x929365, THREE.SRGBColorSpace);
+const PROOF_EARTH = new THREE.Color().setHex(0xb19063, THREE.SRGBColorSpace);
+const MEADOW = new THREE.Color().setHex(0x89965b, THREE.SRGBColorSpace);
+const GROVE_FLOOR = new THREE.Color().setHex(0x567b68, THREE.SRGBColorSpace);
+const UPLAND = new THREE.Color().setHex(0xa1a16c, THREE.SRGBColorSpace);
+const STRATA = new THREE.Color().setHex(0xb2a288, THREE.SRGBColorSpace);
+const WORK_EARTH = new THREE.Color().setHex(0xa08a65, THREE.SRGBColorSpace);
 import type { PhysicsWorld } from '@/physics/PhysicsWorld';
 import { Groups } from '@/physics/Layers';
 
@@ -220,6 +228,13 @@ export class Terrain {
     // Steeper grass sits in shadow more of the day; darkening it is what gives
     // a rolling hillside its form when the geometry itself is smooth.
     _c.lerp(Palette.grassDark, smoothstep(0.10, 0.42, ss) * 0.45);
+    // Broad, quiet meadow patches separate the ground from the saturated fruit
+    // and crowns. These are pigment changes only: all height/route data stays exact.
+    _c.lerp(MEADOW, 0.24 + smoothstep(0.40, 0.67, patch) * 0.28);
+    const grove = 1 - smoothstep(10, 23, Math.hypot((x - 62) * 0.9, z + 9));
+    _c.lerp(GROVE_FLOOR, grove * 0.68);
+    const upland = smoothstep(11, 25, hh) * (1 - smoothstep(31, 45, hh));
+    _c.lerp(UPLAND, upland * 0.28);
     addScaled(out, _c, b.grass);
 
     // Rock, with a crevice term. The high-frequency band is only applied where
@@ -228,6 +243,9 @@ export class Terrain {
     _c.copy(Palette.rock).lerp(Palette.rockDark,
       clamp(fbm2(x * 0.06, z * 0.06, 2, this.seed + 3) * 0.5 + 0.5, 0, 1));
     _c.lerp(Palette.rockDark, smoothstep(0.34, 0.62, ss) * crev * 0.7);
+    const strata = Math.sin(hh * 0.76 + x * 0.041 + Math.sin(z * 0.065) * 1.8);
+    _c.lerp(STRATA, smoothstep(0.52, 0.91, strata) * 0.34);
+    _c.lerp(Palette.rockDark, smoothstep(-0.55, -0.92, strata) * 0.12);
     addScaled(out, _c, b.rock);
 
     addScaled(out, Palette.dirt, b.dirt);
@@ -237,12 +255,27 @@ export class Terrain {
     const shade = 1 + fbm2(x * 0.017, z * 0.017, 3, this.seed + 909) * 0.24;
     out.r *= shade; out.g *= shade; out.b *= shade;
 
+    // Local art proof: a warmer, quieter orchard floor under cooler pruned
+    // crowns. This only paints the mesh; height, slope and routes stay exact.
+    const proof = orchardProofWeight(x, z);
+    if (proof > 0) out.lerp(PROOF_GROUND, proof * b.grass * (0.48 + patch * 0.22));
+
+    // Worn footprints connect the shelters to their ground without flattening
+    // terrain or adding collision. Soft irregular edges avoid a rectangular decal.
+    let wear = 0;
+    for (const [cx, cz, rx, rz] of WORK_FOOTPRINTS) {
+      const d = Math.hypot((x - cx) / rx, (z - cz) / rz);
+      wear = Math.max(wear, 1 - smoothstep(0.48, 1.15, d + (patch - 0.5) * 0.3));
+    }
+    out.lerp(WORK_EARTH, wear * 0.66 * (1 - b.rock));
+
     // The worn route, laid over everything else. Pale packed earth in the
     // middle where it is actually walked, darker at the shoulders where it
     // gives way to the grass.
     const pw = this.pathWeight(x, z);
     if (pw > 0.001) {
       _c.copy(Palette.pathDark).lerp(Palette.path, smoothstep(0.3, 0.9, pw));
+      if (proof > 0) _c.lerp(PROOF_EARTH, proof * 0.35);
       // Scuff it, so a 5 m band of flat colour does not appear on the hillside.
       _c.lerp(Palette.dirt, clamp(fbm2(x * 0.35, z * 0.35, 2, this.seed + 505) * 0.5 + 0.5, 0, 1) * 0.22);
       out.lerp(_c, pw * 0.92);
@@ -325,6 +358,9 @@ export class Terrain {
     this.mesh?.geometry.dispose();
   }
 }
+
+const WORK_FOOTPRINTS = [[-16, -25, 4.7, 3.2], [-54, 57, 3.6, 2.6],
+  [-5, -40, 4.6, 2.6], [60, -23, 5.5, 4.0]] as const;
 
 /** Bounding box of each route, padded by its widest half-width. Used to reject
  *  the ~90% of the island that is nowhere near a route in two comparisons. */

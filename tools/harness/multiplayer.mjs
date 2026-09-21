@@ -38,7 +38,7 @@ try {
   // in simulation time. At 640x360 x2 the host's avatar was still 6 m short of
   // the client's new position when the check read it. Same calibration as
   // run-tests.mjs, and the same reason.
-  a = await openGame({ width: 400, height: 225, headless: true, quiet: true });
+  a = await openGame({ width: 400, height: 225, headless: true, quiet: true, islandActivities: false, drawFrames: false });
   // Same browser context as A, or BroadcastChannel cannot reach between them.
   b = await openSecondClient(a);
 

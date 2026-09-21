@@ -35,6 +35,12 @@ export async function run(g, t) {
   await g.wait(0.5);
   const drawnBefore = (await g.state()).fruit.drawn;
   t.ok(await g.call('pickup', apple), 'an apple can be picked up');
+  // Presentation uses wall-clock frame time while waits below force physics
+  // time. Exclusivity must hold on the next rendered frame, without waiting
+  // for either real-time stow ramp to finish on a fast or slow renderer.
+  await g.idleFrames(1);
+  t.eq((await g.state()).viewmodel.toolShown, false,
+    'pickup hides the equipped tool on the next rendered frame');
   await g.wait(0.4);
   let s = await g.state();
   t.eq(s.interaction.carrying?.cls, 'small', 'and is carried as a small fruit');
@@ -45,6 +51,9 @@ export async function run(g, t) {
   t.eq(s.viewmodel.carryShown, true, 'the carry rig is on screen');
   t.eq(s.viewmodel.toolShown, false, 'and the equipped tool is not');
   await g.call('drop');
+  await g.idleFrames(1);
+  t.eq((await g.state()).viewmodel.carryShown, false,
+    'drop hides the fruit proxy on the next rendered frame');
   await g.wait(0.5);
   s = await g.state();
   t.eq(s.fruit.drawn, drawnBefore, 'dropping puts it back in the world batch');

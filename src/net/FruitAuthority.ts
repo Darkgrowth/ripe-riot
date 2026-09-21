@@ -339,6 +339,7 @@ export class FruitAuthority {
     this.owner.set(fruitId, peer);
     h.carried = fruitId;
     this.stats.claims++;
+    this.hooks.emit('fruit:claimed', { fruitId });
     return null;
   }
 

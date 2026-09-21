@@ -29,7 +29,7 @@ export const STUNTS: Record<string, StuntDef> = {
   hillRunner: { id: 'hillRunner', label: 'HILL RUNNER', bonus: 0.50,
     blurb: 'You chased that a long way downhill.' },
   skyPick: { id: 'skyPick', label: 'SKY PICK', bonus: 0.35,
-    blurb: 'Harvested from somewhere you should not have been.' },
+    blurb: 'Harvested more than eight metres above the ground.' },
   oneShot: { id: 'oneShot', label: 'ONE SHOT', bonus: 0.60,
     blurb: 'Detached and banked without ever touching the ground.' },
   chainReaction: { id: 'chainReaction', label: 'CHAIN REACTION', bonus: 0.45,
@@ -88,7 +88,13 @@ export class HarvestScoring implements System {
     g.bus.on('fruit:detached', (p) => {
       const f = this.fruitSys.get(p.fruitId);
       if (!f) return;
-      if (f.detachPosition.y > 21) this.award(f, 'skyPick');
+      // Elevation is geography, not a stunt: an ordinary apple on the hill
+      // farm should score exactly like an ordinary apple beside the dock.
+      // Measure the fruit's release above its local ground (or the sea),
+      // keeping tall-palm and other elevated tool harvests eligible.
+      const release = f.detachPosition;
+      const ground = Math.max(0, this.world.terrain.height(release.x, release.z));
+      if (release.y - ground > 8) this.award(f, 'skyPick');
       // "Five at once. Nobody meant that." — so a chain reaction is something
       // you caused INDIRECTLY. Counting hand picks made a methodical player
       // filling a basket off one tree score it every time, which is the same

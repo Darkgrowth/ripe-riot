@@ -1,10 +1,13 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 
 const C = (hex: number) => new THREE.Color().setHex(hex, THREE.SRGBColorSpace);
 
 const GLOVE = C(0x8c5a30);
 const GLOVE_DARK = C(0x6b4222);
+const GLOVE_PANEL = C(0xa67543);
+const STITCH = C(0xc49b65);
 const SKIN = C(0xe0a878);
 const STEEL = C(0xa8b0b8);
 const STEEL_DARK = C(0x5f6a72);
@@ -17,6 +20,7 @@ const PAINT_DARK = C(0x9c3a29);
 const RUBBER = C(0x3a3a44);
 const SLEEVE = C(0xd8a13c);
 const SLEEVE_DARK = C(0xa9761f);
+const SLEEVE_PANEL = C(0xe2ad4b);
 
 /**
  * First-person tool models, generated in code like everything else.
@@ -36,6 +40,8 @@ export interface ViewModel {
    * the geometry around its offset instead, which is the part that changes.
    */
   setFit(fit: number): void;
+  /** Cosmetic blast-strength dial; reads existing tool state only. */
+  setCharge?(charge: number): void;
   dispose(): void;
 }
 
@@ -54,6 +60,18 @@ function cyl(rt: number, rb: number, h: number, seg: number, color: THREE.Color,
   at: [number, number, number] = [0, 0, 0],
   rot: [number, number, number] = [0, 0, 0]): THREE.BufferGeometry {
   const g = new THREE.CylinderGeometry(rt, rb, h, seg);
+  if (rot[0]) g.rotateX(rot[0]);
+  if (rot[1]) g.rotateY(rot[1]);
+  if (rot[2]) g.rotateZ(rot[2]);
+  g.translate(at[0], at[1], at[2]);
+  return paint(g, color);
+}
+
+/** A broad, single-step leather/fabric chamfer, contained in the original box. */
+function padded(w: number, h: number, d: number, bevel: number, color: THREE.Color,
+  at: [number, number, number],
+  rot: [number, number, number] = [0, 0, 0]): THREE.BufferGeometry {
+  const g = new RoundedBoxGeometry(w, h, d, 1, bevel);
   if (rot[0]) g.rotateX(rot[0]);
   if (rot[1]) g.rotateY(rot[1]);
   if (rot[2]) g.rotateZ(rot[2]);
@@ -101,33 +119,39 @@ function hand(x: number, y: number, z: number, roll = 0, inward = 1): THREE.Buff
     [x + dx * inward, y + dy, z + dz];
   const r: [number, number, number] = [0, 0, roll];
 
-  // Back of the hand, then four separate fingers with a 3.5 mm gap between
-  // them. At 43 cm from the eye that gap is a couple of pixels at 720p, which
-  // is exactly enough to read as fingers rather than as a mitten — and because
-  // the fingers sit INSIDE the old palm block, it adds no screen area at all.
-  parts.push(box(0.075, 0.056, 0.052, GLOVE, at(0, 0, 0.024), r));
-  parts.push(box(0.076, 0.017, 0.021, GLOVE_DARK, at(0, 0.019, 0.001), r));   // knuckles
+  // Chamfered leather keeps the original palm/finger envelope and spacing.
+  // One leather tone unifies the fingers; small knuckle pads supply the seams
+  // instead of the old alternating dark/light rectangular comb.
+  parts.push(padded(0.075, 0.052, 0.052, 0.009, GLOVE, at(0, 0, 0.024), r));
+  parts.push(padded(0.056, 0.005, 0.032, 0.002, GLOVE_PANEL, at(0, 0.0255, 0.024), r));
   for (let i = 0; i < 4; i++) {
     const fx = -0.0275 + i * 0.0183;
     // Middle fingers longest, little finger shortest and set slightly low:
     // the stagger is what stops four identical boxes reading as a comb.
     const len = 0.050 - Math.abs(i - 1.15) * 0.0055;
-    parts.push(box(0.0145, 0.029, len,
-      i % 2 ? GLOVE : GLOVE_DARK,
+    parts.push(padded(0.0145, 0.029, len, 0.0055, GLOVE,
       at(fx, 0.006 - (i === 3 ? 0.005 : 0), -0.024 - (len - 0.050) / 2), r));
+    parts.push(padded(0.013, 0.013, 0.018, 0.004, GLOVE_PANEL,
+      at(fx, 0.019, 0.001), r));
+    // Four short stitches lie inside the old knuckle bar's silhouette.
+    parts.push(box(0.006, 0.0015, 0.0015, STITCH, at(fx, 0.027, 0.006), r));
   }
   // Thumb, in two segments, angled in across the palm. It is placed on the
   // INBOARD side deliberately: a thumb on the outer edge widens the viewmodel
   // toward the frame edge, which the startup check exists to prevent.
-  parts.push(box(0.021, 0.025, 0.040, GLOVE, at(0.033, -0.004, 0.006), [0, 0.45 * inward, roll]));
-  parts.push(box(0.018, 0.021, 0.030, GLOVE_DARK, at(0.043, 0.004, -0.018), [0, 0.85 * inward, roll]));
+  parts.push(padded(0.021, 0.025, 0.040, 0.006, GLOVE, at(0.033, -0.004, 0.006), [0, 0.45 * inward, roll]));
+  parts.push(padded(0.018, 0.021, 0.030, 0.006, GLOVE, at(0.043, 0.004, -0.018), [0, 0.85 * inward, roll]));
   // Heel of the hand.
-  parts.push(box(0.077, 0.026, 0.044, GLOVE_DARK, at(0, -0.029, 0.014), r));
+  parts.push(padded(0.077, 0.026, 0.044, 0.007, GLOVE_DARK, at(0, -0.029, 0.014), r));
   // Wrist: a narrower section between glove and cuff. Without it the arm is one
   // extruded stick from the fingertips to the bottom of the frame.
-  parts.push(box(0.060, 0.048, 0.028, GLOVE_DARK, at(0, 0.003, 0.057), r));
-  parts.push(box(0.072, 0.070, 0.030, SLEEVE_DARK, at(0, 0.008, 0.079), r));  // cuff
-  parts.push(box(0.064, 0.064, 0.10, SLEEVE, at(0, 0.008, 0.128), r));        // forearm
+  parts.push(padded(0.060, 0.048, 0.028, 0.007, GLOVE_DARK, at(0, 0.003, 0.057), r));
+  parts.push(padded(0.072, 0.070, 0.030, 0.008, SLEEVE_DARK, at(0, 0.008, 0.079), r));
+  // A rolled golden cuff and a single broad fabric facet keep the sleeve
+  // short, with no new geometry extending toward the eye or frame edges.
+  parts.push(padded(0.071, 0.069, 0.014, 0.008, SLEEVE, at(0, 0.008, 0.076), r));
+  parts.push(padded(0.064, 0.060, 0.10, 0.010, SLEEVE, at(0, 0.008, 0.128), r));
+  parts.push(padded(0.028, 0.003, 0.052, 0.0014, SLEEVE_PANEL, at(0, 0.0385, 0.131), r));
   return parts;
 }
 
@@ -137,11 +161,40 @@ function hand(x: number, y: number, z: number, roll = 0, inward = 1): THREE.Buff
  * The tool models bake their hands into one merged mesh because a tool never
  * changes shape. A carried fruit does — a Puff Melon triples in size in under a
  * second — so the hands have to be separate objects the carry rig can move
- * apart. Same geometry, same material, so a hand on an apple and a hand on a
- * shaker are visibly the same pair of gloves.
+ * apart. The carry pose uses the same leather and cuff as a tool hand, but
+ * cups the palm and curls the fingers instead of rotating a straight tool
+ * grip upright. Its local +Y points up the fruit and +Z faces the player.
  */
 export function gripHand(material: THREE.Material, inward: 1 | -1): THREE.Mesh {
-  return assemble(hand(0, 0, 0, 0, inward), material, `grip${inward > 0 ? 'L' : 'R'}`);
+  const parts: THREE.BufferGeometry[] = [];
+  const p = (x: number, y: number, z: number): [number, number, number] => [x * inward, y, z];
+  // A broad palm and overlapping heel make one weight-bearing glove, with no
+  // narrow wrist stalk between a small fruit and its supporting hand.
+  parts.push(padded(0.092, 0.070, 0.045, 0.014, GLOVE, p(0, -0.003, 0)));
+  parts.push(padded(0.080, 0.034, 0.042, 0.011, GLOVE_DARK, p(0, -0.031, 0)));
+  parts.push(padded(0.062, 0.043, 0.010, 0.004, GLOVE_PANEL, p(0.003, -0.005, 0.022)));
+  for (let i = 0; i < 4; i++) {
+    const fx = -0.030 + i * 0.020;
+    const stagger = Math.abs(i - 1.2) * 0.006;
+    // Finger pads climb the near surface. Their curved +Z profile follows the
+    // visible face of a round fruit rather than disappearing behind it.
+    parts.push(padded(0.019, 0.039, 0.025, 0.007, GLOVE,
+      p(fx, 0.024 - stagger, 0.014), [0.30, 0, 0]));
+    parts.push(padded(0.018, 0.028, 0.024, 0.007, GLOVE_PANEL,
+      p(fx, 0.050 - stagger, 0.030), [0.72, 0, 0]));
+  }
+  // The thumb opposes the curled fingers across the inner edge of the palm.
+  parts.push(padded(0.031, 0.045, 0.034, 0.010, GLOVE,
+    p(0.041, 0.001, 0.018), [0.1, 0, -0.62 * inward]));
+  parts.push(padded(0.027, 0.033, 0.030, 0.009, GLOVE_PANEL,
+    p(0.050, 0.024, 0.034), [0.5, 0, 0.40 * inward]));
+  // Cuff nests into the heel. The short sleeve grows wider toward the frame
+  // edge, so it reads as a forearm entering the shot rather than a thin post.
+  parts.push(padded(0.079, 0.029, 0.058, 0.008, SLEEVE_DARK, p(0, -0.052, -0.003)));
+  parts.push(padded(0.078, 0.018, 0.057, 0.008, SLEEVE, p(0, -0.050, 0)));
+  parts.push(padded(0.079, 0.079, 0.056, 0.010, SLEEVE, p(0, -0.096, -0.006)));
+  parts.push(padded(0.044, 0.048, 0.004, 0.0015, SLEEVE_PANEL, p(0, -0.092, 0.023)));
+  return assemble(parts, material, `grip${inward > 0 ? 'L' : 'R'}`);
 }
 
 function assemble(parts: THREE.BufferGeometry[], material: THREE.Material, name: string): THREE.Mesh {
@@ -232,14 +285,60 @@ const BUILDERS: Record<string, Builder> = {
 
   aircannon: () => {
     const parts: THREE.BufferGeometry[] = [];
-    parts.push(cyl(0.075, 0.065, 0.40, 10, PAINT, [0.04, -0.09, -0.28], [Math.PI / 2, 0, 0]));
-    parts.push(torus(0.082, 0.016, PAINT_DARK, [0.04, -0.09, -0.47], [0, 0, 0]));      // muzzle ring
-    parts.push(cyl(0.05, 0.05, 0.22, 8, STEEL, [-0.05, -0.16, -0.12], [Math.PI / 2, 0, 0.3])); // tank
-    parts.push(cyl(0.012, 0.012, 0.14, 5, STEEL_DARK, [0.0, -0.13, -0.20], [0, 0, 1.1]));      // hose
-    parts.push(box(0.05, 0.12, 0.06, RUBBER, [0.05, -0.19, -0.13], [0.22, 0, 0]));
-    parts.push(box(0.03, 0.03, 0.09, STEEL_DARK, [0.04, -0.02, -0.34]));
-    parts.push(...hand(0.05, -0.25, -0.12, 0.1, -1));
-    parts.push(...hand(-0.07, -0.19, -0.30, 0.45, 1));
+    const enamel = C(0x36796f), cream = C(0xe4d5a9), brass = C(0xc49344);
+    const dark = C(0x293c3c);
+    const axial: [number, number, number] = [Math.PI / 2, 0, 0];
+    // A squat pressure vessel, bolted breech and bell mouth give this tool
+    // a different silhouette from the rope gun. All fixed parts stay merged.
+    parts.push(cyl(0.078, 0.088, 0.28, 16, enamel, [0.04, -0.065, -0.25], axial));
+    parts.push(cyl(0.087, 0.074, 0.085, 16, cream, [0.04, -0.065, -0.075], axial));
+    parts.push(cyl(0.094, 0.094, 0.018, 16, brass, [0.04, -0.065, -0.105], axial));
+    const bell = new THREE.CylinderGeometry(0.078, 0.105, 0.075, 16, 1, true);
+    bell.rotateX(Math.PI / 2); bell.translate(0.04, -0.065, -0.423);
+    parts.push(paint(bell, PAINT));
+    const bore = new THREE.CylinderGeometry(0.063, 0.092, 0.07, 16, 1, true);
+    bore.scale(-1, 1, 1); // reverse the wall winding so the inside is visible
+    bore.rotateX(Math.PI / 2); bore.translate(0.04, -0.065, -0.42);
+    parts.push(paint(bore, dark));
+    parts.push(cyl(0.065, 0.065, 0.004, 16, dark, [0.04, -0.065, -0.387], axial));
+    parts.push(torus(0.105, 0.014, PAINT_DARK, [0.04, -0.065, -0.463]));
+    parts.push(torus(0.079, 0.010, brass, [0.04, -0.065, -0.371]));
+    for (const z of [-0.32, -0.18]) {
+      parts.push(torus(0.081, 0.010, cream, [0.04, -0.065, z]));
+      for (const side of [-1, 1]) parts.push(box(0.013, 0.11, 0.019, dark, [0.04 + side * 0.075, -0.065, z]));
+    }
+    // Longitudinal reinforcement ribs, large enough to read at play distance.
+    for (const side of [-1, 1]) parts.push(padded(0.019, 0.026, 0.22, 0.005,
+      cream, [0.04 + side * 0.064, -0.012, -0.24]));
+    for (let i = 0; i < 6; i++) {
+      const a = i * Math.PI / 3;
+      parts.push(cyl(0.007, 0.007, 0.012, 6, dark,
+        [0.04 + Math.cos(a) * 0.067, -0.065 + Math.sin(a) * 0.067, -0.025], axial));
+    }
+    // Side reservoir and a real curved hose, visibly connected at both ends.
+    parts.push(cyl(0.039, 0.046, 0.18, 12, brass, [-0.073, -0.11, -0.19], axial));
+    for (const z of [-0.27, -0.11]) parts.push(torus(0.043, 0.008, dark, [-0.073, -0.11, z]));
+    const hose = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-0.073, -0.105, -0.093), new THREE.Vector3(-0.115, -0.08, -0.04),
+      new THREE.Vector3(-0.085, -0.01, -0.045), new THREE.Vector3(-0.025, -0.015, -0.12),
+    ]);
+    parts.push(paint(new THREE.TubeGeometry(hose, 12, 0.011, 6, false), dark));
+    // Gauge faces the worker. The moving needle is added by buildViewModel.
+    parts.push(cyl(0.038, 0.038, 0.022, 16, brass, [0.045, 0.033, -0.105], axial));
+    parts.push(cyl(0.032, 0.032, 0.003, 24, cream, [0.045, 0.033, -0.092], axial));
+    parts.push(torus(0.034, 0.005, dark, [0.045, 0.033, -0.090]));
+    for (let i = 0; i < 9; i++) {
+      const a = -1.1 + i * 2.2 / 8;
+      parts.push(box(0.003, i % 2 ? 0.005 : 0.008, 0.003, i > 6 ? PAINT : dark,
+        [0.045 + Math.sin(a) * 0.025, 0.033 + Math.cos(a) * 0.025, -0.088], [0, 0, -a]));
+    }
+    // Broad rubber handles and two gloves make the weight-bearing grip clear.
+    parts.push(padded(0.043, 0.10, 0.060, 0.008, RUBBER, [0.07, -0.17, -0.085], [0.22, 0, 0]));
+    parts.push(torus(0.034, 0.007, brass, [0.05, -0.155, -0.15], [0, Math.PI / 2, 0]));
+    parts.push(padded(0.09, 0.034, 0.11, 0.008, RUBBER, [-0.01, -0.158, -0.29]));
+    for (let i = 0; i < 4; i++) parts.push(box(0.092, 0.005, 0.009, STEEL_DARK, [-0.01, -0.177, -0.325 + i * 0.023]));
+    parts.push(...hand(0.085, -0.195, -0.09, 0.12, -1));
+    parts.push(...hand(-0.10, -0.135, -0.32, 0.40, 1));
     return { parts, hold: new THREE.Vector3(0.04, -0.02, -0.46) };
   },
 };
@@ -280,15 +379,30 @@ export function buildViewModel(toolId: string, material: THREE.Material): ViewMo
   const { parts, hold } = builder();
   const mesh = assemble(parts, material, toolId);
   mesh.position.copy(VIEW_OFFSET);
+  // Raise the heavier two-handed housing just enough to show its support
+  // glove. This is tool-specific; other approved framing stays unchanged.
+  if (toolId === 'aircannon') mesh.position.y += 0.010;
   mesh.scale.setScalar(VIEW_SCALE);
   const root = new THREE.Group();
   root.name = `ViewModel:${toolId}`;
   root.add(mesh);
+  let needle: THREE.Mesh | undefined;
+  if (toolId === 'aircannon') {
+    needle = assemble([
+      box(0.0035, 0.024, 0.004, PAINT, [0, 0.008, 0]),
+      cyl(0.005, 0.005, 0.005, 8, STEEL_DARK, [0, 0, 0], [Math.PI / 2, 0, 0]),
+    ], material, 'blast-dial');
+    needle.position.set(0.045, 0.033, -0.084);
+    mesh.add(needle);
+  }
   return {
     root,
     holdPoint: hold.multiplyScalar(VIEW_SCALE).add(VIEW_OFFSET),
     setFit(fit: number) { mesh.scale.setScalar(VIEW_SCALE * fit); },
-    dispose() { mesh.geometry.dispose(); },
+    setCharge: needle ? (charge: number) => {
+      needle.rotation.z = 1.1 - THREE.MathUtils.clamp(charge, 0, 1) * 2.2;
+    } : undefined,
+    dispose() { mesh.geometry.dispose(); needle?.geometry.dispose(); },
   };
 }
 

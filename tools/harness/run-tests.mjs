@@ -79,6 +79,8 @@ function enrich(g) {
      * every scenario after it.
      */
     async reset() {
+      await g.call('director.reset', false).catch(() => {});
+      await g.call('characters.reset', false).catch(() => {});
       await g.clearInput();
       await g.call('ragdoll.recover').catch(() => {});
       await g.call('drop').catch(() => {});
@@ -91,6 +93,9 @@ function enrich(g) {
       await g.call('economy.resetDiscovery').catch(() => {});
       await g.call('book.reset').catch(() => {});
       await g.call('progress.reset').catch(() => {});
+      // Purchases and debug grants belong to one scenario. In particular the
+      // island order fixture grants a net before progression tests buying it.
+      await g.page.evaluate(() => window.__GAME.get('tools').deserialize(window.__RIPE_INITIAL_TOOLS));
       await g.call('wind.set', 1, 0.4, 2.2).catch(() => {});
       await g.attachCam();
       // Park on the flat orchard terrace and let the player settle.
@@ -106,11 +111,12 @@ function enrich(g) {
 }
 
 const results = await withGame(async (raw) => {
+  await raw.page.evaluate(() => { window.__RIPE_INITIAL_TOOLS = window.__GAME.get('tools').serialize(); });
   const g = enrich(raw);
   const out = [];
-  // Hold the clock for the entire run: see `wait` above. Frames still render
-  // (the UI, camera and viewmodel keep updating), the world only moves when a
-  // scenario asks it to.
+  // Hold the clock for the entire run: see `wait` above. UI, camera and
+  // viewmodel still update; GPU draws are suppressed except explicit startup
+  // pixel checks. The world only moves when a scenario asks it to.
   await g.pause(true);
   for (const file of chosen) {
     const mod = await import(pathToFileURL(path.join(DIR, file)).href);
@@ -127,18 +133,10 @@ const results = await withGame(async (raw) => {
     out.push({ name, ctx, error, ms: Date.now() - t0 });
   }
   return out;
-// The window size is a COST, not a calibration.
-//
-// Scenarios advance the world in forced fixed steps (see `wait` in enrich),
-// so what the harness renders no longer decides how much simulation a check
-// gets: a 34 m drop is 216 steps at any resolution. Render size only sets how
-// long the run takes, because every forced step is still followed by a frame.
-// Keep the 16:9 aspect — the startup scenario asserts on horizontal FOV, which
-// is derived from it — and keep it small, because nothing here looks at pixels
-// except the startup scenario's canvas classification, which is resolution
-// independent. The visual harnesses (tour, route, startup-check) keep their
-// own, much larger sizes; they are the ones that actually look at the frame.
-}, { width: 320, height: 180, headless: true, quiet: true });
+// Forced fixed steps keep simulation independent of drawing. Preserve 16:9
+// for the horizontal FOV checks. Only startup's explicit pixel samples draw;
+// visual harnesses retain their own larger sizes and normal rendering.
+}, { width: 320, height: 180, headless: true, quiet: true, islandActivities: false, drawFrames: false });
 
 let failed = 0;
 for (const r of results) {

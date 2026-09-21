@@ -26,8 +26,8 @@ void main() {
   // Three cheap directional waves; damped as the water gets shallow.
   float w =
       sin(p.x * 0.085 + uTime * 1.05) * 0.34
-    + sin(p.y * 0.061 - uTime * 0.83) * 0.28
-    + sin((p.x + p.y) * 0.041 + uTime * 1.5) * 0.20;
+    + sin(p.z * 0.061 - uTime * 0.83) * 0.28
+    + sin((p.x + p.z) * 0.041 + uTime * 1.5) * 0.20;
   w *= uWave * mix(0.25, 1.0, clamp(aDepth / 4.0, 0.0, 1.0));
   vec4 wp = modelMatrix * vec4(p, 1.0);
   // Fade displacement with distance. At 5 m per segment the wave pattern
@@ -54,6 +54,16 @@ varying vec3 vWorld;
 varying float vFoam;
 varying float vDist;
 
+float waterNoise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  vec4 h = fract(sin(vec4(dot(i, vec2(127.1, 311.7)),
+    dot(i + vec2(1.0, 0.0), vec2(127.1, 311.7)),
+    dot(i + vec2(0.0, 1.0), vec2(127.1, 311.7)),
+    dot(i + vec2(1.0, 1.0), vec2(127.1, 311.7)))) * 43758.5453);
+  return mix(mix(h.x, h.y, f.x), mix(h.z, h.w, f.x), f.y);
+}
+
 void main() {
   float detailFade = 1.0 - smoothstep(70.0, 260.0, vDist);
   float d = clamp(vDepth / 9.0, 0.0, 1.0);
@@ -62,9 +72,18 @@ void main() {
   // metre or two: a lagoon is turquoise, not tinted glass.
   vec3 col = mix(uShallow, uDeep, pow(d, 0.9));
 
+  // Domain-warped soft ripples. Thresholded crossing sine crests produced
+  // regular bright dashes, like road markings, across the entire shallows.
+  float nearFade = 1.0 - smoothstep(35.0, 120.0, vDist);
+  float rippleWarp = waterNoise(vWorld.xz * 0.32 + vec2(uTime * 0.045, -uTime * 0.03));
+  float waveA = sin(vWorld.x * 1.6 + vWorld.z * 2.1 - uTime * 1.25
+    + rippleWarp * 8.0 + sin(vWorld.z * 0.43 + uTime * 0.35) * 1.4);
+  float waveB = sin(vWorld.x * -1.1 + vWorld.z * 1.7 + uTime * 0.85);
+  col *= 1.0 + (waveA * 0.028 + waveB * 0.022) * nearFade;
+
   // Animated foam band along the shoreline.
   float band = smoothstep(0.58, 1.0, vFoam);
-  float ripple = sin(vWorld.x * 0.55 + vWorld.z * 0.45 + uTime * 1.7) * 0.5 + 0.5;
+  float ripple = waterNoise(vWorld.xz * 0.8 + vec2(-uTime * 0.12, uTime * 0.07));
   float foam = band * (0.45 + 0.55 * mix(0.5, ripple, detailFade));
   col = mix(col, uFoam, foam * 0.5);
 

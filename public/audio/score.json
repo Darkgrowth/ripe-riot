@@ -1,0 +1,1171 @@
+{
+  "title": "Sunpatch: Small Margins",
+  "bpm": 96,
+  "bars": 48,
+  "beatsPerBar": 4,
+  "duration": 120,
+  "sampleRate": 32000,
+  "instruments": [
+    "plucked melody",
+    "fingerpicked strings",
+    "warm bass",
+    "breathy woodwind",
+    "banjo answers",
+    "wooden percussion"
+  ],
+  "license": "Original composition and synthesis authored for RIPE RIOT; no third-party samples.",
+  "stems": {
+    "calm": {
+      "peak": 0.5692457556724548,
+      "rms": 0.10665956884622574,
+      "seamDelta": 0.0004871971905231476,
+      "samples": 3840000
+    },
+    "busy": {
+      "peak": 0.191163569688797,
+      "rms": 0.03538120910525322,
+      "seamDelta": 0.00059526227414608,
+      "samples": 3840000
+    },
+    "trouble": {
+      "peak": 0.279083251953125,
+      "rms": 0.03253510966897011,
+      "seamDelta": 0.0,
+      "samples": 3840000
+    }
+  },
+  "combinedPeak": 0.7200000286102295,
+  "demoPeak": 0.6587388238403946,
+  "progression": [
+    "C",
+    "C",
+    "Am",
+    "Am",
+    "F",
+    "C",
+    "Dm",
+    "G",
+    "C",
+    "Em",
+    "F",
+    "G",
+    "Am",
+    "F",
+    "G",
+    "C",
+    "F",
+    "F",
+    "C",
+    "C",
+    "Dm",
+    "G",
+    "C",
+    "C",
+    "Am",
+    "Em",
+    "F",
+    "C",
+    "Dm",
+    "G",
+    "G",
+    "C",
+    "C",
+    "C",
+    "Am",
+    "Am",
+    "F",
+    "C",
+    "Dm",
+    "G",
+    "C",
+    "Em",
+    "F",
+    "G",
+    "Am",
+    "F",
+    "G",
+    "C"
+  ],
+  "melody": [
+    {
+      "bar": 0,
+      "beat": 0,
+      "midi": 64,
+      "beats": 1
+    },
+    {
+      "bar": 0,
+      "beat": 1,
+      "midi": 67,
+      "beats": 0.5
+    },
+    {
+      "bar": 0,
+      "beat": 1.5,
+      "midi": 69,
+      "beats": 0.5
+    },
+    {
+      "bar": 0,
+      "beat": 2,
+      "midi": 67,
+      "beats": 1.5
+    },
+    {
+      "bar": 1,
+      "beat": 0,
+      "midi": 64,
+      "beats": 0.75
+    },
+    {
+      "bar": 1,
+      "beat": 1,
+      "midi": 62,
+      "beats": 0.75
+    },
+    {
+      "bar": 1,
+      "beat": 2,
+      "midi": 60,
+      "beats": 1.5
+    },
+    {
+      "bar": 2,
+      "beat": 0,
+      "midi": 64,
+      "beats": 1
+    },
+    {
+      "bar": 2,
+      "beat": 1.5,
+      "midi": 69,
+      "beats": 0.5
+    },
+    {
+      "bar": 2,
+      "beat": 2,
+      "midi": 72,
+      "beats": 1
+    },
+    {
+      "bar": 2,
+      "beat": 3,
+      "midi": 71,
+      "beats": 0.5
+    },
+    {
+      "bar": 3,
+      "beat": 0,
+      "midi": 69,
+      "beats": 2
+    },
+    {
+      "bar": 3,
+      "beat": 3,
+      "midi": 67,
+      "beats": 0.5
+    },
+    {
+      "bar": 3,
+      "beat": 2,
+      "midi": 60,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    },
+    {
+      "bar": 3,
+      "beat": 3,
+      "midi": 64,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    },
+    {
+      "bar": 4,
+      "beat": 0,
+      "midi": 65,
+      "beats": 1
+    },
+    {
+      "bar": 4,
+      "beat": 1,
+      "midi": 69,
+      "beats": 0.5
+    },
+    {
+      "bar": 4,
+      "beat": 1.5,
+      "midi": 72,
+      "beats": 0.5
+    },
+    {
+      "bar": 4,
+      "beat": 2.5,
+      "midi": 69,
+      "beats": 1
+    },
+    {
+      "bar": 5,
+      "beat": 0,
+      "midi": 67,
+      "beats": 1.5
+    },
+    {
+      "bar": 5,
+      "beat": 2,
+      "midi": 64,
+      "beats": 1
+    },
+    {
+      "bar": 5,
+      "beat": 3,
+      "midi": 62,
+      "beats": 0.5
+    },
+    {
+      "bar": 6,
+      "beat": 0,
+      "midi": 62,
+      "beats": 1
+    },
+    {
+      "bar": 6,
+      "beat": 1,
+      "midi": 65,
+      "beats": 1
+    },
+    {
+      "bar": 6,
+      "beat": 2.5,
+      "midi": 64,
+      "beats": 0.5
+    },
+    {
+      "bar": 6,
+      "beat": 3,
+      "midi": 62,
+      "beats": 0.5
+    },
+    {
+      "bar": 7,
+      "beat": 0,
+      "midi": 59,
+      "beats": 1.5
+    },
+    {
+      "bar": 7,
+      "beat": 2,
+      "midi": 62,
+      "beats": 0.75
+    },
+    {
+      "bar": 7,
+      "beat": 3,
+      "midi": 67,
+      "beats": 0.75
+    },
+    {
+      "bar": 7,
+      "beat": 2,
+      "midi": 59,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    },
+    {
+      "bar": 7,
+      "beat": 3,
+      "midi": 62,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    },
+    {
+      "bar": 8,
+      "beat": 0,
+      "midi": 72,
+      "beats": 1
+    },
+    {
+      "bar": 8,
+      "beat": 1.5,
+      "midi": 71,
+      "beats": 0.5
+    },
+    {
+      "bar": 8,
+      "beat": 2,
+      "midi": 67,
+      "beats": 1.5
+    },
+    {
+      "bar": 9,
+      "beat": 0,
+      "midi": 64,
+      "beats": 1
+    },
+    {
+      "bar": 9,
+      "beat": 1,
+      "midi": 67,
+      "beats": 1
+    },
+    {
+      "bar": 9,
+      "beat": 2.5,
+      "midi": 71,
+      "beats": 1
+    },
+    {
+      "bar": 10,
+      "beat": 0,
+      "midi": 69,
+      "beats": 1
+    },
+    {
+      "bar": 10,
+      "beat": 1,
+      "midi": 65,
+      "beats": 0.5
+    },
+    {
+      "bar": 10,
+      "beat": 2,
+      "midi": 64,
+      "beats": 0.5
+    },
+    {
+      "bar": 10,
+      "beat": 2.5,
+      "midi": 65,
+      "beats": 1
+    },
+    {
+      "bar": 11,
+      "beat": 0,
+      "midi": 67,
+      "beats": 1.5
+    },
+    {
+      "bar": 11,
+      "beat": 2,
+      "midi": 62,
+      "beats": 0.5
+    },
+    {
+      "bar": 11,
+      "beat": 3,
+      "midi": 59,
+      "beats": 0.5
+    },
+    {
+      "bar": 11,
+      "beat": 2,
+      "midi": 59,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    },
+    {
+      "bar": 11,
+      "beat": 3,
+      "midi": 62,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    },
+    {
+      "bar": 12,
+      "beat": 0,
+      "midi": 60,
+      "beats": 1
+    },
+    {
+      "bar": 12,
+      "beat": 1,
+      "midi": 64,
+      "beats": 0.5
+    },
+    {
+      "bar": 12,
+      "beat": 1.5,
+      "midi": 69,
+      "beats": 0.5
+    },
+    {
+      "bar": 12,
+      "beat": 2.5,
+      "midi": 67,
+      "beats": 1
+    },
+    {
+      "bar": 13,
+      "beat": 0,
+      "midi": 65,
+      "beats": 1.5
+    },
+    {
+      "bar": 13,
+      "beat": 2,
+      "midi": 64,
+      "beats": 0.5
+    },
+    {
+      "bar": 13,
+      "beat": 3,
+      "midi": 62,
+      "beats": 0.5
+    },
+    {
+      "bar": 14,
+      "beat": 0,
+      "midi": 62,
+      "beats": 0.5
+    },
+    {
+      "bar": 14,
+      "beat": 1,
+      "midi": 59,
+      "beats": 0.5
+    },
+    {
+      "bar": 14,
+      "beat": 2,
+      "midi": 67,
+      "beats": 1
+    },
+    {
+      "bar": 15,
+      "beat": 0,
+      "midi": 64,
+      "beats": 1
+    },
+    {
+      "bar": 15,
+      "beat": 1.5,
+      "midi": 62,
+      "beats": 0.5
+    },
+    {
+      "bar": 15,
+      "beat": 2,
+      "midi": 60,
+      "beats": 1.5
+    },
+    {
+      "bar": 15,
+      "beat": 2,
+      "midi": 64,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    },
+    {
+      "bar": 15,
+      "beat": 3,
+      "midi": 67,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    },
+    {
+      "bar": 16,
+      "beat": 0,
+      "midi": 69,
+      "beats": 1.5
+    },
+    {
+      "bar": 16,
+      "beat": 2,
+      "midi": 72,
+      "beats": 1
+    },
+    {
+      "bar": 17,
+      "beat": 0,
+      "midi": 74,
+      "beats": 0.5
+    },
+    {
+      "bar": 17,
+      "beat": 1,
+      "midi": 72,
+      "beats": 0.5
+    },
+    {
+      "bar": 17,
+      "beat": 2,
+      "midi": 69,
+      "beats": 1.5
+    },
+    {
+      "bar": 18,
+      "beat": 0,
+      "midi": 67,
+      "beats": 1
+    },
+    {
+      "bar": 18,
+      "beat": 1.5,
+      "midi": 64,
+      "beats": 0.5
+    },
+    {
+      "bar": 18,
+      "beat": 2,
+      "midi": 67,
+      "beats": 1
+    },
+    {
+      "bar": 19,
+      "beat": 0,
+      "midi": 72,
+      "beats": 2
+    },
+    {
+      "bar": 19,
+      "beat": 3,
+      "midi": 67,
+      "beats": 0.5
+    },
+    {
+      "bar": 19,
+      "beat": 2,
+      "midi": 64,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    },
+    {
+      "bar": 19,
+      "beat": 3,
+      "midi": 67,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    },
+    {
+      "bar": 20,
+      "beat": 0,
+      "midi": 65,
+      "beats": 0.5
+    },
+    {
+      "bar": 20,
+      "beat": 1,
+      "midi": 62,
+      "beats": 0.5
+    },
+    {
+      "bar": 20,
+      "beat": 2,
+      "midi": 65,
+      "beats": 1
+    },
+    {
+      "bar": 21,
+      "beat": 0,
+      "midi": 67,
+      "beats": 1
+    },
+    {
+      "bar": 21,
+      "beat": 1.5,
+      "midi": 71,
+      "beats": 0.5
+    },
+    {
+      "bar": 21,
+      "beat": 2.5,
+      "midi": 74,
+      "beats": 1
+    },
+    {
+      "bar": 22,
+      "beat": 0,
+      "midi": 72,
+      "beats": 1
+    },
+    {
+      "bar": 22,
+      "beat": 1,
+      "midi": 67,
+      "beats": 0.5
+    },
+    {
+      "bar": 22,
+      "beat": 2,
+      "midi": 64,
+      "beats": 1
+    },
+    {
+      "bar": 23,
+      "beat": 0,
+      "midi": 62,
+      "beats": 0.5
+    },
+    {
+      "bar": 23,
+      "beat": 1,
+      "midi": 64,
+      "beats": 0.5
+    },
+    {
+      "bar": 23,
+      "beat": 2,
+      "midi": 60,
+      "beats": 1.5
+    },
+    {
+      "bar": 23,
+      "beat": 2,
+      "midi": 64,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    },
+    {
+      "bar": 23,
+      "beat": 3,
+      "midi": 67,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    },
+    {
+      "bar": 24,
+      "beat": 0,
+      "midi": 69,
+      "beats": 0.5
+    },
+    {
+      "bar": 24,
+      "beat": 1,
+      "midi": 72,
+      "beats": 0.5
+    },
+    {
+      "bar": 24,
+      "beat": 2,
+      "midi": 76,
+      "beats": 1
+    },
+    {
+      "bar": 25,
+      "beat": 0,
+      "midi": 74,
+      "beats": 0.5
+    },
+    {
+      "bar": 25,
+      "beat": 1,
+      "midi": 71,
+      "beats": 0.5
+    },
+    {
+      "bar": 25,
+      "beat": 2,
+      "midi": 67,
+      "beats": 1.5
+    },
+    {
+      "bar": 26,
+      "beat": 0,
+      "midi": 72,
+      "beats": 1
+    },
+    {
+      "bar": 26,
+      "beat": 1.5,
+      "midi": 69,
+      "beats": 0.5
+    },
+    {
+      "bar": 26,
+      "beat": 2.5,
+      "midi": 65,
+      "beats": 1
+    },
+    {
+      "bar": 27,
+      "beat": 0,
+      "midi": 67,
+      "beats": 2
+    },
+    {
+      "bar": 27,
+      "beat": 3,
+      "midi": 64,
+      "beats": 0.5
+    },
+    {
+      "bar": 27,
+      "beat": 2,
+      "midi": 64,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    },
+    {
+      "bar": 27,
+      "beat": 3,
+      "midi": 67,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    },
+    {
+      "bar": 28,
+      "beat": 0,
+      "midi": 65,
+      "beats": 1
+    },
+    {
+      "bar": 28,
+      "beat": 1,
+      "midi": 62,
+      "beats": 1
+    },
+    {
+      "bar": 28,
+      "beat": 2.5,
+      "midi": 69,
+      "beats": 1
+    },
+    {
+      "bar": 29,
+      "beat": 0,
+      "midi": 67,
+      "beats": 1
+    },
+    {
+      "bar": 29,
+      "beat": 1.5,
+      "midi": 62,
+      "beats": 0.5
+    },
+    {
+      "bar": 29,
+      "beat": 2.5,
+      "midi": 59,
+      "beats": 1
+    },
+    {
+      "bar": 30,
+      "beat": 0,
+      "midi": 62,
+      "beats": 0.5
+    },
+    {
+      "bar": 30,
+      "beat": 1,
+      "midi": 64,
+      "beats": 0.5
+    },
+    {
+      "bar": 30,
+      "beat": 2,
+      "midi": 67,
+      "beats": 0.5
+    },
+    {
+      "bar": 30,
+      "beat": 3,
+      "midi": 71,
+      "beats": 0.5
+    },
+    {
+      "bar": 31,
+      "beat": 0,
+      "midi": 72,
+      "beats": 1.5
+    },
+    {
+      "bar": 31,
+      "beat": 2,
+      "midi": 67,
+      "beats": 0.5
+    },
+    {
+      "bar": 31,
+      "beat": 3,
+      "midi": 64,
+      "beats": 0.5
+    },
+    {
+      "bar": 31,
+      "beat": 2,
+      "midi": 64,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    },
+    {
+      "bar": 31,
+      "beat": 3,
+      "midi": 67,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    },
+    {
+      "bar": 32,
+      "beat": 0,
+      "midi": 64,
+      "beats": 1
+    },
+    {
+      "bar": 32,
+      "beat": 1,
+      "midi": 67,
+      "beats": 0.5
+    },
+    {
+      "bar": 32,
+      "beat": 1.5,
+      "midi": 69,
+      "beats": 0.5
+    },
+    {
+      "bar": 32,
+      "beat": 2,
+      "midi": 67,
+      "beats": 1.5
+    },
+    {
+      "bar": 33,
+      "beat": 0,
+      "midi": 64,
+      "beats": 0.75
+    },
+    {
+      "bar": 33,
+      "beat": 1,
+      "midi": 62,
+      "beats": 0.75
+    },
+    {
+      "bar": 33,
+      "beat": 2,
+      "midi": 60,
+      "beats": 1.5
+    },
+    {
+      "bar": 34,
+      "beat": 0,
+      "midi": 64,
+      "beats": 1
+    },
+    {
+      "bar": 34,
+      "beat": 1.5,
+      "midi": 69,
+      "beats": 0.5
+    },
+    {
+      "bar": 34,
+      "beat": 2,
+      "midi": 72,
+      "beats": 1
+    },
+    {
+      "bar": 34,
+      "beat": 3,
+      "midi": 71,
+      "beats": 0.5
+    },
+    {
+      "bar": 35,
+      "beat": 0,
+      "midi": 69,
+      "beats": 2
+    },
+    {
+      "bar": 35,
+      "beat": 3,
+      "midi": 67,
+      "beats": 0.5
+    },
+    {
+      "bar": 35,
+      "beat": 2,
+      "midi": 60,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    },
+    {
+      "bar": 35,
+      "beat": 3,
+      "midi": 64,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    },
+    {
+      "bar": 36,
+      "beat": 0,
+      "midi": 65,
+      "beats": 1
+    },
+    {
+      "bar": 36,
+      "beat": 1,
+      "midi": 69,
+      "beats": 0.5
+    },
+    {
+      "bar": 36,
+      "beat": 1.5,
+      "midi": 72,
+      "beats": 0.5
+    },
+    {
+      "bar": 36,
+      "beat": 2.5,
+      "midi": 69,
+      "beats": 1
+    },
+    {
+      "bar": 37,
+      "beat": 0,
+      "midi": 67,
+      "beats": 1.5
+    },
+    {
+      "bar": 37,
+      "beat": 2,
+      "midi": 64,
+      "beats": 1
+    },
+    {
+      "bar": 37,
+      "beat": 3,
+      "midi": 62,
+      "beats": 0.5
+    },
+    {
+      "bar": 38,
+      "beat": 0,
+      "midi": 62,
+      "beats": 1
+    },
+    {
+      "bar": 38,
+      "beat": 1,
+      "midi": 65,
+      "beats": 1
+    },
+    {
+      "bar": 38,
+      "beat": 2.5,
+      "midi": 64,
+      "beats": 0.5
+    },
+    {
+      "bar": 38,
+      "beat": 3,
+      "midi": 62,
+      "beats": 0.5
+    },
+    {
+      "bar": 39,
+      "beat": 0,
+      "midi": 59,
+      "beats": 1.5
+    },
+    {
+      "bar": 39,
+      "beat": 2,
+      "midi": 62,
+      "beats": 0.75
+    },
+    {
+      "bar": 39,
+      "beat": 3,
+      "midi": 67,
+      "beats": 0.75
+    },
+    {
+      "bar": 39,
+      "beat": 2,
+      "midi": 59,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    },
+    {
+      "bar": 39,
+      "beat": 3,
+      "midi": 62,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    },
+    {
+      "bar": 40,
+      "beat": 0,
+      "midi": 72,
+      "beats": 1
+    },
+    {
+      "bar": 40,
+      "beat": 1.5,
+      "midi": 71,
+      "beats": 0.5
+    },
+    {
+      "bar": 40,
+      "beat": 2,
+      "midi": 67,
+      "beats": 1.5
+    },
+    {
+      "bar": 41,
+      "beat": 0,
+      "midi": 64,
+      "beats": 1
+    },
+    {
+      "bar": 41,
+      "beat": 1,
+      "midi": 67,
+      "beats": 1
+    },
+    {
+      "bar": 41,
+      "beat": 2.5,
+      "midi": 71,
+      "beats": 1
+    },
+    {
+      "bar": 42,
+      "beat": 0,
+      "midi": 69,
+      "beats": 1
+    },
+    {
+      "bar": 42,
+      "beat": 1,
+      "midi": 65,
+      "beats": 0.5
+    },
+    {
+      "bar": 42,
+      "beat": 2,
+      "midi": 64,
+      "beats": 0.5
+    },
+    {
+      "bar": 42,
+      "beat": 2.5,
+      "midi": 65,
+      "beats": 1
+    },
+    {
+      "bar": 43,
+      "beat": 0,
+      "midi": 67,
+      "beats": 1.5
+    },
+    {
+      "bar": 43,
+      "beat": 2,
+      "midi": 62,
+      "beats": 0.5
+    },
+    {
+      "bar": 43,
+      "beat": 3,
+      "midi": 59,
+      "beats": 0.5
+    },
+    {
+      "bar": 43,
+      "beat": 2,
+      "midi": 59,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    },
+    {
+      "bar": 43,
+      "beat": 3,
+      "midi": 62,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    },
+    {
+      "bar": 44,
+      "beat": 0,
+      "midi": 60,
+      "beats": 1
+    },
+    {
+      "bar": 44,
+      "beat": 1,
+      "midi": 64,
+      "beats": 0.5
+    },
+    {
+      "bar": 44,
+      "beat": 1.5,
+      "midi": 69,
+      "beats": 0.5
+    },
+    {
+      "bar": 44,
+      "beat": 2.5,
+      "midi": 67,
+      "beats": 1
+    },
+    {
+      "bar": 45,
+      "beat": 0,
+      "midi": 65,
+      "beats": 1.5
+    },
+    {
+      "bar": 45,
+      "beat": 2,
+      "midi": 64,
+      "beats": 0.5
+    },
+    {
+      "bar": 45,
+      "beat": 3,
+      "midi": 62,
+      "beats": 0.5
+    },
+    {
+      "bar": 46,
+      "beat": 0,
+      "midi": 62,
+      "beats": 0.5
+    },
+    {
+      "bar": 46,
+      "beat": 1,
+      "midi": 59,
+      "beats": 0.5
+    },
+    {
+      "bar": 46,
+      "beat": 2,
+      "midi": 67,
+      "beats": 1
+    },
+    {
+      "bar": 47,
+      "beat": 0,
+      "midi": 64,
+      "beats": 1
+    },
+    {
+      "bar": 47,
+      "beat": 1.5,
+      "midi": 62,
+      "beats": 0.5
+    },
+    {
+      "bar": 47,
+      "beat": 2,
+      "midi": 60,
+      "beats": 1.5
+    },
+    {
+      "bar": 47,
+      "beat": 2,
+      "midi": 64,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    },
+    {
+      "bar": 47,
+      "beat": 3,
+      "midi": 67,
+      "beats": 0.8,
+      "instrument": "woodwind"
+    }
+  ]
+}

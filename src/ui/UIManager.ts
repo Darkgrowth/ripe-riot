@@ -1,6 +1,9 @@
 import type { Game, System } from '@/core/Game';
 import type { InteractionSystem } from '@/interaction/InteractionSystem';
 import type { Economy } from '@/systems/Economy';
+import { toolIconMarkup } from './ToolIcons';
+import { createAudioSettings } from './AudioSettings';
+import type { AudioManager } from '@/audio/AudioManager';
 
 /**
  * All HUD rendering. Kept as plain DOM: it composites over the canvas for free,
@@ -19,6 +22,7 @@ export class UIManager implements System {
     toasts: HTMLElement; celebrate: HTMLElement; carry: HTMLElement;
     crosshair: HTMLElement; debug: HTMLElement; stunts: HTMLElement;
     banner: HTMLElement; hurt: HTMLElement; slots: HTMLElement;
+    entryHint: HTMLElement; entryTitle: HTMLElement;
   };
   private debugVisible = false;
   private debugTimer = 0;
@@ -26,6 +30,8 @@ export class UIManager implements System {
   private toastNodes: Array<{ el: HTMLElement; until: number }> = [];
   private stuntNodes: Array<{ el: HTMLElement; until: number }> = [];
   private lastPrompt: string | null = null;
+  private hasControlled = false;
+  private audioSettings: ReturnType<typeof createAudioSettings> | null = null;
 
   init(g: Game): void {
     this.g = g;
@@ -44,8 +50,14 @@ export class UIManager implements System {
         <div class="celebrate"></div>
         <div class="toasts"></div>
         <div class="state-banner"></div>
+        <div class="entry-hint" hidden>
+          <strong>Click to play</strong>
+          <span>WASD move · Mouse look · E pick · 1–4 tools</span>
+        </div>
       </div>
       <div class="debug hidden"></div>`;
+    this.audioSettings = createAudioSettings(g.get<AudioManager>('audio'));
+    this.root.append(this.audioSettings.element);
 
     const q = <T extends HTMLElement>(sel: string) => this.root.querySelector(sel) as T;
     this.els = {
@@ -61,6 +73,8 @@ export class UIManager implements System {
       banner: q('.state-banner'),
       hurt: q('.hurt'),
       slots: q('.slots'),
+      entryHint: q('.entry-hint'),
+      entryTitle: q('.entry-hint strong'),
     };
 
     g.bus.on('money:changed', (p) => this.onMoney(p.money, p.delta));
@@ -144,7 +158,7 @@ export class UIManager implements System {
     this.els.slots.innerHTML = slots.map((s, i) => `
       <div class="slot ${s.active ? 'active' : ''} ${s.empty ? 'empty' : ''}">
         <div class="num">${i + 1}</div>
-        <div class="icon">${s.icon}</div>
+        <div class="icon">${toolIconMarkup(s.icon)}</div>
         <div>${s.name}</div>
         <div class="slot-status">${s.status ?? ''}</div>
       </div>`).join('');
@@ -282,12 +296,25 @@ export class UIManager implements System {
 
     this.updateCarry();
     this.updateSlotStatus();
+    this.updateEntryHint();
 
     this.debugTimer -= dt;
     if (this.debugVisible && this.debugTimer <= 0) {
       this.debugTimer = 0.25;
       this.els.debug.textContent = this.debugText();
     }
+  }
+
+  /** A small invitation to take control, never a modal or a pause state. */
+  private updateEntryHint(): void {
+    const controlled = document.pointerLockElement === this.g.renderer.canvas;
+    if (controlled) this.hasControlled = true;
+    const panelOpen = ['shop', 'book'].some(name =>
+      this.g.has(name) && this.g.get<{ open: boolean }>(name).open);
+    const hidden = controlled || panelOpen;
+    if (this.els.entryHint.hidden !== hidden) this.els.entryHint.hidden = hidden;
+    const title = this.hasControlled ? 'Click to return' : 'Click to play';
+    if (this.els.entryTitle.textContent !== title) this.els.entryTitle.textContent = title;
   }
 
   /** The active tool's charge/ammo line, refreshed without rebuilding the DOM. */
@@ -331,9 +358,9 @@ export class UIManager implements System {
       }
     }
     if (basket.items.length) {
-      parts.push(`🧺 ${basket.items.length}/${basket.capacity} · $${inter.basketValue()}`);
+      parts.push(`${toolIconMarkup('basket')} ${basket.items.length}/${basket.capacity} · $${inter.basketValue()}`);
     }
-    this.els.carry.innerHTML = parts.join('&nbsp;&nbsp;|&nbsp;&nbsp;');
+    this.els.carry.innerHTML = parts.join('');
   }
 
   private debugText(): string {
@@ -352,4 +379,5 @@ export class UIManager implements System {
       eco ? `money $${eco.money}  tier ${eco.discoveryTier}` : '',
     ].filter(Boolean).join('\n');
   }
+  dispose(): void { this.audioSettings?.dispose(); }
 }

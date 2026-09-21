@@ -102,21 +102,30 @@ export async function run(g, t) {
   const vb = await g.call('fruit.nearest', 30, 12, -26, 'vinebomb', 'attached');
   t.ok(vb, 'a vinebomb is growing somewhere');
   if (vb) {
-    await g.call('fruit.detach', vb.id);
-    await g.wait(0.12);
-    const launched = await g.call('fruit.info', vb.id);
-    t.ok(launched, 'the vinebomb exists after release');
-    // Peak speed since detaching, not current speed: a harness round-trip is
-    // long enough for gravity to have taken several m/s off the reading.
-    t.gt(launched.peakSpeed, 11, 'releasing a vinebomb launches it hard');
-    t.note(`vinebomb peaked at ${launched.peakSpeed} m/s`);
-    await g.wait(4.0);
-    const landed = await g.call('fruit.info', vb.id);
-    if (landed) {
-      t.gt(landed.travelled, 10, 'and it travels a long way');
-      t.note(`vinebomb travelled ${landed.travelled} m, peak ${landed.peak} m`);
-    } else {
-      t.note('vinebomb left the island, which is exactly the joke');
+    // Keep the flight record even if the fruit is removed from the live map.
+    // A missing fruit can mean it fell through a collider into the sea after
+    // centimetres of motion; disappearance alone never proves a long launch.
+    const record = await g.page.evaluateHandle(id => window.__GAME.get('fruit').get(id), vb.id);
+    try {
+      await g.call('fruit.detach', vb.id);
+      await g.wait(0.12);
+      const launched = await g.call('fruit.info', vb.id);
+      t.ok(launched, 'the vinebomb exists after release');
+      // Peak speed since detaching, not current speed: a harness round-trip is
+      // long enough for gravity to have taken several m/s off the reading.
+      t.gt(launched.peakSpeed, 11, 'releasing a vinebomb launches it hard');
+      t.note(`vinebomb peaked at ${launched.peakSpeed} m/s`);
+      await g.wait(4.0);
+      const landed = await record.evaluate(f => ({
+        travelled: f.travelled, peak: f.peakHeight, state: f.state,
+        destroyed: f.destroyed, y: f.position.y,
+      }));
+      t.gt(landed.travelled, 10, 'and it travels a long way, including before any despawn');
+      const outcome = landed.state !== 'gone' ? landed.state
+        : landed.y < -3.5 ? 'sank' : landed.destroyed ? 'burst' : 'removed';
+      t.note(`vinebomb travelled ${landed.travelled.toFixed(2)} m, peak ${landed.peak.toFixed(2)} m; ${outcome}`);
+    } finally {
+      await record.dispose();
     }
   }
 

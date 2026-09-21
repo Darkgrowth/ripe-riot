@@ -93,12 +93,20 @@ export async function run(g, t) {
   const beforeSale = await g.state();
   t.ok((beforeSale.interaction.prompt ?? '').includes('Sell'), 'standing on the pad offers to sell');
 
-  await g.call('interact');
+  await g.input({ interact: true, interactPressed: true });
+  await g.wait(1 / 60);
+  await g.clearInput();
   await g.wait(0.4);
   const afterSale = await g.state();
   t.gt(afterSale.economy.money, 0, 'selling pays money');
   t.eq(afterSale.interaction.basket, 0, 'the basket is empty afterwards');
   t.ok(!afterSale.interaction.carrying, 'hands are empty afterwards');
+  t.ok(!afterSale.shop.open, 'the sale press does not also open the shop and release pointer lock');
+  await g.input({ interact: true, interactPressed: true });
+  await g.wait(1 / 60);
+  await g.clearInput();
+  t.ok((await g.state()).shop.open, 'a separate empty-handed press still opens the shop');
+  await g.call('shop.close');
   t.note(`sold for $${afterSale.economy.money} (basket was worth ~$${basketValue})`);
   void moneyBefore;
 

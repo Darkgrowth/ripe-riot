@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import type { Game, System } from '@/core/Game';
 import type { Sunpatch } from '@/world/Sunpatch';
 import type { FruitSystem } from '@/fruit/FruitSystem';
-import { Palette } from '@/render/Palette';
 import { clamp } from '@/core/MathUtils';
 
 /**
@@ -21,7 +20,7 @@ import { clamp } from '@/core/MathUtils';
  * two-tonne melon coming down is felt before it is understood.
  *
  * Deliberately not a general particle system: no textures, no billboards, no
- * emitter graph. Chunky shards match the art and cost one draw call.
+ * emitter graph. Chips and folded leaves match the art and cost at most two draw calls.
  */
 export class ImpactFX implements System {
   readonly name = 'fx';
@@ -30,6 +29,8 @@ export class ImpactFX implements System {
   private fruitSys!: FruitSystem;
   private mesh!: THREE.InstancedMesh;
   private colors!: THREE.InstancedBufferAttribute;
+  private leafMesh!: THREE.InstancedMesh;
+  private leafColors!: THREE.InstancedBufferAttribute;
   private pool: Particle[] = [];
   private alive = 0;
   private dirty = false;
@@ -60,6 +61,30 @@ export class ImpactFX implements System {
     this.mesh.frustumCulled = false;
     this.mesh.count = 0;
     g.renderer.scene.add(this.mesh);
+
+    // Leaves are folded blades, not chunks of rind. Lambert-lit shards went
+    // almost black on faces turned away from the sun during look-up picking.
+    // Baked face tones keep these tiny fast-spinning shapes readable in shade.
+    const leafGeo = new THREE.OctahedronGeometry(1, 0);
+    leafGeo.scale(0.52, 0.075, 1.15);
+    const leafPos = leafGeo.getAttribute('position');
+    const leafTint = new Float32Array(leafPos.count * 3);
+    for (let i = 0; i < leafPos.count; i += 3) {
+      const tone = leafPos.getY(i) + leafPos.getY(i + 1) + leafPos.getY(i + 2) >= 0 ? 1 : 0.76;
+      for (let k = 0; k < 9; k++) leafTint[i * 3 + k] = tone;
+    }
+    leafGeo.setAttribute('color', new THREE.BufferAttribute(leafTint, 3));
+    const leafMat = new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: true });
+    leafMat.name = 'pickup-leaves';
+    this.leafMesh = new THREE.InstancedMesh(leafGeo, leafMat, MAX);
+    this.leafMesh.name = 'PickupLeaves';
+    this.leafMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.leafColors = new THREE.InstancedBufferAttribute(new Float32Array(MAX * 3).fill(1), 3);
+    this.leafColors.setUsage(THREE.DynamicDrawUsage);
+    this.leafMesh.instanceColor = this.leafColors;
+    this.leafMesh.frustumCulled = false;
+    this.leafMesh.count = 0;
+    g.renderer.scene.add(this.leafMesh);
 
     g.bus.on('fruit:impact', (p) => this.onImpact(p.fruitId, p.species, p.speed, p.point, p.onPlayer));
     g.bus.on('fruit:destroyed', (p) => this.onBurst(p.fruitId, p.species));
@@ -222,12 +247,13 @@ export class ImpactFX implements System {
   private leaves(at: THREE.Vector3, n: number, spread: number): void {
     const wind = this.fruitSys.wind;
     this.emit(n, at, (q) => {
+      q.leaf = true;
       mixInto(q, LEAF_A, LEAF_B, Math.random());
       scatter(q, 0.4, 1.4, 0.2);
       q.vx += wind.x * 0.35 + rand(-spread, spread);
       q.vz += wind.z * 0.35 + rand(-spread, spread);
       q.vy += rand(0.2, 1.2);
-      q.size = rand(0.07, 0.13);
+      q.size = rand(0.055, 0.09);
       q.life = q.maxLife = rand(1.1, 2.1);
       q.gravity = 1.6; q.drag = 1.4; q.bounce = 0;
       q.spin = rand(-6, 6);
@@ -335,7 +361,7 @@ export class ImpactFX implements System {
   frameUpdate(): void {
     if (!this.dirty) return;
     this.dirty = false;
-    const mesh = this.mesh;
+    let chipCount = 0, leafCount = 0;
     for (let i = 0; i < this.alive; i++) {
       const q = this.pool[i];
       // Shrink out over the last third of life rather than popping.
@@ -343,18 +369,27 @@ export class ImpactFX implements System {
       const s = q.size * (0.35 + 0.65 * fade);
       _q.setFromEuler(_e.set(q.rot * 0.7, q.rot, q.rot * 0.3));
       _m.compose(_v.set(q.x, q.y, q.z), _q, _s.setScalar(s));
-      mesh.setMatrixAt(i, _m);
-      this.colors.setXYZ(i, q.r, q.g, q.b);
+      const mesh = q.leaf ? this.leafMesh : this.mesh;
+      const colors = q.leaf ? this.leafColors : this.colors;
+      const index = q.leaf ? leafCount++ : chipCount++;
+      mesh.setMatrixAt(index, _m);
+      colors.setXYZ(index, q.r, q.g, q.b);
     }
-    mesh.count = this.alive;
-    mesh.instanceMatrix.needsUpdate = true;
+    this.mesh.count = chipCount;
+    this.leafMesh.count = leafCount;
+    this.mesh.instanceMatrix.needsUpdate = true;
+    this.leafMesh.instanceMatrix.needsUpdate = true;
     this.colors.needsUpdate = true;
+    this.leafColors.needsUpdate = true;
   }
 
   dispose(): void {
     this.g.renderer.scene.remove(this.mesh);
     this.mesh.geometry.dispose();
     (this.mesh.material as THREE.Material).dispose();
+    this.g.renderer.scene.remove(this.leafMesh);
+    this.leafMesh.geometry.dispose();
+    (this.leafMesh.material as THREE.Material).dispose();
   }
 }
 
@@ -362,6 +397,7 @@ export class ImpactFX implements System {
 const MAX = 480;
 
 interface Particle {
+  leaf: boolean;
   x: number; y: number; z: number;
   vx: number; vy: number; vz: number;
   life: number; maxLife: number; size: number;
@@ -370,10 +406,11 @@ interface Particle {
 }
 
 function newParticle(): Particle {
-  return { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, life: 0, maxLife: 0, size: 0.1,
+  return { leaf: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, life: 0, maxLife: 0, size: 0.1,
     r: 1, g: 1, b: 1, gravity: 9, drag: 1, bounce: 0, spin: 0, rot: 0, flutter: 0 };
 }
 function resetParticle(q: Particle): void {
+  q.leaf = false;
   q.vx = q.vy = q.vz = 0; q.life = q.maxLife = 0.5; q.size = 0.1;
   q.r = q.g = q.b = 1; q.gravity = 9; q.drag = 1; q.bounce = 0; q.spin = 0; q.rot = 0; q.flutter = 0;
 }
@@ -401,8 +438,8 @@ function rand(lo: number, hi: number): number { return lo + Math.random() * (hi 
 const c = (hex: number) => new THREE.Color().setHex(hex, THREE.SRGBColorSpace);
 const DUST = c(0xd9c69a);
 const DUST_DARK = c(0xa88c62);
-const LEAF_A = Palette.leaf;
-const LEAF_B = Palette.leafDark;
+const LEAF_A = c(0xa9bd52);
+const LEAF_B = c(0x629545);
 
 /** What comes out when a species breaks, and what its skin looks like. */
 const PULP: Record<string, THREE.Color> = {

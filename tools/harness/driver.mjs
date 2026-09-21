@@ -1,7 +1,7 @@
 // Shared Playwright driver for RIPE RIOT.
 // Boots the dev server (or reuses a running one), opens the game in Chromium
-// with a real GPU-backed WebGL context, and exposes helpers that talk to
-// window.__RIPE.
+// with a WebGL context, and exposes helpers that talk to window.__RIPE.
+// Numerical fixtures may suppress draws after boot; visual checks must not.
 //
 // Design note: helpers here return NUMBERS wherever possible. Screenshots are
 // expensive to look at; frame statistics are not.
@@ -18,6 +18,10 @@ export const OUT = path.join(ROOT, 'capture');
 // 127.0.0.1, not localhost: Node's fetch tries ::1 first on Windows and stalls
 // for seconds when Vite is bound to IPv4 only.
 const URL_BASE = process.env.RIPE_URL || 'http://127.0.0.1:5173';
+// A copied staging harness must never attach to the user's live play session.
+if (/RIPE-RIOT-staging/i.test(ROOT) && new URL(URL_BASE).port === '5188') {
+  throw new Error('Staging tests cannot use the live play port 5188. Set RIPE_URL to the staging server.');
+}
 
 export function ensureOut(sub = '') {
   const dir = sub ? path.join(OUT, sub) : OUT;
@@ -40,7 +44,11 @@ async function serverKind() {
     const res = await fetch(URL_BASE, { method: 'GET', signal: AbortSignal.timeout(1500) });
     if (!res.ok) return 'down';
     const html = await res.text();
-    return html.includes('/src/main.ts') && html.includes('id="view"') ? 'ours' : 'foreign';
+    const gameShell = /<title>\s*RIPE RIOT\s*<\/title>/i.test(html)
+      && /<canvas\b[^>]*\bid=["']view["']/i.test(html) && html.includes('id="ui-root"');
+    const entry = html.includes('/src/main.ts')
+      || /<script\b[^>]*\btype=["']module["'][^>]*\bsrc=["'][^"']*\/assets\/[^"']+\.js["']/i.test(html);
+    return gameShell && entry ? 'ours' : 'foreign';
   } catch { return 'down'; }
 }
 
@@ -65,20 +73,28 @@ export async function startServer() {
   throw new Error('dev server did not come up');
 }
 
-export async function openGame({ width = 1280, height = 720, headless = true, quiet = false } = {}) {
+export async function openGame({ width = 1280, height = 720, headless = true, quiet = false,
+  islandActivities = true, drawFrames = true } = {}) {
+  // Opt-in hardware review on the desktop. Playwright's headless shell uses
+  // SwiftShader here; full Chromium with D3D11 was verified on the RTX 4070 Ti.
+  // Keep the historical default for reproducible software-rendered checks.
+  const hardware = process.env.RIPE_HARDWARE === '1';
   const browser = await chromium.launch({
     headless,
+    ...(hardware ? { channel: 'chromium' } : {}),
     // Measured: forcing ANGLE backends is either 50x slower (explicit
     // swiftshader) or renders black (gl-egl). Chromium's own default picks
     // SwANGLE and works. Leave the GL selection alone.
-    args: ['--disable-dev-shm-usage', '--disable-frame-rate-limit'],
+    args: ['--disable-dev-shm-usage', '--disable-frame-rate-limit',
+      ...(hardware ? ['--enable-gpu', '--ignore-gpu-blocklist',
+        ...(process.platform === 'win32' ? ['--use-angle=d3d11'] : [])] : [])],
   });
   const ctx = await browser.newContext({
     viewport: { width, height },
     deviceScaleFactor: 1,
     reducedMotion: 'no-preference',
   });
-  return attachPage(browser, ctx, quiet);
+  return attachPage(browser, ctx, quiet, islandActivities, drawFrames);
 }
 
 /**
@@ -87,16 +103,20 @@ export async function openGame({ width = 1280, height = 720, headless = true, qu
  * an origin within one browser, so clients launched as separate Chromium
  * processes can never see each other.
  */
-export async function openSecondClient(api, { quiet = true } = {}) {
-  return attachPage(api.browser, api.ctx, quiet);
+export async function openSecondClient(api, { quiet = true, islandActivities = api.islandActivities ?? true,
+  drawFrames = api.drawFrames ?? true } = {}) {
+  return attachPage(api.browser, api.ctx, quiet, islandActivities, drawFrames);
 }
 
-async function attachPage(browser, ctx, quiet) {
+async function attachPage(browser, ctx, quiet, islandActivities, drawFrames) {
   const page = await ctx.newPage();
   const consoleErrors = [];
   page.on('console', (m) => {
     const t = m.type();
-    if (t === 'error' || t === 'warning') consoleErrors.push(`${t}: ${m.text()}`);
+    if (t === 'error' || t === 'warning') {
+      const source = m.location().url;
+      consoleErrors.push(`${t}: ${m.text()}${source ? ` (${source})` : ''}`);
+    }
     if (!quiet && t === 'log') console.log('  [page]', m.text());
   });
   page.on('pageerror', (e) => consoleErrors.push(`pageerror: ${e.message}`));
@@ -113,11 +133,27 @@ async function attachPage(browser, ctx, quiet) {
     console.error('\n=== BOOT ERROR ===\n' + bootError + '\n');
     throw new Error('game failed to boot');
   }
+  if (!drawFrames) await page.evaluate(() => {
+    // Numerical fixtures still run the real rAF, fixed steps, physics, camera,
+    // frameUpdate and UI. Only the final GPU draw is suppressed after boot.
+    // These runs are neither visual acceptance nor performance measurements.
+    window.__RIPE_HARNESS_DRAW = window.__GAME.renderer.render.bind(window.__GAME.renderer);
+    window.__GAME.renderer.render = () => {};
+  });
+  if (!islandActivities) await page.evaluate(() => {
+    // Explicit fixture isolation only. Runtime defaults and end-to-end island
+    // tests retain the director and gull, including their presentation.
+    const g = window.__GAME;
+    if (g.has('director')) window.__RIPE.call('director.reset', false);
+    if (g.has('characters')) window.__RIPE.call('characters.reset', false);
+  });
   // A few frames so the first render, env map and shader compiles settle.
   await page.evaluate(() => new Promise((r) => setTimeout(r, 600)));
 
   const api = {
-    page, browser, ctx, consoleErrors,
+    page, browser, ctx, consoleErrors, islandActivities, drawFrames,
+    // Explicit one-frame draw for the startup scenario's pixel assertions.
+    renderFrame: () => page.evaluate(() => window.__RIPE_HARNESS_DRAW?.()),
     state: () => page.evaluate(() => window.__RIPE.state()),
     stats: (w, h) => page.evaluate(([w, h]) => window.__RIPE.frameStats(w, h), [w, h]),
     call: (name, ...args) => page.evaluate(

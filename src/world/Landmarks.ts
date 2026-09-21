@@ -1,9 +1,12 @@
 import * as THREE from 'three';
-import { PropBuilder, signTexture } from './PropBuilder';
+import { PropBuilder, signTexture, finishWorldSign } from './PropBuilder';
 import { Palette } from '@/render/Palette';
 import type { PhysicsWorld } from '@/physics/PhysicsWorld';
 import type { Terrain } from './Terrain';
 import { Rng } from '@/core/Rng';
+import { buildAnchorCrags, buildIslandWorksites } from './IslandWorksites';
+import { buildKingMelonGeometry } from './KingMelonGeometry';
+import { buildGroveArch } from './GroveArch';
 
 const C = (hex: number) => new THREE.Color().setHex(hex, THREE.SRGBColorSpace);
 
@@ -93,6 +96,16 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   const signs: THREE.Mesh[] = [];
 
   const ground = (x: number, z: number) => terrain.height(x, z);
+  const localGround = (x: number, z: number, originX: number, originY: number, originZ: number, rot: number) =>
+    ground(originX + x * Math.cos(rot) + z * Math.sin(rot),
+      originZ - x * Math.sin(rot) + z * Math.cos(rot)) - originY;
+  const timberBetween = (a: THREE.Vector3, end: THREE.Vector3, width: number, depth: number, tint: THREE.Color) => {
+    const delta = end.clone().sub(a);
+    const g = new THREE.BoxGeometry(width, delta.length(), depth);
+    g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), delta.normalize()));
+    g.translate(...a.clone().add(end).multiplyScalar(0.5).toArray() as [number, number, number]);
+    b.mesh(g, tint);
+  };
 
   // ---- THE DOCK ------------------------------------------------------------
   // Runs from the shore out over the water, which is what makes arriving read
@@ -134,6 +147,18 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     const tone = rng.next();
     const col = tone > 0.74 ? PLANK_LIGHT : tone > 0.34 ? PLANK : PLANK_DARK;
     b.box(deckW - 0.30, 0.16, pitch - 0.085, col, false, [rng.range(-0.03, 0.03), 0, z]);
+    // Staggered end joints, nail heads and sparse grain cut the broad stripes
+    // into believable boards. No extra RNG calls: existing props keep their seed.
+    const joint = [-0.85, 0.65, -0.15, 1.25][i % 4];
+    b.box(0.022, 0.008, pitch - 0.09, PLANK_SHADOW, false, [joint, 0.083, z]);
+    for (const nx of [-2.13, joint - 0.075, joint + 0.075, 2.13]) {
+      for (const nz of [-0.17, 0.17])
+        b.cylinder(0.018, 0.018, 0.012, 5, METAL_DARK, false, [nx, 0.086, z + nz]);
+    }
+    if (i % 3 !== 0) {
+      b.box(1.12 + (i % 4) * 0.16, 0.006, 0.012, PLANK_DARK, false,
+        [i % 2 ? -1.15 : 0.95, 0.084, z + 0.09]);
+    }
   }
   // Rim boards down each side: they give the deck an edge, and stop the
   // planking ending in mid-air when you look along it.
@@ -208,27 +233,25 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
       const sz = rng.range(0.52, 0.64) * (1 - i * 0.08);
       b.push().translate(x + rng.range(-0.08, 0.08), y + sz / 2, z + rng.range(-0.08, 0.08))
         .rotateY(rot + rng.range(-0.25, 0.25));
-      b.box(sz, sz, sz, CRATE, i === 0);
-      // Slats, so a crate is a crate and not a brown cube.
-      for (const s2 of [-1, 1]) {
-        b.box(sz * 1.02, sz * 0.14, sz * 0.14, PLANK_DARK, false, [0, s2 * sz * 0.3, sz * 0.51]);
-        b.box(sz * 0.14, sz * 0.14, sz * 1.02, PLANK_DARK, false, [s2 * sz * 0.3, 0, 0]);
-      }
+      b.recordProp(`dock-crate-${x}-${z}-${i}`, { kind: 'crate', size: sz, support: i ? 'crate below' : 'dock deck' });
+      slattedCrate(b, sz, i === 0);
       b.pop();
       y += sz;
     }
   };
   const barrel = (x: number, z: number, r = 0.34) => {
     b.push().translate(x, deckY + 0.08, z).rotateY(rng.range(0, 3.14));
-    b.cylinder(r * 0.92, r * 0.92, 0.86, 9, CRATE, true, [0, 0.43, 0]);
-    b.cylinder(r, r, 0.10, 9, METAL_DARK, false, [0, 0.24, 0]);
-    b.cylinder(r, r, 0.10, 9, METAL_DARK, false, [0, 0.64, 0]);
-    b.cylinder(r * 0.86, r * 0.86, 0.05, 9, PLANK_DARK, false, [0, 0.87, 0]);
+    b.recordProp(`dock-barrel-${x}-${z}`, { kind: 'barrel', radius: r, support: 'dock deck' });
+    b.cylinder(r * 0.92, r * 0.92, 0.86, 16, CRATE, true, [0, 0.43, 0]);
+    b.cylinder(r, r, 0.10, 16, METAL_DARK, false, [0, 0.24, 0]);
+    b.cylinder(r, r, 0.10, 16, METAL_DARK, false, [0, 0.64, 0]);
+    b.cylinder(r * 0.86, r * 0.86, 0.05, 16, PLANK_DARK, false, [0, 0.87, 0]);
     b.pop();
   };
   /** A basket with fruit heaped in it: the sell loop, stated as scenery. */
   const fruitBasket = (x: number, z: number, fruit: THREE.Color) => {
     b.push().translate(x, deckY + 0.08, z).rotateY(rng.range(0, 3.14));
+    b.recordProp(`dock-basket-${x}-${z}`, { kind: 'basket', support: 'dock deck', contents: 'fruit seated on inset floor' });
     for (let i = 0; i < 9; i++) {
       const a = (i / 9) * Math.PI * 2;
       b.push().translate(Math.cos(a) * 0.31, 0.16, Math.sin(a) * 0.31).rotateY(-a);
@@ -238,7 +261,12 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     b.cylinder(0.34, 0.30, 0.05, 9, CRATE, false, [0, 0.03, 0]);
     for (let i = 0; i < 5; i++) {
       const a = rng.range(0, 6.28), r = rng.range(0, 0.17);
-      b.sphere(0.105, 0, fruit, false, [Math.cos(a) * r, 0.32 + rng.range(0, 0.06), Math.sin(a) * r]);
+      // Preserve RNG draws, but seat the contents on the floor instead of
+      // floating above an empty basket.
+      const radius = 0.09 + rng.range(0, 0.06) * 0.25;
+      const piece = new THREE.SphereGeometry(radius, 8, 6);
+      piece.translate(Math.cos(a) * r, 0.055 + radius, Math.sin(a) * r);
+      b.mesh(piece, fruit);
     }
     b.pop();
   };
@@ -247,6 +275,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     // 19 cm cube of lamp colour with a lid on it, which at any distance is a
     // pale blank box rather than a lantern.
     b.cylinder(0.028, 0.028, 0.26, 5, METAL_DARK, false, [x, y + 0.25, z]);
+    b.cylinder(0.045, 0.055, 0.23, 6, METAL_DARK, false, [x, y - 0.23, z]);
     b.box(0.145, 0.17, 0.145, LAMP_HOT, false, [x, y, z]);
     for (const sx of [-1, 1]) {
       for (const sz of [-1, 1]) {
@@ -346,12 +375,14 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   const signFacing = dockDir - 0.55;
   b.push();
   b.translate(signLocal.x, deckY, signLocal.z).rotateY(-0.55);
-  b.cylinder(0.09, 0.11, 2.6, 6, POST, true, [0, 1.3, 0]);
+  b.cylinder(0.09, 0.11, 1.85, 6, POST, true, [0, 0.925, 0]);
   b.pop();
-  signs.push(makeSign(
-    dock.toWorld(signLocal.x, signLocal.z, deckY + 2.05),
-    signFacing, 2.3, 1.5,
-    signTexture(['PICK FRUIT.', 'SELL FRUIT.', 'BUY BETTER STUFF.'], { title: 'SUNPATCH' }),
+  signs.push(makeSign(b,
+    dock.toWorld(signLocal.x, signLocal.z, deckY + 1.45).add(
+      new THREE.Vector3(Math.sin(signFacing), 0, Math.cos(signFacing)).multiplyScalar(0.20)),
+    signFacing, 1.65, 0.74,
+    signTexture(['PICK · HAUL · SELL'], { title: 'SUNPATCH', w: 640, h: 240,
+      bg: '#34554a', fg: '#efe1bb', accent: '#78917a' }),
   ));
 
   // ---- SHOP SHED + SELL PAD -----------------------------------------------
@@ -363,7 +394,9 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   const shopX = 45, shopZ = 52;
   const shopY = ground(shopX, shopZ);
   const shopRot = -0.9;
+  const shopGround = (x: number, z: number) => localGround(x, z, shopX, shopY, shopZ, shopRot);
   b.reset().translate(shopX, shopY, shopZ).rotateY(shopRot);
+  b.recordProp('merv-shop', { kind: 'workstation', front: [0, 1.4, 3.4], origin: [shopX, shopY, shopZ], rotationY: shopRot });
 
   const SW = 6.8, SD = 5.2;            // body footprint
   const PLINTH = 0.34;
@@ -405,6 +438,15 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     b.push().translate(0, (EAVE + RIDGE) / 2, (sz * runZ) / 2).rotateX(sz * theta);
     b.box(SW + OVER_X * 2, 0.20, slabLen, sz > 0 ? ROOF : ROOF_DARK, false);
     b.box(SW + OVER_X * 2 - 0.12, 0.07, slabLen - 0.1, ROOF_DARK, false, [0, -0.14, 0]);
+    // Overlapping terracotta courses, kept broad enough to read from the dock.
+    for (let row = 0; row < 7; row++) {
+      const rz = -slabLen / 2 + (row + 0.5) * slabLen / 7;
+      b.box(SW + OVER_X * 2, 0.045, 0.055, ROOF_DARK, false, [0, 0.115, rz]);
+      for (let col = 0; col < 12; col++) {
+        const rx = -(SW + OVER_X * 2) / 2 + 0.35 + col * 0.7 + (row % 2) * 0.16;
+        b.box(0.025, 0.018, slabLen / 7 - 0.06, ROOF_RIDGE, false, [rx, 0.112, rz]);
+      }
+    }
     b.pop();
   }
   b.box(SW + OVER_X * 2 + 0.14, 0.20, 0.38, ROOF_RIDGE, false, [0, RIDGE + 0.05, 0]);
@@ -443,7 +485,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   b.box(3.4, 0.09, 0.30, PLANK, false, [0, 2.62, front + 0.16]);
   b.box(2.4, 0.36, 0.05, LAMP, false, [0, 2.98, front + 0.13]);
   for (let i = 0; i < 5; i++) {
-    b.sphere(0.14, 0, i % 2 ? APPLE : ORANGE, false, [-1.3 + i * 0.65, 2.80, front + 0.16]);
+    b.sphere(0.14, 1, i % 2 ? APPLE : ORANGE, false, [-1.3 + i * 0.65, 2.80, front + 0.16]);
   }
   for (const sx of [-1, 1]) {
     b.box(0.20, 2.3, 0.20, POST, false, [sx * 2.35, 2.15, front + 0.06]);
@@ -458,7 +500,9 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     b.box(0.13, 0.12, 1.16, POST, false, [SW / 2 + 0.03, 1.72, sz * 1.35]);
     b.box(0.09, 1.0, 1.05, GLASS, false, [SW / 2 + 0.02, 2.25, sz * 1.35]);
     b.push().translate(SW / 2 + 0.06, 2.25, sz * (1.35 + 0.62)).rotateY(sz * 0.5);
-    b.box(0.08, 1.05, 0.55, PLANK_DARK, false);
+    b.box(0.08, 1.05, 0.55, C(0x367f75), false);
+    for (let slat = 0; slat < 6; slat++)
+      b.box(0.10, 0.045, 0.51, C(0x25584f), false, [0.025, -0.4 + slat * 0.16, 0]);
     b.pop();
     b.box(0.34, 0.24, 1.15, PLANK, false, [SW / 2 + 0.18, 1.60, sz * 1.35]);
     for (let i = 0; i < 4; i++) {
@@ -475,8 +519,22 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     b.box(0.10, 1.0, 0.10, POST, false, [-2.2 + i * 0.88, 0.55, 1.22]);
   }
   b.box(5.2, 0.10, 0.24, POST, false, [0, 1.29, 0.5]);
+  for (let i = 0; i < 14; i++) {
+    b.box(0.335, 0.91, 0.04, i % 3 ? C(0x397e73) : C(0x326b62), false,
+      [-2.3 + i * 0.354, 0.56, 1.285]);
+  }
+  for (const sy of [0.12, 1.04])
+    b.box(5.08, 0.09, 0.08, CANVAS_CREAM, false, [0, sy, 1.31]);
+  // A real counter scale: stout enamel base, dial and shallow brass pan.
+  b.box(0.42, 0.15, 0.36, C(0x397e73), false, [-1.6, 1.34, 0.48]);
+  b.cylinder(0.06, 0.09, 0.32, 7, METAL_DARK, false, [-1.6, 1.54, 0.48]);
+  b.cylinder(0.30, 0.22, 0.075, 12, LAMP, false, [-1.6, 1.73, 0.48]);
+  b.push().translate(-1.6, 1.51, 0.71).rotateX(Math.PI / 2);
+  b.cylinder(0.15, 0.15, 0.06, 12, CANVAS_CREAM, false);
   b.pop();
-  b.push().translate(0, 2.62, front + 1.15).rotateX(0.46);
+  b.box(0.018, 0.105, 0.018, METAL_DARK, false, [-1.6, 1.53, 0.751]);
+  b.pop();
+  b.push().translate(0, 3.07, front + 1.15).rotateX(0.46);
   for (let i = 0; i < 9; i++) {
     b.box(0.62, 0.08, 2.1, i % 2 ? CANVAS_RED : CANVAS_CREAM, false, [-2.48 + i * 0.62, 0, 0]);
   }
@@ -484,17 +542,18 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   // Scalloped valance hanging off the awning's front edge.
   for (let i = 0; i < 9; i++) {
     b.box(0.58, 0.30, 0.07, i % 2 ? CANVAS_RED : CANVAS_CREAM, false,
-      [-2.48 + i * 0.62, 2.02, front + 2.06]);
+      [-2.48 + i * 0.62, 2.47, front + 2.06]);
   }
-  b.cylinder(0.08, 0.08, 2.2, 6, POST, false, [-2.6, 1.1, front + 2.1]);
-  b.cylinder(0.08, 0.08, 2.2, 6, POST, false, [2.6, 1.1, front + 2.1]);
-  lantern(-2.6, 2.35, front + 2.1);
-  lantern(2.6, 2.35, front + 2.1);
+  b.cylinder(0.08, 0.08, 2.65, 6, POST, false, [-2.6, 1.325, front + 2.1]);
+  b.cylinder(0.08, 0.08, 2.65, 6, POST, false, [2.6, 1.325, front + 2.1]);
+  lantern(-2.6, 2.8, front + 2.1);
+  lantern(2.6, 2.8, front + 2.1);
 
   // Bracket arm for the hanging sign, on the +X gable.
   b.box(1.5, 0.14, 0.14, POST, false, [SW / 2 + 0.75, 3.30, 0]);
+  b.box(0.14, 0.14, 1.28, POST, false, [SW / 2 + 1.35, 3.30, 0]);
   b.box(0.14, 0.90, 0.14, POST, false, [SW / 2 + 0.06, 2.90, 0]);
-  b.push().translate(SW / 2 + 1.35, 0, 0);
+  b.push().translate(SW / 2 + 1.35, 0, 0).rotateY(Math.PI / 2);
   ropeSwag(b, [-0.5, 3.24, 0], [-0.5, 3.05, 0], 0, 1, 0.028);
   ropeSwag(b, [0.5, 3.24, 0], [0.5, 3.05, 0], 0, 1, 0.028);
   b.pop();
@@ -502,42 +561,62 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   // Porch decking between the counter and the sell pad, so the two read as one
   // place rather than two props standing on sand.
   b.push().translate(0, 0.04, front + 2.6);
-  for (let i = 0; i < 10; i++) {
-    b.box(0.52, 0.12, 3.0, i % 2 ? PLANK : PLANK_DARK, false, [-2.4 + i * 0.53, 0, 0]);
+  // Only the side walkways extend past the pad. The old ten full-length
+  // boards overlapped its base at y=.10, fighting through every plank seam.
+  for (const side of [-1, 1]) {
+    b.box(0.42, 0.12, 3.0, PLANK_DARK, true, [side * 2.44, 0, 0]);
   }
   b.box(5.5, 0.15, 0.20, POST, false, [0, 0.01, 1.55]);
   b.pop();
 
   // Goods stacked round the front, so the shop looks stocked rather than shut.
-  const shopCrate = (x: number, z: number, y: number, sz: number, rot: number) => {
+  const shopCrate = (x: number, z: number, y: number, sz: number, rot: number, loaded = false) => {
     b.push().translate(x, y + sz / 2, z).rotateY(rot);
-    b.box(sz, sz, sz, CRATE, true);
-    for (const s2 of [-1, 1]) {
-      b.box(sz * 1.02, sz * 0.13, sz * 0.13, PLANK_DARK, false, [0, s2 * sz * 0.3, sz * 0.51]);
-      b.box(sz * 0.13, sz * 0.13, sz * 1.02, PLANK_DARK, false, [s2 * sz * 0.3, 0, 0]);
+    b.recordProp(`shop-crate-${x}-${z}-${y}`, { kind: 'crate', size: sz, loaded, supportTop: y + sz });
+    b.collider(sz, sz, sz);
+    b.box(sz, sz * 0.08, sz, PLANK_DARK, false, [0, -sz * 0.46, 0]);
+    for (const sx of [-1, 1]) for (const sz2 of [-1, 1])
+      b.box(sz * 0.09, sz, sz * 0.09, PLANK_DARK, false, [sx * sz * 0.455, 0, sz2 * sz * 0.455]);
+    for (let row = 0; row < 4; row++) for (const side of [-1, 1]) {
+      const sy = -sz * 0.38 + row * sz * 0.25;
+      b.box(sz, sz * 0.15, sz * 0.06, CRATE, false, [0, sy, side * sz * 0.47]);
+      b.box(sz * 0.06, sz * 0.15, sz, CRATE, false, [side * sz * 0.47, sy, 0]);
+    }
+    // A slatted lid carries the decorative produce; its top is exactly the
+    // same local support plane used by the contents and closed collider.
+    for (let slat = 0; slat < 4; slat++) b.box(sz * 0.23, sz * 0.08, sz, CRATE, false,
+      [(-0.375 + slat * 0.25) * sz, sz * 0.46, 0]);
+    if (loaded) for (let i = 0; i < 4; i++) {
+      const r = sz * 0.17, offset = sz * 0.22;
+      const fruit = new THREE.SphereGeometry(r, 16, 10);
+      fruit.translate(i % 2 ? offset : -offset, sz / 2 + r, i > 1 ? offset : -offset);
+      b.mesh(fruit, i % 2 ? APPLE : ORANGE);
     }
     b.pop();
   };
-  shopCrate(-3.15, front + 1.1, 0.10, 0.78, 0.3);
-  shopCrate(-3.20, front + 1.15, 0.88, 0.64, -0.5);
-  shopCrate(3.25, front + 1.0, 0.10, 0.74, -0.2);
-  shopCrate(-3.7, front - 1.1, 0.10, 0.70, 0.9);
-  for (let i = 0; i < 4; i++) {
-    b.sphere(0.15, 0, i % 2 ? APPLE : ORANGE, false,
-      [-3.20 + (i % 2 ? 0.2 : -0.2), 1.60, front + 1.15 + (i > 1 ? 0.2 : -0.2)]);
-  }
-  b.sphere(0.22, 0, LEAF, false, [3.25, 0.92, front + 1.0]);
+  const leftCrateBase = shopGround(-3.15, front + 1.1);
+  shopCrate(-3.15, front + 1.1, leftCrateBase, 0.78, 0.3);
+  shopCrate(-3.15, front + 1.1, leftCrateBase + 0.78, 0.64, 0.3, true);
+  shopCrate(3.25, front + 1.0, shopGround(3.25, front + 1.0), 0.74, -0.2, true);
+  shopCrate(-4.0, -0.8, shopGround(-4.0, -0.8), 0.70, 0.9);
   for (let i = 0; i < 3; i++) {
-    b.push().translate(3.7 + i * 0.05, 0.1, front - 0.6 - i * 0.62).rotateY(i * 0.7)
-      .scale(1, 0.78, 1);
-    b.sphere(0.42, 0, SACK, false, [0, 0.42, 0]);
+    const sx = 3.7 + i * 0.05, sz = front - 0.6 - i * 0.62;
+    b.push().translate(sx, shopGround(sx, sz), sz).rotateY(i * 0.7);
+    b.recordProp(`shop-sack-${i}`, { kind: 'sack', support: 'terrain', radius: 0.42 });
+    const sack = new THREE.SphereGeometry(0.42, 16, 10);
+    sack.scale(1, 0.78, 1); sack.translate(0, 0.42 * 0.78, 0);
+    b.mesh(sack, SACK);
+    b.cylinder(.075, .15, .15, 10, SACK, false, [0, .69, 0]);
+    b.cylinder(.085, .085, .035, 10, ROPE, false, [0, .70, 0]);
     b.pop();
   }
   for (const bz of [1.7, 0.5, -2.2]) {
-    b.push().translate(bz > 0 ? -4.1 : 4.1, 0.08, bz);
-    b.cylinder(0.36, 0.36, 0.94, 9, CRATE, true, [0, 0.47, 0]);
-    b.cylinder(0.39, 0.39, 0.10, 9, METAL_DARK, false, [0, 0.26, 0]);
-    b.cylinder(0.39, 0.39, 0.10, 9, METAL_DARK, false, [0, 0.70, 0]);
+    const barrelX = bz > 0 ? -4.1 : 4.1;
+    b.push().translate(barrelX, shopGround(barrelX, bz), bz);
+    b.recordProp(`shop-barrel-${barrelX}-${bz}`, { kind: 'barrel', support: 'terrain', radius: 0.39 });
+    b.cylinder(0.36, 0.36, 0.94, 16, CRATE, true, [0, 0.47, 0]);
+    b.cylinder(0.39, 0.39, 0.10, 16, METAL_DARK, false, [0, 0.26, 0]);
+    b.cylinder(0.39, 0.39, 0.10, 16, METAL_DARK, false, [0, 0.70, 0]);
     b.pop();
   }
   // The island board by the counter: the frame is built here, the face is a
@@ -556,18 +635,18 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   const islandBoardOpen = signTexture(['SUNPATCH  ✓', 'GALE GROVE  ✓ OPEN', 'boat leaves when it floats'],
     { title: 'ISLANDS', ...boardStyle });
   const boardPos = new THREE.Vector3(3.3, 0, front + 2.3)
-    .add(new THREE.Vector3(0, 1.15, 0.045).applyAxisAngle(new THREE.Vector3(0, 1, 0), -0.55))
+    .add(new THREE.Vector3(0, 1.15, 0.14).applyAxisAngle(new THREE.Vector3(0, 1, 0), -0.55))
     .applyAxisAngle(new THREE.Vector3(0, 1, 0), shopRot)
     .add(new THREE.Vector3(shopX, shopY, shopZ));
-  const islandBoard = makeSign(boardPos, shopRot - 0.55, 1.22, 0.92, islandBoardLocked);
+  const islandBoard = makeSign(b, boardPos, shopRot - 0.55, 1.22, 0.92, islandBoardLocked);
   islandBoard.name = 'IslandBoard';
   signs.push(islandBoard);
 
   // The bounty poster, on the gable the walk from the dock faces. The first
   // ten minutes should already know what the giant melon over the ravine is
   // for, what it pays, and the one word that opens it.
-  signs.push(makeSign(
-    new THREE.Vector3(SW / 2 + 0.07, 1.72, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), shopRot)
+  signs.push(makeSign(b,
+    new THREE.Vector3(SW / 2 + 0.18, 1.72, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), shopRot)
       .add(new THREE.Vector3(shopX, shopY, shopZ)),
     shopRot + Math.PI / 2, 1.22, 1.3,
     signTexture(['THE KING MELON', '2,600 KG. FOUR VINES.', '$9,500 REWARD', 'BRING ROPE.'],
@@ -583,7 +662,8 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   }
   for (const sx of [-1, 1]) {
     b.box(0.22, 0.10, 4.3, C(0xd05a3c), false, [sx * 2.1, 0.12, 0]);
-    b.box(4.3, 0.10, 0.22, C(0xd05a3c), false, [0, 0.12, sx * 2.1]);
+    // Butt joints: no coincident top faces at the four painted corners.
+    b.box(3.98, 0.10, 0.22, C(0xd05a3c), false, [0, 0.12, sx * 2.1]);
   }
   for (const c2 of [[-1.95, -1.95], [1.95, -1.95], [-1.95, 1.95], [1.95, 1.95]]) {
     b.box(0.26, 0.30, 0.26, POST, false, [c2[0], 0.22, c2[1]]);
@@ -609,14 +689,17 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     .applyAxisAngle(new THREE.Vector3(0, 1, 0), shopRot)
     .add(new THREE.Vector3(shopX, shopY, shopZ));
 
-  signs.push(makeSign(
-    new THREE.Vector3(0, 3.66, front + 0.22).applyAxisAngle(new THREE.Vector3(0, 1, 0), shopRot)
+  // Mount the shop name above, and in front of, the weighing crossbar.
+  // A roof-mounted face was still hidden by the gantry at walking height.
+  for (const x of [-1.45, 1.45]) b.box(0.16, 1.02, 0.16, POST, false, [x, 3.66, sellLocal.z + 0.05]);
+  signs.push(makeSign(b,
+    new THREE.Vector3(0, 3.92, sellLocal.z + 0.19).applyAxisAngle(new THREE.Vector3(0, 1, 0), shopRot)
       .add(new THREE.Vector3(shopX, shopY, shopZ)),
     shopRot, 4.0, 1.28,
     signTexture(['SELL HERE  \u2022  BUY THINGS'], { title: "MERV'S SUPPLY", h: 200, w: 640 }),
   ));
   // The hanging bracket board, legible from the whole approach.
-  signs.push(makeSign(
+  signs.push(makeSign(b,
     new THREE.Vector3(SW / 2 + 1.35, 2.62, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), shopRot)
       .add(new THREE.Vector3(shopX, shopY, shopZ)),
     shopRot + Math.PI / 2, 1.6, 1.0,
@@ -627,15 +710,34 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     .applyAxisAngle(new THREE.Vector3(0, 1, 0), shopRot)
     .add(new THREE.Vector3(shopX, shopY, shopZ));
 
+  // The arrival faces the gable, so give that face the same harvest identity
+  // as the counter. A carved orange medallion sits above the wanted poster.
+  b.reset().translate(shopX, shopY, shopZ).rotateY(shopRot);
+  b.push().translate(SW / 2 + 0.14, 3.75, 0).rotateZ(Math.PI / 2);
+  b.cylinder(0.52, 0.52, 0.12, 12, C(0x25584f), false);
+  b.cylinder(0.42, 0.42, 0.14, 12, CANVAS_CREAM, false);
+  b.pop();
+  b.push().translate(SW / 2 + 0.26, 3.73, 0).scale(0.32, 1, 1);
+  b.sphere(0.30, 1, ORANGE, false);
+  b.pop();
+  b.box(0.06, 0.14, 0.055, POST, false, [SW / 2 + 0.28, 4.04, 0]);
+  b.push().translate(SW / 2 + 0.27, 4.02, -0.16).scale(0.15, 0.4, 1);
+  b.sphere(0.21, 0, LEAF, false);
+  b.pop();
+
   // Forecourt dressing, out where the route meets the sell pad. The pad and
   // the counter were an island of detail in the middle of a big empty apron.
   b.reset().translate(shopX, shopY, shopZ).rotateY(shopRot);
-  b.push().translate(-3.2, 0, 8.4).rotateY(0.5);
-  b.cylinder(0.36, 0.36, 0.94, 9, CRATE, true, [0, 0.47, 0]);
-  b.cylinder(0.39, 0.39, 0.10, 9, METAL_DARK, false, [0, 0.26, 0]);
-  b.cylinder(0.39, 0.39, 0.10, 9, METAL_DARK, false, [0, 0.70, 0]);
-  b.box(0.62, 0.62, 0.62, CRATE, true, [1.0, 0.31, 0.3]);
-  b.box(0.64, 0.09, 0.09, PLANK_DARK, false, [1.0, 0.50, 0.3]);
+  const apronBase = shopGround(-3.2, 8.4);
+  b.push().translate(-3.2, apronBase, 8.4).rotateY(0.5);
+  b.cylinder(0.36, 0.36, 0.94, 16, CRATE, true, [0, 0.47, 0]);
+  b.cylinder(0.39, 0.39, 0.10, 16, METAL_DARK, false, [0, 0.26, 0]);
+  b.cylinder(0.39, 0.39, 0.10, 16, METAL_DARK, false, [0, 0.70, 0]);
+  const apronCrateGround = shopGround(-3.2 + Math.cos(.5) + .3 * Math.sin(.5),
+    8.4 - Math.sin(.5) + .3 * Math.cos(.5)) - apronBase;
+  b.push().translate(1.0, apronCrateGround + .31, .3);
+  b.recordProp('shop-apron-crate', { kind: 'crate', size: .62, support: 'terrain' });
+  slattedCrate(b, .62, true); b.pop();
   b.pop();
   // A fingerpost where the route forks for the orchard: signposting the loop
   // in the world instead of on the HUD. The arms carry words now.
@@ -657,11 +759,11 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
       const m = post.clone()
         .multiply(new THREE.Matrix4().makeTranslation(x, y, 0))
         .multiply(new THREE.Matrix4().makeRotationY(rot))
-        .multiply(new THREE.Matrix4().makeTranslation(0, 0, 0.045));
-      signs.push(makeSign(new THREE.Vector3().setFromMatrixPosition(m), shopRot - 0.35 + rot, w, w * 0.2,
+        .multiply(new THREE.Matrix4().makeTranslation(0, 0, 0.14));
+      signs.push(makeSign(b, new THREE.Vector3().setFromMatrixPosition(m), shopRot - 0.35 + rot, w, w * 0.2,
         signTexture([text], { w: 512, h: 104, lineScale: 3.2 })));
     };
-    arm(0.55, 2.28, 0.9, 1.22, 'OLD ORCHARD  →');
+    arm(0.55, 2.28, 0.9, 1.22, '←  OLD ORCHARD');
     arm(-0.5, 1.88, -0.5, 1.08, '←  WATERFALL');
   }
 
@@ -675,24 +777,37 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     b.cylinder(0.10, 0.12, 2.5, 7, POST, true, [0, 1.25, 0]);
     const rot = Math.atan2(faceX - x, faceZ - z);
     const pos = new THREE.Vector3(x, y + 2.05, z).add(
-      new THREE.Vector3(Math.sin(rot), 0, Math.cos(rot)).multiplyScalar(0.09));
-    signs.push(makeSign(pos, rot, 1.6, 0.95,
+      new THREE.Vector3(Math.sin(rot), 0, Math.cos(rot)).multiplyScalar(0.215));
+    signs.push(makeSign(b, pos, rot, 1.6, 0.95,
       signTexture(lines, { title, w: 512, h: 300, lineScale: 1.25 })));
   };
   fingerboard(-28.8, 0.7, -24, 22, ['WATERMELONS · BOULDER PLUMS', 'mind the slope'], 'HILL FARM ↑');
-  fingerboard(-24.7, -38.3, -36, -30, ['THE KING MELON', 'rope gun required'], 'THE RAVINE ↓');
+  fingerboard(-24.7, -38.3, -36, -30, ['THE KING MELON', 'rope gun required'], 'THE RAVINE ↑');
   // A hand cart parked on the apron.
+  b.reset().translate(shopX, shopY, shopZ).rotateY(shopRot);
   b.push().translate(-5.4, 0, 6.2).rotateY(1.2);
+  const cartWorld = new THREE.Vector3(-5.4, 0, 6.2).applyAxisAngle(new THREE.Vector3(0, 1, 0), shopRot)
+    .add(new THREE.Vector3(shopX, shopY, shopZ));
+  const cartGround = (x: number, z: number) => localGround(x, z, cartWorld.x, shopY, cartWorld.z, shopRot + 1.2);
+  b.recordProp('shop-hand-cart', { kind: 'cart', supports: [-1, 1].flatMap(side => [
+    [side * 0.62, cartGround(side * 0.62, -0.25), -0.25], [side * 0.42, cartGround(side * 0.42, 0.6), 0.6]]) });
   b.box(1.1, 0.14, 1.6, PLANK, false, [0, 0.62, 0]);
   b.box(1.1, 0.40, 0.10, PLANK_DARK, false, [0, 0.82, -0.76]);
   b.box(0.10, 0.40, 1.6, PLANK_DARK, false, [-0.55, 0.82, 0]);
   b.box(0.10, 0.40, 1.6, PLANK_DARK, false, [0.55, 0.82, 0]);
-  b.push().rotateZ(Math.PI / 2);
-  b.cylinder(0.34, 0.34, 0.12, 10, METAL_DARK, false, [-0.34, 0, -0.62]);
-  b.cylinder(0.34, 0.34, 0.12, 10, METAL_DARK, false, [-0.34, 0, 0.62]);
-  b.pop();
+  for (const side of [-1, 1]) {
+    const wheelY = cartGround(side * 0.62, -0.25) + 0.34;
+    b.push().translate(side * 0.62, wheelY, -0.25).rotateZ(Math.PI / 2);
+    b.cylinder(0.34, 0.34, 0.12, 10, METAL_DARK, false);
+    b.cylinder(0.17, 0.17, 0.14, 10, PLANK_LIGHT, false);
+    b.pop();
+    timberBetween(new THREE.Vector3(side * 0.62, wheelY, -0.25), new THREE.Vector3(side * 0.46, 0.6, -0.25), 0.10, 0.10, POST);
+    const foot = cartGround(side * 0.42, 0.6) - 0.03;
+    b.box(0.08, 0.59 - foot, 0.08, POST, false, [side * 0.42, (0.59 + foot) / 2, 0.6]);
+    b.box(0.09, 0.09, 1.25, POST, false, [side * 0.42, 0.59, 1.0]);
+  }
   for (let i = 0; i < 6; i++) {
-    b.sphere(0.16, 0, i % 2 ? APPLE : ORANGE, false,
+    b.sphere(0.16, 1, i % 2 ? APPLE : ORANGE, false,
       [-0.28 + (i % 3) * 0.28, 0.80, -0.5 + i * 0.20]);
   }
   b.pop();
@@ -704,8 +819,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   // repeating verticals in the middle distance, which is what the orchard was
   // missing when it was thirty green blobs on a flat green field.
   //
-  // Posts collide, rails do not. A solid fence beside a path is a thing to get
-  // stuck on; posts alone read the same and leave every gap passable.
+  // Solid rails match the visible timber. The authored gate stays open.
   const fenceLine = (pts: Array<[number, number]>, gapAt = -1) => {
     for (let i = 0; i < pts.length - 1; i++) {
       const [x1, z1] = pts[i], [x2, z2] = pts[i + 1];
@@ -723,7 +837,8 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
         for (const ry of [1.02, 0.58]) {
           b.push().translate(0, ry + (by - ay) * 0.5, len / 2)
             .rotateX(-Math.atan2(by - ay, len));
-          b.box(0.07, 0.13, len * 1.02, PLANK_DARK, false);
+          b.recordProp(`orchard-rail-${ax}-${az}-${ry}`, { kind: 'rail', width: .07, height: .13, length: len * 1.02 });
+          b.box(0.07, 0.13, len * 1.02, PLANK_DARK, true);
           b.pop();
         }
       }
@@ -735,6 +850,38 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   };
   fenceLine([[-5.5, 36.4], [-12.5, 32.8], [-19.0, 29.8], [-26.5, 26.8], [-33.0, 25.4]], 0);
   fenceLine([[-1.5, 26.6], [-8.5, 23.2], [-15.0, 20.2], [-22.0, 17.2], [-29.0, 15.4]]);
+  // Orchard entry: a wide, open timber lintel and a painted harvest sign.
+  // Posts sit beyond the path shoulders; the entire addition is decorative.
+  const entryX = -7, entryZ = 29, entryY = ground(entryX, entryZ);
+  const entryRot = Math.atan2(0.9, 0.44);
+  b.reset().translate(entryX, entryY, entryZ).rotateY(entryRot);
+  for (const side of [-1, 1]) {
+    const px = entryX + side * 5.3 * Math.cos(entryRot);
+    const pz = entryZ - side * 5.3 * Math.sin(entryRot);
+    const base = ground(px, pz) - entryY;
+    b.box(0.30, 4.15 - base, 0.30, POST, false, [side * 5.3, (4.15 + base) / 2, 0]);
+    b.box(0.42, 0.12, 0.42, PLANK_LIGHT, false, [side * 5.3, 4.16, 0]);
+    b.box(0.34, 0.42, 0.34, C(0x397e73), false, [side * 5.3, base + 0.45, 0]);
+  }
+  b.box(11.1, 0.22, 0.28, PLANK_DARK, false, [0, 4.0, 0]);
+  b.box(3.9, 0.96, 0.16, POST, false, [0, 3.75, 0.06]);
+  const entrySignPos = new THREE.Vector3(0, 3.75, 0.155)
+    .applyAxisAngle(new THREE.Vector3(0, 1, 0), entryRot)
+    .add(new THREE.Vector3(entryX, entryY, entryZ));
+  signs.push(makeSign(b, entrySignPos, entryRot, 3.72, 0.81,
+    signTexture(['PICK SOMETHING GOOD'], { title: 'OLD ORCHARD', w: 768, h: 180,
+      bg: '#28584e', fg: '#fff0cc', accent: '#cba66b' })));
+  for (let i = 0; i < 10; i++) {
+    const fx = -4.75 + i * 1.055;
+    if (Math.abs(fx) < 2.1) continue;
+    const flag = new THREE.BufferGeometry();
+    flag.setAttribute('position', new THREE.Float32BufferAttribute([
+      fx - 0.28, 3.91, 0, fx + 0.28, 3.91, 0, fx + 0.10, 3.35, 0,
+      fx + 0.28, 3.91, 0, fx - 0.28, 3.91, 0, fx + 0.10, 3.35, 0,
+    ], 3));
+    flag.computeVertexNormals();
+    b.mesh(flag, i % 2 ? CANVAS_RED : CANVAS_CREAM);
+  }
   // A gate post pair and a leaning gate where the route crosses the north run.
   b.reset().translate(-8.6, ground(-8.6, 34.6), 34.6).rotateY(0.42);
   b.cylinder(0.12, 0.14, 1.85, 6, POST, true, [0, 0.9, 0]);
@@ -744,30 +891,60 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   b.box(0.09, 0.85, 0.07, PLANK_DARK, false, [0.78, 0, 0]);
   b.pop();
 
-  // Orchard working props: a ladder against nothing in particular, picking
-  // crates, and a barrow. Small, but they are what make a grove read as an
-  // orchard someone works rather than a patch of trees.
+  // Orchard working props use one local frame for their supports and contents.
+  // Ladders are self-supporting picking A-frames, with every foot grounded.
   const orchardProp = (x: number, z: number, rot: number, what: string) => {
     const y = ground(x, z);
+    const supportGround = (sx: number, sz: number) => localGround(sx, sz, x, y, z, rot);
     b.reset().translate(x, y, z).rotateY(rot);
     if (what === 'ladder') {
-      b.push().rotateZ(0.30);
-      for (const sx of [-0.22, 0.22]) b.box(0.09, 3.2, 0.09, PLANK, false, [sx, 1.6, 0]);
-      for (let i = 0; i < 7; i++) b.box(0.50, 0.06, 0.07, PLANK_DARK, false, [0, 0.35 + i * 0.42, 0]);
-      b.pop();
+      const feet = [-1, 1].flatMap(side => [-1, 1].map(end =>
+        new THREE.Vector3(side * 0.27, supportGround(side * 0.27, end * 0.64) - 0.025, end * 0.64)));
+      const topY = Math.max(...feet.map(p => p.y)) + 3.02;
+      for (const foot of feet) timberBetween(foot,
+        new THREE.Vector3(foot.x, topY, 0), 0.095, 0.095, PLANK);
+      for (let i = 1; i <= 7; i++) {
+        const t = i / 8;
+        const left = feet[1].clone().lerp(new THREE.Vector3(-0.27, topY, 0), t);
+        const right = feet[3].clone().lerp(new THREE.Vector3(0.27, topY, 0), t);
+        timberBetween(left, right, 0.075, 0.12, PLANK_DARK);
+      }
+      b.box(0.73, 0.10, 0.24, PLANK_DARK, false, [0, topY, 0]);
+      for (const side of [-1, 1]) b.box(0.045, 0.07, 0.70, METAL_DARK, false, [side * 0.27, topY * 0.48, 0]);
+      timberBetween(feet[0].clone().lerp(new THREE.Vector3(-0.27, topY, 0), 0.3),
+        feet[2].clone().lerp(new THREE.Vector3(0.27, topY, 0), 0.65), 0.07, 0.07, PLANK_DARK);
+      b.recordProp(`orchard-ladder-${x}-${z}`, { kind: 'ladder', supports: feet.map(p => p.toArray()),
+        peak: [0, topY, 0], supportType: 'A-frame with spreader bars' });
     } else if (what === 'crates') {
-      for (let i = 0; i < 3; i++) {
-        const s2 = 0.66 - i * 0.03;
-        b.push().translate((i % 2) * 0.72, s2 / 2 + (i > 1 ? 0.63 : 0), (i > 1 ? 0.36 : 0))
-          .rotateY(i * 0.5);
-        b.box(s2, s2, s2, CRATE, i < 2);
-        b.box(s2 * 1.02, s2 * 0.13, s2 * 0.13, PLANK_DARK, false, [0, s2 * 0.3, s2 * 0.51]);
+      const crate = (cx: number, cz: number, width: number, height: number, base: number, loaded: boolean) => {
+        b.push().translate(cx, base, cz);
+        // Closed collision stays within the visible slats and corner uprights.
+        b.collider(width, height, width, [0, height / 2, 0]);
+        b.box(width, 0.045, width, PLANK_DARK, false, [0, 0.0225, 0]);
+        for (const sx of [-1, 1]) for (const sz of [-1, 1])
+          b.box(0.065, height, 0.065, PLANK_DARK, false, [sx * (width / 2 - 0.0325), height / 2, sz * (width / 2 - 0.0325)]);
+        for (let slat = 0; slat < 3; slat++) {
+          const sy = 0.08 + slat * (height - 0.15) / 2;
+          for (const side of [-1, 1]) {
+            b.box(width, 0.10, 0.04, CRATE, false, [0, sy, side * (width / 2 - 0.02)]);
+            b.box(0.04, 0.10, width, CRATE, false, [side * (width / 2 - 0.02), sy, 0]);
+          }
+        }
+        const fruitCenters: number[][] = [];
+        if (loaded) for (let i = 0; i < 4; i++) {
+          const r = 0.125, center = [i % 2 ? 0.13 : -0.13, 0.045 + r, i > 1 ? 0.13 : -0.13];
+          const fruit = new THREE.SphereGeometry(r, 16, 10);
+          fruit.translate(...center as [number, number, number]); b.mesh(fruit, i % 2 ? APPLE : ORANGE);
+          fruitCenters.push(center);
+        }
+        b.recordProp(`orchard-crate-${x}-${z}-${cx}-${base}`, { kind: 'crate', width, height,
+          floorTop: 0.045, fruitRadius: 0.125, fruitCenters, supportRelativeContents: true });
         b.pop();
-      }
-      for (let i = 0; i < 4; i++) {
-        b.sphere(0.14, 0, i % 2 ? APPLE : ORANGE, false,
-          [0.72 + (i % 2 ? 0.16 : -0.16), 1.32, 0.36 + (i > 1 ? 0.16 : -0.16)]);
-      }
+      };
+      const baseA = supportGround(0, 0), baseB = supportGround(0.74, 0);
+      crate(0, 0, 0.68, 0.58, baseA, false);
+      crate(0.74, 0, 0.64, 0.55, baseB, false);
+      crate(0, 0, 0.58, 0.30, baseA + 0.58, true);
     } else {
       // A barrow: two rails, a tray and a wheel.
       b.box(0.90, 0.12, 1.30, PLANK, false, [0, 0.52, 0]);
@@ -775,11 +952,20 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
       b.box(0.10, 0.34, 1.30, PLANK_DARK, false, [-0.44, 0.70, 0]);
       b.box(0.10, 0.34, 1.30, PLANK_DARK, false, [0.44, 0.70, 0]);
       for (const sx of [-0.36, 0.36]) b.box(0.09, 0.09, 2.0, POST, false, [sx, 0.48, 0.35]);
-      b.push().rotateZ(Math.PI / 2);
-      b.cylinder(0.28, 0.28, 0.12, 9, METAL_DARK, false, [-0.30, 0, -0.72]);
+      const wheelY = supportGround(0, -0.72) + 0.28;
+      b.push().translate(0, wheelY, -0.72).rotateZ(Math.PI / 2);
+      b.cylinder(0.28, 0.28, 0.12, 9, METAL_DARK, false);
+      b.cylinder(0.13, 0.13, 0.135, 9, PLANK_LIGHT, false);
       b.pop();
+      for (const sx of [-0.34, 0.34]) {
+        const foot = supportGround(sx, 0.5) - 0.025;
+        b.box(0.08, 0.52 - foot, 0.08, POST, false, [sx, (0.52 + foot) / 2, 0.5]);
+      }
+      timberBetween(new THREE.Vector3(0, wheelY, -0.72), new THREE.Vector3(0, 0.50, -0.54), 0.11, 0.11, POST);
+      b.recordProp(`orchard-barrow-${x}-${z}`, { kind: 'barrow', supports: [
+        [0, supportGround(0, -0.72), -0.72], ...[-0.34, 0.34].map(sx => [sx, supportGround(sx, 0.5), 0.5])] });
       for (let i = 0; i < 5; i++) {
-        b.sphere(0.15, 0, i % 2 ? APPLE : ORANGE, false,
+        b.sphere(0.15, 1, i % 2 ? APPLE : ORANGE, false,
           [-0.2 + (i % 3) * 0.2, 0.68, -0.3 + i * 0.16]);
       }
     }
@@ -811,8 +997,9 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     // reference rather than one at a time on an empty field.
     if (rockRng.chance(0.55)) {
       const s2 = s * rockRng.range(0.35, 0.6);
-      b.reset().translate(x + rockRng.range(-1.6, 1.6), 0, z + rockRng.range(-1.6, 1.6));
-      const y2 = ground(x, z);
+      const x2 = x + rockRng.range(-1.6, 1.6), z2 = z + rockRng.range(-1.6, 1.6);
+      b.reset().translate(x2, 0, z2);
+      const y2 = ground(x2, z2);
       b.push().translate(0, y2 + s2 * 0.22, 0).rotateY(rockRng.range(0, 6.28))
         .scale(1, rockRng.range(0.5, 0.85), 1);
       b.sphere(s2, 0, STONE, false);
@@ -842,7 +1029,8 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
       if (terrain.pathWeight(x, z) > 0.1) continue;
       if (!cragRng.chance(0.32 + sl * 0.8)) continue;
       const big = cragRng.range(1.1, 2.2);
-      b.reset().translate(x, y, z).rotateY(cragRng.range(0, 6.28));
+      const cragRot = cragRng.range(0, 6.28);
+      b.reset().translate(x, y, z).rotateY(cragRot);
       b.push().translate(0, big * 0.30, 0).rotateZ(cragRng.range(-0.35, 0.35))
         .scale(1, cragRng.range(0.55, 0.95), 1);
       b.sphere(big, 0, cragRng.chance(0.4) ? STONE_DARK : STONE, true);
@@ -852,7 +1040,9 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
         const r2 = big * cragRng.range(0.30, 0.62);
         const ax = cragRng.range(-big * 1.5, big * 1.5);
         const az = cragRng.range(-big * 1.5, big * 1.5);
-        b.push().translate(ax, ground(x + ax, z + az) - y + r2 * 0.24, az)
+        const wx = x + ax * Math.cos(cragRot) + az * Math.sin(cragRot);
+        const wz = z - ax * Math.sin(cragRot) + az * Math.cos(cragRot);
+        b.push().translate(ax, ground(wx, wz) - y + r2 * 0.24, az)
           .rotateY(cragRng.range(0, 6.28)).rotateZ(cragRng.range(-0.4, 0.4))
           .scale(1, cragRng.range(0.5, 0.9), 1);
         b.sphere(r2, 0, STONE, false);
@@ -910,25 +1100,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   // A rock outcrop under every anchor. Without one the vines read as four
   // whiskers disappearing into an empty sky, and the whole thing stops looking
   // like it is attached to the island at all.
-  for (const anchor of kingMelonAnchors) {
-    const groundHere = ground(anchor.x, anchor.z);
-    const stackHeight = Math.max(1.2, anchor.y - groundHere);
-    b.reset().translate(anchor.x, groundHere, anchor.z);
-    let y = 0;
-    // Deliberately modest. A first attempt scaled the boulders with the anchor
-    // height and produced grey towers that dwarfed the legendary fruit and
-    // showed up on the skyline from the dock.
-    let radius = 1.9;
-    while (y < stackHeight && radius > 0.5) {
-      const step = radius * 1.05;
-      b.push().translate(rng.range(-0.5, 0.5), y + step * 0.5, rng.range(-0.5, 0.5))
-        .rotateY(rng.range(0, 6.28)).scale(1, 0.75, 1);
-      b.sphere(radius, 0, STONE, radius > 1.0);
-      b.pop();
-      y += step;
-      radius *= 0.86;
-    }
-  }
+  buildAnchorCrags(b, physics, terrain, kingMelonAnchors);
 
   // The vines themselves belong to LegendaryHarvestSystem: they are real rope
   // constraints that can be cut, not decoration, so they are not baked in here.
@@ -951,7 +1123,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   // join instead of leaving it hovering 40 cm above its own splash.
   const poolLevel = -0.2;
   // Nudged out from the face so the sheet hangs clear instead of z-fighting it.
-  const waterfall = buildWaterfall(fallX, fallZ + 1.9, poolLevel, Math.max(5, fallTop - poolLevel));
+  const waterfall = buildWaterfall(fallX, fallZ + 1.9, poolLevel, Math.max(5, fallTop - poolLevel), terrain);
   scene.add(waterfall);
 
   // ---- THE CLIFF THE WATER COMES OFF --------------------------------------
@@ -974,7 +1146,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
       const t = i / 3;
       const r = 2.9 - t * 1.1;
       b.push()
-        .translate(side * (fallW / 2 + 1.5 + t * 1.9),
+        .translate(side * (fallW / 2 + 1.5 + t * 1.9) - (side === -1 && i === 0 ? 3 : 0),
           fallTop - 0.9 - t * (fallTop - poolLevel - 1.6) * 0.92,
           1.9 + t * 1.4 + (i % 2) * 0.5)
         .rotateY(side * (0.4 + t))
@@ -1001,6 +1173,8 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     b.pop();
   }
 
+  buildIslandWorksites(b, terrain, signs);
+  buildGroveArch(b, physics, terrain, signs);
   const merged = b.finish()!;
   const mat = new THREE.MeshStandardMaterial({
     color: 0xffffff, vertexColors: true, roughness: 0.88, metalness: 0.03, flatShading: true,
@@ -1069,7 +1243,7 @@ function gableGeometry(width: number, height: number, thickness: number): THREE.
   return g;
 }
 
-function makeSign(pos: THREE.Vector3, rotY: number, w: number, h: number,
+function makeSign(b: PropBuilder, pos: THREE.Vector3, rotY: number, w: number, h: number,
   tex: THREE.CanvasTexture): THREE.Mesh {
   const g = new THREE.PlaneGeometry(w, h);
   // Signs face the sun square-on, and at the sun's 2.45 intensity a pale board
@@ -1077,7 +1251,7 @@ function makeSign(pos: THREE.Vector3, rotY: number, w: number, h: number,
   // the game rendered as a blank rectangle. Dropping the environment term and
   // taking the albedo down keeps the lettering inside the roll-off.
   const m = new THREE.MeshStandardMaterial({
-    map: tex, roughness: 1.0, metalness: 0, side: THREE.DoubleSide,
+    map: tex, roughness: 1.0, metalness: 0, side: THREE.FrontSide,
     color: 0xb9b0a2,
   });
   m.envMapIntensity = 0.12;
@@ -1086,36 +1260,13 @@ function makeSign(pos: THREE.Vector3, rotY: number, w: number, h: number,
   mesh.rotation.y = rotY;
   mesh.castShadow = false;
   mesh.receiveShadow = true;
-  mesh.name = 'Sign';
+  finishWorldSign(b, mesh, w, h, tex);
   return mesh;
 }
 
 /** The aspirational object. It has to look absurd from 150 metres away. */
 function buildKingMelon(pos: THREE.Vector3): THREE.Mesh {
-  const r = KING_MELON_RADIUS;
-  const body = new THREE.SphereGeometry(1, 40, 28);
-  body.scale(r * 1.08, r * 0.9, r * 1.08);
-  // Measured from the dock: at 0x76bd45 over 0x24581f the stripes averaged
-  // out to the same green as the canopies behind it and the legendary read
-  // as one more tree. A pale, slightly yellow stripe over a rind darker
-  // than any leaf is what makes it a watermelon at 150 m rather than at 15.
-  const light = new THREE.Color().setHex(0xa9d95c, THREE.SRGBColorSpace);
-  const dark = new THREE.Color().setHex(0x173f14, THREE.SRGBColorSpace);
-  const pos3 = body.getAttribute('position');
-  const col = new Float32Array(pos3.count * 3);
-  const c = new THREE.Color();
-  for (let i = 0; i < pos3.count; i++) {
-    const x = pos3.getX(i), y = pos3.getY(i), z = pos3.getZ(i);
-    const theta = Math.atan2(z, x);
-    // Fewer, broader, sharper stripes: eight thin ones blur to a mean at any
-    // distance a landmark is seen from.
-    const stripe = Math.sin(theta * 6) + Math.sin(y * 0.55) * 0.25;
-    c.copy(light).lerp(dark, THREE.MathUtils.smoothstep(stripe, -0.35, 0.15));
-    c.multiplyScalar(1 - Math.pow(Math.abs(y) / (KING_MELON_RADIUS * 0.9), 4) * 0.22);
-    col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
-  }
-  body.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  body.computeVertexNormals();
+  const body = buildKingMelonGeometry(KING_MELON_RADIUS);
   const mat = new THREE.MeshStandardMaterial({
     color: 0xffffff, vertexColors: true, roughness: 0.5, metalness: 0.02,
   });
@@ -1202,12 +1353,13 @@ void main() {
  * `baseY` is where it lands; `drop` is how far it falls. Conflating the two
  * once buried the whole sheet underground.
  */
-function buildWaterfall(x: number, z: number, baseY: number, drop: number): THREE.Object3D {
+function buildWaterfall(x: number, z: number, baseY: number, drop: number, terrain: Terrain): THREE.Object3D {
   const group = new THREE.Group();
   group.name = 'Waterfall';
   const uTime = { value: 0 };
 
-  const sheet = (width: number, h: number, phase: number, foam: number, opacity: number) => {
+  const sheet = (width: number, h: number, phase: number, foam: number, opacity: number,
+    offsetX = 0, lean = 0, offsetY = 0, forward = 0) => {
     const geo = new THREE.PlaneGeometry(width, h, 6, 14);
     const pos = geo.getAttribute('position') as THREE.BufferAttribute;
     for (let i = 0; i < pos.count; i++) {
@@ -1215,10 +1367,21 @@ function buildWaterfall(x: number, z: number, baseY: number, drop: number): THRE
       const v = pos.getY(i) / h + 0.5;
       // Bow the sheet so it is not a flat card, and flare it as it falls: real
       // water spreads on the way down and this is most of the silhouette.
-      pos.setZ(i, -Math.cos(u * 1.2) * 1.15 - (1 - v) * 0.5);
-      pos.setX(i, pos.getX(i) * (1 + (1 - v) * 0.34));
+      const flaredX = pos.getX(i) * (1 + (1 - v) * 0.34);
+      const riseY = v * h;
+      // Fit the final transformed vertex, including each side sheet's lean
+      // and offset. Fitting at the centre then moving it can bury it again.
+      const localX = flaredX * Math.cos(lean) - riseY * Math.sin(lean) + offsetX;
+      const localY = flaredX * Math.sin(lean) + riseY * Math.cos(lean) + offsetY;
+      // The old vertical sheet disappeared inside the sloped bank halfway
+      // down. Follow the exposed rock face into the pool without changing
+      // the terrain or its collision. Local -Z is world south after rotation.
+      const worldX = x - localX;
+      const worldY = baseY + localY;
+      let faceZ = z + Math.cos(u * 1.2) * 0.8;
+      while (faceZ < z + 15 && terrain.height(worldX, faceZ) > worldY - 0.45) faceZ += 0.25;
+      pos.setXYZ(i, localX, localY, z - faceZ - 0.35 - forward);
     }
-    geo.translate(0, h / 2, 0);
     pos.needsUpdate = true;
     geo.computeVertexNormals();
     const mat = new THREE.ShaderMaterial({
@@ -1241,21 +1404,15 @@ function buildWaterfall(x: number, z: number, baseY: number, drop: number): THRE
 
   const main = sheet(6.8, drop, 0, 0, 1.0);
   group.add(main);
-  const left = sheet(2.4, drop * 0.97, 2.3, 0.05, 0.85);
-  left.position.set(-3.1, 0, 0.7);
-  left.rotation.z = 0.05;
+  const left = sheet(2.4, drop * 0.97, 2.3, 0.05, 0.85, -2.3, 0.05, 0, 0.3);
   group.add(left);
-  const right = sheet(1.9, drop * 0.94, 4.1, 0.05, 0.8);
-  right.position.set(2.9, 0, 0.5);
-  right.rotation.z = -0.06;
+  const right = sheet(1.9, drop * 0.94, 4.1, 0.05, 0.8, 2.1, -0.06, 0, 0.3);
   group.add(right);
 
   // Spray at the foot: one short, heavily foam-biased curtain, so the fall ends
   // in a cloud rather than at a line. Two of them cost a second full-width
   // transparent surface for a difference nobody could see.
-  const spray = sheet(10.5, 3.6, 1.7, 0.55, 0.55);
-  spray.position.set(0, -0.3, 2.6);
-  spray.rotation.y = 0.32;
+  const spray = sheet(10.5, 3.6, 1.7, 0.55, 0.55, 0, 0, -0.3, 0.55);
   spray.renderOrder = 5;
   group.add(spray);
 
@@ -1263,4 +1420,20 @@ function buildWaterfall(x: number, z: number, baseY: number, drop: number): THRE
   group.rotation.y = Math.PI;
   group.userData.uniforms = { uTime };
   return group;
+}
+
+
+/** Slatted shipping crate, centered on the current prop transform. */
+function slattedCrate(b: PropBuilder, size: number, solid: boolean): void {
+  if (solid) b.collider(size, size, size);
+  b.box(size, size * .08, size, PLANK_DARK, false, [0, -size * .46, 0]);
+  for (const x of [-1, 1]) for (const z of [-1, 1])
+    b.box(size * .09, size, size * .09, PLANK_DARK, false, [x * size * .455, 0, z * size * .455]);
+  for (let row = 0; row < 4; row++) for (const side of [-1, 1]) {
+    const y = (-.38 + row * .25) * size;
+    b.box(size, size * .15, size * .06, CRATE, false, [0, y, side * size * .47]);
+    b.box(size * .06, size * .15, size, CRATE, false, [side * size * .47, y, 0]);
+  }
+  for (let i = 0; i < 4; i++) b.box(size * .23, size * .08, size, CRATE, false,
+    [(-.375 + i * .25) * size, size * .46, 0]);
 }

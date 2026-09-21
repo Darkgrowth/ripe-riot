@@ -7,7 +7,7 @@ import { startServer, openGame, openSecondClient, sleep } from './driver.mjs';
 const server = await startServer();
 let a, b;
 try {
-  a = await openGame({ width: 400, height: 225, headless: true, quiet: true });
+  a = await openGame({ width: 400, height: 225, headless: true, quiet: true, islandActivities: false, drawFrames: false });
   b = await openSecondClient(a);
   const room = 'probe' + Math.floor(Math.random() * 1e6);
   await a.call('net.connect', room, 0);

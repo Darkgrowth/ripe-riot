@@ -29,7 +29,9 @@ export function fruitGeometry(species: string): THREE.BufferGeometry {
   const hit = cache.get(species);
   if (hit) return hit;
   const geo = build(species);
-  geo.computeVertexNormals();
+  // The pear is a soft skin, not a stack of flat polygon bands. Its authored
+  // Lathe normals survive painting/merging; retain hard facets on other fruit.
+  if (species !== 'vinebomb') geo.computeVertexNormals();
   geo.computeBoundingSphere();
   cache.set(species, geo);
   return geo;
@@ -198,20 +200,75 @@ function coconut(): THREE.BufferGeometry {
 }
 
 function watermelon(): THREE.BufferGeometry {
-  const body = new THREE.SphereGeometry(0.5, 22, 16);
+  // Broad, rounded forms still carry a little facet structure at arm's
+  // length. The shell keeps the original physical envelope exactly.
+  const body = new THREE.SphereGeometry(0.5, 40, 20);
   body.scale(1, 0.82, 1);
-  const light = C(0x7fc24a), dark = C(0x2f6b28);
+  const light = C(0x8ab954), dark = C(0x285d3c), field = C(0xcfc079);
+  const fieldDirection = new THREE.Vector3(0.36, -0.80, 0.48).normalize();
+  const normal = new THREE.Vector3();
   const painted = paintBy(body, (x, y, z, out) => {
-    // Vertical stripes from the angle around the long axis.
     const theta = Math.atan2(z, x);
-    const s = Math.sin(theta * 9);
-    const wob = Math.sin(y * 12) * 0.18;
-    out.copy(light).lerp(dark, THREE.MathUtils.smoothstep(s + wob, -0.15, 0.35));
-    out.multiplyScalar(1 - Math.pow(Math.abs(y) / 0.41, 4) * 0.2);
+    const latitude = y / 0.41;
+    // Six broad rind bands bend along the growing fruit. Uneven edges and
+    // width variation keep it botanical without speckling individual faces.
+    const bend = Math.sin(latitude * 4.2 + theta * 2) * 0.23
+      + Math.sin(latitude * 7.5 - theta * 3) * 0.09;
+    const stripe = Math.sin(theta * 6 + bend)
+      + Math.sin(theta * 3 + 0.8) * 0.13;
+    out.copy(light).lerp(dark, THREE.MathUtils.smoothstep(stripe, -0.25, 0.22));
+    // A quiet field spot where the rind rested on the ground. It is colour
+    // on the same surface, so it neither floats nor changes the collider.
+    normal.set(x / 0.5, latitude, z / 0.5).normalize();
+    const patch = THREE.MathUtils.smoothstep(normal.dot(fieldDirection)
+      + Math.sin(theta * 5 + latitude * 8) * 0.015, 0.84, 0.98);
+    out.lerp(field, patch * 0.85);
+    const pole = Math.pow(Math.abs(latitude), 8);
+    out.multiplyScalar(1 - pole * 0.12);
   });
-  const s = stem(0.13, 0.03, C(0x5f7d33), 0.5);
-  s.translate(0, 0.38, 0);
-  return must(mergeGeometries([painted, s], false), 'watermelon');
+  const parts: THREE.BufferGeometry[] = [painted];
+
+  // Five low calyx lobes follow the shoulder, rather than a green disc
+  // perched above it. CircleGeometry supplies matching UVs for the merge.
+  const calyx = new THREE.CircleGeometry(0.083, 10);
+  const cp = calyx.getAttribute('position') as THREE.BufferAttribute;
+  for (let i = 0; i < cp.count; i++) {
+    const scale = i > 0 && i % 2 === 0 ? 0.52 : 1;
+    const x = cp.getX(i) * scale, z = cp.getY(i) * scale;
+    const y = 0.41 * Math.sqrt(Math.max(0, 1 - (x * x + z * z) / 0.25)) + 0.002;
+    // -Z maps the original circle's +Y into a face pointing upwards.
+    cp.setXYZ(i, x, y, -z);
+  }
+  parts.push(paint(calyx, C(0x577442)));
+
+  const stalkCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0, 0.407, 0), new THREE.Vector3(-0.008, 0.444, 0.008),
+    new THREE.Vector3(-0.025, 0.478, 0.014), new THREE.Vector3(-0.049, 0.490, 0.024),
+  ]);
+  const stalk = new THREE.TubeGeometry(stalkCurve, 8, 0.018, 6, false);
+  parts.push(paintBy(stalk, (x, y, z, out) => {
+    out.copy(C(0x536b35)).lerp(C(0x929251), THREE.MathUtils.clamp((y - 0.41) * 7, 0, 0.6));
+  }));
+  // A short curling tendril is enough to identify a vine-grown fruit. Keep
+  // its tip within the former stem's vertical extent for carry framing.
+  const curlCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0.003, 0.423, 0), new THREE.Vector3(0.061, 0.446, 0.007),
+    new THREE.Vector3(0.099, 0.477, 0.009), new THREE.Vector3(0.090, 0.498, 0.012),
+    new THREE.Vector3(0.069, 0.481, 0.013),
+  ]);
+  parts.push(paint(new THREE.TubeGeometry(curlCurve, 12, 0.0055, 4, false), C(0x87904b)));
+
+  // The blossom scar is seated into the opposite pole and remains visible
+  // when the fruit rolls over. Both pieces stay inside the existing shell.
+  const scar = new THREE.CircleGeometry(0.027, 8);
+  scar.rotateX(Math.PI / 2);
+  scar.translate(0, -0.41, 0);
+  parts.push(paint(scar, C(0x796644)));
+  const scarCore = new THREE.CircleGeometry(0.009, 6);
+  scarCore.rotateX(Math.PI / 2);
+  scarCore.translate(0, -0.4101, 0);
+  parts.push(paint(scarCore, C(0x514832)));
+  return must(mergeGeometries(parts, false), 'watermelon');
 }
 
 function puffmelon(): THREE.BufferGeometry {
@@ -235,14 +292,14 @@ function puffmelon(): THREE.BufferGeometry {
 function vinebomb(): THREE.BufferGeometry {
   // Pear/teardrop silhouette so it reads as "under tension" even at rest.
   const pts: THREE.Vector2[] = [];
-  const steps = 16;
+  const steps = 24;
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
     const y = -0.5 + t;
     const r = Math.sin(Math.pow(t, 0.78) * Math.PI) * 0.5 * (1 - t * 0.22) + 0.02;
     pts.push(new THREE.Vector2(Math.max(0.001, r), y));
   }
-  const body = new THREE.LatheGeometry(pts, 16);
+  const body = new THREE.LatheGeometry(pts, 24);
   const plum = C(0x8d3fa8), plumDark = C(0x53206b), sheen = C(0xc47ad8);
   const painted = paintBy(body, (x, y, z, out) => {
     const t = (y + 0.5);

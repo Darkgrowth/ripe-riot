@@ -14,6 +14,8 @@ import { BroadcastTransport, type NetMessage, type PeerId, type Transport } from
 import { FruitAuthority, DENY_TEXT, clamp01, type Deny } from './FruitAuthority';
 import { makePlayerRig, SUIT_PRESETS, type PlayerRig } from '@/player/PlayerRig';
 import { clamp, damp } from '@/core/MathUtils';
+import type { IslandCrew, IslandDirector, IslandDirectorState } from '@/systems/IslandDirector';
+import type { IslandCharacters, CharacterNetState } from '@/world/IslandCharacters';
 
 /** What a client is allowed to ask the host to do. */
 export type IntentKind =
@@ -100,6 +102,8 @@ interface RemoteState {
   targetYaw: number;
   height: number;
   state: string;
+  busy: boolean;
+  hasNet: boolean;
   carrying: string | null;
   name: string;
   suit: number;
@@ -789,8 +793,11 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
         }
         break;
       case 'event':
-        // Cosmetic, host-originated: toasts, celebrations, stunt chips.
-        this.g.bus.emit(m.name as never, m.payload as never);
+        // Generic wire events are presentation only. Never let a peer inject
+        // authoritative sale/pickup notifications into the host's ledger.
+        if (!this.isHost && m.from === this.hostId && m.name === 'ui:toast') {
+          this.g.bus.emit('ui:toast', m.payload as never);
+        }
         break;
       default: break;
     }
@@ -815,6 +822,16 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
 
   /** True when this peer may mutate authoritative state directly. */
   get authoritative(): boolean { return !this.connected || this.isHost; }
+
+  /** Event/wildlife eligibility is shared, including a client using the shop. */
+  activityCrew(): IslandCrew[] {
+    const mine: IslandCrew = { position: this.g.player.position,
+      busy: this.g.player.state !== 'active' || !!this.shop?.open
+        || this.g.get<{ open: boolean }>('book').open,
+      hasNet: !!this.tools?.owned.has('net') };
+    return [mine, ...[...this.remotes.values()].map(r => ({ position: r.targetPos,
+      busy: r.busy || r.state !== 'active', hasNet: r.hasNet }))];
+  }
 
   get me(): PeerId { return this.transport?.id ?? ''; }
 
@@ -1237,6 +1254,9 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
         this.g.physics.explode(new THREE.Vector3(x, y, z),
           clamp01(intent.radius ?? 4, 8), clamp01(intent.power ?? 1, 22 * MAX_BLAST_POWER),
           clamp01(intent.upBias ?? 0.3, 1));
+        // Residents react to accepted remote blasts as well as local tools.
+        this.g.bus.emit('tool:blast', { toolId: 'remote', point: new THREE.Vector3(x, y, z),
+          radius: clamp01(intent.radius ?? 4, 8), power: clamp01((intent.power ?? 1) / 22, 1) });
         break;
       }
       // `null` is success here, so no `??` on these: it reads null as "no
@@ -1365,6 +1385,8 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       yaw: +p.yaw.toFixed(3),
       h: +p.height.toFixed(2),
       s: p.state,
+      busy: !!this.shop?.open || this.g.get<{ open: boolean }>('book').open,
+      nt: this.tools?.owned.has('net') ? 1 : 0,
       c: held?.species ?? null,
       // The host needs the id, not just the species: it is what lets a carried
       // fruit's authoritative transform follow the hands that are carrying it.
@@ -1394,6 +1416,8 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     r.targetYaw = Number(m.yaw);
     r.height = Number(m.h ?? 1.82);
     r.state = String(m.s ?? 'active');
+    r.busy = m.busy === true;
+    r.hasNet = Number(m.nt ?? 0) === 1;
     r.carrying = (m.c as string | null) ?? null;
     r.lastSeen = performance.now();
     if (!this.isHost) return;
@@ -1490,6 +1514,8 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       nlog: this.nodeLogFor(to),
       leg: this.legendary?.netState() ?? null,
       ropes: this.packRopes(peers),
+      island: this.g.has('director') ? this.g.get<IslandDirector>('director').netState() : null,
+      residents: this.g.has('characters') ? this.g.get<IslandCharacters>('characters').netState() : null,
     };
     this.transport.send(msg, to);
     this.stats.sent++;
@@ -1601,6 +1627,8 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       typeof m.pts === 'number' ? m.pts : undefined);
     if (m.leg) this.legendary?.applyNet(m.leg as LegendaryNetState);
     if (Array.isArray(m.ropes)) this.applyRopes(m.ropes as RopePacket[], peers);
+    if (m.island && this.g.has('director')) this.g.get<IslandDirector>('director').applyNet(m.island as IslandDirectorState);
+    if (m.residents && this.g.has('characters')) this.g.get<IslandCharacters>('characters').applyNet(m.residents as CharacterNetState);
   }
 
   private requestResync(): void {
@@ -1622,6 +1650,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       id, name, suit,
       pos: new THREE.Vector3(), targetPos: new THREE.Vector3(),
       yaw: 0, targetYaw: 0, height: 1.82, state: 'active', carrying: null,
+      busy: false, hasNet: false,
       rig, lastSeen: performance.now(),
     };
     this.remotes.set(id, r);

@@ -9,6 +9,7 @@ import type { PlantType } from '@/plants/PlantGeometry';
 import type { Sunpatch } from '@/world/Sunpatch';
 import { Rng } from '@/core/Rng';
 import { QueryMask } from '@/physics/Layers';
+import { buildVineSupports } from '@/world/VineSupports';
 
 interface Regrow { plantId: number; nodeIndex: number; species: string; readyAt: number; }
 
@@ -191,6 +192,7 @@ export class FruitSystem implements System {
   private regrow: Regrow[] = [];
   private ctx!: TraitContext;
   private activationTimer = 0;
+  private disposeVineSupports: (() => void) | null = null;
   /** Installed by MultiplayerAuthority; null in single player, where you are
    *  the authority by definition. */
   net: NetGate | null = null;
@@ -228,6 +230,8 @@ export class FruitSystem implements System {
     Fruit.context = this.ctx;
     this.plants.setWind(this.wind.clone().normalize(), 0.1);
     this.populate();
+    const vineOrigins = [...this.plants.all()].filter(p => p.type === 'vinebombVine').map(p => p.position);
+    this.disposeVineSupports = buildVineSupports(vineOrigins, this.world.terrain, g.physics, g.renderer.scene);
     this.registerDebug();
   }
 
@@ -499,6 +503,14 @@ export class FruitSystem implements System {
       const ang = this.rng.range(0, Math.PI * 2);
       const lat = this.rng.range(0.35, 0.6);
       f.tensionDir.set(Math.cos(ang) * lat, 1, Math.sin(ang) * lat).normalize();
+      // A hanging vine on a steep cliff can roll an upward direction that
+      // still points INTO the ground. Turn only that blocked azimuth toward
+      // open air; keep the tension, elevation, node position and RNG draws.
+      const groundNormal = this.world.terrain.normal(f.position.x, f.position.z, _v2);
+      if (f.tensionDir.dot(groundNormal) < 0) {
+        f.tensionDir.x *= -1;
+        f.tensionDir.z *= -1;
+      }
     }
     node.fruitId = f.id;
     this.fruits.set(f.id, f);
@@ -1046,6 +1058,7 @@ export class FruitSystem implements System {
   defOf(species: string): FruitDef { return FRUIT[species]; }
 
   dispose(): void {
+    this.disposeVineSupports?.();
     this.renderer.dispose();
     this.plants.dispose();
     this.fruits.clear();

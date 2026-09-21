@@ -76,7 +76,7 @@ const results = await withGame(async (g) => {
   await g.simulate(0.4);
   await frame('5-king-melon', 'from the ravine vantage');
   return out;
-}, { width: 960, height: 540, headless: true, quiet: true });
+}, { width: 960, height: 540, headless: true, quiet: true, islandActivities: false });
 
 const sheet = await contactSheet(results, path.join('capture', SUB, `_sheet-${tag}.png`), {
   cols: 3, thumbW: 440, title: `RIPE RIOT — catch net swing [${tag}]`,

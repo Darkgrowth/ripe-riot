@@ -57,6 +57,8 @@ export class Renderer {
   /** Half-extent of the shadow ortho box; smaller = crisper shadows. */
   shadowRadius = 56;
   private shadowTarget = new THREE.Vector3();
+  private shadowRight = new THREE.Vector3();
+  private shadowUp = new THREE.Vector3();
   private baseFov = BASE_FOV;
   private fovOffset = 0;
   /** Separate scene for first-person tool models; see enableViewmodel(). */
@@ -146,6 +148,15 @@ export class Renderer {
   updateSunFollow(focus: THREE.Vector3, forward: THREE.Vector3): void {
     this.shadowTarget.copy(focus).addScaledVector(forward, this.shadowRadius * 0.32);
     this.shadowTarget.y = focus.y;
+    // Keep the light's projection on a fixed world-space texel grid. Following
+    // every sub-pixel camera/bob movement made static awning shadows crawl.
+    this.shadowRight.set(0, 1, 0).cross(this.sunDir).normalize();
+    this.shadowUp.crossVectors(this.sunDir, this.shadowRight).normalize();
+    const texel = 2 * this.shadowRadius / this.sun.shadow.mapSize.x;
+    for (const axis of [this.shadowRight, this.shadowUp]) {
+      const coordinate = this.shadowTarget.dot(axis);
+      this.shadowTarget.addScaledVector(axis, Math.round(coordinate / texel) * texel - coordinate);
+    }
     this.sun.target.position.copy(this.shadowTarget);
     this.sun.position.copy(this.shadowTarget).addScaledVector(this.sunDir, 110);
     this.sun.target.updateMatrixWorld();

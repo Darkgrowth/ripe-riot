@@ -203,6 +203,7 @@ export class ViewmodelSystem implements System {
 
     // --- charge-up: pull the tool back as a throw or blast winds up
     const charge = Math.max(this.interaction.throwCharge, this.tools.activeTool?.charge ?? 0);
+    this.current.setCharge?.(this.tools.activeTool?.charge ?? 0);
 
     // --- framing. How much of the screen a tool covers, and how far to the
     // right it sits, both depend on the aspect ratio, so both are expressed as
@@ -227,7 +228,10 @@ export class ViewmodelSystem implements System {
       -this.sway.x * 2.4 + this.swingYaw,
       this.sway.x * 1.6 - this.stow * 0.5 - this.swingYaw * 0.25,
     );
-    root.visible = this.stow < 0.995;
+    // Ownership decides visibility immediately; the real-time stow animation
+    // only decides the pose. Waiting for its ramp let both rigs appear during
+    // pickup, especially when several simulation steps share one fast frame.
+    root.visible = shouldShow && this.stow < 0.995;
 
     this.updateCarry(dt, carried, charge);
   }
@@ -247,7 +251,10 @@ export class ViewmodelSystem implements System {
     this.carryStow = showCarry
       ? damp(this.carryStow, 0, 13, dt)
       : Math.min(1, this.carryStow + dt * 8);
-    this.carry.root.visible = this.carryStow < 0.995;
+    // A released fruit already belongs to the world renderer. Keeping this
+    // proxy visible until its stow ramp finishes leaves a frozen duplicate in
+    // the hands, because there is no carried object left to update its pose.
+    this.carry.root.visible = showCarry && this.carryStow < 0.995;
     if (!this.carry.root.visible) { this.carry.reset(); return; }
     if (!carried) return;
 

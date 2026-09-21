@@ -16,6 +16,8 @@ export interface GameEventMap {
   'fruit:detached': { fruitId: number; species: string; cause: string; playerId: number };
   /** Something loose was taken into the hands. `mass` drives the feedback. */
   'fruit:grabbed': { fruitId: number; species: string; mass: number; heavy: boolean };
+  /** Host ledger accepted a remote pickup; does not impersonate local hand feedback. */
+  'fruit:claimed': { fruitId: number };
   'fruit:impact': { fruitId: number; species: string; speed: number; point: THREE.Vector3; onPlayer: boolean };
   'fruit:qualityChanged': {
     fruitId: number; quality: string; damage: number;
@@ -65,6 +67,8 @@ export interface GameEventMap {
   'ui:prompt': { text: string | null };
 
   'audio:sfx': { name: string; position?: THREE.Vector3; volume?: number; pitch?: number };
+  'island:event': { id: number; kind: 'windfall' | 'coconuts' | 'order';
+    phase: 'idle' | 'warning' | 'active' | 'result'; result: string };
 
   'legendary:phase': { id: string; phase: string };
   'legendary:complete': { id: string; payout: number };

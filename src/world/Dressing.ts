@@ -4,6 +4,7 @@ import { Palette } from '@/render/Palette';
 import { fbm2, clamp, smoothstep, TAU } from '@/core/MathUtils';
 import { Rng } from '@/core/Rng';
 import type { Terrain } from './Terrain';
+import { orchardProofWeight } from './VisualProof';
 
 /**
  * The clutter layer: grass tufts, bushes, ferns, flowers, loose stones and
@@ -111,6 +112,21 @@ export class Dressing {
         m.compose(pos, q, scl);
         mesh.setMatrixAt(i, m);
         if (k.tinted && p.color) mesh.setColorAt(i, p.color);
+        if (['grass', 'bush', 'bushBig', 'fern'].includes(k.name)) {
+          const proof = orchardProofWeight(p.x, p.z);
+          if (proof > 0) {
+            const tint = k.name === 'grass' ? new THREE.Color(1.18, 0.95, 0.78)
+              : new THREE.Color(0.77, 0.88, 1.04);
+            tint.lerp(new THREE.Color(1, 1, 1), 1 - proof);
+            mesh.setColorAt(i, tint);
+          }
+          const grove = 1 - smoothstep(10, 23, Math.hypot((p.x - 62) * 0.9, p.z + 9));
+          if (grove > 0) {
+            const tint = new THREE.Color().setRGB(0.64, 0.86, 0.95);
+            tint.lerp(new THREE.Color(1, 1, 1), 1 - grove);
+            mesh.setColorAt(i, tint);
+          }
+        }
       }
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
@@ -477,6 +493,12 @@ function scatter(terrain: Terrain): Placement[] {
   };
 
   const blocked = (x: number, z: number) => {
+    // The dock extends far beyond its landward circular exclusion. Test its
+    // actual local rectangle so foliage cannot grow through the planking.
+    const dx = x - 58, dz = z - 62;
+    const localX = dx * 0.6 - dz * 0.8;
+    const localZ = dx * 0.8 + dz * 0.6;
+    if (Math.abs(localX) < 3.2 && localZ > -3 && localZ < 25) return true;
     for (const [cx, cz, r] of KEEP_CLEAR) {
       if ((x - cx) * (x - cx) + (z - cz) * (z - cz) < r * r) return true;
     }
@@ -564,5 +586,50 @@ function scatter(terrain: Terrain): Placement[] {
     }
   }
 
-  return out;
+  // Small coherent wildflower drifts at the route shoulders. A separate seed
+  // preserves the existing scatter, and a shared petal tint keeps each drift
+  // reading as a plant colony rather than multicoloured confetti.
+  const flowerRng = new Rng('sunpatch-flower-drifts');
+  for (const [cx, cz, r, tint] of [
+    [49, 62, 2.4, 0], [34, 57, 2.8, 1], [27, 42, 2.2, 2],
+    [17, 46, 2.5, 1], [6, 40, 2.1, 0], [-8, 36, 2.0, 2],
+    [-15, 33, 2.4, 1], [-24, 17, 2.0, 0], [28, 5, 2.2, 2],
+  ]) {
+    const driftColor = [Palette.petalYellow, Palette.petalWhite, Palette.petalPink][tint];
+    for (let i = 0; i < 20; i++) {
+      const a = flowerRng.range(0, TAU), rr = r * Math.sqrt(flowerRng.next());
+      const x = cx + Math.cos(a) * rr, z = cz + Math.sin(a) * rr;
+      const y = terrain.height(x, z);
+      if (y < 0.85 || terrain.slope(x, z) > 0.4 || blocked(x, z) || terrain.pathWeight(x, z) > 0.25) continue;
+      const p: Placement = { kind: 'flowerStem', x, y, z, scale: flowerRng.range(1.1, 1.8),
+        rotY: flowerRng.range(0, TAU), tilt: 0.04 };
+      out.push(p, { ...p, kind: 'flowerHead', color: driftColor });
+    }
+  }
+  // Clear only the authored workplace footprints after sampling, preserving
+  // the seeded placement of vegetation everywhere else on the island.
+  // Authored fern colonies make the shaded grove read as a damp habitat.
+  // Their independent RNG does not move any existing plants or ground cover.
+  const habitatRng = new Rng('sunpatch-habitat-finish');
+  for (const [cx, cz, radius, kind, count] of [
+    [54, -20, 2.7, 'fern', 18], [67, -21, 2.5, 'fern', 16],
+    [60, -9, 2.4, 'fern', 14], [72, -10, 2.5, 'reed', 12],
+    [-20, -26, 2.6, 'grass', 15], [-12, -27, 2.2, 'grass', 12],
+    [-58, 54, 2.0, 'grass', 10], [-52, 61, 2.2, 'grass', 10],
+    [-10, -78, 3.0, 'grass', 12], [7, -85, 2.5, 'grass', 12],
+  ] as const) {
+    for (let i = 0; i < count; i++) {
+      const angle = habitatRng.range(0, TAU), r = radius * Math.sqrt(habitatRng.next());
+      const x = cx + Math.cos(angle) * r, z = cz + Math.sin(angle) * r;
+      const y = terrain.height(x, z);
+      if (y < 0.7 || terrain.slope(x, z) > 0.38 || blocked(x, z) || terrain.pathWeight(x, z) > 0.25) continue;
+      out.push({ kind, x, y, z, scale: habitatRng.range(0.9, 1.55),
+        rotY: habitatRng.range(0, TAU), tilt: 0.04 });
+    }
+  }
+  return out.filter(p => !(
+    (Math.abs(p.x + 16) < 3.5 && Math.abs(p.z + 25) < 2.5) ||
+    (Math.abs(p.x + 54) < 2.6 && Math.abs(p.z - 57) < 1.9) ||
+    (Math.abs(p.x + 5) < 3.5 && Math.abs(p.z + 40) < 1.4)
+  ));
 }

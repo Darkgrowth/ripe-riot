@@ -95,7 +95,7 @@ await withGame(async (g) => {
   }
   const after = await hud(g);
   check(after.carry === '', 'and goes away again on drop', after.carry);
-}, { headless: true, width: 1280, height: 720, quiet: true });
+}, { headless: true, width: 1280, height: 720, quiet: true, islandActivities: false });
 
 console.log(failures ? `\n${failures} CHECK(S) FAILED` : '\nOK');
 process.exit(failures ? 1 : 0);

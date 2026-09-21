@@ -11,6 +11,7 @@ export const name = 'startup';
 /** Fraction of the actual presented frame that is the raw clear colour. Nonzero
  *  means the world was drawn and then wiped by a later pass. */
 async function clearColourFraction(g) {
+  await g.renderFrame();
   return g.page.evaluate(() => {
     const src = document.getElementById('view');
     const c = document.createElement('canvas');
@@ -30,6 +31,7 @@ async function clearColourFraction(g) {
 
 /** Fraction of the frame that is bright and blue-dominant: sky or open sea. */
 async function skyFraction(g) {
+  await g.renderFrame();
   return g.page.evaluate(() => {
     const src = document.getElementById('view');
     const c = document.createElement('canvas');
@@ -174,8 +176,10 @@ export async function run(g, t) {
 
   // --- pitch clamp: you can look up, but the game must never START there
   await g.look(base.yaw, 9);
+  await g.idleFrames(1); // Debug setter is clamped by the next real input frame.
   const clampedUp = (await g.state()).player.pitch;
   await g.look(base.yaw, -9);
+  await g.idleFrames(1);
   const clampedDown = (await g.state()).player.pitch;
   t.note(`pitch clamps to ${clampedDown.toFixed(3)} .. ${clampedUp.toFixed(3)} rad`);
   t.lt(clampedUp, Math.PI / 2, 'looking up stops short of straight up');

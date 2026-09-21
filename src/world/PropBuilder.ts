@@ -22,6 +22,8 @@ export class PropBuilder {
   /** Set false for decorative geometry that should not be collidable. */
   solid = true;
   triangles = 0;
+  /** Local repair fixtures, carried onto the merged geometry for capture QA. */
+  readonly authoredProps: Array<{ id: string; matrix: number[]; details: Record<string, unknown> }> = [];
 
   constructor(physics: PhysicsWorld | null) {
     this.physics = physics;
@@ -41,6 +43,17 @@ export class PropBuilder {
     this.xform.multiply(_tmp.makeScale(x, y, z)); return this;
   }
   reset(): this { this.xform.identity(); this.stack.length = 0; return this; }
+
+  recordProp(id: string, details: Record<string, unknown>): this {
+    this.authoredProps.push({ id, matrix: this.xform.toArray(), details }); return this;
+  }
+
+  /** Add a world-space decorative mesh without disturbing an active local frame. */
+  worldMesh(g: THREE.BufferGeometry, color: PropColor): this {
+    const frame = this.xform.clone();
+    this.xform.identity(); this.emit(g, color); this.xform.copy(frame);
+    return this;
+  }
 
   // ---- primitives ---------------------------------------------------------
   /** Axis-aligned box in the current frame. Sizes are full extents. */
@@ -155,6 +168,7 @@ export class PropBuilder {
     if (!merged) throw new Error('prop merge failed (attribute mismatch)');
     merged.computeVertexNormals();
     merged.computeBoundingSphere();
+    merged.userData.authoredProps = this.authoredProps;
     for (const p of this.parts) p.dispose();
     this.parts.length = 0;
     return merged;
@@ -190,23 +204,69 @@ export function signTexture(lines: string[], opts: {
   c.lineWidth = 12;
   c.strokeRect(9, 9, w - 18, h - 18);
 
-  c.textAlign = 'center';
+  const padX = Math.max(22, w * 0.045), padY = Math.max(20, h * 0.075);
+  const availableWidth = w - padX * 2;
+  const font = (size: number, weight = 800) => `${weight} ${size}px Segoe UI, system-ui, sans-serif`;
+  const measure = (text: string) => c.measureText(text).width;
+  const wrap = (text: string): string[] => {
+    const rows: string[] = [];
+    let row = '';
+    for (const word of text.trim().split(/\s+/)) {
+      const next = row ? `${row} ${word}` : word;
+      if (row && measure(next) > availableWidth) { rows.push(row); row = word; }
+      else row = next;
+    }
+    if (row) rows.push(row);
+    return rows;
+  };
+  c.textAlign = 'center'; c.textBaseline = 'middle';
   c.fillStyle = opts.fg ?? '#3a2109';
-  let y = 62;
+  const painted: Array<{ text: string; fontSize: number; x: number; y: number; width: number; height: number }> = [];
+  const paint = (text: string, size: number, y: number, weight = 800) => {
+    c.font = font(size, weight);
+    c.fillText(text, w / 2, y);
+    painted.push({ text, fontSize: size, x: w / 2, y, width: measure(text), height: size * 1.2 });
+  };
+  let bodyTop = padY;
   if (opts.title) {
-    c.font = `900 ${Math.round(h * 0.20)}px Segoe UI, system-ui, sans-serif`;
-    c.fillText(opts.title, w / 2, y);
-    y += h * 0.13;
+    let size = Math.min(h * 0.20, (h - padY * 2) * 0.32);
+    c.font = font(size, 900);
+    while (measure(opts.title) > availableWidth && size > 1) { size *= 0.96; c.font = font(size, 900); }
+    paint(opts.title, size, padY + size * 0.6, 900);
+    bodyTop += size * 1.2 + Math.max(10, h * 0.045);
   }
-  c.font = `800 ${Math.round(h * 0.125 * (opts.lineScale ?? 1))}px Segoe UI, system-ui, sans-serif`;
-  if (!opts.title) y = 20;
-  const step = (h - y - 26) / Math.max(1, lines.length);
-  for (const line of lines) {
-    c.fillText(line, w / 2, y + step * 0.75);
-    y += step;
+  const bodyHeight = h - padY - bodyTop;
+  let bodySize = h * 0.125 * (opts.lineScale ?? 1);
+  let rows: string[] = [];
+  for (let attempt = 0; attempt < 160; attempt++) {
+    c.font = font(bodySize);
+    rows = lines.flatMap(wrap);
+    if (rows.length * bodySize * 1.22 <= bodyHeight && rows.every(row => measure(row) <= availableWidth)) break;
+    bodySize *= 0.96;
   }
+  const step = bodySize * 1.22;
+  const top = bodyTop + (bodyHeight - rows.length * step) / 2;
+  rows.forEach((row, i) => paint(row, bodySize, top + (i + 0.5) * step));
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
+  tex.userData.signLayout = { title: opts.title ?? '', sourceLines: lines, width: w, height: h,
+    padding: { x: padX, y: padY }, painted };
   return tex;
+}
+
+/** Attach a front-only legend to a real, blank-backed board in the prop batch. */
+export function finishWorldSign(b: PropBuilder, mesh: THREE.Mesh, width: number, height: number,
+  texture: THREE.CanvasTexture, id?: string): void {
+  const layout = texture.userData.signLayout;
+  const label = id ?? (layout?.title || layout?.sourceLines?.[0] || 'board');
+  const signId = String(label).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  mesh.name = `Sign:${signId}`;
+  mesh.userData.signAudit = { id: signId, width, height, layout, frontOnly: true, backingDepth: 0.08 };
+  const material = mesh.material as THREE.MeshStandardMaterial;
+  material.side = THREE.FrontSide;
+  const backing = new THREE.BoxGeometry(width + 0.07, height + 0.07, 0.08);
+  backing.translate(0, 0, -0.048);
+  mesh.updateMatrix(); backing.applyMatrix4(mesh.matrix);
+  b.worldMesh(backing, new THREE.Color().setHex(0x634d37, THREE.SRGBColorSpace));
 }

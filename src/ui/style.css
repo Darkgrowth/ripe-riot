@@ -1,4 +1,6 @@
 :root {
+  /* Scale readable controls with vertical resolution, not ultrawide width. */
+  --hud-u: clamp(1px, 0.138889vh, 1.8px);
   --ui-font: 'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
   --gold: #ffcc44;
   --good: #6ce89a;
@@ -87,6 +89,8 @@ html, body {
 }
 .slot .num { position: absolute; margin: -40px 0 0 -56px; font-size: 10px; opacity: 0.55; }
 .slot .icon { font-size: 20px; line-height: 1; margin-bottom: 4px; }
+.tool-icon { width: 1em; height: 1em; display: inline-block; vertical-align: -0.16em; }
+.slot .icon .tool-icon { display: block; }
 .slot.active { border-color: var(--gold); transform: translateY(-6px) scale(1.06); background: rgba(30, 44, 58, 0.75); }
 .slot-status { font-size: 10px; opacity: 0.7; color: var(--gold); min-height: 12px; letter-spacing: 0.5px; }
 .slot.empty { opacity: 0.4; }
@@ -104,9 +108,9 @@ html, body {
 /* What you are holding just lost a quality tier. */
 .carry.knock { animation: carryKnock 0.42s ease; }
 @keyframes carryKnock {
-  0%   { transform: translateX(-50%) scale(1); background: rgba(12, 22, 32, 0.55); }
-  18%  { transform: translateX(-50%) scale(1.12); background: rgba(120, 30, 22, 0.85); }
-  100% { transform: translateX(-50%) scale(1); background: rgba(12, 22, 32, 0.55); }
+  0%   { transform: scale(1); background: rgba(12, 22, 32, 0.55); }
+  18%  { transform: scale(1.12); background: rgba(120, 30, 22, 0.85); }
+  100% { transform: scale(1); background: rgba(12, 22, 32, 0.55); }
 }
 
 .prompt {
@@ -118,8 +122,36 @@ html, body {
 .prompt.show { opacity: 1; }
 .prompt b { color: var(--gold); }
 
+/* Visible only while the player is outside mouse control, with panels closed. */
+.entry-hint {
+  position: absolute; left: 50%; top: max(18px, env(safe-area-inset-top));
+  transform: translateX(-50%); max-width: calc(100vw - 180px);
+  padding: 9px 18px 10px; border: 1px solid rgba(228, 183, 83, 0.6);
+  border-radius: 9px; background: rgba(24, 49, 44, 0.92);
+  color: #f0dfae; text-align: center; pointer-events: none;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.18);
+}
+.entry-hint[hidden] { display: none; }
+.entry-hint strong { display: block; font-size: clamp(15px, 1.8vh, 20px); }
+.entry-hint span { display: block; margin-top: 3px; font-size: clamp(11px, 1.35vh, 15px); }
+
+/* Keep the crosshair at its existing size. Nouns and action keys grow with
+   display height, while the bottom cluster sits clear of the two-handed carry pose. */
+.slots { bottom: calc(20 * var(--hud-u)); gap: calc(10 * var(--hud-u)); left: calc(22 * var(--hud-u)); transform: none; }
+.slot { width: calc(78 * var(--hud-u)); height: calc(62 * var(--hud-u));
+  font-size: calc(11 * var(--hud-u)); border-radius: calc(8 * var(--hud-u)); }
+.slot .num { margin: calc(-40 * var(--hud-u)) 0 0 calc(-56 * var(--hud-u));
+  font-size: calc(10 * var(--hud-u)); opacity: 0.78; }
+.slot .icon { font-size: calc(20 * var(--hud-u)); margin-bottom: calc(4 * var(--hud-u)); }
+.slot-status { font-size: calc(10 * var(--hud-u)); min-height: calc(12 * var(--hud-u)); }
+.carry { bottom: calc(96 * var(--hud-u)); font-size: calc(13 * var(--hud-u));
+  padding: calc(6 * var(--hud-u)) calc(14 * var(--hud-u)); left: calc(22 * var(--hud-u)); transform: none; max-width: min(42vw, 680px); border-radius: 12px; transform-origin: bottom left; }
+.carry .keys { display: block; margin-top: 3px; font-size: calc(12 * var(--hud-u)); opacity: 0.85; }
+.prompt { top: calc(50% + 46 * var(--hud-u)); font-size: calc(15 * var(--hud-u));
+  padding: calc(7 * var(--hud-u)) calc(15 * var(--hud-u)); }
+
 .toasts {
-  position: absolute; left: 22px; bottom: 22px; display: flex;
+  position: absolute; left: calc(22 * var(--hud-u)); bottom: calc(170 * var(--hud-u)); display: flex;
   flex-direction: column-reverse; gap: 8px; max-width: 380px;
 }
 .toast {
@@ -243,7 +275,7 @@ html, body {
   border-radius: 10px; padding: 13px 14px; cursor: pointer; transition: all 0.12s ease;
 }
 .shop-item:hover { background: rgba(255, 255, 255, 0.1); border-color: var(--gold); transform: translateY(-2px); }
-.shop-item.locked { opacity: 0.42; cursor: not-allowed; }
+.shop-item.locked { opacity: 0.72; cursor: not-allowed; }
 .shop-item.owned { border-color: var(--good); }
 .shop-item .name { font-weight: 700; font-size: 15px; margin-bottom: 3px; }
 .shop-item .desc { font-size: 12px; opacity: 0.72; line-height: 1.35; min-height: 32px; }
@@ -268,3 +300,25 @@ html, body {
   background: rgba(0, 0, 0, 0.28); padding: 6px 9px; border-radius: 6px;
 }
 .debug.hidden { display: none; }
+
+.island-event { position:absolute; top:22px; left:22px; width:min(350px,calc(100vw - 145px));
+  border-left:4px solid #f2ce70; border-radius:6px; padding:12px 15px; background:#203c33ed;
+  color:#f5ecd1; box-shadow:0 4px 18px #11261d44; pointer-events:none; }
+.island-event[hidden] { display:none; }
+.island-event>div { display:flex; gap:16px; justify-content:space-between; align-items:center; }
+.island-event strong { font-size:13px; letter-spacing:1px; }
+.island-event b { color:#f2ce70; font-size:20px; font-variant-numeric:tabular-nums; }
+.island-event p { margin:6px 0 0; font-size:13px; line-height:1.4; }
+.island-event.urgent { border-color:#f6946c; }
+.island-event.urgent b { color:#ffac7c; }
+
+.audio-settings { position:absolute; right:22px; top:72px; pointer-events:auto; color:#f5ecd1; z-index:40; }
+.audio-settings summary { cursor:pointer; list-style:none; text-align:right; font-size:12px;
+  border:1px solid #b9c2a855; border-radius:5px; padding:5px 10px; background:#203c33dc; }
+.audio-settings-panel { position:absolute; right:0; top:36px; width:min(320px,90vw);
+  padding:17px; border:1px solid #b9c2a855; border-radius:8px; background:#18382ff5; box-shadow:0 6px 28px #06171066; }
+.audio-settings-row { display:grid; grid-template-columns:85px 1fr 38px; align-items:center; gap:10px; margin-top:15px; font-size:12px; }
+.audio-settings-row input { width:100%; accent-color:#f2ce70; }
+.audio-settings-row output { text-align:right; font-variant-numeric:tabular-nums; }
+.audio-settings-mute { display:flex; gap:8px; align-items:center; font-size:13px; }
+.audio-settings-mute input { accent-color:#f2ce70; }

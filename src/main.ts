@@ -16,6 +16,9 @@ import { HarvestBook } from '@/systems/HarvestBook';
 import { LegendaryHarvest } from '@/systems/LegendaryHarvest';
 import { Progression } from '@/systems/Progression';
 import { AudioManager } from '@/audio/AudioManager';
+import { IslandDirector } from '@/systems/IslandDirector';
+import { IslandCharacters } from '@/world/IslandCharacters';
+import { IslandEventView } from '@/ui/IslandEventView';
 import { MultiplayerAuthority } from '@/net/MultiplayerAuthority';
 import { SaveSystem } from '@/save/SaveSystem';
 import { DebugAPI } from '@/debug/DebugAPI';
@@ -71,13 +74,17 @@ async function main(): Promise<void> {
   game.add(new HarvestBook());
   game.add(new LegendaryHarvest());
   game.add(new Progression());
+  game.add(new IslandDirector());
   game.add(new AudioManager());
+  game.add(new IslandCharacters());
   game.add(new MultiplayerAuthority());
   game.add(new SaveSystem());
   game.add(new UIManager());
+  game.add(new IslandEventView());
 
   progress(52, 'planting');
   await game.initSystems();
+  game.get<AudioManager>('audio').setEventDirector(game.get<IslandDirector>('director'));
   // Position AND orientation: a spawn transform that sets only the position
   // leaves the player looking down whatever axis yaw 0 happens to be.
   world.spawnPlayer(game.player);
@@ -105,3 +112,4 @@ async function main(): Promise<void> {
 main().catch(fail);
 window.addEventListener('error', (e) => fail(e.error ?? e.message));
 window.addEventListener('unhandledrejection', (e) => fail(e.reason));
+

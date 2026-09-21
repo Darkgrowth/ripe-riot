@@ -4,33 +4,17 @@ import { damp } from '@/core/MathUtils';
 import { gripHand } from '@/render/Viewmodel';
 import { framingFor, screenHeightPctFor, type CarryClass } from '@/interaction/CarryRules';
 
-const AXIS_X = new THREE.Vector3(1, 0, 0);
-const AXIS_Y = new THREE.Vector3(0, 1, 0);
 const AXIS_Z = new THREE.Vector3(0, 0, 1);
 
 /**
  * Orientation of the two grip hands.
  *
- * The hand geometry is authored for holding a TOOL: fingers forward down -Z,
- * palm down, forearm running back toward the camera along +Z. Wrapping it round
- * a ball is four rotations, and getting them wrong is very visible — the first
- * attempt left the forearms pointing straight up, so a carried apple was
- * flanked by two yellow posts that read as fence rails rather than as arms.
- *
- *   1. X +90°  fingers up, forearm down, palm forward
- *   2. Y ±90°  palm turns in to face the fruit; fingers and forearm unaffected
- *   3. X -0.22 fingers tip forward over the fruit, forearm swings back under the
- *              frame toward the player. Kept SHALLOW: a forearm that runs hard
- *              toward the camera splays outward under perspective, and at -0.5
- *              the two sleeves read as diagonal struts rather than as arms.
- *   4. Z ∓0.18 the hand cants inward, so the two gloves point at each other
+ * Carry hands are authored cupped, with fingertips up +Y and pads toward the
+ * player along +Z. A small inward cant makes the palms cradle the lower sides
+ * while the wrists enter from the lower corners instead of standing upright.
  */
 const HAND_Q: THREE.Quaternion[] = [1, -1].map((side) => {
-  const q = new THREE.Quaternion().setFromAxisAngle(AXIS_X, Math.PI * 0.5);
-  q.premultiply(new THREE.Quaternion().setFromAxisAngle(AXIS_Y, side * Math.PI * 0.5));
-  q.premultiply(new THREE.Quaternion().setFromAxisAngle(AXIS_X, -0.22));
-  q.premultiply(new THREE.Quaternion().setFromAxisAngle(AXIS_Z, side * 0.18));
-  return q;
+  return new THREE.Quaternion().setFromAxisAngle(AXIS_Z, -side * 0.36);
 });
 
 /**
@@ -180,21 +164,15 @@ export class CarryViewmodel {
       h.visible = f.hands === 2 || side === -1;   // one hand: the right one
       if (!h.visible) continue;
       h.scale.setScalar(handScale);
-      // Placed ON the surface of the presented sphere, not beside it.
-      //
-      // The first attempt put the gloves out at the silhouette edge and behind
-      // the equator, so the melon hid them completely and all that showed was
-      // two sleeves sticking out sideways — "a melon resting on two planks".
-      // These offsets sum to roughly one presented radius, which puts each
-      // glove on the near-lower quarter of the fruit where the player can see
-      // fingers against it. Two hands grip the sides; a single supporting hand
-      // goes underneath, because one glove beside a ball reads as a glove that
-      // happens to be next to a ball.
+      // The broad palm sits at the near-lower surface, with curled fingertips
+      // climbing into contact. In the one-hand pose the right hand supports the
+      // lower-right side, with its thumb visible opposing the fingers; placing
+      // it directly underneath hid the glove and made the fruit sit on a post.
       const two = f.hands === 2;
       h.position.set(
-        x + side * pr * (two ? 0.72 : 0.25),
-        y - pr * (two ? 0.22 : 0.86),
-        -c.d + pr * (two ? 0.68 : 0.42),
+        x - side * pr * (two ? 0.66 : 0.48),
+        y - pr * (two ? 0.50 : 0.64),
+        -c.d + pr * (two ? 0.72 : 0.79),
       ).add(sway);
       h.quaternion.copy(HAND_Q[i]);
     }

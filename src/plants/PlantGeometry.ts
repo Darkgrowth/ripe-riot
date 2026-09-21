@@ -82,13 +82,28 @@ function broadleaf(seed: number, opts: {
   leaf: THREE.Color; leafAlt: THREE.Color; spread: number; lean: number;
   /** Smaller blobs in a lower ring. */
   underBlobs?: number;
+  harvestCrown?: boolean;
+  /** Three authored crown habits, independent of attachment sampling. */
+  crownStyle?: number;
 }): PlantShape {
   const rng = new Rng(seed);
+  // Art variation has its own stream: fruit attachment coordinates are saved
+  // gameplay data, so refining a crown must never reshuffle the harvest.
+  const art = new Rng(`${seed}:orchard-crown`);
   const parts: THREE.BufferGeometry[] = [];
   const H = opts.trunkH + opts.blobR * 1.5;
+  const crownStyle = opts.crownStyle ?? 0;
 
   const trunk = new THREE.CylinderGeometry(opts.trunkR * 0.62, opts.trunkR, opts.trunkH, 7, 3);
   trunk.translate(0, opts.trunkH / 2, 0);
+  const trunkPos = trunk.getAttribute('position') as THREE.BufferAttribute;
+  const bend = art.range(-0.065, 0.065);
+  for (let i = 0; i < trunkPos.count; i++) {
+    const t = trunkPos.getY(i) / opts.trunkH;
+    // Reuse the existing three trunk segments for a slight elbow. The roots
+    // and crown retain their original positions, as does the collider.
+    trunkPos.setZ(i, trunkPos.getZ(i) + Math.sin(t * Math.PI) * bend);
+  }
   // A slight lean stops a grove looking like a bar chart.
   trunk.rotateZ(opts.lean);
   parts.push(dress(trunk, (y) => _mix(BARK_DARK, BARK, THREE.MathUtils.clamp(y / opts.trunkH, 0, 1)),
@@ -99,12 +114,25 @@ function broadleaf(seed: number, opts: {
   for (let i = 0; i < nBranch; i++) {
     const a = (i / nBranch) * Math.PI * 2 + rng.range(-0.4, 0.4);
     const len = opts.blobR * rng.range(1.0, 1.5);
-    const b = new THREE.CylinderGeometry(opts.trunkR * 0.16, opts.trunkR * 0.34, len, 5);
-    b.translate(0, len / 2, 0);
-    b.rotateZ(rng.range(0.5, 0.85));
+    const angle = rng.range(0.5, 0.85);
+    const baseY = opts.trunkH * rng.range(0.72, 0.95);
+    // Lower the fork just enough to show below the leaf skirt, then reach
+    // back into the same crown. Two segments give the limb a woody elbow.
+    const drop = opts.trunkR * 1.6;
+    const branchLen = len + drop;
+    const b = new THREE.CylinderGeometry(opts.trunkR * 0.13, opts.trunkR * 0.40, branchLen, 5, 2);
+    b.translate(0, branchLen / 2, 0);
+    const bp = b.getAttribute('position') as THREE.BufferAttribute;
+    for (let k = 0; k < bp.count; k++) {
+      const t = bp.getY(k) / branchLen;
+      bp.setX(k, bp.getX(k) + Math.sin(t * Math.PI) * opts.trunkR * 0.7);
+    }
+    b.rotateZ(angle);
     b.rotateY(a);
-    b.translate(Math.sin(a) * 0.02, opts.trunkH * rng.range(0.72, 0.95), Math.cos(a) * 0.02);
-    parts.push(dress(b, BARK_DARK, (y) => swayCurve(y, H) * 0.55));
+    const forkY = baseY - drop;
+    b.translate(-Math.sin(opts.lean) * forkY, forkY, Math.sin(forkY / opts.trunkH * Math.PI) * bend);
+    if (opts.harvestCrown) b.dispose();
+    else parts.push(dress(b, _mix(BARK_DARK, BARK, 0.32), (y) => swayCurve(y, H) * 0.55));
   }
 
   const attach: THREE.Vector3[] = [];
@@ -133,7 +161,15 @@ function broadleaf(seed: number, opts: {
       rad = opts.blobR * rng.range(0.5, 0.74);
     }
     const blob = new THREE.IcosahedronGeometry(rad, 1);
-    blob.scale(1.1, 0.78, 1.1);
+    // Each existing lobe has a different growing direction. A taller crown,
+    // oblique side masses and smaller leaf skirts avoid a stack of matching
+    // horizontal disks without increasing the canopy's triangle count.
+    const aspect = art.range(0.94, 1.06);
+    const vertical = i === 0 ? art.range(0.84, 0.92)
+      : lower ? art.range(0.70, 0.78) : art.range(0.76, 0.88);
+    blob.scale(1.1 * aspect, vertical, 1.1 / aspect);
+    blob.rotateY(art.range(0, Math.PI));
+    blob.rotateZ(art.range(-0.10, 0.10));
     // Rough the silhouette up so the canopy is not a row of spheres: one broad
     // lump term and one finer one.
     const p = blob.getAttribute('position') as THREE.BufferAttribute;
@@ -143,14 +179,38 @@ function broadleaf(seed: number, opts: {
       const n = Math.sin(v.x * 2.2 + seed) * Math.cos(v.z * 1.9 - seed) * Math.sin(v.y * 2.6) * 0.15
         + Math.sin(v.x * 5.3 - seed * 0.7) * Math.cos(v.z * 4.7 + seed) * 0.06;
       v.multiplyScalar(1 + n);
+      // Tuck the lower silhouette in slightly so low hanging fruit remains
+      // readable against a broken leaf edge instead of a broad flat skirt.
+      const skirt = THREE.MathUtils.smoothstep(-v.y / rad, 0.05, 0.75);
+      v.x *= 1 - skirt * 0.10;
+      v.z *= 1 - skirt * 0.10;
       p.setXYZ(k, v.x, v.y, v.z);
     }
-    blob.translate(cx, cy, cz);
+    // Pruned fans leave fruit against open sky. Compact, spreading and upright
+    // habits break the repeating layer cake without changing any fruit nodes.
+    const lift = opts.harvestCrown ? (i === 0 ? 0.04 : lower ? 0.30 : 0.14) : 0;
+    if (opts.harvestCrown) {
+      const habits = [[0.82, 0.78, 0.76], [0.92, 0.68, 0.72], [0.73, 0.84, 0.88]];
+      const habit = habits[crownStyle % 3];
+      blob.scale(habit[0] * (lower ? 0.93 : 1), habit[1] * (lower ? 0.92 : 1), habit[2]);
+      // Neighbouring fans incline along their own limb, rather than all
+      // exposing exactly horizontal undersides. No new geometry is needed.
+      blob.rotateZ(Math.sin(i * 2.3 + crownStyle) * 0.14);
+      blob.rotateY(crownStyle * 0.6);
+    }
+    blob.translate(cx, cy + lift, cz);
     const tone = rng.next();
+    const lobeLeaf = _mix(opts.leaf, opts.leafAlt, tone * 0.72);
+    // Broad warm/cool masses, not random triangles: the eye should read a
+    // cluster of foliage first and its facets second.
+    lobeLeaf.lerp(art.next() > 0.5 ? C(0x9ab84a) : C(0x367e45), art.range(0.06, 0.20));
+    if (opts.harvestCrown) lobeLeaf.copy(_mix(C(0x4c8051), C(0x95aa64), tone * 0.6 + crownStyle * 0.035));
+    const leafDark = opts.harvestCrown ? C(0x38613d) : LEAF_DARK;
+    const lobeLight = _mix(lobeLeaf, opts.harvestCrown ? C(0xbccb82) : LEAF_LIGHT, 0.48);
     const dressed = dress(blob, (y) => _mix(
-      _mix(LEAF_DARK, opts.leaf, THREE.MathUtils.clamp((y - cy + rad) / (rad * 2), 0, 1)),
-      opts.leafAlt, tone * 0.5), (y) => swayCurve(y, H));
-    shadeByFacing(dressed, LEAF_DARK, LEAF_LIGHT, lower ? 0.75 : 0.6, 0.35);
+      leafDark, lobeLeaf, THREE.MathUtils.clamp((y - cy + rad * 1.3) / (rad * 1.8), 0, 1)),
+    (y) => swayCurve(y, H));
+    shadeByFacing(dressed, leafDark, lobeLight, lower ? 0.68 : 0.55, 0.28);
     parts.push(dressed);
 
     // Fruit hangs on the lower outside of each blob. The lower ring is where
@@ -160,6 +220,7 @@ function broadleaf(seed: number, opts: {
     // hanging point within 30 cm of it, where the trunk collider blocks the
     // eye ray and the pick prompt never appears. Push those outward.
     const minAxisR = opts.spread * 0.85;
+    const nodeStart = attach.length;
     for (let k = 0; k < perBlob; k++) {
       // Out near the canopy edge and low on the blob: fruit buried inside
       // the foliage is fruit the player never sees.
@@ -178,6 +239,44 @@ function broadleaf(seed: number, opts: {
       }
       attach.push(pt);
     }
+    if (opts.harvestCrown) {
+      const nodes = attach.slice(nodeStart);
+      const center = new THREE.Vector3(cx, cy + lift, cz);
+      if (i > 0 && !lower) {
+        // Substantial forked limbs support the fans. Their roots follow the
+        // trunk's lean; the branches meet the foliage instead of ending in
+        // disconnected twigs below it. These are visual geometry only.
+        const forkY = opts.trunkH * (0.69 + (i % 2) * 0.07);
+        const fork = new THREE.Vector3(-Math.sin(opts.lean) * forkY, forkY,
+          Math.sin(forkY / opts.trunkH * Math.PI) * bend);
+        const end = center.clone().add(new THREE.Vector3(0, -rad * 0.10, 0));
+        const elbow = fork.clone().lerp(end, 0.58);
+        elbow.y -= 0.10;
+        parts.push(harvestBranch(fork, elbow, opts.trunkR * 0.43, H, 0.35, 0.70));
+        parts.push(harvestBranch(elbow, end, opts.trunkR * 0.43 * 0.55, H, 0.70, 1));
+      }
+      for (const pt of nodes) {
+        // Only the exposed fruiting spur is needed. The main fork already
+        // reaches into the crown; connecting every saved node to the trunk
+        // creates a thicket of bare spokes after the fruit is picked.
+        const tip = pt.clone().add(new THREE.Vector3(0, 0.20, 0));
+        const direction = tip.clone().sub(center).normalize();
+        const root = center.clone().addScaledVector(direction, rad * 0.50);
+        parts.push(harvestBranch(root, tip, 0.022, H));
+        // A pair of broad leaf blades makes the spur read as living growth,
+        // including attachment sites waiting for their next crop.
+        for (const side of [-1, 1]) {
+          const blade = new THREE.OctahedronGeometry(0.115);
+          blade.scale(1.65, 0.20, 0.65);
+          blade.rotateZ(side * 0.38);
+          const leafAngle = Math.atan2(direction.x, direction.z);
+          blade.rotateY(leafAngle);
+          blade.translate(tip.x + Math.cos(leafAngle) * side * 0.085,
+            tip.y + 0.055, tip.z - Math.sin(leafAngle) * side * 0.085);
+          parts.push(dress(blade, side > 0 ? lobeLight : lobeLeaf, y => swayCurve(y, H)));
+        }
+      }
+    }
   }
 
   const geometry = mustMerge(mergeGeometries(parts, false));
@@ -187,6 +286,16 @@ function broadleaf(seed: number, opts: {
     geometry, attachPoints: attach, height: H,
     collider: { halfHeight: opts.trunkH * 0.5, radius: opts.trunkR * 1.15, offset: opts.trunkH * 0.5 },
   };
+}
+
+function harvestBranch(from: THREE.Vector3, to: THREE.Vector3, radius: number,
+  height: number, rootSway = 1, tipSway = 1): THREE.BufferGeometry {
+  const dir = to.clone().sub(from);
+  const g = new THREE.CylinderGeometry(radius * 0.55, radius, dir.length(), 5);
+  g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize()));
+  g.translate((from.x + to.x) / 2, (from.y + to.y) / 2, (from.z + to.z) / 2);
+  return dress(g, C(0x6b4d35), y => swayCurve(y, height) * THREE.MathUtils.lerp(rootSway, tipSway,
+    THREE.MathUtils.clamp((y - from.y) / (to.y - from.y || 1), 0, 1)));
 }
 
 function palm(seed: number): PlantShape {
@@ -411,7 +520,7 @@ function vinebombVine(seed: number): PlantShape {
     new THREE.Vector3(rng.range(-0.35, 0.35), -len * 0.78, rng.range(-0.35, 0.35)),
     new THREE.Vector3(0, -len, 0),
   ]);
-  const tube = new THREE.TubeGeometry(curve, 12, 0.055, 5, false);
+  const tube = new THREE.TubeGeometry(curve, 18, 0.055, 8, false);
   const g = dress(tube, VINE, (y) => THREE.MathUtils.clamp(-y / len, 0, 1) * 0.9);
   g.computeVertexNormals();
   g.computeBoundingSphere();
@@ -437,19 +546,20 @@ function mustMerge(g: THREE.BufferGeometry | null): THREE.BufferGeometry {
   return g;
 }
 
-export function plantShape(type: PlantType, variant: number): PlantShape {
-  const key = `${type}:${variant}`;
+export function plantShape(type: PlantType, variant: number, harvestCrown = false): PlantShape {
+  const baseKey = `${type}:${variant}`;
+  const key = baseKey + (harvestCrown ? ':harvest' : '');
   const hit = SHAPE_CACHE.get(key);
   if (hit) return hit;
-  const seed = Rng.hash(key);
+  const seed = Rng.hash(baseKey);
   let s: PlantShape;
   switch (type) {
     case 'appleTree':
       s = broadleaf(seed, { trunkH: 3.1 + (variant % 3) * 0.35, trunkR: 0.24, blobs: 5, blobR: 1.45,
-        leaf: LEAF, leafAlt: LEAF_LIGHT, spread: 1.3, lean: (variant - 1) * 0.045, underBlobs: 3 }); break;
+        leaf: LEAF, leafAlt: LEAF_LIGHT, spread: 1.3, lean: (variant - 1) * 0.045, underBlobs: 3, harvestCrown, crownStyle: variant }); break;
     case 'orangeTree':
       s = broadleaf(seed, { trunkH: 2.7 + (variant % 3) * 0.3, trunkR: 0.21, blobs: 4, blobR: 1.3,
-        leaf: C(0x3f8f31), leafAlt: C(0x67ad3e), spread: 1.05, lean: (variant - 1) * 0.05, underBlobs: 2 }); break;
+        leaf: C(0x3f8f31), leafAlt: C(0x67ad3e), spread: 1.05, lean: (variant - 1) * 0.05, underBlobs: 2, harvestCrown, crownStyle: (variant + 1) % 3 }); break;
     case 'palm': s = palm(seed); break;
     case 'bananaPlant': s = bananaPlant(seed); break;
     case 'melonVine': s = melonVine(seed); break;
