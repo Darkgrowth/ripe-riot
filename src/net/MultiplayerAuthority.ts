@@ -83,6 +83,8 @@ export interface Intent {
 interface Pending {
   kind: IntentKind;
   fruitId: number;
+  /** Preserve the pickup tool through reconciliation for client feedback. */
+  cause?: string;
   /** Every fruit this request touches, for sells. */
   ids: number[];
   /** The branch a predicted pick came off, so a refusal can put it back. */
@@ -448,6 +450,11 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     this.peers = [];
     this.authority.reset();
     this.mirrorOwner.clear();
+    for (const p of this.pending.values()) {
+      if (p.kind === 'pick' && p.cause === 'net') {
+        this.g.bus.emit('net:pickResult', { fruitId: p.fruitId, ok: false });
+      }
+    }
     this.pending.clear();
     this.pendingFruit.clear();
     this.pendingSell.clear();
@@ -617,6 +624,9 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   private settleOnPromotion(): void {
     for (const [rid, p] of [...this.pending]) {
       this.settle(rid);
+      if (p.kind === 'pick' && p.cause === 'net') {
+        this.g.bus.emit('net:pickResult', { fruitId: p.fruitId, ok: true });
+      }
       if (p.kind === 'sell') {
         for (const id of p.ids) this.pendingSell.delete(id);
         this.interaction.saleRefused('the host left mid-sale');
@@ -888,7 +898,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     if (owner && owner !== this.me) return 'refuse';
     if (this.pendingSell.has(f.id)) return 'refuse';
     this.send({ kind: 'pick', fruitId: f.id, cause }, {
-      kind: 'pick', fruitId: f.id, ids: [f.id],
+      kind: 'pick', fruitId: f.id, ids: [f.id], cause,
       plantId: f.attach?.plantId ?? -1, nodeIndex: f.attach?.nodeIndex ?? -1,
     });
     return 'predict';
@@ -1335,6 +1345,9 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       this.g.bus.emit('ui:toast', { text: `Rope refused — ${why}`, kind: 'bad', ms: 2000 });
       return;
     }
+    if (p?.kind === 'pick' && p.cause === 'net') {
+      this.g.bus.emit('net:pickResult', { fruitId: p.fruitId, ok });
+    }
     if (ok || !p) return;
 
     // Refused. Give the fruit back before the snapshot gets here, so the hand
@@ -1370,6 +1383,9 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
         const rope = p.cid !== undefined ? this.ropes.ropes.get(p.cid) : undefined;
         if (rope?.net && !rope.net.acked) this.ropes.remove(rope.id, 'gone', true);
       } else if (p.fruitId >= 0) {
+        if (p.kind === 'pick' && p.cause === 'net') {
+          this.g.bus.emit('net:pickResult', { fruitId: p.fruitId, ok: false });
+        }
         this.interaction.forfeit(p.fruitId, 'the host never answered');
       }
     }

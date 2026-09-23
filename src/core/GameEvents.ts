@@ -18,6 +18,8 @@ export interface GameEventMap {
   'fruit:grabbed': { fruitId: number; species: string; mass: number; heavy: boolean };
   /** Host ledger accepted a remote pickup; does not impersonate local hand feedback. */
   'fruit:claimed': { fruitId: number };
+  /** A predicted net pickup has been accepted or rejected by the host. */
+  'net:pickResult': { fruitId: number; ok: boolean };
   'fruit:impact': { fruitId: number; species: string; speed: number; point: THREE.Vector3; onPlayer: boolean };
   'fruit:qualityChanged': {
     fruitId: number; quality: string; damage: number;

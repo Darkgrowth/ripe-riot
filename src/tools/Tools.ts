@@ -175,7 +175,10 @@ export class CatchNet extends Tool {
   /** What this swing caught, and whether something already got past it. */
   private swingCaught = 0;
   private missedThisSwing = false;
+  /** A fruit crossing during wind-up may still be caught by this swing. */
+  private earlyMissCandidate = false;
   private hintsLeft = 3;
+  private pendingCatch = new Map<number, { name: string; speed: number }>();
 
   /** Ground nets soften whatever lands on them. */
   private groundNets: Array<{ pos: THREE.Vector3; radius: number; until: number; mesh: THREE.Mesh }> = [];
@@ -198,6 +201,13 @@ export class CatchNet extends Tool {
   private hoop = new THREE.Vector3();
 
   override onAttach(): void {
+    this.game.bus.on('net:pickResult', ({ fruitId, ok }) => {
+      const catchInfo = this.pendingCatch.get(fruitId);
+      if (!catchInfo) return;
+      this.pendingCatch.delete(fruitId);
+      if (ok) this.announceCatch(catchInfo.name, catchInfo.speed);
+      else this.caught = Math.max(0, this.caught - 1);
+    });
     const geo = new THREE.TorusGeometry(this.catchRadius, 0.035, 6, 24);
     this.ringMat = new THREE.MeshStandardMaterial({
       color: Palette.rope, roughness: 0.9, transparent: true, opacity: 0.85,
@@ -223,6 +233,7 @@ export class CatchNet extends Tool {
     this.phase = 'ready';
     this.phaseT = 0;
     this.queued = false;
+    this.earlyMissCandidate = false;
     this.lock = 0;
     this.flash = 0;
     if (this.ring) { this.ring.visible = false; this.ring.scale.setScalar(1); }
@@ -241,12 +252,14 @@ export class CatchNet extends Tool {
     this.swings++;
     this.swingCaught = 0;
     this.missedThisSwing = false;
+    this.earlyMissCandidate = false;
     this.game.bus.emit('audio:sfx', { name: 'netSwing', volume: 0.5, pitch: 1 });
     this.game.bus.emit('tool:swing', { toolId: this.def.id, duration: CatchNet.SWING });
     this.game.playerCamera.addRecoil((Math.random() - 0.5) * 0.004, 0.004);
   }
 
   private endSwing(): void {
+    if (this.earlyMissCandidate && !this.swingCaught && !this.missedThisSwing) this.registerMiss();
     this.phase = 'recover';
     this.phaseT = 0;
     // Whiffing at something costs more than swinging at nothing.
@@ -255,12 +268,11 @@ export class CatchNet extends Tool {
 
   /**
    * A miss is a real event, not the absence of a catch: a catchable fruit
-   * went through the hoop while the net could not take it — too late (the
-   * dead start of the swing) or too early (the recovery). It has to be
-   * legible as a miss the moment it happens, or the player concludes the
-   * tool is broken rather than that their timing was off. A low whoosh, a
-   * dip in the view, a longer recovery, and — the first few times — the one
-   * sentence that fixes it.
+   * went through the hoop while the net could not take it. A crossing in
+   * the dead start is provisional until this swing's catch window closes:
+   * the same fruit may still be caught a frame later. Recovery misses are
+   * immediate. A low whoosh, a dip in the view, and a longer recovery make
+   * a genuine miss legible.
    */
   private checkMiss(): void {
     if (this.missedThisSwing || this.swingCaught > 0) return;
@@ -269,18 +281,32 @@ export class CatchNet extends Tool {
       if (f.state !== 'free' || f.mass > 14) continue;
       if (this.seenSpeed(f) < CatchNet.CATCH_SPEED * 1.5) continue;
       if (f.position.distanceToSquared(this.hoop) > r2) continue;
-      this.missedThisSwing = true;
-      this.misses++;
-      if (this.phase === 'recover') this.recoverFor = CatchNet.RECOVER_MISS;
-      this.game.bus.emit('audio:sfx', { name: 'netSwing', volume: 0.42, pitch: 0.72 });
-      this.game.playerCamera.addRecoil(0, -0.007);
-      if (this.hintsLeft > 0) {
-        this.hintsLeft--;
-        this.game.bus.emit('ui:toast', {
-          text: 'MISSED', sub: 'Swing as it reaches the hoop — when the ring glows', kind: 'bad', ms: 1800,
-        });
-      }
+      if (this.phase === 'swing') this.earlyMissCandidate = true;
+      else this.registerMiss();
       return;
+    }
+  }
+
+  private registerMiss(): void {
+    this.earlyMissCandidate = false;
+    this.missedThisSwing = true;
+    this.misses++;
+    if (this.phase === 'recover') this.recoverFor = CatchNet.RECOVER_MISS;
+    this.game.bus.emit('audio:sfx', { name: 'netSwing', volume: 0.42, pitch: 0.72 });
+    this.game.playerCamera.addRecoil(0, -0.007);
+    if (this.hintsLeft > 0) {
+      this.hintsLeft--;
+      this.game.bus.emit('ui:toast', {
+        text: 'MISSED', sub: 'Swing as it reaches the hoop — when the ring glows', kind: 'bad', ms: 1800,
+      });
+    }
+  }
+
+  private announceCatch(name: string, speed: number): void {
+    if (speed > 5) {
+      this.game.bus.emit('ui:toast', {
+        text: 'CAUGHT', sub: `${name} at ${speed.toFixed(0)} m/s`, kind: 'good', ms: 1400,
+      });
     }
   }
 
@@ -471,13 +497,19 @@ export class CatchNet extends Tool {
       }
       const speed = this.seenSpeed(f);
       const realCatch = speed > CatchNet.CATCH_SPEED;
+      const catchPoint = f.position.clone();
+      const abovePlayer = f.position.y > this.player.position.y + 0.4;
+      // A pickup can be refused (or later denied by the host). Neither case
+      // should celebrate fruit that never actually reached this player's net.
+      if (!inter.pickUp(f, 'net')) continue;
       this.caught++;
       this.swingCaught++;
+      this.earlyMissCandidate = false;
       // A catch and a scoop are different events and should not sound the
       // same: snatching a coconut out of the air is the point of the tool,
       // sweeping a windfall out of the grass is tidying up.
       this.game.bus.emit('audio:sfx', {
-        name: 'netCatch', position: f.position.clone(),
+        name: 'netCatch', position: catchPoint,
         volume: realCatch ? clamp(0.55 + speed / 18, 0.55, 1) : 0.3,
         pitch: realCatch ? clamp(0.85 + speed / 26, 0.85, 1.5) : 0.7,
       });
@@ -489,21 +521,20 @@ export class CatchNet extends Tool {
         this.game.playerCamera.addRecoil(0, -0.008 - Math.min(0.014, speed * 0.001));
         this.game.bus.emit('tool:fired', { toolId: this.def.id, power: clamp(0.4 + speed / 20, 0.4, 1.3) });
         this.game.bus.emit('tool:blast', {
-          toolId: this.def.id, point: f.position.clone(), power: clamp(speed / 30, 0.12, 0.4), radius: 0.9,
+          toolId: this.def.id, point: catchPoint, power: clamp(speed / 30, 0.12, 0.4), radius: 0.9,
         });
-        if (speed > 5) {
-          this.game.bus.emit('ui:toast', {
-            text: 'CAUGHT', sub: `${f.displayName} at ${speed.toFixed(0)} m/s`, kind: 'good', ms: 1400,
-          });
-        }
       }
-      if (speed > 5.5 && f.position.y > this.player.position.y + 0.4) {
+      if (speed > 5.5 && abovePlayer) {
         this.game.bus.emit('stunt:candidate', { fruitId: f.id, kind: 'midAir' });
       }
       // The hoop is not a hand: a spikefruit or a gluefruit caught in the
       // netting goes straight to the basket without touching anyone.
-      if (!inter.pickUp(f, 'net')) continue;
       inter.stowHeld();
+      if (this.ctx.fruit.net && !this.ctx.fruit.net.authoritative) {
+        this.pendingCatch.set(f.id, { name: f.displayName, speed });
+      } else {
+        this.announceCatch(f.displayName, speed);
+      }
       break; // one per step, so a burst of fruit reads as a sequence of catches
     }
   }

@@ -417,6 +417,10 @@ try {
   note('setup-complete', { firstId, host: (await observed(a)).pos, client: (await observed(b)).pos });
   await b.page.evaluate(id => {
     const game = window.__GAME, net = game.get('tools').toolOf('net');
+    window.__coopNetOutcomes = [];
+    game.bus.on('ui:toast', e => {
+      if (e.text === 'CAUGHT' || e.text === 'MISSED') window.__coopNetOutcomes.push(e.text);
+    });
     const trace = window.__coopTrace = { rows: [], active: true };
     const sample = () => {
       if (!trace.active) return;
@@ -470,7 +474,13 @@ try {
   note('attempt-1-caught', { id: firstId, holder: 'client', basket: held1.basket });
   await waitFor(async () => (await fruitInfo(a, firstId))?.state === 'stowed'
     && (await fruitInfo(b, firstId))?.state === 'stowed', 'both peers stowed fruit');
-  check((await b.call('tool.debug', 'net')).caught >= 1, 'client net records a real catch');
+  const netOutcome = await b.call('tool.debug', 'net');
+  const outcomeToasts = await b.page.evaluate(() => window.__coopNetOutcomes);
+  check(netOutcome.caught >= 1 && netOutcome.misses === 0,
+    'client net records a catch without miss recovery', JSON.stringify(netOutcome));
+  check(outcomeToasts.filter(x => x === 'CAUGHT').length === 1
+    && !outcomeToasts.includes('MISSED'),
+  'client sees one confirmed CAUGHT cue and no contradictory MISSED cue', JSON.stringify(outcomeToasts));
 
   if (probe) throw new Error('probe stopped after first catch');
   if (clientStepProbe) {
