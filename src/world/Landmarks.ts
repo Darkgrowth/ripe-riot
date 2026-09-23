@@ -781,7 +781,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     signs.push(makeSign(b, pos, rot, 1.6, 0.95,
       signTexture(lines, { title, w: 512, h: 300, lineScale: 1.25 })));
   };
-  fingerboard(-28.8, 0.7, -24, 22, ['WATERMELONS · BOULDER PLUMS', 'mind the slope'], 'HILL FARM ↑');
+  fingerboard(-28.8, 0.7, -24, 22, ['BOULDER PLUMS AHEAD', 'ROPE · BLAST · CATCH'], 'HILL FARM ↑');
   fingerboard(-24.7, -38.3, -36, -30, ['THE KING MELON', 'rope gun required'], 'THE RAVINE ↑');
   // A hand cart parked on the apron.
   b.reset().translate(shopX, shopY, shopZ).rotateY(shopRot);

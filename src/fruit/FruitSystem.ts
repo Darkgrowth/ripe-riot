@@ -190,6 +190,7 @@ export class FruitSystem implements System {
   private world!: Sunpatch;
   private rng = new Rng('fruit-spawn');
   private regrow: Regrow[] = [];
+  private hillHarvestPlantId = -1;
   private ctx!: TraitContext;
   private activationTimer = 0;
   private disposeVineSupports: (() => void) | null = null;
@@ -418,6 +419,20 @@ export class FruitSystem implements System {
         new THREE.Vector3(x, y + 4.6, z), this.rng, { scale: this.rng.range(0.9, 1.25) });
       this.growOn(p);
     }
+    // One repeatable hill-farm harvest sits on the shoulder above the orchard.
+    // The scattered nests on the flat plateau teach the fruit's weight; this
+    // one gives a released plum somewhere to roll. Keep its ordinary size and
+    // value fixed so a player can choose hands, rope, or a later cannon here.
+    // Placing it last leaves every existing seeded plant and fruit unchanged.
+    const x = -35, z = -11.5;
+    const y = this.world.terrain.height(x, z);
+    const nest = this.plants.plant(this.g.newId(), 'boulderBush',
+      new THREE.Vector3(x, y, z), this.rng);
+    this.hillHarvestPlantId = nest.id;
+    // A full area shake can release this one without forcing a hand pickup,
+    // so a line pinned before detachment remains a useful plan.
+    nest.nodes[0].grip = 0.85;
+    this.growFruitAt(nest, 0, 'boulderplum');
     this.g.bus.emit('debug:log', {
       text: `populated: ${this.plants.count} plants, ${this.fruits.size} fruit`,
     });
@@ -483,10 +498,15 @@ export class FruitSystem implements System {
     given?: { id: number; variantId: string | null; sizeRoll: number }, log = false): Fruit | null {
     const node = plant.nodes[nodeIndex];
     if (!node || node.fruitId >= 0) return null;
-    const variantId = given ? given.variantId : this.rollVariant(this.rareByPlant.get(plant.id) ?? 1);
+    // Keep the authored hill challenge hand-catchable on every regrowth.
+    // Replicas still use the host's explicit recipe in `given`.
+    const fixedHillPlum = plant.id === this.hillHarvestPlantId && nodeIndex === 0;
+    const variantId = given ? given.variantId : fixedHillPlum ? null
+      : this.rollVariant(this.rareByPlant.get(plant.id) ?? 1);
     const id = given ? given.id : this.g.newId();
     if (given) this.g.reserveId(id);
-    const f = new Fruit(this.g.physics, id, speciesId, variantId, given ? given.sizeRoll : this.rng.next());
+    const f = new Fruit(this.g.physics, id, speciesId, variantId,
+      given ? given.sizeRoll : fixedHillPlum ? 0.5 : this.rng.next());
     f.attachTo({
       plantId: plant.id, nodeIndex,
       position: node.world.clone(), quaternion: node.quat.clone(),
