@@ -74,7 +74,7 @@ export async function startServer() {
 }
 
 export async function openGame({ width = 1280, height = 720, headless = true, quiet = false,
-  islandActivities = true, drawFrames = true } = {}) {
+  islandActivities = true, drawFrames = true, recordVideoDir = null } = {}) {
   // Opt-in hardware review on the desktop. Playwright's headless shell uses
   // SwiftShader here; full Chromium with D3D11 was verified on the RTX 4070 Ti.
   // Keep the historical default for reproducible software-rendered checks.
@@ -93,6 +93,7 @@ export async function openGame({ width = 1280, height = 720, headless = true, qu
     viewport: { width, height },
     deviceScaleFactor: 1,
     reducedMotion: 'no-preference',
+    ...(recordVideoDir ? { recordVideo: { dir: recordVideoDir, size: { width, height } } } : {}),
   });
   return attachPage(browser, ctx, quiet, islandActivities, drawFrames);
 }

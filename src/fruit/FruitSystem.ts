@@ -191,6 +191,7 @@ export class FruitSystem implements System {
   private rng = new Rng('fruit-spawn');
   private regrow: Regrow[] = [];
   private hillHarvestPlantId = -1;
+  private coopVinePlantId = -1;
   private ctx!: TraitContext;
   private activationTimer = 0;
   private disposeVineSupports: (() => void) | null = null;
@@ -417,6 +418,13 @@ export class FruitSystem implements System {
       if (y < 1) continue;
       const p = this.plants.plant(this.g.newId(), 'vinebombVine',
         new THREE.Vector3(x, y + 4.6, z), this.rng, { scale: this.rng.range(0.9, 1.25) });
+      if (x === 22 && z === -56) {
+        // Existing dry shelf west of this vine gives a missed launch somewhere
+        // players can chase. A nearby area shake can release this one; the
+        // other vines retain their stronger, less predictable stems.
+        this.coopVinePlantId = p.id;
+        p.nodes[0].grip = 0.36;
+      }
       this.growOn(p);
     }
     // One repeatable hill-farm harvest sits on the shoulder above the orchard.
@@ -501,12 +509,15 @@ export class FruitSystem implements System {
     // Keep the authored hill challenge hand-catchable on every regrowth.
     // Replicas still use the host's explicit recipe in `given`.
     const fixedHillPlum = plant.id === this.hillHarvestPlantId && nodeIndex === 0;
-    const variantId = given ? given.variantId : fixedHillPlum ? null
+    const coopVine = plant.id === this.coopVinePlantId && nodeIndex === 0;
+    const rolledVariant = given || fixedHillPlum ? null
       : this.rollVariant(this.rareByPlant.get(plant.id) ?? 1);
+    const variantId = given ? given.variantId : fixedHillPlum || coopVine ? null : rolledVariant;
     const id = given ? given.id : this.g.newId();
     if (given) this.g.reserveId(id);
+    const rolledSize = given || fixedHillPlum ? 0 : this.rng.next();
     const f = new Fruit(this.g.physics, id, speciesId, variantId,
-      given ? given.sizeRoll : fixedHillPlum ? 0.5 : this.rng.next());
+      given ? given.sizeRoll : fixedHillPlum || coopVine ? 0.5 : rolledSize);
     f.attachTo({
       plantId: plant.id, nodeIndex,
       position: node.world.clone(), quaternion: node.quat.clone(),
@@ -530,6 +541,12 @@ export class FruitSystem implements System {
       if (f.tensionDir.dot(groundNormal) < 0) {
         f.tensionDir.x *= -1;
         f.tensionDir.z *= -1;
+      }
+      if (coopVine) {
+        // The visible open shelf is the same target for either releaser and
+        // on every regrowth. This is still the ordinary elastic launch.
+        f.tension = 11;
+        f.tensionDir.set(-0.9, 0.15, 0.05).normalize();
       }
     }
     node.fruitId = f.id;
@@ -771,6 +788,7 @@ export class FruitSystem implements System {
    * decides where it goes.
    */
   private aimElastic(f: Fruit, playerId: number): void {
+    if (f.attach?.plantId === this.coopVinePlantId) return;
     if (playerId < 0 || playerId !== this.g.player.id || !f.hasTrait('elastic')) return;
     this.g.player.lookDir(_v);
     f.tensionDir.multiplyScalar(0.45).addScaledVector(_v, 0.55);

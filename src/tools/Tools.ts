@@ -266,8 +266,8 @@ export class CatchNet extends Tool {
     if (this.missedThisSwing || this.swingCaught > 0) return;
     const r2 = Math.pow(this.catchRadius * 1.15, 2);
     for (const f of this.ctx.fruit.fruits.values()) {
-      if (f.state !== 'free' || !f.body || f.mass > 14) continue;
-      if (f.speed < CatchNet.CATCH_SPEED * 1.5) continue;
+      if (f.state !== 'free' || f.mass > 14) continue;
+      if (this.seenSpeed(f) < CatchNet.CATCH_SPEED * 1.5) continue;
       if (f.position.distanceToSquared(this.hoop) > r2) continue;
       this.missedThisSwing = true;
       this.misses++;
@@ -398,15 +398,21 @@ export class CatchNet extends Tool {
   }
 
   /** How close the nearest catchable fruit is to the hoop, as 0..1. */
+  private seenSpeed(f: Fruit): number {
+    // A client draws the host's free fruit without a body. Its replicated
+    // velocity still drives the net's timing cue and catch window.
+    return f.body ? f.speed : f.netVel.length();
+  }
+
   private threat(hoop: THREE.Vector3): number {
     let best = 0;
     const warn = this.catchRadius * 3.4;
     for (const f of this.ctx.fruit.fruits.values()) {
-      if (f.state !== 'free' || !f.body || f.mass > 14) continue;
+      if (f.state !== 'free' || f.mass > 14) continue;
       const d = f.position.distanceTo(hoop);
       if (d > warn) continue;
       // Weight by speed: a fruit lying still in the grass is not a catch.
-      const moving = clamp(f.speed / 6, 0, 1);
+      const moving = clamp(this.seenSpeed(f) / 6, 0, 1);
       const near = 1 - d / warn;
       // Rises early enough to be a cue, not a confirmation: with near squared the
       // ring only lit once the fruit was already inside the swing.
@@ -450,10 +456,11 @@ export class CatchNet extends Tool {
     const inter = this.ctx.interaction;
     const r2 = this.catchRadius * this.catchRadius;
     for (const f of this.ctx.fruit.fruits.values()) {
-      if (f.state !== 'free' || !f.body) continue;
+      if (f.state !== 'free') continue;
       if (f.position.distanceToSquared(this.hoop) > r2) continue;
       // Too heavy to catch by hand — but it does get slowed down a lot.
       if (f.mass > 14) {
+        if (!f.body) continue; // only the host can deflect a physical body
         const v = f.body.linvel();
         f.body.setLinvel({ x: v.x * 0.72, y: v.y * 0.72, z: v.z * 0.72 }, true);
         this.swingCaught++;   // deflecting a watermelon is not a miss
@@ -462,7 +469,7 @@ export class CatchNet extends Tool {
         });
         continue;
       }
-      const speed = f.speed;
+      const speed = this.seenSpeed(f);
       const realCatch = speed > CatchNet.CATCH_SPEED;
       this.caught++;
       this.swingCaught++;
