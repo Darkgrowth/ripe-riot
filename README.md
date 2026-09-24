@@ -14,9 +14,9 @@ npm run dev          # http://localhost:5173
 ```
 
 **Controls** — WASD move · mouse look · Space jump · Shift sprint · Ctrl crouch ·
-E interact/pick/sell · LMB tool primary · RMB tool secondary · Q drop or release
-a rope · 1–3 tools · 4 utility (tap again to swap basket/ladder) · B harvest
-book · F3 debug overlay.
+E interact/pick/sell · LMB tool primary · RMB tool secondary · Q drop held fruit
+or release the newest rope with Rope Gun selected · 1–3 tools · 4 utility
+(tap again to swap basket/ladder) · B harvest book · F3 debug overlay.
 
 **Docs** — [GAME_DESIGN.md](GAME_DESIGN.md) · [ARCHITECTURE.md](ARCHITECTURE.md)
 · [ROADMAP.md](ROADMAP.md) · [TESTING.md](TESTING.md)

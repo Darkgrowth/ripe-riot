@@ -194,9 +194,10 @@ export class ToolInventory implements System {
       if (input.secondaryPressed) active?.onSecondary(true);
       if (input.secondaryReleased) active?.onSecondary(false);
       if (input.dropPressed) {
-        // Q releases a rope before it drops what is in your hands.
-        const gun = this.all.get('ropegun') as RopeGun | undefined;
-        if (!gun || !gun.releaseNewest()) this.ctx.interaction.dropHeld();
+        // The visible carry cue owns Q while fruit is in hand. Otherwise Q
+        // affects ropes only when the gun that owns them is selected.
+        if (this.ctx.interaction.carried) this.ctx.interaction.dropHeld();
+        else if (active instanceof RopeGun) active.releaseNewest();
       }
     }
 

@@ -105,6 +105,20 @@ html, body {
    how to put it down is the reminder. */
 .carry .keys { opacity: 0.66; font-size: 12px; }
 .carry .keys b { color: var(--gold); font-weight: 800; }
+.rope-guide {
+  position: absolute; left: calc(22 * var(--hud-u));
+  bottom: calc(116 * var(--hud-u));
+  max-width: min(calc(590 * var(--hud-u)), calc(100vw - 44 * var(--hud-u)));
+  padding: calc(8 * var(--hud-u)) calc(12 * var(--hud-u));
+  border: 1px solid rgba(255, 209, 92, 0.45); border-radius: calc(8 * var(--hud-u));
+  background: rgba(12, 22, 32, 0.78); box-shadow: var(--shadow);
+  font-size: calc(11 * var(--hud-u)); line-height: 1.45; color: rgba(255, 255, 255, 0.88);
+}
+.rope-guide[hidden] { display: none; }
+.rope-guide-title { display: flex; justify-content: space-between; gap: 18px;
+  margin-bottom: 2px; color: var(--gold); font-weight: 800; letter-spacing: 0.7px; }
+.rope-guide .rope-count { color: #fff; font-weight: 700; letter-spacing: 0; }
+.rope-guide b { color: var(--gold); }
 /* What you are holding just lost a quality tier. */
 .carry.knock { animation: carryKnock 0.42s ease; }
 @keyframes carryKnock {

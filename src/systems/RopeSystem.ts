@@ -171,6 +171,8 @@ export class RopeSystem implements System {
   private group = new THREE.Group();
   private meshes = new Map<number, THREE.Mesh>();
   private material!: THREE.MeshStandardMaterial;
+  private selectedMaterial!: THREE.MeshStandardMaterial;
+  private highlightedRopeId: number | null = null;
   private materials = new Map<string, THREE.MeshStandardMaterial>();
   /** Installed by MultiplayerAuthority. Null in single player. */
   net: RopeNet | null = null;
@@ -188,6 +190,10 @@ export class RopeSystem implements System {
       color: Palette.rope, roughness: 0.95, metalness: 0, flatShading: true,
     });
     this.material.name = 'rope';
+    this.selectedMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffd15c, emissive: 0x4b2b00, roughness: 0.8, flatShading: true,
+    });
+    this.selectedMaterial.name = 'rope:selected';
 
     g.debug?.addProbe('ropes', () => ({
       count: this.ropes.size,
@@ -326,6 +332,22 @@ export class RopeSystem implements System {
     this.meshes.set(rope.id, mesh);
   }
 
+  /** Mark only this player's next actionable line; shared rope state is untouched. */
+  highlight(id: number | null): void {
+    if (this.highlightedRopeId === id) return;
+    const oldId = this.highlightedRopeId;
+    if (oldId !== null) {
+      const old = this.ropes.get(oldId);
+      const mesh = this.meshes.get(oldId);
+      if (old && mesh) mesh.material = this.materialFor(old.color);
+    }
+    this.highlightedRopeId = id;
+    if (id !== null) {
+      const mesh = this.meshes.get(id);
+      if (mesh) mesh.material = this.selectedMaterial;
+    }
+  }
+
   /** Change a rope's length over time. Negative reels in. */
   setReel(id: number, rate: number): void {
     const r = this.ropes.get(id);
@@ -371,6 +393,7 @@ export class RopeSystem implements System {
     const mesh = this.meshes.get(id);
     if (mesh) { this.group.remove(mesh); mesh.geometry.dispose(); this.meshes.delete(id); }
     this.ropes.delete(id);
+    if (this.highlightedRopeId === id) this.highlightedRopeId = null;
     this.sentReel.delete(id);
     if (!r.net) return;
     if (r.net.mirror) return;
@@ -756,7 +779,7 @@ export class RopeSystem implements System {
     return s.alive;
   }
 
-  frameUpdate(): void {
+  lateUpdate(): void {
     for (const rope of this.ropes.values()) {
       const mesh = this.meshes.get(rope.id);
       if (!mesh) continue;
@@ -768,8 +791,34 @@ export class RopeSystem implements System {
       const sag = Math.min(rope.length * 0.34, slack * 0.55 + 0.04);
       _mid.copy(_a).lerp(_b, 0.5).setY(Math.min(_a.y, _b.y) - sag + Math.abs(_a.y - _b.y) * 0.12);
       const curve = new THREE.CatmullRomCurve3([_a.clone(), _mid.clone(), _b.clone()]);
-      const radius = rope.radius * (1 + clamp(rope.tension / 3000, 0, 1) * 0.4);
-      const geo = new THREE.TubeGeometry(curve, SEGMENTS, radius, 5, false);
+      let drawnCurve = curve;
+      // The constraint stays at the player's hand, but that end of the tube
+      // sits only ~0.4 m from the first-person camera. Near-plane clipping
+      // made several cables fill the screen as broad pale strips. Draw the
+      // visible part beyond the camera instead; remote players keep the full
+      // line because their rope ends are resolved as `peer`, not `player`.
+      const ownA = rope.a.kind === 'player' && rope.a.ownerId === this.g.player.id;
+      const ownB = rope.b.kind === 'player' && rope.b.ownerId === this.g.player.id;
+      if (ownA || ownB) {
+        const points = curve.getPoints(32);
+        if (ownB) points.reverse();
+        const camera = this.g.renderer.camera.position;
+        let start = 0;
+        for (let i = 0; i < points.length; i++) {
+          if (points[i].distanceToSquared(camera) < 0.7 * 0.7) start = i + 1;
+        }
+        if (start > 0) {
+          if (points.length - start < 2) { mesh.visible = false; continue; }
+          drawnCurve = new THREE.CatmullRomCurve3(points.slice(start));
+        }
+      }
+      mesh.visible = true;
+      // The same chunky tube that reads well on another player appears many
+      // pixels wide when it starts beside our camera. Keep that local visual
+      // narrow; neither the shared rope nor its collision/strength changes.
+      const radius = rope.radius * (ownA || ownB ? 0.35 : 1)
+        * (1 + clamp(rope.tension / 3000, 0, 1) * 0.4);
+      const geo = new THREE.TubeGeometry(drawnCurve, SEGMENTS, radius, 5, false);
       mesh.geometry.dispose();
       mesh.geometry = geo;
     }
@@ -785,6 +834,7 @@ export class RopeSystem implements System {
   dispose(): void {
     this.clear();
     this.material.dispose();
+    this.selectedMaterial.dispose();
     for (const m of this.materials.values()) m.dispose();
     this.materials.clear();
   }

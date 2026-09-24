@@ -564,7 +564,7 @@ export class CatchNet extends Tool {
 export class RopeGun extends Tool {
   readonly def: ToolDef = {
     id: 'ropegun', label: 'Rope Gun', icon: '🪝',
-    description: 'Tethers you to anything. Right-click to pin the near end, hold to winch.',
+    description: 'Left-click to attach. Tap right-click to anchor the newest rope; hold to reel it in. Q releases it.',
     tagline: 'Fruit picking was not supposed to require a harpoon. This is the warm-up.',
     // Measured (tools/harness/playthrough.mjs): at $720 the gun sat behind
     // eight minutes of beach runs after the shaker; at $650 it is about a
@@ -628,6 +628,7 @@ export class RopeGun extends Tool {
     this.game.playerCamera.addRecoil(0, 0.012);
     this.game.bus.emit('audio:sfx', { name: 'ropeFire', position: target.point });
     this.game.bus.emit('tool:fired', { toolId: this.def.id, power: 0.7 });
+    this.markNewest();
   }
 
   /**
@@ -707,6 +708,7 @@ export class RopeGun extends Tool {
     const idx = this.mine.indexOf(rope);
     const fresh = this.ropes.create(target.end, far, len, { maxTension: 5200 });
     if (idx >= 0) this.mine[idx] = fresh; else this.mine.push(fresh);
+    this.markNewest();
     this.game.bus.emit('ui:toast', { text: 'Rope anchored', kind: 'good', ms: 1400 });
     this.game.bus.emit('audio:sfx', { name: 'ropeAnchor', position: target.point });
   }
@@ -715,6 +717,7 @@ export class RopeGun extends Tool {
     super.step(dt, held);
     // Drop ropes whose far end has been sold, eaten or otherwise removed.
     this.mine = this.mine.filter((r) => this.ropes.ropes.has(r.id));
+    this.markNewest();
     if (held.secondary && this.secondaryHeldFor >= 0) {
       this.secondaryHeldFor += dt;
       if (this.secondaryHeldFor > 0.28) {
@@ -741,7 +744,15 @@ export class RopeGun extends Tool {
     }
   }
 
-  /** Q releases the newest rope. */
+  private markNewest(): void {
+    this.ropes.highlight(this.equipped ? (this.mine[this.mine.length - 1]?.id ?? null) : null);
+  }
+
+  ropeHud(): { count: number; max: number } {
+    return { count: this.mine.length, max: this.maxRopes };
+  }
+
+  /** Q releases the newest rope while this gun is equipped. */
   releaseNewest(): boolean {
     const rope = this.mine.pop();
     if (!rope) return false;
@@ -749,6 +760,10 @@ export class RopeGun extends Tool {
     // like a line vanishing from the scene.
     const loaded = clamp(rope.tension / 3000, 0, 1);
     this.ropes.remove(rope.id, 'released');
+    this.markNewest();
+    this.game.bus.emit('ui:toast', {
+      text: 'Rope released', sub: `${this.mine.length} of ${this.maxRopes} ropes left`, ms: 1400,
+    });
     this.game.bus.emit('audio:sfx', {
       name: 'ropeSnap', volume: 0.25 + loaded * 0.45, pitch: 1.35 - loaded * 0.35,
     });
@@ -763,7 +778,8 @@ export class RopeGun extends Tool {
     const taut = rope.tension > 60 ? ' ‼' : rope.tension > 1 ? ' ·' : '';
     return `${this.mine.length} · ${rope.length.toFixed(1)}m${taut}`;
   }
-  override onUnequip(): void { super.onUnequip(); this.stopWinch(); }
+  override onEquip(): void { super.onEquip(); this.markNewest(); }
+  override onUnequip(): void { super.onUnequip(); this.stopWinch(); this.markNewest(); }
 }
 
 // ---------------------------------------------------------------------------

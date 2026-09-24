@@ -4,6 +4,8 @@ import type { Economy } from '@/systems/Economy';
 import { toolIconMarkup } from './ToolIcons';
 import { createAudioSettings } from './AudioSettings';
 import type { AudioManager } from '@/audio/AudioManager';
+import type { ToolInventory } from '@/tools/ToolInventory';
+import type { RopeGun } from '@/tools/Tools';
 
 /**
  * All HUD rendering. Kept as plain DOM: it composites over the canvas for free,
@@ -22,6 +24,7 @@ export class UIManager implements System {
     toasts: HTMLElement; celebrate: HTMLElement; carry: HTMLElement;
     crosshair: HTMLElement; debug: HTMLElement; stunts: HTMLElement;
     banner: HTMLElement; hurt: HTMLElement; slots: HTMLElement;
+    ropeGuide: HTMLElement; ropeCount: HTMLElement;
     entryHint: HTMLElement; entryTitle: HTMLElement;
   };
   private debugVisible = false;
@@ -46,6 +49,10 @@ export class UIManager implements System {
         <div class="money-delta"></div>
         <div class="prompt"></div>
         <div class="carry"></div>
+        <div class="rope-guide" hidden>
+          <div class="rope-guide-title">ROPE GUN <span class="rope-count"></span></div>
+          <div><b>LMB</b> attach · <b>Tap RMB</b> anchor · <b>Hold RMB</b> reel · <b>Q</b> release newest</div>
+        </div>
         <div class="slots"></div>
         <div class="stunt-stack"></div>
         <div class="celebrate"></div>
@@ -74,6 +81,8 @@ export class UIManager implements System {
       banner: q('.state-banner'),
       hurt: q('.hurt'),
       slots: q('.slots'),
+      ropeGuide: q('.rope-guide'),
+      ropeCount: q('.rope-count'),
       entryHint: q('.entry-hint'),
       entryTitle: q('.entry-hint strong'),
     };
@@ -162,6 +171,15 @@ export class UIManager implements System {
   lateUpdate(): void {
     const blocked = this.g.player.state !== 'active' || !this.g.input.enabled || this.modalOpen();
     this.setPrompt(blocked ? null : (this.promptCandidate?.text ?? null));
+    const inv = this.g.get<ToolInventory>('tools');
+    const showingRope = !blocked && !this.g.get<InteractionSystem>('interaction').carried
+      && inv.activeId === 'ropegun';
+    this.els.ropeGuide.hidden = !showingRope;
+    if (showingRope) {
+      const { count, max } = (inv.activeTool as RopeGun).ropeHud();
+      const label = `Your ropes: ${count}/${max}`;
+      if (this.els.ropeCount.textContent !== label) this.els.ropeCount.textContent = label;
+    }
     this.promptCandidate = null;
   }
 
