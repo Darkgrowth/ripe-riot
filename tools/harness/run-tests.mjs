@@ -79,6 +79,7 @@ function enrich(g) {
      * every scenario after it.
      */
     async reset() {
+      await g.call('encounters.suspend', true).catch(() => {});
       await g.call('director.reset', false).catch(() => {});
       await g.call('characters.reset', false).catch(() => {});
       await g.clearInput();
@@ -130,6 +131,11 @@ const results = await withGame(async (raw) => {
     let error = null;
     try {
       await g.reset();
+      // The generic movement/fruit/tool fixtures predate the orchard ambush
+      // and intentionally test their own physics in isolation. Encounter
+      // scenarios still run the real unsuspended enemy AI and hit rules.
+      const encounterScenario = name.startsWith('action-') || name === 'mimic-orchard';
+      await g.call('encounters.suspend', !encounterScenario);
       await mod.run(g, ctx);
     } catch (e) {
       error = e;

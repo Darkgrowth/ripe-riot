@@ -47,12 +47,14 @@ function fail(err: unknown): void {
 }
 
 async function main(): Promise<void> {
+  const comparisonChoice = new URLSearchParams(window.location.search).get('mimicCompare');
+  const comparison = comparisonChoice === 'A' || comparisonChoice === 'B' ? comparisonChoice : null;
   const canvas = document.getElementById('view') as HTMLCanvasElement;
   const game = new Game();
   (window as unknown as { __GAME: Game }).__GAME = game;
 
   progress(12, 'loading physics');
-  const world = new Sunpatch();
+  const world = new Sunpatch(!!comparison);
   // A provisional spawn; corrected once the terrain exists.
   await game.boot(canvas, new THREE.Vector3(55, 6, 64));
 
@@ -74,6 +76,12 @@ async function main(): Promise<void> {
       hands.tipOutBasket();
     },
     onWipe: () => {
+      if (comparison) {
+        // A failed comparison fight starts a genuinely fresh fixture. No normal
+        // save is loaded or written in this mode, including during unload.
+        window.location.reload();
+        return;
+      }
       const net = game.get<MultiplayerAuthority>('net');
       if (!net.connected) {
         game.get<KingVine>('kingVine').reset();
@@ -87,7 +95,7 @@ async function main(): Promise<void> {
       });
     },
   }));
-  game.add(new EncounterSystem());
+  game.add(new EncounterSystem(comparison === 'B' ? 'block' : comparison === 'A' ? 'polygon' : null));
   game.add(new KingVine({
     onDamagePlayer: (victimId, amount, source) => {
       const net = game.get<MultiplayerAuthority>('net');
@@ -108,13 +116,15 @@ async function main(): Promise<void> {
   game.add(new Shop());
   game.add(new HarvestBook());
   game.add(new LegendaryHarvest());
-  game.add(new Progression());
+  game.add(new Progression(!!comparison));
   game.add(new IslandDirector());
   game.add(new AudioManager());
   game.add(new IslandCharacters());
   game.add(new MultiplayerAuthority());
-  game.add(new SaveSystem());
-  game.add(new UIManager());
+  // The A/B fixture never even constructs SaveSystem: it cannot read, write,
+  // or clear the player's auto slot by booting, resetting, or unloading.
+  if (!comparison) game.add(new SaveSystem());
+  game.add(new UIManager(comparison));
   game.add(new IslandEventView());
 
   progress(52, 'planting');
@@ -140,7 +150,14 @@ async function main(): Promise<void> {
   game.get<AudioManager>('audio').setEventDirector(game.get<IslandDirector>('director'));
   // Position AND orientation: a spawn transform that sets only the position
   // leaves the player looking down whatever axis yaw 0 happens to be.
-  world.spawnPlayer(game.player);
+  if (comparison) {
+    game.get<IslandDirector>('director').automatic = false;
+    debug.call('characters.enable', false);
+    game.get<ToolInventory>('tools').give('aircannon');
+    game.player.teleport(world.groundAt(-11, 24, 0.15));
+    game.player.yaw = Math.atan2(12, 2);
+    game.player.pitch = -0.06;
+  } else world.spawnPlayer(game.player);
 
   progress(88, 'starting');
   debug.log('boot complete');

@@ -1,6 +1,9 @@
 export const name = 'action-combat';
 
 export async function run(g, t) {
+  // The shared scenario reset settles the player inside the relocated orchard
+  // ambush. Start this combat contract before that proximity moves the Mimic.
+  await g.call('encounters.reset');
   const before = await g.call('encounters.info');
   const mimic = before.threats.mimic;
   t.ok(mimic && mimic.health > 0, 'a suspicious harvest is present on Sunpatch');

@@ -26,6 +26,9 @@ export class Sunpatch implements System {
   landmarks = new Map<string, Landmark>();
   root = new THREE.Group();
   built!: BuiltLandmarks;
+  private comparisonPad: THREE.Vector3 | null = null;
+
+  constructor(private readonly mimicComparison = false) {}
 
   init(g: Game): void {
     this.root.name = 'Sunpatch';
@@ -34,6 +37,7 @@ export class Sunpatch implements System {
     this.ocean.build(g.renderer.scene, this.terrain, g.renderer.sunDir);
     this.defineLandmarks();
     this.built = buildLandmarks(g.renderer.scene, g.physics, this.terrain);
+    if (this.mimicComparison) this.buildComparisonPad();
     // Clutter goes in AFTER the landmarks so its keep-clear zones are testing
     // against buildings that already exist rather than against coordinates.
     this.dressing.build(g.renderer.scene, this.terrain);
@@ -76,8 +80,8 @@ export class Sunpatch implements System {
   }
 
   /** Where fruit is sold. */
-  get sellPad(): THREE.Vector3 { return this.built.sellPad; }
-  get sellRadius(): number { return this.built.sellRadius; }
+  get sellPad(): THREE.Vector3 { return this.comparisonPad ?? this.built.sellPad; }
+  get sellRadius(): number { return this.comparisonPad ? 1.65 : this.built.sellRadius; }
   get shopCounter(): THREE.Vector3 { return this.built.shopCounter; }
   get kingMelonPos(): THREE.Vector3 { return this.built.kingMelonPos; }
 
@@ -106,6 +110,51 @@ export class Sunpatch implements System {
   /** Ground position with a small standing offset. */
   groundAt(x: number, z: number, offset = 0.1): THREE.Vector3 {
     return new THREE.Vector3(x, this.terrain.height(x, z) + offset, z);
+  }
+
+  /** A nearby sale point used only by the A/B fight. The normal dock pad and
+   *  its collision, art, and progression stay exactly where they were. */
+  private buildComparisonPad(): void {
+    const centre = this.groundAt(-7.5, 27.5, 0);
+    this.comparisonPad = centre;
+    const pad = new THREE.Group();
+    pad.name = 'Orchard comparison sell pad';
+    pad.position.copy(centre);
+    this.root.add(pad);
+
+    const wood = new THREE.MeshStandardMaterial({ color: 0x8c6844, roughness: 1 });
+    const plank = new THREE.MeshStandardMaterial({ color: 0xe2bd76, roughness: 1 });
+    const alternate = new THREE.MeshStandardMaterial({ color: 0xceab6e, roughness: 1 });
+    const edge = new THREE.MeshStandardMaterial({ color: 0xb64f36, roughness: 1 });
+    const box = (w: number, h: number, d: number, x: number, y: number, z: number,
+      material: THREE.Material): void => {
+      const item = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+      item.position.set(x, y, z);
+      item.receiveShadow = true;
+      pad.add(item);
+    };
+    box(3.3, 0.06, 3.3, 0, 0.035, 0, wood);
+    for (let i = 0; i < 6; i++) box(0.48, 0.025, 3.12,
+      -1.33 + i * 0.53, 0.078, 0, i % 2 ? alternate : plank);
+    for (const side of [-1, 1]) {
+      box(0.13, 0.075, 3.3, side * 1.64, 0.11, 0, edge);
+      box(3.05, 0.075, 0.13, 0, 0.11, side * 1.64, edge);
+    }
+
+    const label = document.createElement('canvas');
+    label.width = 512; label.height = 176;
+    const ctx = label.getContext('2d')!;
+    ctx.fillStyle = '#20342c'; ctx.fillRect(0, 0, 512, 176);
+    ctx.strokeStyle = '#dfb765'; ctx.lineWidth = 12; ctx.strokeRect(6, 6, 500, 164);
+    ctx.fillStyle = '#f7e4ac'; ctx.textAlign = 'center';
+    ctx.font = 'bold 48px sans-serif'; ctx.fillText('SELL PAD', 256, 72);
+    ctx.font = 'bold 29px sans-serif'; ctx.fillText('BRING FRUIT · PRESS E', 256, 127);
+    const texture = new THREE.CanvasTexture(label);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    const sign = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthWrite: false }));
+    sign.position.set(1.8, 1.45, 1.55);
+    sign.scale.set(2.15, 0.74, 1);
+    pad.add(sign);
   }
 
   /** Where on the deck the player stands: just past the boat, most of the deck

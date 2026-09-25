@@ -1,7 +1,7 @@
 /** Host-owned encounter rules. Coordinates are world-space metres. */
 export type Point3 = [number, number, number];
 export type EncounterKind = 'mimic' | 'snapjaw' | 'spitter';
-export type EncounterPhase = 'idle' | 'warn' | 'attack' | 'recover' | 'defeated';
+export type EncounterPhase = 'idle' | 'warn' | 'attack' | 'stagger' | 'recover' | 'defeated';
 export type EncounterStrike = 'melee' | 'air';
 
 export interface EncounterTarget {
@@ -75,6 +75,11 @@ const ATTACK = { mimic: 1.05, snapjaw: 0.32, spitter: 0.2 };
 const RECOVER = { mimic: 1.3, snapjaw: 1.6, spitter: 1.5 };
 const HEALTH = { mimic: 3, snapjaw: 2, spitter: 2 };
 const PROJECTILE_GRAVITY = 7.5;
+const MIMIC_RADIUS = 0.85;
+const MIMIC_STAGGER = 0.48;
+
+/** A world collision query shared by charge, knockback and bite checks. */
+export type MimicBlocked = (from: Point3, to: Point3, radius: number) => boolean;
 
 const distanceXZ = (a: Point3, b: Point3): number => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const headingTo = (a: Point3, b: Point3): number => Math.atan2(b[0] - a[0], b[2] - a[2]);
@@ -89,11 +94,13 @@ export class EncounterModel {
   private lastStrikeAt = new Map<string, number>();
   private projectiles: EncounterProjectile[] = [];
   private nextProjectileId = 1;
+  private mimicBlocked: MimicBlocked | null;
 
   constructor(spawns: Array<{ kind: EncounterKind; position: Point3 }>,
     groundHeight: ((x: number, z: number) => number) | null = null,
-    initialRevision = 0) {
+    initialRevision = 0, mimicBlocked: MimicBlocked | null = null) {
     this.groundHeight = groundHeight;
+    this.mimicBlocked = mimicBlocked;
     this.revision = initialRevision;
     for (const spawn of spawns) {
       this.encounters.set(spawn.kind, {
@@ -144,15 +151,21 @@ export class EncounterModel {
       state.timeLeft = Math.max(0, state.timeLeft - dt);
       if (state.phase === 'attack' && state.kind !== 'spitter') {
         if (state.kind === 'mimic') {
-          state.position[0] += Math.sin(state.heading) * 10 * elapsed;
-          state.position[2] += Math.cos(state.heading) * 10 * elapsed;
-          if (this.groundHeight) state.position[1] = this.groundHeight(state.position[0], state.position[2]);
+          const next: Point3 = [state.position[0] + Math.sin(state.heading) * 10 * elapsed,
+            state.position[1], state.position[2] + Math.cos(state.heading) * 10 * elapsed];
+          if (this.groundHeight) next[1] = this.groundHeight(next[0], next[2]);
+          if (this.mimicBlocked?.(state.position, next, MIMIC_RADIUS)) {
+            state.phase = 'recover';
+            state.timeLeft = RECOVER.mimic;
+          } else state.position = next;
         }
         for (const target of this.targets) {
+          if (state.kind === 'mimic' && state.phase !== 'attack') break;
           if (state.alreadyHit.has(target.id)) continue;
           if (state.kind === 'snapjaw' && state.capturedVictimId !== null) break;
           const reach = state.kind === 'mimic' ? 1.5 : 2.25;
           if (distanceXZ(state.position, target.position) > reach) continue;
+          if (state.kind === 'mimic' && this.mimicBlocked?.(state.position, target.position, 0.1)) continue;
           if (state.kind === 'snapjaw') {
             const toward = headingTo(state.position, target.position);
             if (Math.cos(toward - state.heading) < 0.45) continue;
@@ -160,6 +173,22 @@ export class EncounterModel {
           state.alreadyHit.add(target.id);
           events.push({ type: 'damage', kind: state.kind, victimId: target.id,
             amount: state.kind === 'mimic' ? 28 : 38 });
+          if (state.kind === 'mimic') {
+            // A lunge has one committed impact. Halt it at body contact rather
+            // than letting the whole shell travel through the player's view.
+            const ax = state.position[0] - target.position[0];
+            const az = state.position[2] - target.position[2];
+            const distance = Math.hypot(ax, az);
+            const ux = distance > 1e-5 ? ax / distance : -Math.sin(state.heading);
+            const uz = distance > 1e-5 ? az / distance : -Math.cos(state.heading);
+            const next: Point3 = [target.position[0] + ux * 1.7,
+              state.position[1], target.position[2] + uz * 1.7];
+            if (this.groundHeight) next[1] = this.groundHeight(next[0], next[2]);
+            if (!this.mimicBlocked?.(state.position, next, 0.1)) state.position = next;
+            state.phase = 'recover';
+            state.timeLeft = RECOVER.mimic;
+            break;
+          }
           if (state.kind === 'snapjaw') {
             state.capturedVictimId = target.id;
             state.captureTimeLeft = 2.4;
@@ -176,6 +205,9 @@ export class EncounterModel {
       } else if (state.phase === 'attack') {
         state.phase = 'recover';
         state.timeLeft = RECOVER[state.kind];
+      } else if (state.phase === 'stagger') {
+        state.phase = 'recover';
+        state.timeLeft = RECOVER.mimic;
       } else if (state.phase === 'recover') {
         state.phase = 'idle';
         state.baited = false;
@@ -261,8 +293,15 @@ export class EncounterModel {
         state.capturedVictimId = null;
         state.captureTimeLeft = 0;
       }
-    } else if (state.kind === 'mimic' && (state.phase === 'idle' || state.phase === 'attack')) {
-      this.beginWarning(state, origin, false);
+    } else if (state.kind === 'mimic') {
+      const dx = state.position[0] - origin[0], dz = state.position[2] - origin[2];
+      const len = Math.hypot(dx, dz) || 1;
+      const next: Point3 = [state.position[0] + dx / len * 0.55, state.position[1],
+        state.position[2] + dz / len * 0.55];
+      if (this.groundHeight) next[1] = this.groundHeight(next[0], next[2]);
+      if (!this.mimicBlocked?.(state.position, next, MIMIC_RADIUS)) state.position = next;
+      state.phase = 'stagger';
+      state.timeLeft = MIMIC_STAGGER;
     } else if (state.kind === 'spitter') {
       state.phase = 'recover';
       state.timeLeft = RECOVER.spitter;

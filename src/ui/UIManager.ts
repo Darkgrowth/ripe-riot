@@ -39,6 +39,12 @@ export class UIManager implements System {
   private hasControlled = false;
   private audioSettings: ReturnType<typeof createAudioSettings> | null = null;
 
+  constructor(private readonly mimicComparison: 'A' | 'B' | null = null) {}
+
+  private comparisonUrl(style: 'A' | 'B'): string {
+    return `${window.location.pathname}?mimicCompare=${style}`;
+  }
+
   init(g: Game): void {
     this.g = g;
     this.root = document.getElementById('ui-root')!;
@@ -63,11 +69,28 @@ export class UIManager implements System {
         <div class="toasts"></div>
         <div class="state-banner"></div>
         <div class="entry-hint" hidden>
-          <strong>Click to play</strong>
-          <span>WASD move · Mouse look · E interact · 1–4 tools · Hold H if stuck</span>
+          <strong>${this.mimicComparison ? 'Click to start the encounter' : 'Click to play'}</strong>
+          <span>${this.mimicComparison
+            ? 'WASD move · Mouse look · LMB strike · 2 Air Cannon · E collect · Esc for style selector'
+            : 'WASD move · Mouse look · E interact · 1–4 tools · Hold H if stuck'}</span>
         </div>
       </div>
       <div class="debug hidden"></div>`;
+    if (this.mimicComparison) {
+      const compare = document.createElement('nav');
+      compare.className = 'mimic-compare';
+      compare.setAttribute('aria-label', 'Mimic Melon style comparison');
+      compare.innerHTML = `<strong>MIMIC STYLE COMPARISON</strong>
+        <span>Same fight · fresh start for each style</span>
+        <div class="mimic-compare-actions">
+          <a href="${this.comparisonUrl('A')}" ${this.mimicComparison === 'A' ? 'aria-current="page"' : ''}>A · Polygonal</a>
+          <a href="${this.comparisonUrl('B')}" ${this.mimicComparison === 'B' ? 'aria-current="page"' : ''}>B · Block built</a>
+          <button type="button">Reset fight</button>
+        </div>
+        <small>Esc to use buttons · V switch · R reset</small>`;
+      compare.querySelector('button')!.addEventListener('click', () => window.location.reload());
+      this.root.append(compare);
+    }
     this.audioSettings = createAudioSettings(g.get<AudioManager>('audio'));
     this.root.append(this.audioSettings.element);
 
@@ -126,6 +149,16 @@ export class UIManager implements System {
     });
 
     window.addEventListener('keydown', (e) => {
+      if (this.mimicComparison && !e.repeat && !(e.target instanceof HTMLInputElement)) {
+        if (e.code === 'KeyV') {
+          window.location.assign(this.comparisonUrl(this.mimicComparison === 'A' ? 'B' : 'A'));
+          return;
+        }
+        if (e.code === 'KeyR') {
+          window.location.reload();
+          return;
+        }
+      }
       if (e.code === 'F3' || (e.code === 'Backquote' && !e.ctrlKey)) {
         this.debugVisible = !this.debugVisible;
         this.els.debug.classList.toggle('hidden', !this.debugVisible);
@@ -387,7 +420,9 @@ export class UIManager implements System {
     const panelOpen = this.modalOpen();
     const hidden = controlled || panelOpen;
     if (this.els.entryHint.hidden !== hidden) this.els.entryHint.hidden = hidden;
-    const title = this.hasControlled ? 'Click to return' : 'Click to play';
+    const title = this.mimicComparison
+      ? this.hasControlled ? 'Click to resume the encounter' : 'Click to start the encounter'
+      : this.hasControlled ? 'Click to return' : 'Click to play';
     if (this.els.entryTitle.textContent !== title) this.els.entryTitle.textContent = title;
   }
 

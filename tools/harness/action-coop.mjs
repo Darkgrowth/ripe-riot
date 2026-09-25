@@ -34,6 +34,10 @@ try {
   const client = aHost ? second : first;
   const hostId = aHost ? idA : idB;
   const clientId = aHost ? idB : idA;
+  // This authority fixture parks both peers inside the new orchard ambush.
+  // Hold enemy AI still while checking targeted damage, revive, and the
+  // client's actual host-validated melee intent.
+  await host.call('encounters.suspend', true);
   const y = await host.terrainHeight(-24, 22);
   await host.tp(-24, y + 1.2, 22);
   await client.tp(-24, y + 1.2, 23);

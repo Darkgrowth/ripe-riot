@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { EncounterKind, EncounterProjectile, EncounterState } from './EncounterModel';
+import { MimicRig, type MimicStyle } from './MimicRig.ts';
 
 const color = (hex: number) => new THREE.Color().setHex(hex, THREE.SRGBColorSpace);
 const material = (hex: number, roughness = 0.86, emissive = 0): THREE.MeshStandardMaterial =>
@@ -20,6 +21,7 @@ function mesh(geometry: THREE.BufferGeometry, mat: THREE.Material, parent: THREE
 export class EncounterVisual {
   readonly root = new THREE.Group();
   private kind: EncounterKind;
+  private mimicRig: MimicRig | null = null;
   private upperJaw: THREE.Group | null = null;
   private spitterHead: THREE.Group | null = null;
   private prize: THREE.Mesh | null = null;
@@ -30,12 +32,12 @@ export class EncounterVisual {
   private time = 0;
   private positioned = false;
 
-  constructor(kind: EncounterKind, scene: THREE.Scene) {
+  constructor(kind: EncounterKind, scene: THREE.Scene, style: MimicStyle = 'polygon') {
     this.kind = kind;
     this.root.name = kind === 'mimic' ? 'Mimic Melon'
       : kind === 'snapjaw' ? 'Snapjaw' : 'Spitter Plant';
     scene.add(this.root);
-    if (kind === 'mimic') this.buildMimic();
+    if (kind === 'mimic') this.mimicRig = new MimicRig(this.root, style);
     else if (kind === 'snapjaw') this.buildSnapjaw();
     else this.buildSpitter();
     const ring = new THREE.RingGeometry(kind === 'snapjaw' ? 2.1 : 1.75,
@@ -65,7 +67,7 @@ export class EncounterVisual {
 
   update(state: Readonly<EncounterState>, groundY: number, dt: number): void {
     this.time += dt;
-    this.root.visible = state.phase !== 'defeated';
+    if (this.kind !== 'mimic') this.root.visible = state.phase !== 'defeated';
     const target = new THREE.Vector3(state.position[0], groundY, state.position[2]);
     if (!this.positioned) { this.root.position.copy(target); this.positioned = true; }
     else this.root.position.lerp(target, 1 - Math.exp(-Math.max(0, dt) * 24));
@@ -74,20 +76,18 @@ export class EncounterVisual {
     const warning = state.phase === 'warn';
     const attacking = state.phase === 'attack';
     const recovering = state.phase === 'recover';
-    (this.danger.material as THREE.MeshBasicMaterial).opacity = warning ? 0.36 + 0.36 * pulse
-      : attacking ? 0.32 : state.capturedVictimId !== null ? 0.28 + pulse * 0.22 : 0;
+    (this.danger.material as THREE.MeshBasicMaterial).opacity = this.kind === 'mimic'
+      ? warning ? 0.14 + 0.08 * pulse : attacking ? 0.12 : 0
+      : warning ? 0.36 + 0.36 * pulse
+        : attacking ? 0.32 : state.capturedVictimId !== null ? 0.28 + pulse * 0.22 : 0;
     this.danger.scale.setScalar(warning ? 0.87 + pulse * 0.15 : 1);
     if (this.lane) {
-      (this.lane.material as THREE.MeshBasicMaterial).opacity = warning ? 0.14 + pulse * 0.17 : 0;
+      (this.lane.material as THREE.MeshBasicMaterial).opacity = warning
+        ? this.kind === 'mimic' ? 0.07 + pulse * 0.04 : 0.14 + pulse * 0.17 : 0;
     }
 
     if (this.kind === 'mimic') {
-      const twitch = warning ? Math.sin(this.time * 31) * 0.13 : 0;
-      const lunge = attacking ? -0.22 : 0;
-      const breathe = state.phase === 'idle' ? Math.sin(this.time * 2.6) * 0.025 : 0;
-      this.root.scale.set(1 + twitch + breathe, 1 - twitch * 0.35, 1 + twitch * 0.3);
-      this.root.rotation.x = lunge;
-      if (this.glow) this.glow.emissiveIntensity = warning || attacking ? 0.85 + pulse * 1.4 : 0.2;
+      this.mimicRig?.update(state, dt);
     } else if (this.kind === 'snapjaw') {
       const open = state.capturedVictimId !== null ? 0.13
         : warning ? 0.43 + pulse * 0.22 : attacking ? 0.02
@@ -125,49 +125,6 @@ export class EncounterVisual {
     });
     for (const geo of geometries) geo.dispose();
     for (const mat of materials) mat.dispose();
-  }
-
-  private buildMimic(): void {
-    const rind = material(0x35543a);
-    const rib = material(0x567247);
-    const leaf = material(0x254b30);
-    const flesh = material(0x8f3035);
-    const tooth = material(0xf2d9a7);
-    const slit = material(0x241c24);
-    const eyeMat = material(0xff8b3c, 0.35, 0.2);
-    this.glow = eyeMat;
-    const body = mesh(new THREE.SphereGeometry(1.05, 14, 10), rind, this.root, 0, 1.05, 0);
-    body.scale.set(1.2, 0.92, 1.03);
-    for (let i = 0; i < 7; i++) {
-      const angle = i * Math.PI * 2 / 7;
-      const stripe = mesh(new THREE.CapsuleGeometry(0.055, 1.65, 2, 5), rib,
-        this.root, Math.sin(angle) * 1.13, 1.06, Math.cos(angle) * 0.98);
-      stripe.rotation.z = Math.sin(angle) * 0.24;
-      stripe.rotation.x = Math.cos(angle) * -0.24;
-    }
-    const mouth = mesh(new THREE.SphereGeometry(0.64, 12, 8), slit, this.root, 0, 0.84, 0.98);
-    mouth.scale.set(1, 0.26, 0.17);
-    const lip = mesh(new THREE.TorusGeometry(0.58, 0.09, 5, 13, Math.PI), flesh,
-      this.root, 0, 0.94, 1.03);
-    lip.rotation.z = Math.PI;
-    for (let i = -2; i <= 2; i++) {
-      const fang = mesh(new THREE.ConeGeometry(0.11, 0.28, 4), tooth,
-        this.root, i * 0.23, 0.92, 1.14);
-      fang.rotation.z = Math.PI;
-    }
-    for (const x of [-0.42, 0.42]) {
-      const eye = mesh(new THREE.SphereGeometry(0.13, 7, 5), eyeMat,
-        this.root, x, 1.36, 0.98);
-      this.eyes.push(eye);
-      mesh(new THREE.SphereGeometry(0.045, 6, 4), slit, this.root, x, 1.36, 1.1);
-    }
-    for (let i = 0; i < 5; i++) {
-      const a = i * Math.PI * 2 / 5;
-      const frond = mesh(new THREE.ConeGeometry(0.19, 0.85, 4), leaf,
-        this.root, Math.sin(a) * 0.38, 2.04, Math.cos(a) * 0.38);
-      frond.rotation.z = Math.sin(a) * 0.9;
-      frond.rotation.x = -Math.cos(a) * 0.9;
-    }
   }
 
   private buildSnapjaw(): void {

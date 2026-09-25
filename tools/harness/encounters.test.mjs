@@ -18,6 +18,49 @@ test('mimic warns before charging and damages a target once per charge', () => {
   ]);
 });
 
+test('mimic impact stops before its body passes through the player camera', () => {
+  const model = modelAt('mimic');
+  model.setTargets([{ id: 'fighter', position: [0, 0, 5] }]);
+  model.step(0.02);
+  model.step(0.9);
+  let hit = false;
+  for (let i = 0; i < 70; i++) {
+    if (model.step(0.02).some(e => e.type === 'damage')) { hit = true; break; }
+  }
+  assert.equal(hit, true);
+  assert.equal(model.get('mimic').phase, 'recover', 'bite commits then visibly recovers');
+  assert.ok(Math.hypot(model.get('mimic').position[0],
+    model.get('mimic').position[2] - 5) >= 1.65,
+  'the rooted shell stays outside the player camera');
+});
+
+test('mimic stops at a solid orchard rail and cannot hit through it', () => {
+  // A rail at x=4 blocks a 0.85 m-wide enemy. The player stands beyond it.
+  const blocked = (from, to, radius) => from[0] + radius < 4 && to[0] + radius >= 4;
+  const model = new EncounterModel([{ kind: 'mimic', position: [0, 0, 0] }], null, 0, blocked);
+  model.setTargets([{ id: 'beyond-rail', position: [5, 0, 0] }]);
+  model.step(0.02);
+  model.step(0.9);
+  const events = [];
+  for (let i = 0; i < 70; i++) events.push(...model.step(0.02));
+  assert.ok(model.get('mimic').position[0] < 4, 'body stays on its side of the rail');
+  assert.equal(events.some(e => e.type === 'damage'), false, 'the rail blocks the bite too');
+  assert.equal(model.get('mimic').phase, 'recover');
+});
+
+test('nonlethal Mimic hit interrupts its attack with knockback and recovery', () => {
+  const model = modelAt('mimic');
+  model.setTargets([{ id: 'fighter', position: [0, 0, 5] }]);
+  model.step(0.02);
+  model.step(0.9);
+  const before = model.get('mimic').position[2];
+  assert.equal(model.tryHit([0, 1.2, -2], [0, 0, 1], 'melee', 'fighter')?.damage, 1);
+  assert.equal(model.get('mimic').phase, 'stagger');
+  assert.ok(model.get('mimic').position[2] > before + 0.25);
+  model.step(0.55);
+  assert.equal(model.get('mimic').phase, 'recover');
+});
+
 test('snapjaw bait starts a telegraphed snap away from the player, then exposes recovery', () => {
   const model = modelAt('snapjaw');
   model.setTargets([{ id: 'peer-3', position: [-4, 0, 0] }]);

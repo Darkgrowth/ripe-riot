@@ -170,6 +170,28 @@ html, body {
 .entry-hint strong { display: block; font-size: clamp(15px, 1.8vh, 20px); }
 .entry-hint span { display: block; margin-top: 3px; font-size: clamp(11px, 1.35vh, 15px); }
 
+/* The comparison controls stay outside the crosshair and tool slots. */
+.mimic-compare {
+  position: absolute; right: calc(22 * var(--hud-u)); bottom: calc(22 * var(--hud-u));
+  z-index: 5; max-width: min(420px, 45vw); pointer-events: auto;
+  padding: 11px 13px; border: 1px solid rgba(255, 218, 128, 0.5);
+  border-radius: 8px; background: rgba(13, 31, 34, 0.88);
+  color: #f6ecd1; box-shadow: 0 4px 18px rgba(0, 0, 0, 0.28);
+  font-size: 12px; line-height: 1.3;
+}
+.mimic-compare strong { display: block; color: var(--gold); letter-spacing: 1px; font-size: 12px; }
+.mimic-compare span, .mimic-compare small { display: block; opacity: 0.8; margin-top: 3px; }
+.mimic-compare-actions { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+.mimic-compare a, .mimic-compare button {
+  padding: 6px 8px; border: 1px solid rgba(246, 236, 209, 0.45);
+  border-radius: 5px; background: rgba(16, 39, 42, 0.95); color: #f6ecd1;
+  font: inherit; font-weight: 700; text-decoration: none; cursor: pointer;
+}
+.mimic-compare a[aria-current="page"] { background: var(--gold); border-color: var(--gold); color: #17231e; }
+.mimic-compare a:focus-visible, .mimic-compare button:focus-visible {
+  outline: 2px solid white; outline-offset: 2px;
+}
+
 /* Keep the crosshair at its existing size. Nouns and action keys grow with
    display height, while the bottom cluster sits clear of the two-handed carry pose. */
 .slots { bottom: calc(20 * var(--hud-u)); gap: calc(10 * var(--hud-u)); left: calc(22 * var(--hud-u)); transform: none; }

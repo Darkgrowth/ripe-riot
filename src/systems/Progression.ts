@@ -70,6 +70,8 @@ export class Progression implements System {
   private unlockAt = -1;
   private sightTimer = 0;
 
+  constructor(private readonly mimicComparison = false) {}
+
   init(g: Game): void {
     this.g = g;
     this.economy = g.get<Economy>('economy');
@@ -134,6 +136,9 @@ export class Progression implements System {
   }
 
   get objective(): string {
+    if (this.mimicComparison) return this.threatsCleared.has('mimic')
+      ? 'Mimic subdued. Secure the melon and sell it at the nearby orchard pad.'
+      : 'Investigate the orchard fruit. Strike or use the Air Cannon.';
     if (this.nextIslandUnlocked) return 'Sunpatch cleared. Return to the boat.';
     if (!this.threatsCleared.has('mimic')) return 'Follow the orchard path. Investigate the moving fruit.';
     if (!this.threatsCleared.has('snapjaw')) return 'Take the hill path. Free the harvest from Snapjaw.';
@@ -230,7 +235,7 @@ export class Progression implements System {
   }
 
   fixedStep(dt: number): void {
-    this.checkFirstSight(dt);
+    if (!this.mimicComparison) this.checkFirstSight(dt);
     const now = this.g.clock.elapsed;
     if (this.pendingHint && now >= this.pendingHint.at) {
       this.g.bus.emit('ui:toast', {
