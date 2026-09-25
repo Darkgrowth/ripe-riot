@@ -1,0 +1,538 @@
+{
+  "tookHit": true,
+  "defeated": true,
+  "delivery": {
+    "recovered": true,
+    "sold": true,
+    "saleDelta": 105
+  },
+  "money": 80,
+  "errors": [],
+  "warnings": [
+    "[.WebGL-0x30ac001ba600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[.WebGL-0x30ac001ba600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[.WebGL-0x30ac001ba600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[.WebGL-0x30ac001ba600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+  ],
+  "final": {
+    "time": 7.75,
+    "pos": [
+      -12.713366749897615,
+      7.520099080744695,
+      23.681935835950494
+    ],
+    "eye": [
+      -12.713366749897615,
+      9.150099080744695,
+      23.681935835950494
+    ],
+    "yaw": 1.4056476493802696,
+    "pitch": -0.06,
+    "state": "active",
+    "health": 72,
+    "enemy": {
+      "pos": [
+        -15.802545362847889,
+        7.5,
+        23.20824305230486
+      ],
+      "phase": "defeated",
+      "health": 0,
+      "timeLeft": 0
+    },
+    "activeTool": "aircannon",
+    "carried": null,
+    "carriedSpecies": null,
+    "basket": [],
+    "targetKind": "fruit",
+    "targetId": 686,
+    "nearSellPad": false,
+    "sellPad": [
+      -7.5,
+      7.5,
+      27.5
+    ],
+    "money": 80,
+    "prize": [
+      {
+        "id": 686,
+        "pos": [
+          -15.802545547485352,
+          9.297795295715332,
+          23.208242416381836
+        ],
+        "radius": 0.4,
+        "speed": 5.441773414611816
+      }
+    ],
+    "synthetic": false,
+    "locked": true,
+    "sensitivity": 0.0022,
+    "invertY": false,
+    "events": [
+      {
+        "name": "money:changed",
+        "time": 7.75,
+        "payload": {
+          "money": 80,
+          "delta": 80,
+          "reason": "defeat:mimic"
+        }
+      },
+      {
+        "name": "encounter:defeated",
+        "time": 7.75,
+        "payload": {
+          "kind": "mimic",
+          "position": {
+            "x": -15.802545362847889,
+            "y": 7.5,
+            "z": 23.20824305230486
+          },
+          "actorId": "solo"
+        }
+      },
+      {
+        "name": "tool:fired",
+        "time": 7.75,
+        "payload": {
+          "toolId": "aircannon",
+          "power": 1.3866
+        }
+      }
+    ]
+  },
+  "timeline": [
+    {
+      "wall": "2026-09-25T18:02:59.767Z",
+      "kind": "start",
+      "time": 1.5,
+      "pos": [
+        -10.999996249119453,
+        7.520100187014032,
+        24.000000648717723
+      ],
+      "eye": [
+        -10.999996249119453,
+        9.150100187014033,
+        24.000000648717723
+      ],
+      "yaw": 1.4056476493802696,
+      "pitch": -0.06,
+      "state": "active",
+      "health": 100,
+      "enemy": {
+        "pos": [
+          -23,
+          7.5,
+          22
+        ],
+        "phase": "idle",
+        "health": 3,
+        "timeLeft": 0
+      },
+      "activeTool": "hand",
+      "carried": null,
+      "carriedSpecies": null,
+      "basket": [],
+      "targetKind": null,
+      "targetId": null,
+      "nearSellPad": false,
+      "sellPad": [
+        -7.5,
+        7.5,
+        27.5
+      ],
+      "money": 0,
+      "prize": [],
+      "synthetic": false,
+      "locked": false,
+      "sensitivity": 0.0022,
+      "invertY": false,
+      "events": []
+    },
+    {
+      "wall": "2026-09-25T18:03:09.602Z",
+      "kind": "mallet-strike",
+      "time": 6.5,
+      "pos": [
+        -13.579625052019793,
+        7.520099221028795,
+        23.556277194611027
+      ],
+      "eye": [
+        -13.579625052019793,
+        9.150099221028796,
+        23.556277194611027
+      ],
+      "yaw": 1.4056476493802696,
+      "pitch": -0.06,
+      "state": "active",
+      "health": 72,
+      "enemy": {
+        "pos": [
+          -15.802545362847889,
+          7.5,
+          23.20824305230486
+        ],
+        "phase": "recover",
+        "health": 2,
+        "timeLeft": 1.3
+      },
+      "activeTool": "hand",
+      "carried": null,
+      "carriedSpecies": null,
+      "basket": [],
+      "targetKind": null,
+      "targetId": null,
+      "nearSellPad": false,
+      "sellPad": [
+        -7.5,
+        7.5,
+        27.5
+      ],
+      "money": 0,
+      "prize": [],
+      "synthetic": false,
+      "locked": true,
+      "sensitivity": 0.0022,
+      "invertY": false,
+      "events": [
+        {
+          "name": "encounter:attack",
+          "time": 6,
+          "payload": {
+            "kind": "mimic",
+            "victimId": "solo",
+            "damage": 28
+          }
+        }
+      ]
+    },
+    {
+      "wall": "2026-09-25T18:03:12.200Z",
+      "kind": "fight-end",
+      "time": 7.75,
+      "pos": [
+        -12.713366749897615,
+        7.520099080744695,
+        23.681935835950494
+      ],
+      "eye": [
+        -12.713366749897615,
+        9.150099080744695,
+        23.681935835950494
+      ],
+      "yaw": 1.4056476493802696,
+      "pitch": -0.06,
+      "state": "active",
+      "health": 72,
+      "enemy": {
+        "pos": [
+          -15.802545362847889,
+          7.5,
+          23.20824305230486
+        ],
+        "phase": "defeated",
+        "health": 0,
+        "timeLeft": 0
+      },
+      "activeTool": "aircannon",
+      "carried": null,
+      "carriedSpecies": null,
+      "basket": [],
+      "targetKind": "fruit",
+      "targetId": 686,
+      "nearSellPad": false,
+      "sellPad": [
+        -7.5,
+        7.5,
+        27.5
+      ],
+      "money": 80,
+      "prize": [
+        {
+          "id": 686,
+          "pos": [
+            -15.802545547485352,
+            9.297795295715332,
+            23.208242416381836
+          ],
+          "radius": 0.4,
+          "speed": 5.441773414611816
+        }
+      ],
+      "synthetic": false,
+      "locked": true,
+      "sensitivity": 0.0022,
+      "invertY": false,
+      "events": [
+        {
+          "name": "money:changed",
+          "time": 7.75,
+          "payload": {
+            "money": 80,
+            "delta": 80,
+            "reason": "defeat:mimic"
+          }
+        },
+        {
+          "name": "encounter:defeated",
+          "time": 7.75,
+          "payload": {
+            "kind": "mimic",
+            "position": {
+              "x": -15.802545362847889,
+              "y": 7.5,
+              "z": 23.20824305230486
+            },
+            "actorId": "solo"
+          }
+        },
+        {
+          "name": "tool:fired",
+          "time": 7.75,
+          "payload": {
+            "toolId": "aircannon",
+            "power": 1.3866
+          }
+        }
+      ]
+    },
+    {
+      "wall": "2026-09-25T18:03:23.317Z",
+      "kind": "prize-target",
+      "time": 13.5,
+      "pos": [
+        -13.961731760261548,
+        7.520099000730989,
+        23.46007220950793
+      ],
+      "eye": [
+        -13.961731760261548,
+        9.15009900073099,
+        23.46007220950793
+      ],
+      "yaw": 1.41884764938027,
+      "pitch": -0.6386000000000001,
+      "state": "active",
+      "health": 72,
+      "enemy": {
+        "pos": [
+          -15.802545362847889,
+          7.5,
+          23.20824305230486
+        ],
+        "phase": "defeated",
+        "health": 0,
+        "timeLeft": 0
+      },
+      "activeTool": "aircannon",
+      "carried": null,
+      "carriedSpecies": null,
+      "basket": [],
+      "targetKind": "fruit",
+      "targetId": 686,
+      "nearSellPad": false,
+      "sellPad": [
+        -7.5,
+        7.5,
+        27.5
+      ],
+      "money": 80,
+      "prize": [
+        {
+          "id": 686,
+          "pos": [
+            -15.62234878540039,
+            7.898375511169434,
+            23.208242416381836
+          ],
+          "radius": 0.4,
+          "speed": 0
+        }
+      ],
+      "synthetic": false,
+      "locked": true,
+      "sensitivity": 0.0022,
+      "invertY": false,
+      "events": []
+    },
+    {
+      "wall": "2026-09-25T18:03:24.451Z",
+      "kind": "prize-carried",
+      "time": 14.25,
+      "pos": [
+        -13.961732012067957,
+        7.520098689476436,
+        23.4600718043185
+      ],
+      "eye": [
+        -13.961732012067957,
+        9.150098689476437,
+        23.4600718043185
+      ],
+      "yaw": 1.41884764938027,
+      "pitch": -0.6386000000000001,
+      "state": "active",
+      "health": 72,
+      "enemy": {
+        "pos": [
+          -15.802545362847889,
+          7.5,
+          23.20824305230486
+        ],
+        "phase": "defeated",
+        "health": 0,
+        "timeLeft": 0
+      },
+      "activeTool": "aircannon",
+      "carried": 686,
+      "carriedSpecies": "watermelon",
+      "basket": [],
+      "targetKind": null,
+      "targetId": null,
+      "nearSellPad": false,
+      "sellPad": [
+        -7.5,
+        7.5,
+        27.5
+      ],
+      "money": 80,
+      "prize": [],
+      "synthetic": false,
+      "locked": true,
+      "sensitivity": 0.0022,
+      "invertY": false,
+      "events": [
+        {
+          "name": "fruit:grabbed",
+          "time": 14,
+          "payload": {
+            "fruitId": 686,
+            "species": "watermelon",
+            "mass": 22,
+            "heavy": true
+          }
+        }
+      ]
+    },
+    {
+      "wall": "2026-09-25T18:03:42.729Z",
+      "kind": "at-sell-pad",
+      "time": 24.5,
+      "pos": [
+        -8.843319676841555,
+        7.520097015125794,
+        26.69195960797659
+      ],
+      "eye": [
+        -8.843319676841555,
+        9.150097015125795,
+        26.69195960797659
+      ],
+      "yaw": -2.127537657799315,
+      "pitch": -0.06880000000000004,
+      "state": "active",
+      "health": 72,
+      "enemy": {
+        "pos": [
+          -15.802545362847889,
+          7.5,
+          23.20824305230486
+        ],
+        "phase": "defeated",
+        "health": 0,
+        "timeLeft": 0
+      },
+      "activeTool": "aircannon",
+      "carried": 686,
+      "carriedSpecies": "watermelon",
+      "basket": [],
+      "targetKind": "sell",
+      "targetId": null,
+      "nearSellPad": true,
+      "sellPad": [
+        -7.5,
+        7.5,
+        27.5
+      ],
+      "money": 80,
+      "prize": [],
+      "synthetic": false,
+      "locked": true,
+      "sensitivity": 0.0022,
+      "invertY": false,
+      "events": []
+    },
+    {
+      "wall": "2026-09-25T18:03:43.982Z",
+      "kind": "sold",
+      "time": 25.25,
+      "pos": [
+        -8.843318057983323,
+        7.520097587867349,
+        26.691960382675386
+      ],
+      "eye": [
+        -8.843318057983323,
+        9.15009758786735,
+        26.691960382675386
+      ],
+      "yaw": -2.127537657799315,
+      "pitch": -0.06880000000000004,
+      "state": "active",
+      "health": 72,
+      "enemy": {
+        "pos": [
+          -15.802545362847889,
+          7.5,
+          23.20824305230486
+        ],
+        "phase": "defeated",
+        "health": 0,
+        "timeLeft": 0
+      },
+      "activeTool": "aircannon",
+      "carried": null,
+      "carriedSpecies": null,
+      "basket": [],
+      "targetKind": null,
+      "targetId": null,
+      "nearSellPad": true,
+      "sellPad": [
+        -7.5,
+        7.5,
+        27.5
+      ],
+      "money": 185,
+      "prize": [],
+      "synthetic": false,
+      "locked": true,
+      "sensitivity": 0.0022,
+      "invertY": false,
+      "events": [
+        {
+          "name": "fruit:sold",
+          "time": 25,
+          "payload": {
+            "fruitId": 686,
+            "species": "watermelon",
+            "value": 105,
+            "quality": "Good",
+            "mass": 22
+          }
+        },
+        {
+          "name": "money:changed",
+          "time": 25,
+          "payload": {
+            "money": 185,
+            "delta": 105,
+            "reason": "sale"
+          }
+        }
+      ]
+    }
+  ]
+}

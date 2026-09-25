@@ -7,13 +7,15 @@ import { chromium } from 'playwright';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-const [style = 'A', widthText = '1280', heightText = '720'] = process.argv.slice(2);
+const [style = 'A', widthText = '1280', heightText = '720', strategy = 'mixed'] = process.argv.slice(2);
 if (!['A', 'B'].includes(style)) throw new Error('Choose A or B');
+if (!['mixed', 'air'].includes(strategy)) throw new Error('Choose mixed or air');
 const width = Number(widthText), height = Number(heightText);
 const base = process.env.RIPE_URL;
 if (!base || !/^http:\/\/127\.0\.0\.1:\d+$/.test(base))
   throw new Error('Set RIPE_URL to the dedicated local comparison server.');
-const dir = path.resolve('capture/mimic-comparison', `${style}-${width}x${height}`);
+const dir = path.resolve('capture/mimic-comparison',
+  `${style}-${width}x${height}${strategy === 'air' ? '-air-only' : ''}`);
 mkdirSync(dir, { recursive: true });
 const video = process.env.MIMIC_VIDEO === '1';
 const browser = await chromium.launch({ headless: true,
@@ -120,23 +122,34 @@ async function recoverPrize() {
     Math.hypot(a.pos[0] - s.pos[0], a.pos[2] - s.pos[2])
       - Math.hypot(b.pos[0] - s.pos[0], b.pos[2] - s.pos[2]))[0];
   if (!prize) return { recovered: false, sold: false, reason: 'no free reward watermelon' };
-  const dx = s.pos[0] - prize.pos[0], dz = s.pos[2] - prize.pos[2];
-  const d = Math.hypot(dx, dz) || 1;
-  const stand = [prize.pos[0] + dx / d * 1.6, 0, prize.pos[2] + dz / d * 1.6];
-  if (!await go(stand, .75)) return { recovered: false, sold: false, reason: 'could not walk to prize' };
-  s = await read();
-  const live = s.prize.find(f => f.id === prize.id);
-  if (!live) return { recovered: false, sold: false, reason: 'prize disappeared' };
-  await aim([live.pos[0], live.pos[1], live.pos[2]]);
-  await sleep(160);
-  s = await observe('prize-target');
-  if (s.targetKind !== 'fruit' || s.targetId !== prize.id)
-    return { recovered: false, sold: false,
-      reason: `target is ${s.targetKind}/${s.targetId}, expected watermelon ${prize.id}` };
-  await press('e');
-  s = await observe('prize-carried');
-  if (s.carried !== prize.id) return { recovered: false, sold: false,
-    reason: 'E did not carry the prize' };
+  let carried = false;
+  for (let attempt = 0; attempt < 7; attempt++) {
+    s = await read();
+    const live = s.prize.find(f => f.id === prize.id);
+    if (!live) return { recovered: false, sold: false, reason: 'prize disappeared' };
+    const dx = s.pos[0] - live.pos[0], dz = s.pos[2] - live.pos[2];
+    const d = Math.hypot(dx, dz) || 1;
+    if (d > 2.1) {
+      const stand = [live.pos[0] + dx / d * 1.6, 0,
+        live.pos[2] + dz / d * 1.6];
+      if (!await go(stand, .75)) return { recovered: false, sold: false,
+        reason: 'could not walk to rolling prize' };
+      s = await read();
+    }
+    const target = s.prize.find(f => f.id === prize.id);
+    if (!target) return { recovered: false, sold: false, reason: 'prize disappeared' };
+    await aim(target.pos);
+    await sleep(130);
+    s = await observe('prize-target');
+    if (s.targetKind === 'fruit' && s.targetId === prize.id) {
+      await press('e');
+      s = await observe('prize-carried');
+      if (s.carried === prize.id) { carried = true; break; }
+    }
+    await sleep(250);
+  }
+  if (!carried) return { recovered: false, sold: false,
+    reason: 'E did not carry the moving prize after seven attempts' };
   await snap('05-prize');
   if (!await go(s.sellPad, 2.4, 90))
     return { recovered: true, sold: false, reason: 'could not reach orchard sell pad' };
@@ -178,28 +191,44 @@ try {
   await observe('start');
   await snap('01-entry');
   await lock();
-  // Advance with the starter mallet into the committed lunge, accept one
-  // mistake/hit, then interrupt the recovery with a direct melee strike.
-  await walkForward(650);
-  const inRange = await waitFor(x => {
-    const dx = x.enemy.pos[0] - x.pos[0], dz = x.enemy.pos[2] - x.pos[2];
-    return dx < 0 && Math.hypot(dx, dz) < 2.75;
-  }, 7000);
-  if (!(inRange.enemy.pos[0] < inRange.pos[0]
-    && Math.hypot(inRange.enemy.pos[0] - inRange.pos[0],
-      inRange.enemy.pos[2] - inRange.pos[2]) < 2.75))
-    throw new Error('Mimic never entered frontal mallet reach');
-  await page.mouse.down(); await sleep(100); await page.mouse.up();
-  const struck = await observe('mallet-strike');
-  if (struck.enemy.health !== 2) throw new Error('Normal-input mallet strike missed');
-  const tookHit = struck.health < 100;
-  await press('Digit2');
-  await page.mouse.down(); await sleep(230); await page.mouse.up();
+  let tookHit = false;
+  if (strategy === 'mixed') {
+    // Advance with the starter mallet into the committed lunge, accept one
+    // mistake/hit, then interrupt the recovery with a direct melee strike.
+    await walkForward(650);
+    const inRange = await waitFor(x => {
+      const dx = x.enemy.pos[0] - x.pos[0], dz = x.enemy.pos[2] - x.pos[2];
+      return dx < 0 && Math.hypot(dx, dz) < 2.75;
+    }, 7000);
+    if (!(inRange.enemy.pos[0] < inRange.pos[0]
+      && Math.hypot(inRange.enemy.pos[0] - inRange.pos[0],
+        inRange.enemy.pos[2] - inRange.pos[2]) < 2.75))
+      throw new Error('Mimic never entered frontal mallet reach');
+    await page.mouse.down(); await sleep(100); await page.mouse.up();
+    const struck = await observe('mallet-strike');
+    if (struck.enemy.health !== 2) throw new Error('Normal-input mallet strike missed');
+    tookHit = struck.health < 100;
+    await press('Digit2');
+    await page.mouse.down(); await sleep(230); await page.mouse.up();
+  } else {
+    // The fresh fixture faces the Mimic down the open lane. Fire from that
+    // starting sightline, then retarget after recoil for the second shot.
+    await press('Digit2');
+    await page.mouse.down(); await sleep(230); await page.mouse.up();
+    const first = await observe('air-opening');
+    if (first.enemy.health !== 1) throw new Error('First normal-input Air Cannon shot missed');
+    await waitFor(x => x.time >= first.time + 0.65, 6000);
+    const enemy = await read();
+    if (!await aim([enemy.enemy.pos[0], enemy.enemy.pos[1] + 1.15,
+      enemy.enemy.pos[2]])) throw new Error('Could not aim second ranged shot');
+    await page.mouse.down(); await sleep(230); await page.mouse.up();
+    tookHit = enemy.health < 100;
+  }
   const s = await observe('fight-end');
   if (s.enemy.health !== 0) throw new Error('Normal-input Air Cannon finish missed');
   await snap('04-defeat');
   const delivery = s.enemy.health === 0 ? await recoverPrize() : null;
-  result = { tookHit, defeated: s.enemy.health === 0, delivery, money: s.money,
+  result = { strategy, tookHit, defeated: s.enemy.health === 0, delivery, money: s.money,
     errors, warnings, final: s, timeline };
 } catch (e) {
   log('runner-error', { error: String(e.stack || e) });

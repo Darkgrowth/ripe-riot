@@ -64,7 +64,7 @@ compare [A warning](evidence/mimic-style/A-warn.png) with
 [B recovery](evidence/mimic-style/B-recover.png).
 
 `tools/harness/mimic-fight.mjs` records the separate normal-input proof. The
-four full-HUD recordings are committed here:
+four matched full-HUD close-fight recordings are committed here:
 
 | | 1920×1080 | 3434×1270 |
 | --- | --- | --- |
@@ -74,13 +74,24 @@ four full-HUD recordings are committed here:
 Each run starts from the comparison fixture,
 accepts one charge hit, strikes with the Mallet, finishes with the Air Cannon,
 grabs the physical watermelon, walks to the orchard pad, and sells with `E`.
-The accompanying `report.json` and full-HUD stills are in the ignored local
-`capture/mimic-comparison` directories. No debug phase, teleport, synthetic
-input, or forced reward is
-used during those recordings. Reproduce them with `RIPE_URL` pointed at this
+
+The separate ranged alternative uses the Air Cannon twice from the open lane,
+starting with the Mimic about nine metres away. Both runs finish at full
+health, then chase the rolling reward and sell it through normal controls:
+[A ranged fight](evidence/mimic-style/videos/A-1920x1080-air-only.webm) and
+[B ranged fight](evidence/mimic-style/videos/B-1920x1080-air-only.webm).
+Matched gameplay frames show the [A mid-distance attack](evidence/mimic-style/A-ranged.png)
+and [B mid-distance attack](evidence/mimic-style/B-ranged.png) with the full HUD.
+
+The six [raw run reports](evidence/mimic-style/reports/) record positions,
+health, tool events, pickup, sale, and browser errors. Additional full-HUD
+stills are in the ignored local `capture/mimic-comparison` directories. No
+debug phase, teleport, synthetic input, or forced reward is used during any
+of these recordings. Reproduce them with `RIPE_URL` pointed at this
 branch's dedicated Vite server and `MIMIC_VIDEO=1`, then run
 `node tools/harness/mimic-fight.mjs A 1920 1080` (change style/size for the
-other three cells).
+other three matched cells), or add `air` as the fourth argument for the ranged
+route.
 
 ## Static render comparison
 
@@ -100,9 +111,8 @@ The renderer is headless software SwiftShader. These CPU-side measurements
 are useful for a controlled A/B comparison, but they are not GPU time, actual
 hardware frame rate, or a promise of playable ultrawide performance. The
 numbers include the existing orchard; the extra enemy geometry changes the
-whole-scene totals only slightly. Raw data is in the ignored local
-`capture/mimic-comparison/metrics.json` and can be regenerated with the metrics
-script.
+whole-scene totals only slightly. [Raw metrics](evidence/mimic-style/metrics.json)
+are committed and can be regenerated with the metrics script.
 
 ## Verification on this branch
 
@@ -110,6 +120,10 @@ script.
   strike, Air Cannon finish, physical watermelon pickup, and sale by `E`.
   Health finished at 72/100; reward was $80 for the encounter plus $105 for
   the sale in each run. Browser error lists were empty.
+- The two additional Air Cannon-only recordings proved a distinct route:
+  two shots from distance, 100/100 health, rolling-prize recovery, and the
+  same $80 plus $105 payouts in both styles. Their browser error lists were
+  also empty.
 - The preview check passed style matching, reset, save isolation, pad sale,
   and solo retry. `npm test` passed 20/20 gameplay scenarios.
 - `node --test tools/harness/encounters.test.mjs tools/harness/mimic-visual.test.mjs`
