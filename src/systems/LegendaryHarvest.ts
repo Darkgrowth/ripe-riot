@@ -4,7 +4,7 @@ import type { Game, System } from '@/core/Game';
 import type { Sunpatch } from '@/world/Sunpatch';
 import type { RopeSystem, Rope } from './RopeSystem';
 import type { Economy } from './Economy';
-import type { ToolInventory } from '@/tools/ToolInventory';
+import type { KingVine } from '@/boss/KingVine';
 import type { RBody, PhysicsOwner } from '@/physics/PhysicsWorld';
 import type { Deny } from '@/net/FruitAuthority';
 import { Groups } from '@/physics/Layers';
@@ -43,6 +43,8 @@ export interface LegendaryNetState {
   p: [number, number, number];
   q: [number, number, number, number];
   req: number;
+  /** Ropes that controlled the drop, retained for payout after release. */
+  dtc: number;
   /** Dollars paid on completion, 0 until then. */
   paid: number;
   /** Bumped on every reset so a client rebuilds rather than diffs. */
@@ -61,15 +63,15 @@ export interface LegendaryNet {
  *
  * Explicitly not a health bar. Every phase is a physical problem:
  *
- *   PREPARE  you need a rope gun, because the drop is unsurvivable without one
- *   TETHER   restrain it — each rope you attach bleeds off the fall
+ *   PREPARE  subdue the King Vine that guards the stem
+ *   TETHER   cut the holding vines; optional ropes can tame the fall
  *   DETACH   cut the vines; every cut shifts the load onto the ones left
  *   DROP     two and a half tonnes goes where physics says, not where you hoped
  *   RECOVER  get it into the extraction pad down the ravine
  *   PAYOUT
  *
- * Solo is possible on a reduced tether requirement rather than a separate
- * script, so a solo run is the same problem with a wider margin.
+ * The direct action route needs no Rope Gun. Tethers still give a more
+ * controlled drop and a payout bonus; zero ropes leaves a short ground haul.
  *
  * A TETHER IS A ROPE, NOT A METHOD CALL. The first version kept its own list
  * that only a debug action ever appended to, so the rope gun — the tool the
@@ -94,7 +96,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
   private world!: Sunpatch;
   private ropes!: RopeSystem;
   private economy!: Economy;
-  private tools!: ToolInventory;
+  private boss: KingVine | null = null;
   net: LegendaryNet | null = null;
 
   phase: LegendaryPhase = 'prepare';
@@ -106,6 +108,8 @@ export class LegendaryHarvest implements System, PhysicsOwner {
   /** Ropes restraining it: derived from the rope system, never appended to. */
   tethers: Rope[] = [];
   requiredTethers = 2;
+  /** Ropes that actually controlled the drop, retained after they are released. */
+  dropTetherCount = 0;
   cutVines = 0;
   restStart = -1;
   /** Game time the last vine went; the drop has a clock of its own. */
@@ -135,7 +139,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     this.world = g.get<Sunpatch>('world');
     this.ropes = g.get<RopeSystem>('ropes');
     this.economy = g.get<Economy>('economy');
-    this.tools = g.get<ToolInventory>('tools');
+    this.boss = g.has('kingVine') ? g.get<KingVine>('kingVine') : null;
 
     this.mesh = this.world.built.kingMelon;
     this.homePosition.copy(this.world.kingMelonPos);
@@ -147,6 +151,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
       vines: this.vines.length,
       cut: this.cutVines,
       tethers: this.tethers.length,
+      dropTetherCount: this.dropTetherCount,
       required: this.requiredTethers,
       held: this.heldRopesToMelon().length,
       authoritative: this.authoritative,
@@ -172,6 +177,8 @@ export class LegendaryHarvest implements System, PhysicsOwner {
         if (!this.authoritative) {
           this.net!.requestLegendary({ kind: 'lcut', vine: this.vineIdx[i] });
         } else {
+          const deny = this.cutGate();
+          if (deny) { this.refuse(deny); break; }
           this.cutVine(this.vines[0]);
         }
       }
@@ -206,6 +213,8 @@ export class LegendaryHarvest implements System, PhysicsOwner {
 
   /** True when this peer runs the state machine and pays out. */
   get authoritative(): boolean { return !this.net || this.net.authoritative; }
+  /** Extraction unlocks only after the King Vine is subdued. */
+  get guardianSubdued(): boolean { return this.boss?.subdued ?? false; }
 
   // ---- construction -------------------------------------------------------
   private setupExtractionPad(): void {
@@ -240,7 +249,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
       if (this.world.terrain.height(nx, nz) < 3.5) break;
       cursor.set(nx, 0, nz);
       travelled += 2.0;
-      if (travelled >= 28) { landing = cursor.clone(); break; }
+      if (travelled >= 20) { landing = cursor.clone(); break; }
       landing = cursor.clone();
     }
     this.extractionPad.set(landing.x, this.world.terrain.height(landing.x, landing.z), landing.z);
@@ -317,6 +326,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     this.vineIdx.length = 0;
     this.tethers.length = 0;
     this.lastTetherCount = 0;
+    this.dropTetherCount = 0;
     this.cutVines = 0;
     this.restStart = -1;
     this.dropStart = -1;
@@ -369,23 +379,20 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     return null;
   }
 
-  /** The rule that makes the tethers matter. */
+  /** The boss is the cut gate. Ropes are an optional drop-control tactic. */
   private cutGate(): Deny | null {
+    if (!this.guardianSubdued) return 'wrong-phase';
     if (this.phase !== 'tether' && this.phase !== 'detach') return 'wrong-phase';
-    if (this.tethers.length < this.requiredTethers && this.vines.length <= 2) return 'restrain-first';
     return null;
   }
 
   /** Say why a cut did not happen. Clients hear this from the host. */
   refuse(deny: Deny): void {
-    if (deny === 'restrain-first') {
-      this.g.bus.emit('ui:toast', {
-        text: 'Restrain it first',
-        sub: `${this.tethers.length}/${this.requiredTethers} tethers — pin ropes to rock, not to yourself`,
-        kind: 'bad', ms: 2600,
-      });
-    } else if (deny === 'wrong-phase') {
-      this.g.bus.emit('ui:toast', { text: 'Not now', ms: 1400 });
+    if (deny === 'wrong-phase') {
+      this.g.bus.emit('ui:toast', this.guardianSubdued
+        ? { text: 'Not now', ms: 1400 }
+        : { text: 'King Vine guards the stem', sub: 'Subdue it before cutting the holding vines',
+          kind: 'bad', ms: 2600 });
     }
   }
 
@@ -430,11 +437,12 @@ export class LegendaryHarvest implements System, PhysicsOwner {
   private beginDrop(): void {
     this.setPhase('drop');
     this.dropStart = this.g.clock.elapsed;
+    this.dropTetherCount = this.tethers.length >= this.requiredTethers ? this.tethers.length : 0;
     if (this.body) {
       this.body.setLinearDamping(0.12);
       this.body.setAngularDamping(0.35);
     }
-    if (this.tethers.length >= this.requiredTethers) {
+    if (this.dropTetherCount > 0) {
       // The encounter takes the ropes over. A rope gun's line is rated for a
       // watermelon, not two and a half tonnes; what "enough tethers" buys is
       // that together they hold, and pay out rather than part.
@@ -454,14 +462,17 @@ export class LegendaryHarvest implements System, PhysicsOwner {
         kind: 'legendary',
       });
     } else {
+      const hadRope = this.tethers.length > 0;
       for (const tether of this.tethers) {
         this.g.bus.emit('rope:snapped', { ropeId: tether.id });
         this.ropes.remove(tether.id, 'snapped');
       }
       this.tethers.length = 0;
-      this.g.bus.emit('audio:sfx', { name: 'ropeSnap', volume: 1 });
+      if (hadRope) this.g.bus.emit('audio:sfx', { name: 'ropeSnap', volume: 1 });
       this.g.bus.emit('ui:celebrate', {
-        title: 'IT IS COMING DOWN', sub: 'NOT ENOUGH ROPE', kind: 'legendary',
+        title: 'IT IS COMING DOWN',
+        sub: hadRope ? 'THE ROPE PARTED — FOLLOW IT TO THE PAD' : 'FOLLOW IT TO THE PAD',
+        kind: 'legendary',
       });
     }
   }
@@ -530,7 +541,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
       this.g.bus.emit('ui:toast', {
         text: `TETHER ${n} / ${this.requiredTethers}`,
         sub: (high ? 'Anchored above it — this one can lower it. ' : 'Anchored below it — this one will swing it. ')
-          + (n >= this.requiredTethers ? 'Enough to try.' : 'Not enough yet.'),
+          + (n >= this.requiredTethers ? 'Enough for a controlled drop.' : 'Another makes the drop gentler.'),
         kind: high ? 'good' : 'info', ms: 3200,
       });
     }
@@ -632,7 +643,8 @@ export class LegendaryHarvest implements System, PhysicsOwner {
       ph: PHASES.indexOf(this.phase), vm,
       p: [+t.x.toFixed(2), +t.y.toFixed(2), +t.z.toFixed(2)],
       q: [+q.x.toFixed(3), +q.y.toFixed(3), +q.z.toFixed(3), +q.w.toFixed(3)],
-      req: this.requiredTethers, paid: this.lastPayout, gen: this.generation,
+      req: this.requiredTethers, dtc: this.dropTetherCount,
+      paid: this.lastPayout, gen: this.generation,
     };
   }
 
@@ -646,6 +658,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
       this.remoteGen = s.gen;
     }
     this.requiredTethers = s.req;
+    this.dropTetherCount = Math.max(0, s.dtc ?? 0);
     // Vines the host has cut, by anchor index. Cutting locally plays the same
     // snap the host heard, which is the point of mirroring it as a cut rather
     // than as a vine quietly missing from the next frame.
@@ -701,7 +714,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     if (this.phase === 'complete' || !this.authoritative) return;
     this.setPhase('complete');
     this.completedAt = this.g.clock.elapsed;
-    const bonus = Math.round(PAYOUT * (1 + this.tethers.length * 0.12));
+    const bonus = Math.round(PAYOUT * (1 + this.dropTetherCount * 0.12));
     this.lastPayout = bonus;
     this.economy.add(bonus, 'legendary');
     this.economy.addDiscovery(220);
@@ -739,7 +752,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     const canInteract = this.g.player.state === 'active' && this.g.input.enabled;
     if (!this.authoritative) {
       // A client: aim, ask, and count. The host decides everything else.
-      this.lookingAtVine = canInteract ? this.findVineUnderCrosshair() : null;
+      this.lookingAtVine = canInteract && this.guardianSubdued ? this.findVineUnderCrosshair() : null;
       if (canInteract && this.lookingAtVine && this.g.input.frame.interactPressed) this.tryCut();
       this.syncTethers();
       return;
@@ -748,9 +761,8 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     this.syncTethers();
 
     if (this.phase === 'prepare' || this.phase === 'tether' || this.phase === 'detach') {
-      const hasRope = this.tools.owned.has('ropegun') || !!this.net?.anyoneHasRopeGun();
-      if (this.phase === 'prepare' && hasRope) this.setPhase('tether');
-      this.lookingAtVine = canInteract ? this.findVineUnderCrosshair() : null;
+      if (this.phase === 'prepare' && this.guardianSubdued) this.setPhase('tether');
+      this.lookingAtVine = canInteract && this.guardianSubdued ? this.findVineUnderCrosshair() : null;
       if (canInteract && this.lookingAtVine && this.g.input.frame.interactPressed) this.tryCut();
     }
 
@@ -825,15 +837,13 @@ export class LegendaryHarvest implements System, PhysicsOwner {
       if (this.firstSightAt < 0) this.firstSightAt = this.g.clock.elapsed;
       if (this.g.clock.elapsed - this.firstSightAt < 4.5) {
         this.g.bus.emit('ui:prompt', {
-          text: 'You will need a <b>Rope Gun</b> for this — Merv sells one', priority: 'hint',
+          text: '<b>Subdue King Vine</b> — dodge its warning, then hit the exposed stem', priority: 'hint',
         });
       }
     } else if ((this.phase === 'tether' || this.phase === 'detach') && this.heldRopesToMelon().length) {
-      // The one thing the encounter has to teach: a rope in your hands is a
-      // leash, and a leash does not restrain two and a half tonnes. The
-      // second thing: rock ABOVE the melon, the towers the vines hang from.
+      // An optional rope can control the fall only when pinned to rock above.
       this.g.bus.emit('ui:prompt', {
-        text: `Pin the rope to the rock towers <b>above</b> it — <b>right-click</b> · tethers <b>${this.tethers.length}/${this.requiredTethers}</b>`,
+        text: `Optional: pin to rock <b>above</b> it for a gentler drop — <b>right-click</b> · tethers <b>${this.tethers.length}/${this.requiredTethers}</b>`,
         priority: 'context',
       });
     } else if (this.phase === 'recover' && dist < 40) {
@@ -874,9 +884,9 @@ export class LegendaryHarvest implements System, PhysicsOwner {
 }
 
 const PHASE_BLURB: Partial<Record<LegendaryPhase, { title: string; sub: string }>> = {
-  tether: { title: 'PHASE 1 — RESTRAIN IT', sub: 'Rope it, then pin the rope to the rock towers above it — a rope in your hands is a leash' },
+  tether: { title: 'PHASE 1 — FREE THE FRUIT', sub: 'Cut its vines. Ropes to the towers can control the drop, but are optional.' },
   detach: { title: 'PHASE 2 — CUT THE VINES', sub: 'Every cut puts more load on the rest' },
-  drop: { title: 'PHASE 3 — CONTROL THE DROP', sub: 'Two and a half tonnes, going where it wants' },
+  drop: { title: 'PHASE 3 — FOLLOW THE DROP', sub: 'Two and a half tonnes, going where it wants' },
   recover: { title: 'PHASE 4 — GET IT TO THE PAD', sub: 'Push, rope, winch, or shout at it' },
 };
 

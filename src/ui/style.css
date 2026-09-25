@@ -73,6 +73,27 @@ html, body {
 }
 .money-delta.show { animation: floatUp 1.15s ease forwards; }
 .money-delta.neg { color: var(--bad); }
+.objective {
+  position: absolute; top: calc(18 * var(--hud-u)); left: calc(22 * var(--hud-u));
+  max-width: min(36vw, calc(430 * var(--hud-u)));
+  padding: calc(7 * var(--hud-u)) calc(10 * var(--hud-u));
+  border-left: calc(3 * var(--hud-u)) solid var(--gold);
+  background: rgba(12, 22, 32, 0.68); border-radius: 3px 7px 7px 3px;
+  font-size: calc(12 * var(--hud-u)); font-weight: 650; line-height: 1.35;
+  color: var(--paper); text-shadow: var(--shadow);
+}
+.health {
+  position: absolute; top: calc(68 * var(--hud-u)); left: calc(22 * var(--hud-u));
+  width: calc(165 * var(--hud-u)); display: grid; grid-template-columns: 1fr auto;
+  gap: calc(3 * var(--hud-u)); align-items: center;
+  color: var(--paper); font-size: calc(10 * var(--hud-u)); font-weight: 700;
+  text-shadow: var(--shadow);
+}
+.health strong { font-size: calc(12 * var(--hud-u)); }
+.health i { grid-column: 1 / 3; height: calc(6 * var(--hud-u)); overflow: hidden;
+  border-radius: 6px; background: rgba(10, 18, 26, 0.75); }
+.health i b { display: block; width: 100%; height: 100%; background: #7bc88d; }
+.health.low i b { background: #e7836c; }
 @keyframes floatUp {
   0% { opacity: 0; transform: translateY(0); }
   15% { opacity: 1; }

@@ -418,6 +418,30 @@ export class RopeSystem implements System {
     return out;
   }
 
+  /**
+   * After a safe-ground rescue, release only lines whose player endpoint would
+   * be stretched beyond its length at the new position. A line merely created
+   * by that player may be holding the King Melon to a rock; it is untouched.
+   * `peer` is used by the host when it validates a remote player's rescue.
+   */
+  releasePlayerConflicts(destination: THREE.Vector3, playerId: number, peer?: string): number {
+    let released = 0;
+    for (const rope of [...this.ropes.values()]) {
+      const isPlayer = (end: RopeEnd) => end.kind === 'player' && end.ownerId === playerId
+        || end.kind === 'peer' && !!peer && end.peer === peer;
+      const hand = isPlayer(rope.a) ? rope.a : isPlayer(rope.b) ? rope.b : null;
+      if (!hand) continue;
+      const other = hand === rope.a ? rope.b : rope.a;
+      const end = this.resolve(other, newEndState());
+      if (!end.alive) continue;
+      const rescuedHand = destination.clone().add(hand.kind === 'peer' ? HAND_OFFSET : hand.local);
+      if (rescuedHand.distanceTo(end.pos) <= rope.length + 0.25) continue;
+      this.remove(rope.id, 'released');
+      released++;
+    }
+    return released;
+  }
+
   /** A shared rope by its wire identity. */
   findByKey(owner: string, cid: number): Rope | null {
     for (const r of this.ropes.values()) {

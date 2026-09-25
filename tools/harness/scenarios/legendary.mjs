@@ -1,11 +1,12 @@
 // The King Melon, played through. This is the vertical slice's climax, so it
 // gets tested as a sequence rather than as a set of independent features:
-// gating, tethering, cutting, a two-and-a-half-tonne drop, and recovery.
+// boss gating, optional tethering, cutting, a two-and-a-half-tonne drop, and recovery.
 
 export const name = 'legendary-king-melon';
 
 export async function run(g, t) {
   await g.call('legendary.reset');
+  await g.call('kingVine.reset');
   await g.wait(0.6);
   const info = await g.call('legendary.info');
   t.note(`melon at ${info.home.map((v) => v.toFixed(0)).join(', ')}, pad at ${info.pad.map((v) => v.toFixed(0)).join(', ')}`);
@@ -25,12 +26,28 @@ export async function run(g, t) {
   t.lt(st.legendary.speed, 1.5, 'and it is not thrashing on its constraints');
   t.note(`idle drift ${drift.toFixed(2)} m at ${st.legendary.speed} m/s`);
 
-  // --- gating: the rope gun is the entry requirement
-  t.eq(st.legendary.phase, 'prepare', 'stays in PREPARE without a rope gun');
+  // --- gating: King Vine, not a shop purchase, opens the melon.
+  t.eq(st.legendary.phase, 'prepare', 'stays in PREPARE while King Vine guards it');
+  await g.call('legendary.cut', 1);
+  t.eq((await g.state()).legendary.vines, 4, 'a vine cannot be cut before the guardian falls');
   await g.call('tool.give', 'ropegun');
   await g.wait(0.6);
   st = await g.state();
-  t.eq(st.legendary.phase, 'tether', 'owning a rope gun advances to TETHER');
+  t.eq(st.legendary.phase, 'prepare', 'owning a Rope Gun does not bypass King Vine');
+  const won = await g.page.evaluate(() => {
+    const boss = window.__GAME.get('kingVine');
+    boss.phase = 'recover';
+    boss.timeLeft = 10;
+    const [x, y, z] = boss.center;
+    for (let i = 0; i < 3; i++) {
+      boss.tryHit([x, y + 1.7, z - 10], [0, 0, 1], 'air', 'test-player');
+      boss.fixedStep(0.5);
+    }
+    return boss.subdued;
+  });
+  t.ok(won, 'direct hits subdue the guardian');
+  await g.wait(0.1);
+  t.eq((await g.state()).legendary.phase, 'tether', 'boss victory opens vine cutting');
 
   // --- tethering, the way a player does it: rope gun, then pin the near end.
   //
@@ -69,8 +86,7 @@ export async function run(g, t) {
   t.eq(st.legendary.tethers, 1, 'pinning the near end turns the rope into a tether');
   t.eq(st.legendary.held, 0, 'and it leaves the player\'s hands');
 
-  // --- the cut gate reads the tethers it can see. One is not enough to cut
-  // past two vines, and the refusal names the rule.
+  // --- one rope helps control the fall but does not gate later cuts.
   await g.call('legendary.cut', 2);
   await g.wait(1.5);
   st = await g.state();
@@ -93,8 +109,8 @@ export async function run(g, t) {
   await g.wait(0.1);
   const gate = await g.call('legendary.cutLooking');
   st = await g.state();
-  t.eq(gate, 'restrain-first', 'cutting a third vine on one tether is refused, by name');
-  t.eq(st.legendary.vines, 2, 'and the vine is still there');
+  t.eq(gate, null, 'a third vine can be cut without a second tether');
+  t.eq(st.legendary.vines, 1, 'and the cut takes effect');
 
   // A second tether, from the debug path, which builds the same rope a pin does.
   await g.standAt(info.home[0] - 16, info.home[2] + 14, 0, 1.2);
@@ -149,6 +165,7 @@ export async function run(g, t) {
   st = await g.state();
   t.eq(st.legendary.vines, 0, 'the last vine is cut');
   t.eq(st.legendary.phase, 'drop', 'which starts the DROP phase');
+  t.eq(st.legendary.dropTetherCount, 2, 'two pinned ropes count for the optional drop bonus');
 
   let maxSpeed = 0;
   const trace = [];
@@ -210,6 +227,7 @@ export async function run(g, t) {
   const done = await g.state();
   t.eq(done.legendary.phase, 'complete', 'the King Melon completes');
   t.gt(done.economy.money, 5000, 'completing the legendary pays a legendary amount');
+  t.eq(done.economy.money, 11780, 'two controlled tethers add a 24% bonus');
   t.note(`payout $${done.economy.money}`);
 
   // --- the payoff: the next island. Announced a beat after the banner.

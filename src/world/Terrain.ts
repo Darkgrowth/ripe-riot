@@ -50,7 +50,15 @@ export const ROUTE_HILL: ReadonlyArray<readonly [number, number, number]> = [
   [-13.0, -49.0, 2.8], [-5.0, -51.5, 3.2],
 ];
 
-const ROUTES = [ROUTE, ROUTE_HILL];
+/** Worn footpath from the lower ravine to the gentler southern ground. */
+export const ROUTE_RAVINE: ReadonlyArray<readonly [number, number, number]> = [
+  [15.8, -57, 2.2], [15.4, -53, 2.2], [15.0, -49, 2.2], [14.5, -44, 2.2],
+];
+export const ROUTE_RAVINE_WEST: ReadonlyArray<readonly [number, number, number]> = [
+  [-20, -62, 2.2], [-18.2, -58, 2.2], [-15.6, -52, 2.2], [-12, -44, 2.2],
+];
+
+const ROUTES = [ROUTE, ROUTE_HILL, ROUTE_RAVINE, ROUTE_RAVINE_WEST];
 
 export interface BiomeWeights { sand: number; grass: number; rock: number; dirt: number; }
 
@@ -124,6 +132,29 @@ export class Terrain {
       const d = Math.hypot(x - f.x, z - f.z);
       const w = smoothstep(f.r + f.blend, f.r, d);
       if (w > 0) h = h * (1 - w) + f.y * w;
+    }
+
+    // A lower ravine player must be able to walk out without a tool. Blend a
+    // broad, shallow ramp into the south bank rather than changing the King
+    // Melon's landing ground or the high rim where its vines are anchored.
+    // The visual mesh and Rapier trimesh both sample this same height function.
+    const exitX = 15.8 - (z + 57) * 0.1;
+    const along = smoothstep(-58.2, -56.7, z) * smoothstep(-42.5, -45.3, z);
+    const across = smoothstep(5.0, 2.2, Math.abs(x - exitX));
+    const exitWeight = along * across;
+    if (exitWeight > 0) {
+      const exitHeight = 1.4 + (z + 57) * 0.62;
+      h += (exitHeight - h) * exitWeight;
+    }
+    // The western pocket is divided from that walkout by the high ridge. Its
+    // second path climbs south into the existing back-country route instead.
+    const westX = -20 + (z + 62) * (8 / 18);
+    const westAlong = smoothstep(-63, -61.8, z) * smoothstep(-42.5, -45.3, z);
+    const westAcross = smoothstep(5.0, 2.2, Math.abs(x - westX));
+    const westWeight = westAlong * westAcross;
+    if (westWeight > 0) {
+      const westHeight = 4.7 + (z + 62) * 0.49;
+      h += (westHeight - h) * westWeight;
     }
 
     // Beaches: flatten anything close to sea level into a gentle shelf.

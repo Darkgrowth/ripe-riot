@@ -1,5 +1,11 @@
 # RIPE RIOT — Game Design
 
+> **Current Sunpatch direction (25 September 2026):**
+> [Action Harvest Overhaul](docs/ACTION_HARVEST_OVERHAUL.md) supersedes the
+> original logistics-first loop and mandatory Rope Gun legendary gate described
+> below. The fruit, physics, art, and equipment details here remain useful
+> unless the overhaul document explicitly changes them.
+
 **Harvest increasingly impossible fruit with increasingly unreasonable
 equipment.**
 

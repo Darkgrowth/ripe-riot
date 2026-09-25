@@ -83,6 +83,10 @@ function enrich(g) {
       await g.call('characters.reset', false).catch(() => {});
       await g.clearInput();
       await g.call('ragdoll.recover').catch(() => {});
+      await g.page.evaluate(() => window.__GAME.get('vitals').restoreAtCheckpoint());
+      await g.call('encounters.reset').catch(() => {});
+      await g.call('kingVine.reset').catch(() => {});
+      await g.call('legendary.reset').catch(() => {});
       await g.call('drop').catch(() => {});
       await g.call('fruit.despawnAllFree').catch(() => {});
       await g.call('basket.clear').catch(() => {});

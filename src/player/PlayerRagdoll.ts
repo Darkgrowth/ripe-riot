@@ -2,11 +2,13 @@ import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import type { Game, System } from '@/core/Game';
 import type { RBody, RCollider, PhysicsOwner } from '@/physics/PhysicsWorld';
-import { groups, Layer } from '@/physics/Layers';
+import { groups, Layer, QueryMask } from '@/physics/Layers';
 import { makePlayerRig, RIG_JOINTS, type PlayerRig } from './PlayerRig';
 import type { FruitSystem } from '@/fruit/FruitSystem';
+import type { RopeSystem } from '@/systems/RopeSystem';
+import type { Sunpatch } from '@/world/Sunpatch';
 import { clamp } from '@/core/MathUtils';
-import { PLAYER_RADIUS } from './PlayerController';
+import { PLAYER_RADIUS, STAND_HEIGHT } from './PlayerController';
 
 /** Ragdoll parts collide with the world but never with each other. */
 const RAGDOLL_GROUPS = groups(
@@ -57,6 +59,11 @@ export class PlayerRagdoll implements System, PhysicsOwner {
   knockdowns = 0;
   lastSource = '';
   private lastSanePos = new THREE.Vector3();
+  private safeGround = new THREE.Vector3();
+  private hasSafeGround = false;
+  private safeScan = 0;
+  private rescueHold = 0;
+  private rescueLatched = false;
   lastSpeed = 0;
 
   init(g: Game): void {
@@ -82,6 +89,11 @@ export class PlayerRagdoll implements System, PhysicsOwner {
       return this.active;
     });
     g.debug?.addAction('ragdoll.recover', () => { this.recover(); return !this.active; });
+    g.debug?.addAction('ragdoll.rescue', () => this.rescue());
+    g.debug?.addProbe('safeRecovery', () => ({
+      checkpoint: this.hasSafeGround ? this.safeGround.toArray() : null,
+      holding: +this.rescueHold.toFixed(2),
+    }));
   }
 
   // ---- trigger / recover --------------------------------------------------
@@ -196,16 +208,35 @@ export class PlayerRagdoll implements System, PhysicsOwner {
   recover(): void {
     if (!this.active) return;
     const torso = this.parts.find((p) => p.name === 'torso');
-    const p = this.g.player;
-    if (torso) {
-      const t = torso.body.translation();
-      // Stand up where the torso ended up, lifted clear of the ground.
-      _v.set(t.x, t.y + 0.15, t.z);
-      const hit = this.g.physics.raycast(
-        _v.clone().setY(_v.y + 2.5), DOWN, 8, 0xffff_ffff, null);
-      if (hit) _v.y = hit.point.y + 0.06;
-      p.teleport(_v);
+    const t = torso?.body.translation() ?? this.g.player.position;
+    const destination = this.findSafeGround(t.x, t.z, true);
+    if (!destination) return;
+    this.finishRecovery(destination);
+  }
+
+  /** Hold H or use the debug action to leave bad geometry without a penalty. */
+  rescue(): boolean {
+    const torso = this.active ? this.parts.find((p) => p.name === 'torso') : null;
+    const from = torso?.body.translation() ?? this.g.player.position;
+    const destination = this.findSafeGround(from.x, from.z, false);
+    if (!destination) return false;
+    if (this.active) this.finishRecovery(destination);
+    else {
+      this.releaseConflictingRopes(destination);
+      this.g.player.teleport(destination);
     }
+    this.safeGround.copy(destination);
+    this.hasSafeGround = true;
+    this.g.bus.emit('ui:toast', {
+      text: 'Back on safe ground', sub: 'Your haul and progress are intact', kind: 'good', ms: 2600,
+    });
+    return true;
+  }
+
+  private finishRecovery(destination: THREE.Vector3): void {
+    const p = this.g.player;
+    this.releaseConflictingRopes(destination);
+    p.teleport(destination);
     this.destroyBodies();
     this.rig.setVisible(false);
     this.timer = 0;
@@ -217,6 +248,79 @@ export class PlayerRagdoll implements System, PhysicsOwner {
     this.g.renderer.setFovOffset(0);
     this.active = false;
     this.g.bus.emit('player:recovered', { playerId: p.id });
+  }
+
+  private releaseConflictingRopes(destination: THREE.Vector3): void {
+    if (!this.g.has('ropes')) return;
+    this.g.get<RopeSystem>('ropes').releasePlayerConflicts(destination, this.g.player.id);
+  }
+
+  /** The old downward ray accepted any floor, including the unescapable trench. */
+  private lowerRavine(x: number, z: number): boolean {
+    if (z <= -70 || z >= -46) return false;
+    return (x > 0 && x < 40) || (x > -35 && x < -8);
+  }
+
+  private standingGround(x: number, z: number): THREE.Vector3 | null {
+    const terrain = this.g.get<Sunpatch>('world').terrain;
+    const y = terrain.height(x, z);
+    if (!Number.isFinite(y) || y < 0.2) return null;
+    const hit = this.g.physics.raycast(
+      new THREE.Vector3(x, y + 3.5, z), DOWN, 7, QueryMask.groundOnly, this.g.player.body);
+    if (!hit || hit.normal.y < Math.cos(THREE.MathUtils.degToRad(45))) return null;
+    const foot = new THREE.Vector3(x, hit.point.y + 0.12, z);
+    const shape = new RAPIER.Capsule((STAND_HEIGHT - 2 * PLAYER_RADIUS) / 2, PLAYER_RADIUS + 0.02);
+    let obstructed = false;
+    this.g.physics.world.intersectionsWithShape(
+      { x, y: foot.y + STAND_HEIGHT / 2, z }, { x: 0, y: 0, z: 0, w: 1 }, shape,
+      (collider) => {
+        if (collider.handle === this.g.player.collider.handle) return true;
+        obstructed = true; return false;
+      }, undefined, QueryMask.solid,
+    );
+    return obstructed ? null : foot;
+  }
+
+  /** Prefer the final standing spot; otherwise search nearby dry, clear ground. */
+  private findSafeGround(x: number, z: number, allowHere: boolean): THREE.Vector3 | null {
+    const inRavine = this.lowerRavine(x, z);
+    if (allowHere && !inRavine) {
+      const here = this.standingGround(x, z);
+      if (here) return here;
+    }
+    if (inRavine) {
+      const routeExit = x < 0 ? this.standingGround(-12, -43.5) : this.standingGround(14.5, -43.5);
+      if (routeExit) return routeExit;
+    }
+    for (const radius of [4, 8, 12, 16, 22, 30, 40]) {
+      for (let i = 0; i < 16; i++) {
+        const a = Math.PI / 2 + i * Math.PI * 2 / 16;
+        const sx = x + Math.cos(a) * radius;
+        const sz = z + Math.sin(a) * radius;
+        if (inRavine && sz < -46) continue;
+        if (this.lowerRavine(sx, sz)) continue;
+        const candidate = this.standingGround(sx, sz);
+        if (candidate) return candidate;
+      }
+    }
+    if (this.hasSafeGround) {
+      const checkpoint = this.standingGround(this.safeGround.x, this.safeGround.z);
+      if (checkpoint) return checkpoint;
+    }
+    const spawn = this.g.get<Sunpatch>('world').spawnPoint;
+    return this.standingGround(spawn.x, spawn.z) ?? spawn.clone();
+  }
+
+  private rememberSafeGround(dt: number): void {
+    this.safeScan -= dt;
+    if (this.safeScan > 0) return;
+    this.safeScan = 0.25;
+    const p = this.g.player;
+    if (!p.grounded || this.lowerRavine(p.position.x, p.position.z)) return;
+    const ground = this.standingGround(p.position.x, p.position.z);
+    if (!ground || Math.abs(ground.y - p.position.y) > 0.7) return;
+    this.safeGround.copy(ground);
+    this.hasSafeGround = true;
   }
 
   private destroyBodies(): void {
@@ -299,8 +403,20 @@ export class PlayerRagdoll implements System, PhysicsOwner {
 
   // ---- loop ---------------------------------------------------------------
   fixedStep(dt: number): void {
+    const holdingRescue = this.g.input.frame.rescue
+      && !this.g.get<{ open: boolean }>('shop').open
+      && !this.g.get<{ open: boolean }>('book').open;
+    if (!holdingRescue) { this.rescueHold = 0; this.rescueLatched = false; }
+    else if (!this.rescueLatched) {
+      this.rescueHold += dt;
+      if (this.rescueHold >= 1.25) {
+        this.rescueLatched = true;
+        this.rescue();
+        return;
+      }
+    }
     if (this.hitCooldown > 0) this.hitCooldown = Math.max(0, this.hitCooldown - dt);
-    if (!this.active) { this.checkFruitStrikes(); return; }
+    if (!this.active) { this.rememberSafeGround(dt); this.checkFruitStrikes(); return; }
     this.timer += dt;
     if (this.timer < this.minTime) return;
     // Get up once the torso has calmed down, or after the hard cap regardless.

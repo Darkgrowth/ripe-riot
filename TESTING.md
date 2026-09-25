@@ -30,6 +30,10 @@ node tools/harness/route.mjs         # the six first-person views of the main ro
 node tools/harness/detail.mjs        # three close-range frames: deck, shop, fruit
 node tools/harness/shadow-check.mjs  # A/B the frame with shadows on and off
 node tools/harness/perf-check.mjs    # attribute draw calls between passes
+node tools/harness/action-coop.mjs    # two-page combat, damage, and revival
+node tools/harness/action-review.mjs  # gameplay-camera action route frames
+node tools/harness/ravine-walk.mjs    # actual movement out of both ravine pockets
+node tools/harness/ravine-recovery.mjs # hold-H fallback, haul, and rope checks
 ```
 
 `RIPE_VERBOSE=1` prints passing checks too.
@@ -56,8 +60,9 @@ because it is testing an asynchronous transport between two pages.
 Chromium notes, all measured:
 - Do not force ANGLE backends. `--use-angle=swiftshader` is ~50× slower and
   `gl-egl` renders black. Chromium's own default works.
-- Never use `page.screenshot()`: the game never stops animating so Playwright's
-  stability wait never settles. Capture the canvas directly.
+- Prefer direct canvas capture for routine world shots. Full DOM/HUD reviews
+  such as `action-review.mjs` use a bounded `page.screenshot()` because the HUD
+  is absent from canvas captures; keep its timeout finite on animated pages.
 - Use `127.0.0.1`, not `localhost` — Node's fetch tries `::1` first on Windows
   and stalls for seconds against an IPv4-bound Vite.
 - The driver reuses a dev server already on the port, and checks that it is

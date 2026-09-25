@@ -50,6 +50,9 @@ export async function run(g, t) {
   t.gt(cat.length, 4, 'the shop has things to sell');
   const net = cat.find((c) => c.id === 'net');
   t.ok(net && !net.owned, 'the catch net is for sale and not yet owned');
+  const air = cat.find((c) => c.id === 'aircannon');
+  t.ok(air && !air.locked && air.tier === 0 && air.cost <= 250,
+    'a basic Air Cannon is affordable in the opening outing without a discovery gate');
   const buy = await g.call('shop.buy', 'net');
   t.ok(buy.ok, 'buying the catch net succeeds');
   const afterBuy = await g.state();

@@ -20,26 +20,55 @@ const _q = new THREE.Quaternion();
 // ---------------------------------------------------------------------------
 export class HandPicker extends Tool {
   readonly def: ToolDef = {
-    id: 'hand', label: 'Hand Picker', icon: '✋',
-    description: 'Two hands and some optimism.',
-    tagline: 'Free, because it is your hands.',
+    id: 'hand', label: 'Picking Mallet', icon: '✋',
+    description: 'Pick ordinary fruit, or strike a threatening harvest up close.',
+    tagline: 'The first answer when the orchard bites back.',
     cost: 0, tier: 0, starter: true,
   };
 
   /** True while the click that just picked something is still held down, so
    *  releasing it cannot immediately throw what it picked. */
   private pickedOnPress = false;
+  private struckOnPress = false;
 
   override onPrimary(down: boolean): void {
     const inter = this.ctx.interaction;
     if (down) {
       this.charge = 0;
+      this.struckOnPress = false;
+      if (!inter.carried && this.cooldown <= 0 && this.game.has('encounters')) {
+        const p = this.player;
+        const origin = p.eyePosition.clone();
+        const direction = this.aim(_dir).clone();
+        const actorId = this.game.has('net')
+          ? this.game.get<{ connected: boolean; me: string }>('net').me || 'solo' : 'solo';
+        const threats = this.game.get<{
+          canStrike(origin: THREE.Vector3, direction: THREE.Vector3, strike: 'melee'): boolean;
+          tryHit(origin: THREE.Vector3, direction: THREE.Vector3, strike: 'melee', actorId: string): unknown;
+        }>('encounters');
+        const aimedThreat = threats.canStrike(origin, direction, 'melee');
+        const hit = aimedThreat && threats.tryHit(origin, direction, 'melee', actorId);
+        const aimedVine = this.game.has('kingVine') && this.game.get<{
+          canStrike(origin: THREE.Vector3, direction: THREE.Vector3, strike: 'melee'): boolean;
+        }>('kingVine').canStrike(origin, direction, 'melee');
+        if (aimedVine) this.game.get<{
+          tryVineHit(origin: THREE.Vector3, direction: THREE.Vector3, strike: 'melee'): boolean;
+        }>('net').tryVineHit(origin, direction, 'melee');
+        if (hit || aimedThreat || aimedVine) {
+          this.cooldown = 0.38;
+          this.struckOnPress = true;
+          this.game.bus.emit('tool:swing', { toolId: this.def.id, duration: 0.32 });
+          this.game.bus.emit('audio:sfx', { name: 'thud', volume: 0.7, pitch: 1.15 });
+          return;
+        }
+      }
       // Left-click with empty hands used to do nothing at all, which is a
       // strange thing for the first button of a first-person game to do:
       // every player tries it on the first apple they see. It picks.
       this.pickedOnPress = !inter.carried && inter.tryInteract();
       return;
     }
+    if (this.struckOnPress) { this.struckOnPress = false; return; }
     if (this.pickedOnPress) { this.pickedOnPress = false; this.charge = 0; return; }
     if (inter.carried) {
       inter.throwHeld(0.35 + this.charge * 0.65);
@@ -788,9 +817,9 @@ export class RopeGun extends Tool {
 export class AirCannon extends Tool {
   readonly def: ToolDef = {
     id: 'aircannon', label: 'Air Cannon', icon: '💨',
-    description: 'A directed blast of compressed air. Hold to charge.',
-    tagline: 'Harvests fruit, teammates, and your own dignity.',
-    cost: 1450, tier: 2,
+    description: 'Blast a threat away or knock fruit loose. Hold to charge a stronger shot.',
+    tagline: 'The first bad idea you can afford.',
+    cost: 110, tier: 0,
   };
 
   private charging = false;
@@ -817,10 +846,9 @@ export class AirCannon extends Tool {
     if (down) { this.charging = true; this.charge = 0; this.chargeStep = 0; return; }
     if (!this.charging) return;
     this.charging = false;
-    // A tap is a puff and a full charge is a cannon. The old floor of 0.42
-    // meant a tap already did 43% of the damage of a full wind-up, so holding
-    // the button was a formality rather than a decision.
-    this.fire(0.28 + this.charge * 0.72);
+    // A tap has to be useful against a charging harvest; holding still gives
+    // the high-impact shot that can shift a heavy prize or a group of threats.
+    this.fire(0.52 + this.charge * 0.48);
     this.charge = 0;
     this.chargeStep = 0;
   }
@@ -891,8 +919,18 @@ export class AirCannon extends Tool {
     // Measured at the old value: a full-charge blast left an apple doing
     // 11.7 m/s, which is slower than throwing the same apple by hand (21 m/s).
     // A $1450 compressed-air cannon has to beat an arm.
-    const strength = 22 * power;
+    const strength = 45 * power;
     const pushed = this.ctx.fruit.blast(_v, radius, strength, 0.30);
+    if (this.game.has('encounters')) {
+      const actorId = this.game.has('net')
+        ? this.game.get<{ me: string }>('net').me || 'solo' : 'solo';
+      this.game.get<{
+        tryHit(origin: THREE.Vector3, direction: THREE.Vector3, strike: 'air', actorId: string): unknown;
+      }>('encounters').tryHit(p.eyePosition.clone(), _dir.clone(), 'air', actorId);
+    }
+    if (this.game.has('kingVine')) this.game.get<{
+      tryVineHit(origin: THREE.Vector3, direction: THREE.Vector3, strike: 'air'): boolean;
+    }>('net').tryVineHit(p.eyePosition.clone(), _dir.clone(), 'air');
     this.lastPushed = pushed;
     this.lastCentre = [+_v.x.toFixed(2), +_v.y.toFixed(2), +_v.z.toFixed(2)];
     this.lastRadius = +radius.toFixed(2);

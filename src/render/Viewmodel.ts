@@ -213,8 +213,15 @@ type Builder = () => { parts: THREE.BufferGeometry[]; hold: THREE.Vector3 };
 
 const BUILDERS: Record<string, Builder> = {
   hand: () => ({
-    // Empty hands: both gloves, held ready, thumbs turned toward each other.
-    parts: [...hand(-0.17, -0.08, -0.26, 0.25, 1), ...hand(0.16, -0.11, -0.22, -0.3, -1)],
+    // The starter mallet is short and low in frame so it reads as a tool
+    // without hiding fruit at the crosshair or the way through the orchard.
+    parts: [
+      ...hand(-0.17, -0.08, -0.26, 0.25, 1),
+      ...hand(0.16, -0.11, -0.22, -0.3, -1),
+      cyl(0.018, 0.022, 0.34, 8, WOOD_DARK, [0.16, 0.08, -0.24], [0, 0, -0.18]),
+      box(0.16, 0.075, 0.09, STEEL_DARK, [0.16, 0.25, -0.24]),
+      box(0.12, 0.015, 0.095, STEEL, [0.16, 0.294, -0.24]),
+    ],
     hold: new THREE.Vector3(0.0, -0.04, -0.40),
   }),
 

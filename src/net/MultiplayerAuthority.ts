@@ -16,6 +16,11 @@ import { makePlayerRig, SUIT_PRESETS, type PlayerRig } from '@/player/PlayerRig'
 import { clamp, damp } from '@/core/MathUtils';
 import type { IslandCrew, IslandDirector, IslandDirectorState } from '@/systems/IslandDirector';
 import type { IslandCharacters, CharacterNetState } from '@/world/IslandCharacters';
+import type { EncounterSystem, EncounterIntent } from '@/enemies/EncounterSystem';
+import type { EncounterNetState } from '@/enemies/EncounterModel';
+import type { PlayerVitals } from '@/player/PlayerVitals';
+import type { KingVine, KingVineNetState, KingVineStrike } from '@/boss/KingVine';
+import type { Progression } from '@/systems/Progression';
 
 /** What a client is allowed to ask the host to do. */
 export type IntentKind =
@@ -23,6 +28,7 @@ export type IntentKind =
   | 'shove' | 'shake' | 'blast' | 'spawn'
   | 'buy'
   | 'lcut'
+  | 'encounter' | 'revive' | 'vineHit'
   | 'rope'
   | 'resync';
 
@@ -77,6 +83,10 @@ export interface Intent {
   eb?: EndPacket;
   len?: number;
   rate?: number;
+  encounter?: EncounterIntent;
+  targetPeerId?: PeerId;
+  holding?: boolean;
+  vineHit?: { origin: [number, number, number]; direction: [number, number, number]; strike: KingVineStrike };
 }
 
 /** What a client is waiting to hear back about, and how to undo it. */
@@ -210,6 +220,10 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   private shop: Shop | null = null;
   private tools: ToolInventory | null = null;
   private legendary: LegendaryHarvest | null = null;
+  private encounters: EncounterSystem | null = null;
+  private vitals: PlayerVitals | null = null;
+  private kingVine: KingVine | null = null;
+  private progress: Progression | null = null;
   transport: Transport | null = null;
   peers: PeerId[] = [];
   /** Lowest peer id is the host; deterministic and needs no election round. */
@@ -226,6 +240,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   authority!: FruitAuthority;
 
   private remotes = new Map<PeerId, RemoteState>();
+  private reviveClaims = new Map<PeerId, PeerId>();
   private snapshotTimer = 0;
   private playerTimer = 0;
   private off: Array<() => void> = [];
@@ -278,9 +293,14 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     this.shop = g.has('shop') ? g.get<Shop>('shop') : null;
     this.tools = g.has('tools') ? g.get<ToolInventory>('tools') : null;
     this.legendary = g.has('legendary') ? g.get<LegendaryHarvest>('legendary') : null;
+    this.encounters = g.has('encounters') ? g.get<EncounterSystem>('encounters') : null;
+    this.vitals = g.has('vitals') ? g.get<PlayerVitals>('vitals') : null;
+    this.kingVine = g.has('kingVine') ? g.get<KingVine>('kingVine') : null;
+    this.progress = g.has('progress') ? g.get<Progression>('progress') : null;
     // The gate that makes stems, shakes and blasts host-only, everywhere at once.
     this.fruitSys.net = this;
     if (this.legendary) this.legendary.net = this;
+    if (this.encounters) this.encounters.net = this;
     // And the one that makes every rope the host's.
     this.ropes.net = this;
     this.ropes.onRemoved = (rope, why) => this.onRopeRemoved(rope, why);
@@ -412,6 +432,8 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     this.disconnect();
     this.transport = transport;
     this.connected = true;
+    if (this.vitals) this.vitals.mode = 'coop';
+    this.kingVine?.setAuthority(true);
     this.off.push(transport.onMessage((m) => this.onMessage(m)));
     this.off.push(transport.onPeerChange((p) => this.onPeers(p)));
     this.established = false;
@@ -442,9 +464,12 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     this.off.length = 0;
     for (const r of this.remotes.values()) this.destroyRemote(r);
     this.remotes.clear();
+    this.reviveClaims.clear();
     this.transport?.close();
     this.transport = null;
     this.connected = false;
+    if (this.vitals) this.vitals.mode = 'solo';
+    this.kingVine?.setAuthority(true);
     this.isHost = true;
     this.established = false;
     this.peers = [];
@@ -529,6 +554,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   private applyHost(): void {
     const wasHost = this.isHost;
     this.isHost = this.hostId === this.me;
+    this.kingVine?.setAuthority(this.isHost);
     if (wasHost === this.isHost) return;
     // The ledger belongs to whoever is host.
     this.authority.reset();
@@ -809,6 +835,14 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
           this.g.bus.emit('ui:toast', m.payload as never);
         }
         break;
+      case 'harvestAttack':
+        if (m.from === this.hostId) {
+          this.vitals?.damage(Number(m.amount ?? 0), String(m.source ?? 'harvest'));
+        }
+        break;
+      case 'reviveAttempt':
+        if (m.from === this.hostId) this.vitals?.setReviveAttempt(m.by ? String(m.by) : null);
+        break;
       default: break;
     }
   }
@@ -974,6 +1008,71 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       kind: 'blast', at: [+center.x.toFixed(2), +center.y.toFixed(2), +center.z.toFixed(2)],
       radius: +radius.toFixed(2), power: +strength.toFixed(2), upBias: +upBias.toFixed(2),
     });
+  }
+
+  requestEncounter(encounter: EncounterIntent): void {
+    if (!this.connected || this.isHost) return;
+    this.send({ kind: 'encounter', encounter });
+  }
+
+  nearbyDowned(range = 3.5): { id: PeerId; name: string } | null {
+    const p = this.g.player.position;
+    for (const r of this.remotes.values()) {
+      if (r.state === 'downed' && r.targetPos.distanceTo(p) <= range)
+        return { id: r.id, name: r.name };
+    }
+    return null;
+  }
+
+  nearbyCaptured(victimId: string, range = 3.4): { id: PeerId; name: string } | null {
+    const r = this.remotes.get(victimId);
+    return r && r.targetPos.distanceTo(this.g.player.position) <= range
+      ? { id: r.id, name: r.name } : null;
+  }
+
+  requestRevive(target: PeerId, holding: boolean): void {
+    if (!this.connected || !target || target === this.me) return;
+    if (this.isHost) this.applyReviveClaim(this.me, target, holding);
+    else this.send({ kind: 'revive', targetPeerId: target, holding });
+  }
+
+  private applyReviveClaim(from: PeerId, target: PeerId, holding: boolean): void {
+    if (!target || target === from) return;
+    const victim = target === this.me ? null : this.remotes.get(target);
+    if (target !== this.me && !victim) { this.reviveClaims.delete(target); return; }
+    const rescuer = from === this.me ? null : this.remotes.get(from);
+    const victimPos = victim?.targetPos ?? this.g.player.position;
+    const rescuerPos = rescuer?.targetPos ?? this.g.player.position;
+    const victimDown = victim ? victim.state === 'downed' : !!this.vitals?.downed;
+    const rescuerActive = rescuer ? rescuer.state === 'active' : this.g.player.state === 'active';
+    const valid = holding && (from === this.me || !!rescuer) && victimDown
+      && rescuerActive && victimPos.distanceTo(rescuerPos) <= 3.5;
+    if (valid) {
+      if (this.reviveClaims.get(target) === from) return;
+      this.reviveClaims.set(target, from);
+    } else {
+      if (this.reviveClaims.get(target) !== from) return;
+      this.reviveClaims.delete(target);
+    }
+    if (target === this.me) this.vitals?.setReviveAttempt(valid ? from : null);
+    else this.transport?.send({ t: 'reviveAttempt', by: valid ? from : null }, target);
+  }
+
+  /** Aim a local tool at the guardian; clients ask the host to resolve the hit. */
+  tryVineHit(origin: THREE.Vector3, direction: THREE.Vector3, strike: KingVineStrike): boolean {
+    if (!this.kingVine) return false;
+    if (this.authoritative) return !!this.kingVine.tryHit(origin, direction, strike, this.me || 'solo');
+    this.send({ kind: 'vineHit', vineHit: {
+      origin: [origin.x, origin.y, origin.z],
+      direction: [direction.x, direction.y, direction.z], strike,
+    } });
+    return false;
+  }
+
+  /** Only the host's encounter simulation may declare that a remote player was hit. */
+  damagePeer(peer: PeerId, amount: number, source: string): void {
+    if (!this.isHost || !this.transport || !this.peers.includes(peer)) return;
+    this.transport.send({ t: 'harvestAttack', amount, source }, peer);
   }
 
   // ---- LegendaryNet, for the King Melon -----------------------------------
@@ -1269,6 +1368,36 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
           radius: clamp01(intent.radius ?? 4, 8), power: clamp01((intent.power ?? 1) / 22, 1) });
         break;
       }
+      case 'encounter': {
+        const req = intent.encounter;
+        if (!req || !this.encounters) break;
+        if (req.kind === 'hit') {
+          const o = req.origin, d = req.direction;
+          if (!o?.every(Number.isFinite) || !d?.every(Number.isFinite)) break;
+          if (!near(o[0], o[1], o[2], 4.5)) break;
+          this.encounters.tryHit(new THREE.Vector3(...o), new THREE.Vector3(...d),
+            req.strike, from);
+        } else if (req.kind === 'bait') {
+          const p = req.position;
+          if (!p?.every(Number.isFinite) || !near(p[0], p[1], p[2], 7)) break;
+          this.encounters.offerBait(new THREE.Vector3(...p), from);
+        } else if (req.kind === 'escape' && req.victimId === from) {
+          this.encounters.tryEscape(from);
+        } else if (req.kind === 'rescue' && req.rescuerId === from) {
+          this.encounters.tryRescue(req.victimId, from);
+        }
+        break;
+      }
+      case 'vineHit': {
+        const hit = intent.vineHit;
+        if (!hit || !hit.origin?.every(Number.isFinite) || !hit.direction?.every(Number.isFinite)
+          || !near(hit.origin[0], hit.origin[1], hit.origin[2], 4.5)) break;
+        this.kingVine?.tryHit(hit.origin, hit.direction, hit.strike, from);
+        break;
+      }
+      case 'revive':
+        this.applyReviveClaim(from, String(intent.targetPeerId ?? ''), intent.holding === true);
+        break;
       // `null` is success here, so no `??` on these: it reads null as "no
       // answer" and turned every cut and tether the host had just made into
       // a refusal on the wire.
@@ -1532,6 +1661,9 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       ropes: this.packRopes(peers),
       island: this.g.has('director') ? this.g.get<IslandDirector>('director').netState() : null,
       residents: this.g.has('characters') ? this.g.get<IslandCharacters>('characters').netState() : null,
+      encounters: this.encounters?.snapshot() ?? null,
+      kingVine: this.kingVine?.snapshot() ?? null,
+      threatsCleared: this.progress ? [...this.progress.threatsCleared] : null,
     };
     this.transport.send(msg, to);
     this.stats.sent++;
@@ -1645,6 +1777,9 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     if (Array.isArray(m.ropes)) this.applyRopes(m.ropes as RopePacket[], peers);
     if (m.island && this.g.has('director')) this.g.get<IslandDirector>('director').applyNet(m.island as IslandDirectorState);
     if (m.residents && this.g.has('characters')) this.g.get<IslandCharacters>('characters').applyNet(m.residents as CharacterNetState);
+    if (m.encounters) this.encounters?.applySnapshot(m.encounters as EncounterNetState);
+    if (m.kingVine) this.kingVine?.applySnapshot(m.kingVine as KingVineNetState);
+    if (m.threatsCleared) this.progress?.applyHostThreats(m.threatsCleared);
   }
 
   private requestResync(): void {
@@ -1683,6 +1818,23 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   // ---- loop ---------------------------------------------------------------
   fixedStep(dt: number): void {
     if (!this.connected) return;
+    if (this.isHost) {
+      for (const [target, rescuer] of [...this.reviveClaims])
+        this.applyReviveClaim(rescuer, target, true);
+    }
+    if (this.isHost) {
+      const targets = [
+        ...(this.g.player.state === 'active' ? [{
+          id: this.me,
+          position: [this.g.player.position.x, this.g.player.position.y, this.g.player.position.z] as [number, number, number],
+        }] : []),
+        ...[...this.remotes.values()].filter(r => r.state === 'active').map(r => ({
+          id: r.id, position: [r.targetPos.x, r.targetPos.y, r.targetPos.z] as [number, number, number],
+        })),
+      ];
+      this.encounters?.setTargets(targets);
+      this.kingVine?.setTargets(targets);
+    }
     this.expirePending();
     this.playerTimer += dt;
     if (this.playerTimer >= 1 / PLAYER_HZ) {

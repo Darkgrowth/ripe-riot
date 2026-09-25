@@ -21,6 +21,7 @@ export interface InputFrame {
   secondaryPressed: boolean;
   secondaryReleased: boolean;
   dropPressed: boolean;
+  rescue: boolean;       // hold H for the nearby safe-ground fallback
   slot: number;         // 0 = none, 1..4 = requested slot
   scroll: number;
 }
@@ -31,7 +32,7 @@ const EMPTY: InputFrame = {
   interact: false, interactPressed: false,
   primary: false, primaryPressed: false, primaryReleased: false,
   secondary: false, secondaryPressed: false, secondaryReleased: false,
-  dropPressed: false, slot: 0, scroll: 0,
+  dropPressed: false, rescue: false, slot: 0, scroll: 0,
 };
 
 export class PlayerInput {
@@ -171,6 +172,7 @@ export class PlayerInput {
     f.interact = down('KeyE');
     f.interactPressed = pressed('KeyE');
     f.dropPressed = pressed('KeyQ');
+    f.rescue = down('KeyH');
     f.slot = this.slotRequest;
 
     f.primary = this.buttons.has(0);

@@ -36,7 +36,7 @@ export const STAND_HEIGHT = 1.82;
 export const CROUCH_HEIGHT = 1.16;
 export const PLAYER_RADIUS = 0.34;
 
-export type PlayerState = 'active' | 'ragdoll' | 'downed';
+export type PlayerState = 'active' | 'ragdoll' | 'downed' | 'captured';
 
 const _v = new THREE.Vector3();
 const _v2 = new THREE.Vector3();

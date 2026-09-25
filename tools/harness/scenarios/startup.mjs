@@ -199,5 +199,11 @@ export async function run(g, t) {
   t.near(again.player.pitch, world.spawnPitch, 1e-3, 'respawn restores the spawn pitch');
   t.near(again.player.pos[0], base.pos[0], 0.05, 'respawn restores the spawn position (x)');
   t.near(again.player.pos[2], base.pos[2], 0.05, 'respawn restores the spawn position (z)');
+  // The harness fast-forwards simulation time, while the cosmetic ragdoll
+  // camera blend settles in actual rendered frames. Compare compositions only
+  // after the chase camera has returned to the player's eye.
+  await g.page.waitForFunction(() => window.__GAME.playerCamera.ragdollAnchor === null,
+    null, { timeout: 10_000 });
+  await g.idleFrames(2);
   t.near(await skyFraction(g), sky, 0.05, 'and reproduces the opening composition');
 }

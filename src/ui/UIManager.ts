@@ -6,6 +6,7 @@ import { createAudioSettings } from './AudioSettings';
 import type { AudioManager } from '@/audio/AudioManager';
 import type { ToolInventory } from '@/tools/ToolInventory';
 import type { RopeGun } from '@/tools/Tools';
+import type { PlayerVitals } from '@/player/PlayerVitals';
 
 /**
  * All HUD rendering. Kept as plain DOM: it composites over the canvas for free,
@@ -25,6 +26,7 @@ export class UIManager implements System {
     crosshair: HTMLElement; debug: HTMLElement; stunts: HTMLElement;
     banner: HTMLElement; hurt: HTMLElement; slots: HTMLElement;
     ropeGuide: HTMLElement; ropeCount: HTMLElement;
+    objective: HTMLElement; health: HTMLElement; healthFill: HTMLElement;
     entryHint: HTMLElement; entryTitle: HTMLElement;
   };
   private debugVisible = false;
@@ -47,6 +49,8 @@ export class UIManager implements System {
         <div class="crosshair"><i class="dot"></i></div>
         <div class="money"><small>$</small><span>0</span></div>
         <div class="money-delta"></div>
+        <div class="objective" aria-live="polite"></div>
+        <div class="health"><span>HEALTH</span><strong>100</strong><i><b></b></i></div>
         <div class="prompt"></div>
         <div class="carry"></div>
         <div class="rope-guide" hidden>
@@ -60,7 +64,7 @@ export class UIManager implements System {
         <div class="state-banner"></div>
         <div class="entry-hint" hidden>
           <strong>Click to play</strong>
-          <span>WASD move · Mouse look · E pick · 1–4 tools</span>
+          <span>WASD move · Mouse look · E interact · 1–4 tools · Hold H if stuck</span>
         </div>
       </div>
       <div class="debug hidden"></div>`;
@@ -83,6 +87,9 @@ export class UIManager implements System {
       slots: q('.slots'),
       ropeGuide: q('.rope-guide'),
       ropeCount: q('.rope-count'),
+      objective: q('.objective'),
+      health: q('.health'),
+      healthFill: q('.health i b'),
       entryHint: q('.entry-hint'),
       entryTitle: q('.entry-hint strong'),
     };
@@ -91,6 +98,12 @@ export class UIManager implements System {
     g.bus.on('ui:toast', (p) => this.toast(p.text, p.sub, p.kind, p.ms));
     g.bus.on('ui:celebrate', (p) => this.celebrate(p.title, p.sub, p.kind));
     g.bus.on('ui:prompt', (p) => this.offerPrompt(p.text, p.priority));
+    g.bus.on('player:revived', () => {
+      const v = g.get<PlayerVitals>('vitals');
+      if (v.mode === 'solo' && v.soloRecoveries > 0)
+        this.toast('Back on your feet', 'The next down forces evacuation.', 'bad', 3000);
+      else if (v.mode === 'coop') this.toast('Teammate revive', 'You are back in the harvest.', 'good', 2600);
+    });
     g.bus.on('stunt:awarded', (p) => this.stunt(p.label, p.multiplier));
     // A discovery is the strongest single moment in the loop and it used to be
     // the quietest: two handlers wrote the same banner over each other (this one
@@ -169,10 +182,28 @@ export class UIManager implements System {
 
   /** Resolve after every system has offered its candidate for this frame. */
   lateUpdate(): void {
-    const blocked = this.g.player.state !== 'active' || !this.g.input.enabled || this.modalOpen();
-    this.setPrompt(blocked ? null : (this.promptCandidate?.text ?? null));
+    if (this.g.has('progress')) {
+      const objective = this.g.get<{ objective: string }>('progress').objective;
+      if (this.els.objective.textContent !== objective) this.els.objective.textContent = objective;
+    }
+    if (this.g.has('vitals')) {
+      const v = this.g.get<PlayerVitals>('vitals');
+      this.els.health.querySelector('strong')!.textContent = `${Math.ceil(v.health)}`;
+      this.els.healthFill.style.width = `${Math.max(0, v.health / v.maxHealth * 100)}%`;
+      this.els.health.classList.toggle('low', v.health <= v.maxHealth * 0.3);
+    }
+    const blocked = !this.g.input.enabled || this.modalOpen();
+    const state = this.g.player.state;
+    const v = this.g.has('vitals') ? this.g.get<PlayerVitals>('vitals') : null;
+    const statePrompt = state === 'downed' && v
+      ? v.mode === 'solo' ? v.soloRecoveries > 0
+        ? `Evacuating in ${Math.ceil(v.bleedoutRemaining)} s`
+        : `Recovering in ${Math.ceil(v.soloRecoveryRemaining)} s`
+        : `Downed — teammate revive or evacuation in ${Math.ceil(v.bleedoutRemaining)} s`
+      : state === 'captured' ? '<b>Hold E</b> to pry open Snapjaw' : null;
+    this.setPrompt(blocked ? null : statePrompt ?? (state === 'active' ? this.promptCandidate?.text ?? null : null));
     const inv = this.g.get<ToolInventory>('tools');
-    const showingRope = !blocked && !this.g.get<InteractionSystem>('interaction').carried
+    const showingRope = !blocked && state === 'active' && !this.g.get<InteractionSystem>('interaction').carried
       && inv.activeId === 'ropegun';
     this.els.ropeGuide.hidden = !showingRope;
     if (showingRope) {

@@ -97,6 +97,7 @@ export async function run(g, t) {
   await g.wait(0.4);
   const beforeShort = (await g.state()).ragdoll.knockdowns;
   const p3 = (await g.state()).player.pos;
+  t.note(`short-drop setup: player ${(await g.state()).player.state}, ragdoll ${(await g.state()).ragdoll.active}`);
   await g.page.evaluate(() => {
     window.__FEELHITS = { n: 0, biggest: 0 };
     if (!window.__FEELHITS_BOUND) {

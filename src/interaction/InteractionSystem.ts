@@ -5,6 +5,8 @@ import type { FruitSystem } from '@/fruit/FruitSystem';
 import type { Sunpatch } from '@/world/Sunpatch';
 import type { Economy } from '@/systems/Economy';
 import type { MultiplayerAuthority } from '@/net/MultiplayerAuthority';
+import type { EncounterSystem } from '@/enemies/EncounterSystem';
+import type { PlayerVitals } from '@/player/PlayerVitals';
 import { clamp, damp } from '@/core/MathUtils';
 import { QueryMask } from '@/physics/Layers';
 import { PLAYER_RADIUS } from '@/player/PlayerController';
@@ -73,6 +75,8 @@ export class InteractionSystem implements System {
   pricks = 0;
   private targetPlantId = -1;
   promptText: string | null = null;
+  private revivingPeer: string | null = null;
+  private lastEscapeRequest = -1;
 
   /** Smoothed hand position offsets, so carrying has weight. */
   private handSway = new THREE.Vector3();
@@ -164,15 +168,50 @@ export class InteractionSystem implements System {
   // ---- per-frame ----------------------------------------------------------
   fixedStep(dt: number): void {
     const input = this.g.input.frame;
+    const encounters = this.g.has('encounters') ? this.g.get<EncounterSystem>('encounters') : null;
+    const vitals = this.g.has('vitals') ? this.g.get<PlayerVitals>('vitals') : null;
+    const myId = this.net?.me || 'solo';
+    const captured = !!encounters?.isCaptured(myId);
+    if (captured && !vitals?.downed && this.g.player.state === 'active') this.g.player.state = 'captured';
+    if (!captured && this.g.player.state === 'captured') this.g.player.state = vitals?.downed ? 'downed' : 'active';
     this.sellCooldown = Math.max(0, this.sellCooldown - dt);
     this.refreshCarryClass();
     this.updateTarget();
     this.updateSellPad(dt);
 
-    if (this.g.player.state !== 'active') {
-      if (this.carried) this.dropHeld(true);
+    if (this.g.player.state === 'captured') {
+      this.promptText = '<b>Hold E</b> to pry open Snapjaw';
+      if (input.interact && this.g.clock.elapsed - this.lastEscapeRequest > 0.18) {
+        encounters?.tryEscape(myId);
+        this.lastEscapeRequest = this.g.clock.elapsed;
+      }
       return;
     }
+
+    if (this.g.player.state !== 'active') {
+      if (this.revivingPeer) { this.net?.requestRevive(this.revivingPeer, false); this.revivingPeer = null; }
+      // A short slapstick ragdoll drops the item. A serious downed state keeps
+      // the haul available for rescue; only evacuation forfeits it.
+      if (this.g.player.state === 'ragdoll' && this.carried) this.dropHeld(true);
+      return;
+    }
+
+    const snapjaw = encounters?.snapshot().encounters.find(e => e.kind === 'snapjaw');
+    const captiveId = snapjaw?.capturedVictimId;
+    const captive = captiveId && captiveId !== myId ? this.net?.nearbyCaptured(captiveId) : null;
+    if (captive) {
+      this.promptText = `<b>E</b> Free ${captive.name} from Snapjaw`;
+      if (input.interactPressed) { encounters?.tryRescue(captive.id, myId); return; }
+    }
+    const downed = !captive ? this.net?.nearbyDowned() : null;
+    if (downed) this.promptText = `<b>Hold E</b> Revive ${downed.name}`;
+    const nextRevive = downed && input.interact ? downed.id : null;
+    if (this.revivingPeer !== nextRevive) {
+      if (this.revivingPeer) this.net?.requestRevive(this.revivingPeer, false);
+      if (nextRevive) this.net?.requestRevive(nextRevive, true);
+      this.revivingPeer = nextRevive;
+    }
+    if (nextRevive) return;
 
     this.catchStickyHits();
     if (input.interactPressed) this.tryInteract();

@@ -8,10 +8,15 @@ export interface GameEventMap {
   'player:ragdoll': { playerId: number; speed: number; source: string };
   'player:recovered': { playerId: number };
   'player:downed': { playerId: number };
-  'player:revived': { playerId: number; byId: number };
+  'player:revived': { playerId: number; byId: string | number };
   'player:landed': { playerId: number; speed: number };
   /** Something hit the player hard enough to notice but not to flatten them. */
   'player:hit': { momentum: number; fromAbove: boolean; point: THREE.Vector3 };
+  'encounter:defeated': { kind: 'mimic' | 'snapjaw' | 'spitter'; position: THREE.Vector3; actorId: string };
+  'encounter:attack': { kind: 'mimic' | 'snapjaw' | 'spitter'; victimId: string; damage: number };
+  'encounter:capture': { kind: 'snapjaw'; victimId: string };
+  'encounter:release': { kind: 'snapjaw'; victimId: string;
+    reason: 'escape' | 'rescue' | 'timeout' | 'defeat' };
 
   'fruit:detached': { fruitId: number; species: string; cause: string; playerId: number };
   /** Something loose was taken into the hands. `mass` drives the feedback. */

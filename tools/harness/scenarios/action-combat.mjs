@@ -1,0 +1,35 @@
+export const name = 'action-combat';
+
+export async function run(g, t) {
+  const before = await g.call('encounters.info');
+  const mimic = before.threats.mimic;
+  t.ok(mimic && mimic.health > 0, 'a suspicious harvest is present on Sunpatch');
+
+  const [x, y, z] = mimic.pos;
+  const startingMoney = (await g.state()).economy.money;
+  await g.standAt(x, z - 2.2);
+  await g.faceTo(x, y + 1.15, z);
+  await g.call('tool.select', 'hand');
+  await g.call('tool.fire');
+  const struck = await g.call('encounters.info');
+  t.lt(struck.threats.mimic.health, mimic.health,
+    'the starting picking tool can directly defend against a Mimic Melon');
+
+  await g.call('tool.give', 'aircannon');
+  await g.call('tool.select', 'aircannon');
+  await g.wait(0.45); // the first hit's enemy strike cooldown is part of combat timing
+  await g.call('tool.fire');
+  const blasted = await g.call('encounters.info');
+  t.lt(blasted.threats.mimic.health, struck.threats.mimic.health,
+    'the early Air Cannon also damages the threatening harvest');
+
+  if (blasted.threats.mimic.phase !== 'defeated') {
+    await g.wait(0.55);
+    await g.call('tool.fire');
+  }
+  const defeated = await g.call('encounters.info');
+  t.eq(defeated.threats.mimic.phase, 'defeated', 'the starter and early tool can finish the encounter');
+  t.gt((await g.state()).economy.money, startingMoney,
+    'a dangerous harvest gives a dependable base reward');
+  await g.call('encounters.reset');
+}

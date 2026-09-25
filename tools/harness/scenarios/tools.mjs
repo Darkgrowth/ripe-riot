@@ -171,6 +171,8 @@ export async function run(g, t) {
   const fxBefore = armed.fx.spawned;
   const kickBefore = (await g.state()).viewmodel.kick;
   await g.call('tool.fire');
+  // Recoil starts as velocity; the arm pose changes on the next rendered frame.
+  await g.idleFrames(2);
   const fired = await g.state();
   t.gt(fired.fx.spawned, fxBefore, 'firing the cannon puts a visible blast in the world');
   t.ok(fired.viewmodel.kick !== kickBefore, 'and it moves the arms');

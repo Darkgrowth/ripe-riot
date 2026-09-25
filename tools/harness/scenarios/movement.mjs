@@ -10,7 +10,9 @@ export const name = 'movement';
 
 export async function run(g, t) {
   // --- flat ground walk speed
-  await g.standAt(-24, 22, 0);            // orchard terrace, flat and open
+  // The orchard lane runs northeast. Facing south from here reaches its solid
+  // boundary fence after roughly 5 m, which measures collision, not speed.
+  await g.standAt(-24, 22, -2.0);
   // `grounded` is a per-step flag and a capsule on a real trimesh genuinely
   // loses contact for the odd step (see TESTING.md), so it is sampled across
   // the walk rather than read once.

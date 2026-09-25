@@ -6,6 +6,9 @@ import { Economy } from '@/systems/Economy';
 import { InteractionSystem } from '@/interaction/InteractionSystem';
 import { UIManager } from '@/ui/UIManager';
 import { PlayerRagdoll } from '@/player/PlayerRagdoll';
+import { PlayerVitals } from '@/player/PlayerVitals';
+import { EncounterSystem } from '@/enemies/EncounterSystem';
+import { KingVine } from '@/boss/KingVine';
 import { ViewmodelSystem } from '@/player/ViewmodelSystem';
 import { RopeSystem } from '@/systems/RopeSystem';
 import { HarvestScoring } from '@/systems/HarvestScoring';
@@ -64,6 +67,38 @@ async function main(): Promise<void> {
   game.add(new Economy());
   game.add(new FruitSystem());
   game.add(new PlayerRagdoll());
+  game.add(new PlayerVitals({
+    onLoseUnsecured: () => {
+      const hands = game.get<InteractionSystem>('interaction');
+      hands.dropHeld(true);
+      hands.tipOutBasket();
+    },
+    onWipe: () => {
+      const net = game.get<MultiplayerAuthority>('net');
+      if (!net.connected) {
+        game.get<KingVine>('kingVine').reset();
+        const legendary = game.get<LegendaryHarvest>('legendary');
+        if (legendary.phase !== 'complete') legendary.reset();
+      }
+      world.spawnPlayer(game.player);
+      game.get<PlayerVitals>('vitals').restoreAtCheckpoint();
+      game.bus.emit('ui:toast', {
+        text: 'Evacuated to the dock', sub: 'Unsecured fruit was left behind.', kind: 'bad', ms: 4200,
+      });
+    },
+  }));
+  game.add(new EncounterSystem());
+  game.add(new KingVine({
+    onDamagePlayer: (victimId, amount, source) => {
+      const net = game.get<MultiplayerAuthority>('net');
+      if (!net.connected || victimId === net.me) game.get<PlayerVitals>('vitals').damage(amount, source);
+      else net.damagePeer(victimId, amount, source);
+    },
+    onSubdued: () => game.bus.emit('ui:toast', {
+      text: 'King Vine subdued', sub: 'Cut the King Melon free, then bring it to the marked pad.',
+      kind: 'good', ms: 4500,
+    }),
+  }));
   game.add(new InteractionSystem());
   game.add(new RopeSystem());
   game.add(new HarvestScoring());
@@ -84,6 +119,24 @@ async function main(): Promise<void> {
 
   progress(52, 'planting');
   await game.initSystems();
+  const encounters = game.get<EncounterSystem>('encounters');
+  encounters.onPlayerDamaged = (amount, kind, victimId) => {
+    const net = game.get<MultiplayerAuthority>('net');
+    if (!net.connected || victimId === net.me) game.get<PlayerVitals>('vitals').damage(amount, kind);
+    else net.damagePeer(victimId, amount, kind);
+  };
+  encounters.onDefeated = (kind, at) => {
+    // Fighting always pays something. The physical fruit is a second reward
+    // for a crew that secures it, never the only way to afford another try.
+    game.get<Economy>('economy').add(kind === 'mimic' ? 80 : kind === 'snapjaw' ? 140 : 110, `defeat:${kind}`);
+    game.get<FruitSystem>('fruit').spawnFree(
+      kind === 'mimic' ? 'watermelon' : kind === 'snapjaw' ? 'gluefruit' : 'puffmelon',
+      at.clone().add(new THREE.Vector3(0, 2.4, 0)));
+    game.bus.emit('ui:toast', {
+      text: kind === 'mimic' ? 'Mimic Melon subdued' : kind === 'snapjaw' ? 'Snapjaw opened' : 'Spitter Plant silenced',
+      sub: 'Base reward banked. Secure the prize for more.', kind: 'good', ms: 3200,
+    });
+  };
   game.get<AudioManager>('audio').setEventDirector(game.get<IslandDirector>('director'));
   // Position AND orientation: a spawn transform that sets only the position
   // leaves the player looking down whatever axis yaw 0 happens to be.

@@ -64,6 +64,8 @@ export class Progression implements System {
   shown = new Set<string>();
   /** Game time of each milestone the first time it happened, for the playthrough report. */
   milestones = new Map<string, number>();
+  /** Encounter victories count even if the crew discovers them out of order. */
+  threatsCleared = new Set<'mimic' | 'snapjaw' | 'spitter'>();
   private pendingHint: { at: number; text: string; sub: string } | null = null;
   private unlockAt = -1;
   private sightTimer = 0;
@@ -76,6 +78,14 @@ export class Progression implements System {
 
     g.bus.on('shop:purchased', (p) => this.onPurchase(p.itemId));
     g.bus.on('legendary:complete', () => this.onLegendaryComplete());
+    g.bus.on('encounter:defeated', ({ kind }) => {
+      if (this.threatsCleared.has(kind)) return;
+      this.threatsCleared.add(kind);
+      this.mark(`defeated:${kind}`);
+      this.g.bus.emit('ui:toast', {
+        text: 'Objective updated', sub: this.objective, kind: 'gold', ms: 3800,
+      });
+    });
     g.bus.on('fruit:sold', () => this.mark('firstSale'));
     g.bus.on('money:changed', (p) => { if (p.reason === 'sale') this.onSale(p.delta); });
     g.bus.on('book:discovered', (p) => this.onDiscovered(p.species, p.variant));
@@ -93,20 +103,45 @@ export class Progression implements System {
       nextIsland: this.nextIslandUnlocked,
       shown: [...this.shown],
       milestones: Object.fromEntries([...this.milestones].map(([k, v]) => [k, +v.toFixed(1)])),
+      objective: this.objective, threatsCleared: [...this.threatsCleared],
     }));
     g.debug?.addAction('progress.info', () => ({
       islands: [...this.islands], milestones: Object.fromEntries(this.milestones),
+      objective: this.objective, threatsCleared: [...this.threatsCleared],
     }));
     g.debug?.addAction('progress.reset', () => {
       this.islands = new Set(['sunpatch']);
       this.shown.clear();
       this.milestones.clear();
+      this.threatsCleared.clear();
       this.world.setNextIslandOpen(false);
       return true;
     });
   }
 
   get nextIslandUnlocked(): boolean { return this.islands.has('galegrove'); }
+
+  /** The session host owns shared encounter milestones while playing together. */
+  applyHostThreats(value: unknown): void {
+    if (!Array.isArray(value)) return;
+    const next = new Set<'mimic' | 'snapjaw' | 'spitter'>(value.filter(
+      (x): x is 'mimic' | 'snapjaw' | 'spitter' => x === 'mimic' || x === 'snapjaw' || x === 'spitter'));
+    if (next.size === this.threatsCleared.size && [...next].every(x => this.threatsCleared.has(x))) return;
+    this.threatsCleared = next;
+    this.g.bus.emit('ui:toast', {
+      text: 'Objective updated', sub: this.objective, kind: 'gold', ms: 3800,
+    });
+  }
+
+  get objective(): string {
+    if (this.nextIslandUnlocked) return 'Sunpatch cleared. Return to the boat.';
+    if (!this.threatsCleared.has('mimic')) return 'Follow the orchard path. Investigate the moving fruit.';
+    if (!this.threatsCleared.has('snapjaw')) return 'Take the hill path. Free the harvest from Snapjaw.';
+    if (!this.threatsCleared.has('spitter')) return 'Climb toward the ridge. Silence the Spitter Plant.';
+    if (this.g.has('kingVine') && this.g.get<{ subdued: boolean }>('kingVine').subdued)
+      return 'Cut the King Melon free. Bring it to the marked pad.';
+    return 'Confront King Vine at King Melon.';
+  }
 
   /** Record the first time something happened, in game seconds. */
   mark(key: string): void {
@@ -186,12 +221,10 @@ export class Progression implements System {
     this.once('sight');
     this.mark('kingMelonSeen');
     this.legendary.firstSightAt = this.g.clock.elapsed;
-    const has = this.g.has('tools')
-      && this.g.get<{ owned: Set<string> }>('tools').owned.has('ropegun');
     this.g.bus.emit('ui:celebrate', { title: 'THE KING MELON', sub: '2,600 KG. $9,500. FOUR VINES.', kind: 'legendary' });
     this.g.bus.emit('ui:toast', {
-      text: has ? 'You have the rope gun. Rope it, pin it, cut it.' : 'You are not equipped for this',
-      sub: has ? 'Two tethers to rock before the last vine goes.' : 'A Rope Gun from the shed opens it. Everything else is nerve.',
+      text: 'The King Vine guards the prize',
+      sub: 'Dodge its attacks, hit the exposed stem, then cut the melon free. Ropes can steady the drop.',
       kind: 'gold', ms: 6000,
     });
   }
@@ -211,17 +244,22 @@ export class Progression implements System {
     }
   }
 
-  serialize(): { islands: string[]; shown: string[]; milestones: Record<string, number> } {
+  serialize(): { islands: string[]; shown: string[]; milestones: Record<string, number>;
+    threatsCleared: Array<'mimic' | 'snapjaw' | 'spitter'> } {
     return {
       islands: [...this.islands], shown: [...this.shown],
       milestones: Object.fromEntries([...this.milestones].map(([k, v]) => [k, +v.toFixed(1)])),
+      threatsCleared: [...this.threatsCleared],
     };
   }
 
-  deserialize(d: { islands?: string[]; shown?: string[]; milestones?: Record<string, number> }): void {
+  deserialize(d: { islands?: string[]; shown?: string[]; milestones?: Record<string, number>;
+    threatsCleared?: Array<'mimic' | 'snapjaw' | 'spitter'> }): void {
     this.islands = new Set(d.islands?.length ? d.islands : ['sunpatch']);
     this.shown = new Set(d.shown ?? []);
     this.milestones = new Map(Object.entries(d.milestones ?? {}));
+    this.threatsCleared = new Set((d.threatsCleared ?? []).filter(
+      (x): x is 'mimic' | 'snapjaw' | 'spitter' => x === 'mimic' || x === 'snapjaw' || x === 'spitter'));
     this.world.setNextIslandOpen(this.nextIslandUnlocked);
   }
 }
