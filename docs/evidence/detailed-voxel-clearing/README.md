@@ -28,6 +28,6 @@ The final sale frames report 244 calls/1.63 million triangles at 1920 and 248 ca
 - [Save round trip](save-roundtrip.json): baseline fresh save → voxel resume → baseline resume, with money 0 → 321 → 654, schema version 1, identical serialized system keys, and no browser errors.
 - One independent reviewer inspected code and final captures. The reviewer found and verified fixes for the banana plant collider omission, detached Mimic eyes, and disconnected banana fronds. No further blocking finding remained.
 
-## Decision still open
+## Later visual decision
 
-The user must judge the visual style and character motion before this language is applied to the rest of Sunpatch or other enemies. The first clearing still sits beside baseline assets elsewhere on the island. Continuous animation, full ragdoll contact, and sustained hardware performance need a closer user or hardware playtest; automated checks alone do not grant visual approval.
+The later 52-second gameplay clip led to a choice to continue the moderately detailed voxel direction; see the [27 September art review](../voxel-art-polish/README.md). This original Stage 1 evidence remains a record of the pilot. The first clearing still sits beside baseline assets elsewhere on the island. Continuous animation, full ragdoll contact, and sustained hardware performance need a closer user or hardware playtest; automated checks alone do not grant approval of each asset.

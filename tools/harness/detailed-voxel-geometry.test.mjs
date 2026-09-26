@@ -111,6 +111,34 @@ test('voxel orchard trees preserve every harvest point and trunk collider', () =
   }
 });
 
+test('orchard crown variants have distinct spreading, upright and windswept silhouettes', () => {
+  const leafProfile = (type, variant) => {
+    const shape = voxelPlantShape(type, variant, true);
+    const positions = shape.geometry.getAttribute('position');
+    const colors = shape.geometry.getAttribute('color');
+    let minX = Infinity, maxX = -Infinity, top = -Infinity;
+    for (let i = 0; i < positions.count; i++) {
+      if (colors.getY(i) < colors.getX(i) * 1.2) continue;
+      minX = Math.min(minX, positions.getX(i));
+      maxX = Math.max(maxX, positions.getX(i));
+      top = Math.max(top, positions.getY(i));
+    }
+    return { width: maxX - minX, skew: maxX + minX,
+      crownHeight: top - shape.collider.offset * 2 };
+  };
+  for (const type of ['appleTree', 'orangeTree']) {
+    const spreading = leafProfile(type, 0);
+    const upright = leafProfile(type, 1);
+    const windswept = leafProfile(type, 2);
+    assert.ok(spreading.width > upright.width * 1.15,
+      `${type}: spreading crown should be visibly wider than upright`);
+    assert.ok(upright.crownHeight > spreading.crownHeight + 0.15,
+      `${type}: upright crown should visibly rise above spreading`);
+    assert.ok(Math.abs(windswept.skew) > 0.35,
+      `${type}: windswept crown should favor one side`);
+  }
+});
+
 test('voxel melon vine retains its single saved fruit node and ground-level sway geometry', () => {
   for (const variant of [0, 1, 2]) {
     const old = plantShape('melonVine', variant, false);

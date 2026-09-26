@@ -129,6 +129,15 @@ function buildTree(type: 'appleTree' | 'orangeTree', variant: number,
   const lean = (variant - 1) * (apple ? 0.045 : 0.05);
   const spread = apple ? 1.30 : 1.05;
   const crownR = apple ? 1.45 : 1.30;
+  const habits = [
+    { spreadX: 1.17, spreadZ: 1.08, lobeX: 1.07, topWidth: 0.94,
+      topHeight: 0.94, topLift: 0.42, ringHeight: 0.91, biasX: 0 },
+    { spreadX: 0.77, spreadZ: 0.86, lobeX: 0.86, topWidth: 0.76,
+      topHeight: 1.15, topLift: 0.52, ringHeight: 1.05, biasX: 0 },
+    { spreadX: 1.02, spreadZ: 0.95, lobeX: 0.94, topWidth: 0.84,
+      topHeight: 1.00, topLift: 0.46, ringHeight: 0.98, biasX: 0.38 },
+  ] as const;
+  const habit = habits[((variant % habits.length) + habits.length) % habits.length];
   const palette = apple
     ? [0x4c8e43, 0x59a04a, 0x69a851, 0x478544]
     : [0x408a39, 0x519b41, 0x67a747, 0x3a7f3c];
@@ -150,30 +159,36 @@ function buildTree(type: 'appleTree' | 'orangeTree', variant: number,
   }
 
   const lobes: Lobe[] = [{
-    x: -Math.sin(lean) * trunkH, y: trunkH + crownR * 0.43, z: 0,
-    rx: crownR * 0.84, ry: crownR * 1.06, rz: crownR * 0.84,
+    x: -Math.sin(lean) * trunkH + habit.biasX * 0.6,
+    y: trunkH + crownR * habit.topLift, z: 0,
+    rx: crownR * habit.topWidth, ry: crownR * habit.topHeight,
+    rz: crownR * (habit.topWidth + 0.03),
     color: palette[0],
   }];
   const ring = apple ? 5 : 4;
   for (let i = 0; i < ring; i++) {
     const angle = i * Math.PI * 2 / ring + variant * 0.32 + (apple ? 0.12 : -0.16);
     const range = spread * (0.91 + 0.08 * Math.sin(i * 2.4 + variant));
+    const lift = [0.22, -0.16, 0.10, -0.10, 0.17][i % 5];
     lobes.push({
-      x: Math.sin(angle) * range, y: trunkH + 0.04 + 0.13 * Math.sin(i * 1.7 + variant),
-      z: Math.cos(angle) * range,
-      rx: crownR * (0.69 + 0.05 * (i % 2)),
-      ry: crownR * (0.62 + 0.07 * ((i + variant) % 3)),
-      rz: crownR * (0.69 + 0.04 * ((i + 1) % 2)),
+      x: Math.sin(angle) * range * habit.spreadX + habit.biasX,
+      y: trunkH + lift + (variant === 1 ? 0.16 : 0),
+      z: Math.cos(angle) * range * habit.spreadZ,
+      rx: crownR * (0.69 + 0.05 * (i % 2)) * habit.lobeX,
+      ry: crownR * (0.62 + 0.07 * ((i + variant) % 3)) * habit.ringHeight,
+      rz: crownR * (0.69 + 0.04 * ((i + 1) % 2)) * habit.spreadZ,
       color: palette[1 + i % 3],
     });
   }
-  const skirt = apple ? 3 : 2;
+  const skirt = variant === 1 ? (apple ? 2 : 1) : (apple ? 3 : 2);
   for (let i = 0; i < skirt; i++) {
     const angle = (i + 0.5) * Math.PI * 2 / skirt + variant * 0.3;
     lobes.push({
-      x: Math.sin(angle) * spread * 1.15, y: trunkH - crownR * 0.30,
-      z: Math.cos(angle) * spread * 1.15,
-      rx: crownR * 0.56, ry: crownR * 0.50, rz: crownR * 0.54,
+      x: Math.sin(angle) * spread * 1.15 * habit.spreadX + habit.biasX,
+      y: trunkH - crownR * (0.28 + (i % 2) * 0.10),
+      z: Math.cos(angle) * spread * 1.15 * habit.spreadZ,
+      rx: crownR * 0.56 * habit.lobeX, ry: crownR * 0.48,
+      rz: crownR * 0.54 * habit.spreadZ,
       color: palette[(i + 2) % palette.length],
     });
   }
@@ -208,11 +223,8 @@ function buildTree(type: 'appleTree' | 'orangeTree', variant: number,
       // Keep saved fruit positions visible against small recesses in the leaf
       // surface, without moving the gameplay node or opening broad holes.
       if (harvestCrown && original.attachPoints.some(pt =>
-        Math.hypot(wx - pt.x, wy - pt.y, wz - pt.z) < 0.18)) continue;
-      const base = lobes[lobeIndex].color;
-      const tone = wy < trunkH - 0.4 ? 0x3c763b
-        : wy > trunkH + crownR * 0.74 ? palette[2] : base;
-      volume.put(x, y, z, tone);
+        Math.hypot(wx - pt.x, wy - pt.y, wz - pt.z) < 0.22)) continue;
+      volume.put(x, y, z, lobes[lobeIndex].color);
     }
   }
 

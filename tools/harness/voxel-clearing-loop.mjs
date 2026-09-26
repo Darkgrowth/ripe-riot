@@ -3,7 +3,7 @@
  * Reads game state for navigation and evidence only. Every action uses trusted
  * Playwright keyboard/mouse input; no debug actions, state writes or fixture.
  *
- * RIPE_URL=http://127.0.0.1:5203 node tools/harness/voxel-clearing-loop.mjs \
+ * RIPE_URL=http://127.0.0.1:5205 node tools/harness/voxel-clearing-loop.mjs \
  *   --width 320 --height 180
  * Add --video for a full session WebM, then inspect screenshots and report.
  * --capture-warning and --capture-hit attempt synchronous stills during combat;
@@ -27,8 +27,8 @@ if (!Number.isInteger(width) || !Number.isInteger(height) || width < 320 || heig
   || !Number.isFinite(maxSeconds) || maxSeconds < 30 || maxSeconds > 600)
   throw new Error('Use a viewport of at least 320x180 and --seconds from 30 to 600.');
 const base = process.env.RIPE_URL;
-if (base !== 'http://127.0.0.1:5203')
-  throw new Error('Set RIPE_URL=http://127.0.0.1:5203 (isolated pilot server).');
+if (!base || !/^http:\/\/127\.0\.0\.1:\d+$/.test(base))
+  throw new Error('Set RIPE_URL to an isolated local pilot server, such as http://127.0.0.1:5205.');
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const out = path.resolve(root, option('--out',
   `docs/evidence/detailed-voxel-clearing/normal-loop/${width}x${height}`));

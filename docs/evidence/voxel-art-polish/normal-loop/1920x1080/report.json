@@ -1,0 +1,757 @@
+{
+  "url": "http://127.0.0.1:5205/?fresh=1&voxelPilot=1",
+  "viewport": [
+    1920,
+    1080
+  ],
+  "maxSeconds": 200,
+  "durationSeconds": 39.03,
+  "videoPageCreatedOffsetSeconds": 0.001,
+  "gpu": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+  "beats": {
+    "dock": true,
+    "warning": true,
+    "hit": true,
+    "continuedAfterHit": true,
+    "mimicDefeated": true,
+    "physicalPrize": true,
+    "carriedPrize": true,
+    "reachedRealPad": true,
+    "soldWithE": true
+  },
+  "failure": null,
+  "errors": [],
+  "warnings": [],
+  "final": {
+    "gameSeconds": 36.14999999999924,
+    "visualMode": "voxel",
+    "pos": [
+      41.11156279420915,
+      2.6008269113222777,
+      56.395189455318146
+    ],
+    "eye": [
+      41.11156279420915,
+      4.230826911322278,
+      56.395189455318146
+    ],
+    "yaw": 0.3398952180016126,
+    "pitch": -0.044000000000000004,
+    "playerState": "active",
+    "health": 72,
+    "downed": false,
+    "synthetic": false,
+    "locked": true,
+    "sensitivity": 0.0022,
+    "invertY": false,
+    "mimic": {
+      "pos": [
+        -14.12214559352387,
+        7.5,
+        26.3092533173177
+      ],
+      "phase": "defeated",
+      "health": 0,
+      "timeLeft": 0
+    },
+    "activeTool": "hand",
+    "cooldown": 0,
+    "carried": null,
+    "carriedSpecies": null,
+    "targetKind": null,
+    "targetId": null,
+    "prompt": null,
+    "nearSellPad": true,
+    "sellPad": [
+      40.77003468801159,
+      2.4811767578125,
+      55.35669382866159
+    ],
+    "spawn": [
+      71.5,
+      2.450734972582344,
+      71.5
+    ],
+    "money": 185,
+    "prize": [],
+    "render": {
+      "drawCalls": 246,
+      "triangles": 1637822,
+      "geometries": 215,
+      "textures": 17,
+      "programs": 37
+    },
+    "gpu": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "events": []
+  },
+  "timeline": [
+    {
+      "wallSeconds": 2.72,
+      "stage": "boot",
+      "kind": "fresh-dock",
+      "pos": [
+        71.5000016427717,
+        2.3508349371619115,
+        71.49999522937429
+      ],
+      "health": 100,
+      "playerState": "active",
+      "mimic": {
+        "pos": [
+          -23,
+          7.5,
+          22
+        ],
+        "phase": "idle",
+        "health": 3,
+        "timeLeft": 0
+      },
+      "tool": "hand",
+      "carried": null,
+      "targetKind": null,
+      "targetId": null,
+      "money": 0,
+      "render": {
+        "drawCalls": 242,
+        "triangles": 1647056,
+        "geometries": 196,
+        "textures": 17,
+        "programs": 36
+      }
+    },
+    {
+      "wallSeconds": 3.12,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        60,
+        0,
+        65
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 5.09,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        55.5,
+        0,
+        61
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 6.11,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        50.5,
+        0,
+        61.5
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 6.93,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        44,
+        0,
+        62.5
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 7.86,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        37.2,
+        0,
+        58.2
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 9.14,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        30,
+        0,
+        54
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 10.24,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        25,
+        0,
+        46
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 11.52,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        11,
+        0,
+        38.6
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 13.74,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -3.5,
+        0,
+        31.4
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 15.84,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -7.5,
+        0,
+        29.5
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 16.5,
+      "stage": "warning-and-hit",
+      "kind": "orchard-entry",
+      "pos": [
+        -7.53568682753167,
+        7.520100129877013,
+        29.462884626845792
+      ],
+      "health": 100,
+      "playerState": "active",
+      "mimic": {
+        "pos": [
+          -23,
+          7.5,
+          22
+        ],
+        "phase": "idle",
+        "health": 3,
+        "timeLeft": 0
+      },
+      "tool": "hand",
+      "carried": null,
+      "targetKind": null,
+      "targetId": null,
+      "money": 0,
+      "render": {
+        "drawCalls": 238,
+        "triangles": 1858110,
+        "geometries": 197,
+        "textures": 17,
+        "programs": 36
+      }
+    },
+    {
+      "wallSeconds": 16.65,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -12.5,
+        0,
+        27.2
+      ],
+      "radius": 0.5
+    },
+    {
+      "wallSeconds": 17.75,
+      "stage": "walk",
+      "kind": "warning-observed",
+      "pos": [
+        -11.53381202676566,
+        7.520017789254402,
+        27.588854398688106
+      ],
+      "mimic": {
+        "pos": [
+          -23,
+          7.5,
+          22
+        ],
+        "phase": "warn",
+        "health": 3,
+        "timeLeft": 0.7666666666666666
+      },
+      "health": 100
+    },
+    {
+      "wallSeconds": 21.76,
+      "stage": "walk",
+      "kind": "first-hit-observed"
+    },
+    {
+      "wallSeconds": 21.87,
+      "stage": "walk",
+      "kind": "immediate-mallet-click-after-hit"
+    },
+    {
+      "wallSeconds": 22.71,
+      "stage": "mimic-fight",
+      "kind": "rapid-mallet-click",
+      "index": 2
+    },
+    {
+      "wallSeconds": 23.54,
+      "stage": "mimic-fight",
+      "kind": "rapid-mallet-click",
+      "index": 3
+    },
+    {
+      "wallSeconds": 23.54,
+      "stage": "mimic-fight",
+      "kind": "event",
+      "name": "encounter:attack",
+      "gameSeconds": 19.433333333333515,
+      "payload": {
+        "kind": "mimic",
+        "victimId": "solo",
+        "damage": 28
+      }
+    },
+    {
+      "wallSeconds": 23.54,
+      "stage": "mimic-fight",
+      "kind": "event",
+      "name": "tool:swing",
+      "gameSeconds": 19.45000000000018,
+      "payload": {
+        "toolId": "hand",
+        "duration": 0.32
+      }
+    },
+    {
+      "wallSeconds": 23.54,
+      "stage": "mimic-fight",
+      "kind": "event",
+      "name": "tool:swing",
+      "gameSeconds": 20.28333333333347,
+      "payload": {
+        "toolId": "hand",
+        "duration": 0.32
+      }
+    },
+    {
+      "wallSeconds": 23.54,
+      "stage": "mimic-fight",
+      "kind": "event",
+      "name": "money:changed",
+      "gameSeconds": 21.10000000000009,
+      "payload": {
+        "money": 80,
+        "delta": 80,
+        "reason": "defeat:mimic"
+      }
+    },
+    {
+      "wallSeconds": 23.54,
+      "stage": "mimic-fight",
+      "kind": "event",
+      "name": "encounter:defeated",
+      "gameSeconds": 21.10000000000009,
+      "payload": {
+        "kind": "mimic",
+        "position": {
+          "x": -14.12214559352387,
+          "y": 7.5,
+          "z": 26.3092533173177
+        },
+        "actorId": "solo"
+      }
+    },
+    {
+      "wallSeconds": 23.54,
+      "stage": "mimic-fight",
+      "kind": "event",
+      "name": "tool:swing",
+      "gameSeconds": 21.10000000000009,
+      "payload": {
+        "toolId": "hand",
+        "duration": 0.32
+      }
+    },
+    {
+      "wallSeconds": 23.54,
+      "stage": "mimic-fight",
+      "kind": "damage-observed",
+      "pos": [
+        -11.624017766908441,
+        7.520103046084463,
+        27.573937927106883
+      ],
+      "mimic": {
+        "pos": [
+          -14.12214559352387,
+          7.5,
+          26.3092533173177
+        ],
+        "phase": "defeated",
+        "health": 0,
+        "timeLeft": 0
+      },
+      "health": 72
+    },
+    {
+      "wallSeconds": 23.54,
+      "stage": "mimic-fight",
+      "kind": "rapid-mallet-result",
+      "pos": [
+        -11.624017766908441,
+        7.520103046084463,
+        27.573937927106883
+      ],
+      "health": 72,
+      "playerState": "active",
+      "mimic": {
+        "pos": [
+          -14.12214559352387,
+          7.5,
+          26.3092533173177
+        ],
+        "phase": "defeated",
+        "health": 0,
+        "timeLeft": 0
+      },
+      "tool": "hand",
+      "carried": null,
+      "targetKind": null,
+      "targetId": null,
+      "money": 80,
+      "render": {
+        "drawCalls": 260,
+        "triangles": 1867604,
+        "geometries": 212,
+        "textures": 17,
+        "programs": 37
+      }
+    },
+    {
+      "wallSeconds": 23.94,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -12.694651166990816,
+        0,
+        27.031928926094366
+      ],
+      "radius": 0.7
+    },
+    {
+      "wallSeconds": 24.94,
+      "stage": "walk",
+      "kind": "prize-target",
+      "pos": [
+        -12.709744213452526,
+        7.520099425928114,
+        27.00248709385396
+      ],
+      "health": 72,
+      "playerState": "active",
+      "mimic": {
+        "pos": [
+          -14.12214559352387,
+          7.5,
+          26.3092533173177
+        ],
+        "phase": "defeated",
+        "health": 0,
+        "timeLeft": 0
+      },
+      "tool": "hand",
+      "carried": null,
+      "targetKind": "fruit",
+      "targetId": 686,
+      "money": 80,
+      "render": {
+        "drawCalls": 220,
+        "triangles": 1858370,
+        "geometries": 212,
+        "textures": 17,
+        "programs": 37
+      }
+    },
+    {
+      "wallSeconds": 25.06,
+      "stage": "walk",
+      "kind": "event",
+      "name": "fruit:grabbed",
+      "gameSeconds": 22.633333333333336,
+      "payload": {
+        "fruitId": 686,
+        "species": "watermelon",
+        "mass": 22,
+        "heavy": true
+      }
+    },
+    {
+      "wallSeconds": 25.06,
+      "stage": "walk",
+      "kind": "prize-E",
+      "pos": [
+        -12.709744397359424,
+        7.520099492255744,
+        27.002487182697056
+      ],
+      "health": 72,
+      "playerState": "active",
+      "mimic": {
+        "pos": [
+          -14.12214559352387,
+          7.5,
+          26.3092533173177
+        ],
+        "phase": "defeated",
+        "health": 0,
+        "timeLeft": 0
+      },
+      "tool": "hand",
+      "carried": 686,
+      "targetKind": null,
+      "targetId": null,
+      "money": 80,
+      "render": {
+        "drawCalls": 222,
+        "triangles": 1850806,
+        "geometries": 215,
+        "textures": 17,
+        "programs": 37
+      }
+    },
+    {
+      "wallSeconds": 25.16,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -7.5,
+        0,
+        29.5
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 26.89,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -3.5,
+        0,
+        31.4
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 27.71,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        11,
+        0,
+        38.6
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 30.14,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        25,
+        0,
+        46
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 32.4,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        30,
+        0,
+        54
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 33.88,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        37.2,
+        0,
+        58.2
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 35.3,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        44,
+        0,
+        62.5
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 36.4,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        40.77003468801159,
+        2.4811767578125,
+        55.35669382866159
+      ],
+      "radius": 2.2
+    },
+    {
+      "wallSeconds": 37.98,
+      "stage": "walk",
+      "kind": "real-sell-pad",
+      "pos": [
+        41.30339576885695,
+        2.7352729966001643,
+        57.0459581623981
+      ],
+      "health": 72,
+      "playerState": "active",
+      "mimic": {
+        "pos": [
+          -14.12214559352387,
+          7.5,
+          26.3092533173177
+        ],
+        "phase": "defeated",
+        "health": 0,
+        "timeLeft": 0
+      },
+      "tool": "hand",
+      "carried": 686,
+      "targetKind": "sell",
+      "targetId": null,
+      "money": 80,
+      "render": {
+        "drawCalls": 249,
+        "triangles": 1638998,
+        "geometries": 215,
+        "textures": 17,
+        "programs": 37
+      }
+    },
+    {
+      "wallSeconds": 38.23,
+      "stage": "walk",
+      "kind": "event",
+      "name": "fruit:sold",
+      "gameSeconds": 35.79999999999926,
+      "payload": {
+        "fruitId": 686,
+        "species": "watermelon",
+        "value": 105,
+        "quality": "Good",
+        "mass": 22
+      }
+    },
+    {
+      "wallSeconds": 38.23,
+      "stage": "walk",
+      "kind": "event",
+      "name": "money:changed",
+      "gameSeconds": 35.79999999999926,
+      "payload": {
+        "money": 185,
+        "delta": 105,
+        "reason": "sale"
+      }
+    },
+    {
+      "wallSeconds": 38.23,
+      "stage": "walk",
+      "kind": "sale-E",
+      "pos": [
+        41.111562794856994,
+        2.6008268688306853,
+        56.395189841647735
+      ],
+      "health": 72,
+      "playerState": "active",
+      "mimic": {
+        "pos": [
+          -14.12214559352387,
+          7.5,
+          26.3092533173177
+        ],
+        "phase": "defeated",
+        "health": 0,
+        "timeLeft": 0
+      },
+      "tool": "hand",
+      "carried": null,
+      "targetKind": null,
+      "targetId": null,
+      "money": 185,
+      "render": {
+        "drawCalls": 246,
+        "triangles": 1637822,
+        "geometries": 215,
+        "textures": 17,
+        "programs": 37
+      }
+    },
+    {
+      "wallSeconds": 38.49,
+      "stage": "walk",
+      "kind": "final",
+      "pos": [
+        41.11156279420915,
+        2.6008269113222777,
+        56.395189455318146
+      ],
+      "health": 72,
+      "playerState": "active",
+      "mimic": {
+        "pos": [
+          -14.12214559352387,
+          7.5,
+          26.3092533173177
+        ],
+        "phase": "defeated",
+        "health": 0,
+        "timeLeft": 0
+      },
+      "tool": "hand",
+      "carried": null,
+      "targetKind": null,
+      "targetId": null,
+      "money": 185,
+      "render": {
+        "drawCalls": 246,
+        "triangles": 1637822,
+        "geometries": 215,
+        "textures": 17,
+        "programs": 37
+      }
+    }
+  ]
+}
