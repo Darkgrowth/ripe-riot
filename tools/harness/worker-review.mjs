@@ -22,6 +22,13 @@ const FIXTURES = [
   ['mallet-uw', 3434, 1270],
   ['carry-large-uw', 3434, 1270],
 ];
+const EXTRA_AFTER = [
+  ['basket', 1920, 1080],
+  ['basket-uw', 3434, 1270],
+  ['aircannon-uw', 3434, 1270],
+  ['carry-small-uw', 3434, 1270],
+  ['remote-blue', 1920, 1080],
+];
 
 function checkFixtures(stage) {
   const dir = path.join(EVIDENCE, stage);
@@ -33,7 +40,8 @@ function checkFixtures(stage) {
     try { manifest = JSON.parse(readFileSync(manifestPath, 'utf8')); }
     catch (e) { problems.push(`${stage}: invalid manifest.json: ${e.message}`); }
   }
-  for (const [id, width, height] of FIXTURES) {
+  const fixtures = stage === 'after' ? [...FIXTURES, ...EXTRA_AFTER] : FIXTURES;
+  for (const [id, width, height] of fixtures) {
     const file = path.join(dir, `${id}.png`);
     const meta = manifest?.frames?.find((f) => f.id === id);
     if (!meta) problems.push(`${stage}: missing metadata for ${id}`);
@@ -52,7 +60,7 @@ function checkFixtures(stage) {
   if (problems.length) {
     for (const p of problems) console.error(`FAIL ${p}`);
     process.exitCode = 1;
-  } else console.log(`${stage}: ${FIXTURES.length}/${FIXTURES.length} matched frames with valid metadata`);
+  } else console.log(`${stage}: ${fixtures.length}/${fixtures.length} matched frames with valid metadata`);
 }
 
 async function capture(stage) {
@@ -72,9 +80,15 @@ async function capture(stage) {
     await client.page.setViewportSize({ width: 320, height: 180 });
     const room = `worker-review-${Date.now()}`;
     await host.call('net.connect', room, 0);
+    // The incumbent must be established before a second fresh page joins;
+    // otherwise the ID tie-break can elect the capture page as a client and
+    // a debug-spawned fruit will be removed by the real host's next snapshot.
+    await sleep(900);
     await client.call('net.connect', room, 1);
     await host.page.waitForFunction(() => window.__GAME.get('net').remotes.size > 0,
       null, { timeout: 15_000 });
+    if (!await host.call('net.isHost')) throw new Error('capture page is not the co-op host');
+    let blue = null;
 
     // Open sand between the dock and orchard. The orchard enemy otherwise
     // occludes the worker and invalidates the silhouette comparison.
@@ -91,14 +105,27 @@ async function capture(stage) {
       copyFileSync(source, path.join(dir, `${id}.png`));
       const actual = await host.page.evaluate(() => ({
         viewport: [document.getElementById('view').width, document.getElementById('view').height],
+        dpr: window.devicePixelRatio,
         cameraPosition: window.__GAME.renderer.camera.position.toArray(),
         drawCalls: window.__GAME.renderer.renderer.info.render.calls,
         triangles: window.__GAME.renderer.renderer.info.render.triangles,
+        interaction: window.__RIPE.state().interaction,
+        viewmodel: window.__RIPE.state().viewmodel,
+        frame: window.__RIPE.state().profile,
+        elapsed: window.__RIPE.state().elapsed,
       }));
       frames.push({ id, viewport: actual.viewport, camera: {
         ...camera, position: actual.cameraPosition }, pose,
+        dpr: actual.dpr, elapsed: actual.elapsed, frame: actual.frame,
         drawCalls: actual.drawCalls, triangles: actual.triangles,
-        errors: [...host.consoleErrors, ...client.consoleErrors] });
+        interaction: actual.interaction, viewmodel: actual.viewmodel,
+        errors: [...host.consoleErrors, ...client.consoleErrors,
+          ...(blue?.consoleErrors ?? [])] });
+      if (id.startsWith('carry-') && (!actual.interaction?.carrying
+        || !actual.viewmodel?.carryShown || actual.viewmodel?.toolShown))
+        throw new Error(`${id} is not a carry frame: ${JSON.stringify({
+          interaction: actual.interaction, viewmodel: actual.viewmodel,
+        })}`);
       console.log(`${stage} ${id} ${actual.viewport.join('x')}`);
     };
 
@@ -144,6 +171,11 @@ async function capture(stage) {
     await host.call('tool.select', 'aircannon');
     await sleep(700);
     await save('aircannon', { mode: 'player', yaw: 0.6, pitch: -0.05 }, 'Air Cannon grip');
+    await host.call('tool.select', 'basket');
+    await sleep(550);
+    await save('basket', { mode: 'player', yaw: 0.6, pitch: -0.05 }, 'basket grip');
+    await host.call('tool.select', 'aircannon');
+    await sleep(550);
 
     const carry = async (id, species) => {
       const p = (await host.state()).player.pos;
@@ -165,15 +197,47 @@ async function capture(stage) {
       'watermelon carry grip, ultrawide');
     await host.call('drop');
     await host.call('fruit.despawnAllFree');
+    await carry('carry-small-uw', 'apple');
+    await host.call('drop');
+    await host.call('fruit.despawnAllFree');
     await host.call('tool.select', 'hand');
     await sleep(550);
     await save('mallet-uw', { mode: 'player', yaw: 0.6, pitch: -0.05 },
       'starter mallet, ultrawide');
+    await host.call('tool.select', 'aircannon');
+    await sleep(550);
+    await save('aircannon-uw', { mode: 'player', yaw: 0.6, pitch: -0.05 },
+      'Air Cannon grip, ultrawide');
+    await host.call('tool.select', 'basket');
+    await sleep(550);
+    await save('basket-uw', { mode: 'player', yaw: 0.6, pitch: -0.05 },
+      'basket grip, ultrawide');
     await host.pause(true);
     await host.call('ragdoll.trigger', 18, 'worker-review-ultrawide');
     await host.simulate(0.63);
     await save('ragdoll-mid-uw', { mode: 'ragdoll chase', seconds: 0.63 },
       'debug-triggered fall, ultrawide');
+
+    await host.call('ragdoll.recover');
+    await host.pause(false);
+    await host.page.setViewportSize({ width: 1920, height: 1080 });
+    await host.page.evaluate(() => window.__GAME.renderer.resize());
+    await host.call('viewmodel.show', false);
+    const farX = cx + 15;
+    await client.tp(farX, (await client.terrainHeight(farX, cz)) + .12, cz);
+    blue = await openSecondClient(host, { quiet: true,
+      islandActivities: false, drawFrames: false });
+    await blue.page.setViewportSize({ width: 320, height: 180 });
+    await blue.page.evaluate(() => { window.__GAME.get('net').suit = 1; });
+    await blue.call('net.connect', room, 2);
+    await host.page.waitForFunction(() => window.__GAME.get('net').remotes.size > 1,
+      null, { timeout: 15_000 });
+    await blue.tp(cx, (await blue.terrainHeight(cx, cz)) + .12, cz);
+    await host.tp(cx, (await host.terrainHeight(cx, cz + 3.2)) + .12, cz + 3.2);
+    await host.look(0, -.2);
+    await sleep(1400);
+    await save('remote-blue', { mode: 'player', x: cx, z: cz + 3.2,
+      note: 'third peer authored as Dockworker Blue' }, 'blue co-op suit preset');
 
     writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify({
       stage, source: url, renderer: await host.page.evaluate(() => {
@@ -190,7 +254,10 @@ async function capture(stage) {
   }
 }
 
-if (process.argv.includes('--check-fixtures')) checkFixtures('before');
+if (process.argv.includes('--check-fixtures')) {
+  checkFixtures('before');
+  if (existsSync(path.join(EVIDENCE, 'after/manifest.json'))) checkFixtures('after');
+}
 else if (process.argv.includes('--before')) await capture('before');
 else if (process.argv.includes('--after')) await capture('after');
 else throw new Error('use --check-fixtures, --before or --after');

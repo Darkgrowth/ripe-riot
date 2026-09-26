@@ -1,0 +1,1199 @@
+{
+  "stage": "after",
+  "source": "http://127.0.0.1:5199",
+  "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+  "frames": [
+    {
+      "id": "remote-front",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "mode": "player",
+        "x": 15,
+        "z": 43.2,
+        "yaw": 0,
+        "pitch": -0.2033978887253536,
+        "target": [
+          15,
+          4.424,
+          40
+        ],
+        "note": "tool hidden for silhouette",
+        "position": [
+          14.999996417818016,
+          4.963573243029882,
+          43.20011575086592
+        ]
+      },
+      "pose": "remote idle facing camera",
+      "dpr": 1,
+      "elapsed": 10.35,
+      "frame": {
+        "physics": 0.6,
+        "fixed": 1.1,
+        "frame": 0.8,
+        "render": 0,
+        "total": 2.5
+      },
+      "drawCalls": 255,
+      "triangles": 937880,
+      "interaction": {
+        "carrying": null,
+        "carryClass": "small",
+        "lastRefusal": null,
+        "basket": 0,
+        "basketMass": 0,
+        "basketValue": 0,
+        "target": null,
+        "targetKind": null,
+        "prompt": null,
+        "nearSellPad": false,
+        "carriedId": -1,
+        "basketIds": [],
+        "pendingSells": 0,
+        "stuckHands": 0,
+        "pricks": 0
+      },
+      "viewmodel": {
+        "tool": "hand",
+        "stow": 1,
+        "kick": 0,
+        "visible": false,
+        "cached": 1,
+        "toolShown": false,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 0
+      },
+      "errors": [
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x36cc001bc800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "remote-side",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "mode": "player",
+        "x": 18.2,
+        "z": 40,
+        "yaw": 1.5707963267948966,
+        "pitch": -0.2222065889882113,
+        "target": [
+          15,
+          4.424,
+          40
+        ],
+        "note": "tool hidden for silhouette",
+        "position": [
+          18.19965504138406,
+          5.0560668835197,
+          39.99998180219194
+        ]
+      },
+      "pose": "remote idle profile",
+      "dpr": 1,
+      "elapsed": 11.1,
+      "frame": {
+        "physics": 1.1,
+        "fixed": 1.3,
+        "frame": 0.8,
+        "render": 0,
+        "total": 3.2
+      },
+      "drawCalls": 276,
+      "triangles": 932864,
+      "interaction": {
+        "carrying": null,
+        "carryClass": "small",
+        "lastRefusal": null,
+        "basket": 0,
+        "basketMass": 0,
+        "basketValue": 0,
+        "target": null,
+        "targetKind": null,
+        "prompt": null,
+        "nearSellPad": false,
+        "carriedId": -1,
+        "basketIds": [],
+        "pendingSells": 0,
+        "stuckHands": 0,
+        "pricks": 0
+      },
+      "viewmodel": {
+        "tool": "hand",
+        "stow": 1,
+        "kick": 0,
+        "visible": false,
+        "cached": 1,
+        "toolShown": false,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 0
+      },
+      "errors": [
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x36cc001bc800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "remote-rear",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "mode": "player",
+        "x": 15,
+        "z": 36.8,
+        "yaw": -3.141592653589793,
+        "pitch": -0.20579469039140552,
+        "target": [
+          15,
+          4.424,
+          40
+        ],
+        "note": "tool hidden for silhouette",
+        "position": [
+          15.00058278916913,
+          5.024478430815536,
+          36.80034559730767
+        ]
+      },
+      "pose": "remote idle from behind",
+      "dpr": 1,
+      "elapsed": 11.783,
+      "frame": {
+        "physics": 3.7,
+        "fixed": 4.7,
+        "frame": 0.8,
+        "render": 0,
+        "total": 9.2
+      },
+      "drawCalls": 178,
+      "triangles": 927220,
+      "interaction": {
+        "carrying": null,
+        "carryClass": "small",
+        "lastRefusal": null,
+        "basket": 0,
+        "basketMass": 0,
+        "basketValue": 0,
+        "target": null,
+        "targetKind": null,
+        "prompt": null,
+        "nearSellPad": false,
+        "carriedId": -1,
+        "basketIds": [],
+        "pendingSells": 0,
+        "stuckHands": 0,
+        "pricks": 0
+      },
+      "viewmodel": {
+        "tool": "hand",
+        "stow": 1,
+        "kick": 0,
+        "visible": false,
+        "cached": 1,
+        "toolShown": false,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 0
+      },
+      "errors": [
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x36cc001bc800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "remote-walk",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "mode": "player",
+        "x": 19.2,
+        "z": 44.2,
+        "yaw": 0.7853981633974478,
+        "pitch": -0.15761244722787737,
+        "target": [
+          15,
+          4.424,
+          40
+        ],
+        "note": "tool hidden for silhouette",
+        "position": [
+          19.199795879698467,
+          5.272954474313854,
+          44.200023158418176
+        ]
+      },
+      "pose": "remote moving under normal input",
+      "dpr": 1,
+      "elapsed": 12.65,
+      "frame": {
+        "physics": 0,
+        "fixed": 0,
+        "frame": 0.6,
+        "render": 0,
+        "total": 0.6
+      },
+      "drawCalls": 309,
+      "triangles": 941718,
+      "interaction": {
+        "carrying": null,
+        "carryClass": "small",
+        "lastRefusal": null,
+        "basket": 0,
+        "basketMass": 0,
+        "basketValue": 0,
+        "target": null,
+        "targetKind": null,
+        "prompt": null,
+        "nearSellPad": false,
+        "carriedId": -1,
+        "basketIds": [],
+        "pendingSells": 0,
+        "stuckHands": 0,
+        "pricks": 0
+      },
+      "viewmodel": {
+        "tool": "hand",
+        "stow": 1,
+        "kick": 0,
+        "visible": false,
+        "cached": 1,
+        "toolShown": false,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 0
+      },
+      "errors": [
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x36cc001bc800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "ragdoll-early",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "mode": "ragdoll chase",
+        "seconds": 0.18,
+        "position": [
+          16.062641143798828,
+          6.052462100982666,
+          47.36683044433594
+        ]
+      },
+      "pose": "debug-triggered fall",
+      "dpr": 1,
+      "elapsed": 12.833,
+      "frame": {
+        "physics": 0,
+        "fixed": 0,
+        "frame": 1.5,
+        "render": 0,
+        "total": 1.5
+      },
+      "drawCalls": 301,
+      "triangles": 946914,
+      "interaction": {
+        "carrying": null,
+        "carryClass": "small",
+        "lastRefusal": null,
+        "basket": 0,
+        "basketMass": 0,
+        "basketValue": 0,
+        "target": null,
+        "targetKind": null,
+        "prompt": null,
+        "nearSellPad": false,
+        "carriedId": -1,
+        "basketIds": [],
+        "pendingSells": 0,
+        "stuckHands": 0,
+        "pricks": 0
+      },
+      "viewmodel": {
+        "tool": "hand",
+        "stow": 1,
+        "kick": 0,
+        "visible": false,
+        "cached": 1,
+        "toolShown": false,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 0
+      },
+      "errors": [
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x36cc001bc800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "ragdoll-mid",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "mode": "ragdoll chase",
+        "seconds": 0.63,
+        "position": [
+          15.482050895690918,
+          5.384027481079102,
+          46.74426422119141
+        ]
+      },
+      "pose": "debug-triggered fall",
+      "dpr": 1,
+      "elapsed": 13.283,
+      "frame": {
+        "physics": 0,
+        "fixed": 0,
+        "frame": 0.8,
+        "render": 0,
+        "total": 0.8
+      },
+      "drawCalls": 302,
+      "triangles": 946942,
+      "interaction": {
+        "carrying": null,
+        "carryClass": "small",
+        "lastRefusal": null,
+        "basket": 0,
+        "basketMass": 0,
+        "basketValue": 0,
+        "target": null,
+        "targetKind": null,
+        "prompt": null,
+        "nearSellPad": false,
+        "carriedId": -1,
+        "basketIds": [],
+        "pendingSells": 0,
+        "stuckHands": 0,
+        "pricks": 0
+      },
+      "viewmodel": {
+        "tool": "hand",
+        "stow": 1,
+        "kick": 0,
+        "visible": false,
+        "cached": 1,
+        "toolShown": false,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 0
+      },
+      "errors": [
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x36cc001bc800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "mallet",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "mode": "player",
+        "yaw": 0.6,
+        "pitch": -0.05,
+        "position": [
+          15.628434321064105,
+          4.920709677233197,
+          45.577817053158924
+        ]
+      },
+      "pose": "starter mallet in hands",
+      "dpr": 1,
+      "elapsed": 14.333,
+      "frame": {
+        "physics": 0.6,
+        "fixed": 1.1,
+        "frame": 0.9,
+        "render": 0,
+        "total": 2.6
+      },
+      "drawCalls": 314,
+      "triangles": 947446,
+      "interaction": {
+        "carrying": null,
+        "carryClass": "small",
+        "lastRefusal": null,
+        "basket": 0,
+        "basketMass": 0,
+        "basketValue": 0,
+        "target": null,
+        "targetKind": null,
+        "prompt": null,
+        "nearSellPad": false,
+        "carriedId": -1,
+        "basketIds": [],
+        "pendingSells": 0,
+        "stuckHands": 0,
+        "pricks": 0
+      },
+      "viewmodel": {
+        "tool": "hand",
+        "stow": 0,
+        "kick": 0,
+        "visible": true,
+        "cached": 1,
+        "toolShown": true,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 0
+      },
+      "errors": [
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x36cc001bc800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "aircannon",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "mode": "player",
+        "yaw": 0.6,
+        "pitch": -0.05,
+        "position": [
+          15.62808013713311,
+          4.920561034555965,
+          45.57734125221623
+        ]
+      },
+      "pose": "Air Cannon grip",
+      "dpr": 1,
+      "elapsed": 15.383,
+      "frame": {
+        "physics": 0,
+        "fixed": 0,
+        "frame": 1,
+        "render": 0,
+        "total": 1
+      },
+      "drawCalls": 315,
+      "triangles": 950166,
+      "interaction": {
+        "carrying": null,
+        "carryClass": "small",
+        "lastRefusal": null,
+        "basket": 0,
+        "basketMass": 0,
+        "basketValue": 0,
+        "target": null,
+        "targetKind": null,
+        "prompt": null,
+        "nearSellPad": false,
+        "carriedId": -1,
+        "basketIds": [],
+        "pendingSells": 0,
+        "stuckHands": 0,
+        "pricks": 0
+      },
+      "viewmodel": {
+        "tool": "aircannon",
+        "stow": 0,
+        "kick": 0,
+        "visible": true,
+        "cached": 2,
+        "toolShown": true,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 0
+      },
+      "errors": [
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x36cc001bc800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "basket",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "mode": "player",
+        "yaw": 0.6,
+        "pitch": -0.05,
+        "position": [
+          15.62778250328165,
+          4.9204140782929136,
+          45.57694014686422
+        ]
+      },
+      "pose": "basket grip",
+      "dpr": 1,
+      "elapsed": 16.267,
+      "frame": {
+        "physics": 0,
+        "fixed": 0,
+        "frame": 0.9,
+        "render": 0,
+        "total": 0.9
+      },
+      "drawCalls": 314,
+      "triangles": 945342,
+      "interaction": {
+        "carrying": null,
+        "carryClass": "small",
+        "lastRefusal": null,
+        "basket": 0,
+        "basketMass": 0,
+        "basketValue": 0,
+        "target": null,
+        "targetKind": null,
+        "prompt": null,
+        "nearSellPad": false,
+        "carriedId": -1,
+        "basketIds": [],
+        "pendingSells": 0,
+        "stuckHands": 0,
+        "pricks": 0
+      },
+      "viewmodel": {
+        "tool": "basket",
+        "stow": 0,
+        "kick": 0,
+        "visible": true,
+        "cached": 3,
+        "toolShown": true,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 0
+      },
+      "errors": [
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x36cc001bc800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "carry-small",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "mode": "player",
+        "yaw": 0.6,
+        "pitch": -0.05,
+        "position": [
+          15.62725474399258,
+          4.920405172853669,
+          45.57622745421713
+        ]
+      },
+      "pose": "apple carry grip",
+      "dpr": 1,
+      "elapsed": 17.833,
+      "frame": {
+        "physics": 1,
+        "fixed": 2,
+        "frame": 0.9,
+        "render": 0,
+        "total": 3.9
+      },
+      "drawCalls": 315,
+      "triangles": 945386,
+      "interaction": {
+        "carrying": {
+          "id": 686,
+          "species": "apple",
+          "heavy": false,
+          "mass": 1.1,
+          "cls": "small",
+          "diameter": 0.34
+        },
+        "carryClass": "small",
+        "lastRefusal": null,
+        "basket": 0,
+        "basketMass": 0,
+        "basketValue": 0,
+        "target": null,
+        "targetKind": null,
+        "prompt": null,
+        "nearSellPad": false,
+        "carriedId": 686,
+        "basketIds": [],
+        "pendingSells": 0,
+        "stuckHands": 0,
+        "pricks": 0
+      },
+      "viewmodel": {
+        "tool": "aircannon",
+        "stow": 1,
+        "kick": -0.001,
+        "visible": true,
+        "cached": 3,
+        "toolShown": false,
+        "carryShown": true,
+        "carryClass": "small",
+        "carryHeightPct": 22
+      },
+      "errors": [
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x36cc001bc800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "carry-large",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "mode": "player",
+        "yaw": 0.6,
+        "pitch": -0.05,
+        "position": [
+          15.62691220643319,
+          4.920360003010308,
+          45.57576510332092
+        ]
+      },
+      "pose": "watermelon carry grip",
+      "dpr": 1,
+      "elapsed": 18.85,
+      "frame": {
+        "physics": 1.2,
+        "fixed": 2.3,
+        "frame": 0.9,
+        "render": 0,
+        "total": 4.5
+      },
+      "drawCalls": 316,
+      "triangles": 949126,
+      "interaction": {
+        "carrying": {
+          "id": 687,
+          "species": "watermelon",
+          "heavy": true,
+          "mass": 22,
+          "cls": "large",
+          "diameter": 0.8
+        },
+        "carryClass": "large",
+        "lastRefusal": null,
+        "basket": 0,
+        "basketMass": 0,
+        "basketValue": 0,
+        "target": null,
+        "targetKind": null,
+        "prompt": null,
+        "nearSellPad": false,
+        "carriedId": 687,
+        "basketIds": [],
+        "pendingSells": 0,
+        "stuckHands": 0,
+        "pricks": 0
+      },
+      "viewmodel": {
+        "tool": "aircannon",
+        "stow": 1,
+        "kick": -0.002,
+        "visible": true,
+        "cached": 3,
+        "toolShown": false,
+        "carryShown": true,
+        "carryClass": "large",
+        "carryHeightPct": 29.7
+      },
+      "errors": [
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x36cc001bc800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "carry-large-uw",
+      "viewport": [
+        3434,
+        1270
+      ],
+      "camera": {
+        "mode": "player",
+        "yaw": 0.6,
+        "pitch": -0.05,
+        "position": [
+          15.62660866929582,
+          4.920372109809057,
+          45.575356368343364
+        ]
+      },
+      "pose": "watermelon carry grip, ultrawide",
+      "dpr": 1,
+      "elapsed": 19.75,
+      "frame": {
+        "physics": 0,
+        "fixed": 0,
+        "frame": 1,
+        "render": 0,
+        "total": 1
+      },
+      "drawCalls": 316,
+      "triangles": 949126,
+      "interaction": {
+        "carrying": {
+          "id": 687,
+          "species": "watermelon",
+          "heavy": true,
+          "mass": 22,
+          "cls": "large",
+          "diameter": 0.8
+        },
+        "carryClass": "large",
+        "lastRefusal": null,
+        "basket": 0,
+        "basketMass": 0,
+        "basketValue": 0,
+        "target": null,
+        "targetKind": null,
+        "prompt": null,
+        "nearSellPad": false,
+        "carriedId": 687,
+        "basketIds": [],
+        "pendingSells": 0,
+        "stuckHands": 0,
+        "pricks": 0
+      },
+      "viewmodel": {
+        "tool": "aircannon",
+        "stow": 1,
+        "kick": 0,
+        "visible": true,
+        "cached": 3,
+        "toolShown": false,
+        "carryShown": true,
+        "carryClass": "large",
+        "carryHeightPct": 29.7
+      },
+      "errors": [
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x36cc001bc800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "carry-small-uw",
+      "viewport": [
+        3434,
+        1270
+      ],
+      "camera": {
+        "mode": "player",
+        "yaw": 0.6,
+        "pitch": -0.05,
+        "position": [
+          15.626260365781945,
+          4.920247092475427,
+          45.57488771755288
+        ]
+      },
+      "pose": "apple carry grip",
+      "dpr": 1,
+      "elapsed": 20.783,
+      "frame": {
+        "physics": 0,
+        "fixed": 0,
+        "frame": 1.8,
+        "render": 0,
+        "total": 1.8
+      },
+      "drawCalls": 315,
+      "triangles": 945386,
+      "interaction": {
+        "carrying": {
+          "id": 688,
+          "species": "apple",
+          "heavy": false,
+          "mass": 1.1,
+          "cls": "small",
+          "diameter": 0.34
+        },
+        "carryClass": "small",
+        "lastRefusal": null,
+        "basket": 0,
+        "basketMass": 0,
+        "basketValue": 0,
+        "target": null,
+        "targetKind": null,
+        "prompt": null,
+        "nearSellPad": false,
+        "carriedId": 688,
+        "basketIds": [],
+        "pendingSells": 0,
+        "stuckHands": 0,
+        "pricks": 0
+      },
+      "viewmodel": {
+        "tool": "aircannon",
+        "stow": 1,
+        "kick": 0,
+        "visible": true,
+        "cached": 3,
+        "toolShown": false,
+        "carryShown": true,
+        "carryClass": "small",
+        "carryHeightPct": 22
+      },
+      "errors": [
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x36cc001bc800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "mallet-uw",
+      "viewport": [
+        3434,
+        1270
+      ],
+      "camera": {
+        "mode": "player",
+        "yaw": 0.6,
+        "pitch": -0.05,
+        "position": [
+          15.625945842463352,
+          4.92019698430139,
+          45.5744639833747
+        ]
+      },
+      "pose": "starter mallet, ultrawide",
+      "dpr": 1,
+      "elapsed": 21.717,
+      "frame": {
+        "physics": 0,
+        "fixed": 0,
+        "frame": 0.7,
+        "render": 0,
+        "total": 0.7
+      },
+      "drawCalls": 314,
+      "triangles": 947446,
+      "interaction": {
+        "carrying": null,
+        "carryClass": "small",
+        "lastRefusal": null,
+        "basket": 0,
+        "basketMass": 0,
+        "basketValue": 0,
+        "target": null,
+        "targetKind": null,
+        "prompt": null,
+        "nearSellPad": false,
+        "carriedId": -1,
+        "basketIds": [],
+        "pendingSells": 0,
+        "stuckHands": 0,
+        "pricks": 0
+      },
+      "viewmodel": {
+        "tool": "hand",
+        "stow": 0,
+        "kick": 0,
+        "visible": true,
+        "cached": 3,
+        "toolShown": true,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 22
+      },
+      "errors": [
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x36cc001bc800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "aircannon-uw",
+      "viewport": [
+        3434,
+        1270
+      ],
+      "camera": {
+        "mode": "player",
+        "yaw": 0.6,
+        "pitch": -0.05,
+        "position": [
+          15.625642290061023,
+          4.9201971693399065,
+          45.57405543975938
+        ]
+      },
+      "pose": "Air Cannon grip, ultrawide",
+      "dpr": 1,
+      "elapsed": 22.617,
+      "frame": {
+        "physics": 0,
+        "fixed": 0,
+        "frame": 0.7,
+        "render": 0,
+        "total": 0.7
+      },
+      "drawCalls": 315,
+      "triangles": 950166,
+      "interaction": {
+        "carrying": null,
+        "carryClass": "small",
+        "lastRefusal": null,
+        "basket": 0,
+        "basketMass": 0,
+        "basketValue": 0,
+        "target": null,
+        "targetKind": null,
+        "prompt": null,
+        "nearSellPad": false,
+        "carriedId": -1,
+        "basketIds": [],
+        "pendingSells": 0,
+        "stuckHands": 0,
+        "pricks": 0
+      },
+      "viewmodel": {
+        "tool": "aircannon",
+        "stow": 0,
+        "kick": 0,
+        "visible": true,
+        "cached": 3,
+        "toolShown": true,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 22
+      },
+      "errors": [
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x36cc001bc800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "basket-uw",
+      "viewport": [
+        3434,
+        1270
+      ],
+      "camera": {
+        "mode": "player",
+        "yaw": 0.6,
+        "pitch": -0.05,
+        "position": [
+          15.625327669406033,
+          4.920046141538285,
+          45.573631621367895
+        ]
+      },
+      "pose": "basket grip, ultrawide",
+      "dpr": 1,
+      "elapsed": 23.55,
+      "frame": {
+        "physics": 0,
+        "fixed": 0,
+        "frame": 0.8,
+        "render": 0,
+        "total": 0.8
+      },
+      "drawCalls": 314,
+      "triangles": 945342,
+      "interaction": {
+        "carrying": null,
+        "carryClass": "small",
+        "lastRefusal": null,
+        "basket": 0,
+        "basketMass": 0,
+        "basketValue": 0,
+        "target": null,
+        "targetKind": null,
+        "prompt": null,
+        "nearSellPad": false,
+        "carriedId": -1,
+        "basketIds": [],
+        "pendingSells": 0,
+        "stuckHands": 0,
+        "pricks": 0
+      },
+      "viewmodel": {
+        "tool": "basket",
+        "stow": 0,
+        "kick": 0,
+        "visible": true,
+        "cached": 3,
+        "toolShown": true,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 22
+      },
+      "errors": [
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x36cc001bc800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "ragdoll-mid-uw",
+      "viewport": [
+        3434,
+        1270
+      ],
+      "camera": {
+        "mode": "ragdoll chase",
+        "seconds": 0.63,
+        "position": [
+          16.471702802034958,
+          5.443716526031494,
+          46.92606984038197
+        ]
+      },
+      "pose": "debug-triggered fall, ultrawide",
+      "dpr": 1,
+      "elapsed": 24.183,
+      "frame": {
+        "physics": 0,
+        "fixed": 0,
+        "frame": 1.4,
+        "render": 0,
+        "total": 1.4
+      },
+      "drawCalls": 331,
+      "triangles": 949808,
+      "interaction": {
+        "carrying": null,
+        "carryClass": "small",
+        "lastRefusal": null,
+        "basket": 0,
+        "basketMass": 0,
+        "basketValue": 0,
+        "target": null,
+        "targetKind": null,
+        "prompt": null,
+        "nearSellPad": false,
+        "carriedId": -1,
+        "basketIds": [],
+        "pendingSells": 0,
+        "stuckHands": 0,
+        "pricks": 0
+      },
+      "viewmodel": {
+        "tool": "basket",
+        "stow": 1,
+        "kick": 0,
+        "visible": true,
+        "cached": 3,
+        "toolShown": false,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 22
+      },
+      "errors": [
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x36cc001bc800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "remote-blue",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "mode": "player",
+        "x": 15,
+        "z": 43.2,
+        "note": "third peer authored as Dockworker Blue",
+        "position": [
+          14.999985444343789,
+          4.96377189677622,
+          43.20027817480441
+        ]
+      },
+      "pose": "blue co-op suit preset",
+      "dpr": 1,
+      "elapsed": 32.367,
+      "frame": {
+        "physics": 0.5,
+        "fixed": 1.1,
+        "frame": 0.9,
+        "render": 0,
+        "total": 2.5
+      },
+      "drawCalls": 267,
+      "triangles": 941740,
+      "interaction": {
+        "carrying": null,
+        "carryClass": "small",
+        "lastRefusal": null,
+        "basket": 0,
+        "basketMass": 0,
+        "basketValue": 0,
+        "target": null,
+        "targetKind": null,
+        "prompt": null,
+        "nearSellPad": false,
+        "carriedId": -1,
+        "basketIds": [],
+        "pendingSells": 0,
+        "stuckHands": 0,
+        "pricks": 0
+      },
+      "viewmodel": {
+        "tool": "basket",
+        "stow": 1,
+        "kick": 0,
+        "visible": false,
+        "cached": 3,
+        "toolShown": false,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 22
+      },
+      "errors": [
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x5234001b7c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x36cc001bc800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    }
+  ]
+}
