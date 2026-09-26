@@ -27,6 +27,7 @@ import { SaveSystem } from '@/save/SaveSystem';
 import { DebugAPI } from '@/debug/DebugAPI';
 import { loadWorkerAsset } from '@/player/WorkerAsset';
 import { installDiagnosticWorkerHands, loadWorkerHands } from '@/render/WorkerHands';
+import { selectVisualMode } from '@/art/voxel/VisualMode';
 
 const boot = document.getElementById('boot')!;
 const bar = boot.querySelector('.bar > i') as HTMLElement;
@@ -51,6 +52,8 @@ function fail(err: unknown): void {
 async function main(): Promise<void> {
   const comparisonChoice = new URLSearchParams(window.location.search).get('mimicCompare');
   const comparison = comparisonChoice === 'A' || comparisonChoice === 'B' ? comparisonChoice : null;
+  const visualMode = selectVisualMode(window.location.search, !!comparison);
+  (window as unknown as { __RIPE_VISUAL_MODE: string }).__RIPE_VISUAL_MODE = visualMode;
   const canvas = document.getElementById('view') as HTMLCanvasElement;
   const game = new Game();
   (window as unknown as { __GAME: Game }).__GAME = game;
