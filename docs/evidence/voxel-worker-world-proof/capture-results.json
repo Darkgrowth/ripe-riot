@@ -1,0 +1,58 @@
+[
+  {
+    "name": "scene-distance-1920x1080.png",
+    "view": "normal",
+    "width": 1920,
+    "height": 1080,
+    "status": 200,
+    "errors": [],
+    "metrics": {
+      "workerComponents": 1,
+      "workerVoxels": 952,
+      "terrainVoxels": 2328,
+      "drawObjects": 7
+    }
+  },
+  {
+    "name": "worker-close-1920x1080.png",
+    "view": "close",
+    "width": 1920,
+    "height": 1080,
+    "status": 200,
+    "errors": [],
+    "metrics": {
+      "workerComponents": 1,
+      "workerVoxels": 952,
+      "terrainVoxels": 2328,
+      "drawObjects": 7
+    }
+  },
+  {
+    "name": "whole-patch-1920x1080.png",
+    "view": "wide",
+    "width": 1920,
+    "height": 1080,
+    "status": 200,
+    "errors": [],
+    "metrics": {
+      "workerComponents": 1,
+      "workerVoxels": 952,
+      "terrainVoxels": 2328,
+      "drawObjects": 7
+    }
+  },
+  {
+    "name": "scene-distance-3434x1270.png",
+    "view": "normal",
+    "width": 3434,
+    "height": 1270,
+    "status": 200,
+    "errors": [],
+    "metrics": {
+      "workerComponents": 1,
+      "workerVoxels": 952,
+      "terrainVoxels": 2328,
+      "drawObjects": 7
+    }
+  }
+]

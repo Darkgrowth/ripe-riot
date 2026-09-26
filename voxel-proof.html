@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RIPE RIOT · Voxel style proof</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="/src/proof/voxel-proof.css" />
+  </head>
+  <body>
+    <main class="proof">
+      <canvas id="proof-view" aria-label="Interactive voxel worker and orchard preview"></canvas>
+      <header class="masthead">
+        <span class="eyebrow">RIPE RIOT / VISUAL STUDY 01</span>
+        <h1>Voxel worker <span>+ orchard</span></h1>
+        <p>One connected character. One small slice of Sunpatch.</p>
+      </header>
+      <aside class="scope">STYLE CHECK <span>·</span> NOT IN LIVE GAME</aside>
+      <nav class="views" aria-label="Camera view">
+        <span class="views-label">INSPECT</span>
+        <button data-view="normal" class="active" type="button">Scene distance</button>
+        <button data-view="close" type="button">Character close-up</button>
+        <button data-view="wide" type="button">Whole patch</button>
+      </nav>
+      <div class="hint">DRAG TO ORBIT <span>·</span> SCROLL TO ZOOM</div>
+      <div class="credit">WARM VOXEL ORCHARD <span> / </span> ART DIRECTION PROOF</div>
+    </main>
+    <script type="module" src="/src/proof/VoxelProof.ts"></script>
+  </body>
+</html>

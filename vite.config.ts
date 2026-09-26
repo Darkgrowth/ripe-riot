@@ -7,6 +7,15 @@ export default defineConfig({
   },
   server: { port: 5173, strictPort: true },
   preview: { port: 4173, strictPort: true },
-  build: { target: 'es2022', sourcemap: true },
+  build: {
+    target: 'es2022',
+    sourcemap: true,
+    rollupOptions: {
+      input: {
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        voxelProof: fileURLToPath(new URL('./voxel-proof.html', import.meta.url)),
+      },
+    },
+  },
   optimizeDeps: { exclude: ['@dimforge/rapier3d-compat'] },
 });
