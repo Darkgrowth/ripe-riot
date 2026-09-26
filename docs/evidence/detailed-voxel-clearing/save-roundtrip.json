@@ -1,0 +1,41 @@
+{
+  "base": "http://127.0.0.1:5203",
+  "visits": [
+    {
+      "query": "?fresh=1",
+      "error": null,
+      "mode": "baseline",
+      "money": 0,
+      "resumed": false,
+      "saved": false
+    },
+    {
+      "query": "?voxelPilot=1",
+      "error": null,
+      "mode": "voxel",
+      "money": 321,
+      "resumed": true,
+      "saved": true
+    },
+    {
+      "query": "",
+      "error": null,
+      "mode": "baseline",
+      "money": 654,
+      "resumed": true,
+      "saved": true
+    }
+  ],
+  "schemaVersion": 1,
+  "systemKeys": [
+    "economy",
+    "scoring",
+    "tools",
+    "shop",
+    "book",
+    "legendary",
+    "progress",
+    "director"
+  ],
+  "errors": []
+}

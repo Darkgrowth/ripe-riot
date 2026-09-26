@@ -10,6 +10,7 @@ import type { Sunpatch } from '@/world/Sunpatch';
 import { Rng } from '@/core/Rng';
 import { QueryMask } from '@/physics/Layers';
 import { buildVineSupports } from '@/world/VineSupports';
+import type { VisualMode } from '@/art/voxel/VisualMode';
 
 interface Regrow { plantId: number; nodeIndex: number; species: string; readyAt: number; }
 
@@ -167,6 +168,13 @@ const DECOR: Array<{ type: PlantType; x: number; z: number; scale: number; fruit
   { type: 'bananaPlant', x: 39.5, z: -2.0, scale: 1.10 },
 ];
 
+/** The single colliderless approach bush omitted from the pilot sightline. */
+export function skipVoxelPilotDecor(visualMode: VisualMode,
+  decor: { type: PlantType; x: number; z: number; fruit?: boolean }): boolean {
+  if (visualMode !== 'voxel' || decor.fruit) return false;
+  return decor.type === 'puffBush' && decor.x === -14 && decor.z === 36.5;
+}
+
 /** Vinebombs hang from anchors above the ground, so they get their own pass. */
 const VINEBOMB_SITES: Array<[number, number]> = [
   [30, -26], [40, -20], [24, -6], [46, -6],
@@ -215,11 +223,13 @@ export class FruitSystem implements System {
 
   stats = { attached: 0, free: 0, carried: 0, stowed: 0, total: 0 };
 
+  constructor(private readonly visualMode: VisualMode = 'baseline') {}
+
   init(g: Game): void {
     this.g = g;
     this.world = g.get<Sunpatch>('world');
-    this.plants = new PlantSystem(g.renderer.scene, g.physics);
-    this.renderer = new FruitRenderer(g.renderer.scene);
+    this.plants = new PlantSystem(g.renderer.scene, g.physics, this.visualMode);
+    this.renderer = new FruitRenderer(g.renderer.scene, this.visualMode, g.renderer.camera);
     this.ctx = {
       wind: this.wind,
       dt: 1 / 60,
@@ -245,6 +255,7 @@ export class FruitSystem implements System {
       plants: this.plants.count,
       drawn: this.renderer.lastDrawn,
       species: this.renderer.speciesCount,
+      drawBatches: this.renderer.activeDrawBatches,
       regrowQueued: this.regrow.length,
       byState: this.countByState(),
     }));
@@ -409,7 +420,7 @@ export class FruitSystem implements System {
       const y = this.world.terrain.height(d.x, d.z);
       if (y < 1.0) continue;
       const p = this.plants.plant(this.g.newId(), d.type, new THREE.Vector3(d.x, y, d.z),
-        this.rng, { scale: d.scale });
+        this.rng, { scale: d.scale, hiddenCosmetic: skipVoxelPilotDecor(this.visualMode, d) });
       if (d.fruit) this.growOn(p);
     }
     // Hanging vinebomb vines at authored cliff sites.

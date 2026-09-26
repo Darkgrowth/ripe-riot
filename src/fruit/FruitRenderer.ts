@@ -1,11 +1,13 @@
 import * as THREE from 'three';
 import { fruitGeometry } from './FruitGeometry';
+import { voxelFruitGeometry } from '@/art/voxel/VoxelFruit';
+import type { VisualMode } from '@/art/voxel/VisualMode';
 import type { Fruit } from './Fruit';
 
 /**
- * One InstancedMesh per species. Everything visible — on the tree, in the air,
- * rolling down a hill, in someone's hands — is drawn from the same instance
- * buffer, so the entire island's fruit costs one draw call per species.
+ * One InstancedMesh per species, with a second distant-detail batch for three
+ * pilot voxel species. Everything visible — on the tree, in the air, rolling
+ * down a hill, in someone's hands — stays instanced and shares species colour.
  *
  * Per-instance colour carries the variant/damage tint; a small shader patch
  * adds a per-instance emissive term so Glowing variants actually glow.
@@ -28,11 +30,14 @@ class SpeciesBatch {
   mesh: THREE.InstancedMesh;
   capacity: number;
   emissiveAttr: THREE.InstancedBufferAttribute;
-  private species: string;
+  readonly species: string;
+  readonly far: boolean;
   private scene: THREE.Scene;
 
-  constructor(scene: THREE.Scene, species: string, capacity: number) {
+  constructor(scene: THREE.Scene, species: string, capacity: number,
+    private readonly visualMode: VisualMode, far = false) {
     this.species = species;
+    this.far = far;
     this.scene = scene;
     this.capacity = capacity;
     this.mesh = this.make(capacity);
@@ -41,9 +46,13 @@ class SpeciesBatch {
   }
 
   private make(capacity: number): THREE.InstancedMesh {
-    const geo = fruitGeometry(this.species).clone();
+    const voxel = this.visualMode === 'voxel'
+      && (this.species === 'apple' || this.species === 'orange' || this.species === 'watermelon');
+    const geo = (voxel ? voxelFruitGeometry(this.species, this.far ? 8 : 20)
+      : fruitGeometry(this.species)).clone();
     const mat = new THREE.MeshStandardMaterial({
-      color: 0xffffff, vertexColors: true, roughness: 0.55, metalness: 0.02,
+      color: 0xffffff, vertexColors: true, roughness: voxel ? 0.78 : 0.55,
+      metalness: voxel ? 0 : 0.02,
     });
     mat.name = `fruit:${this.species}`;
     mat.envMapIntensity = 0.5;
@@ -59,13 +68,13 @@ class SpeciesBatch {
     mat.customProgramCacheKey = () => `fruit-emissive-${this.species}`;
 
     const mesh = new THREE.InstancedMesh(geo, mat, capacity);
-    mesh.name = `Fruit:${this.species}`;
+    mesh.name = `Fruit:${this.species}${this.far ? ':far' : ''}`;
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(capacity * 3).fill(1), 3);
     mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
     geo.setAttribute('instanceEmissive',
       new THREE.InstancedBufferAttribute(new Float32Array(capacity), 1).setUsage(THREE.DynamicDrawUsage));
-    mesh.castShadow = true;
+    mesh.castShadow = !this.far;
     mesh.receiveShadow = true;
     mesh.frustumCulled = false; // the batch spans the island; culling it is all-or-nothing
     mesh.count = 0;
@@ -102,6 +111,7 @@ export class FruitRenderer {
   private batches = new Map<string, SpeciesBatch>();
   private scene: THREE.Scene;
   private buckets = new Map<string, Fruit[]>();
+  private farByFruit = new WeakMap<Fruit, boolean>();
   lastDrawn = 0;
   /**
    * One fruit that this client does not draw in the world.
@@ -116,12 +126,31 @@ export class FruitRenderer {
   /** Fruit the player is aiming at: lit so a ripe apple in a dark canopy reads. */
   highlightId = -1;
 
-  constructor(scene: THREE.Scene) { this.scene = scene; }
+  constructor(scene: THREE.Scene, private readonly visualMode: VisualMode = 'baseline',
+    private readonly camera: THREE.Camera | null = null) {
+    this.scene = scene;
+  }
 
-  private batch(species: string): SpeciesBatch {
-    let b = this.batches.get(species);
-    if (!b) { b = new SpeciesBatch(this.scene, species, 48); this.batches.set(species, b); }
+  private batch(species: string, far: boolean): SpeciesBatch {
+    const key = far ? `${species}:far` : species;
+    let b = this.batches.get(key);
+    if (!b) {
+      b = new SpeciesBatch(this.scene, species, 48, this.visualMode, far);
+      this.batches.set(key, b);
+    }
     return b;
+  }
+
+  private distant(f: Fruit): boolean {
+    if (this.visualMode !== 'voxel' || !this.camera || f.id === this.highlightId
+      || (f.species !== 'apple' && f.species !== 'orange' && f.species !== 'watermelon')) return false;
+    // A unit fruit projects to ~800 pixels / metre at 1080p and 68° vertical
+    // FOV. At 38 diameters it occupies ~21 px; reverse at 31 to avoid shimmer.
+    const wasFar = this.farByFruit.get(f) ?? false;
+    const cutoff = f.renderScale * (wasFar ? 31 : 38);
+    const far = this.camera.position.distanceToSquared(f.position) > cutoff * cutoff;
+    this.farByFruit.set(f, far);
+    return far;
   }
 
   /** Rewrite every instance buffer from the live fruit list. */
@@ -130,15 +159,18 @@ export class FruitRenderer {
     let total = 0;
     for (const f of fruits) {
       if (!f.visible || f.id === this.hiddenId) continue;
-      let list = this.buckets.get(f.species);
-      if (!list) { list = []; this.buckets.set(f.species, list); }
+      const key = this.distant(f) ? `${f.species}:far` : f.species;
+      let list = this.buckets.get(key);
+      if (!list) { list = []; this.buckets.set(key, list); }
       list.push(f);
       total++;
     }
     this.lastDrawn = total;
 
-    for (const [species, list] of this.buckets) {
-      const b = this.batch(species);
+    for (const [key, list] of this.buckets) {
+      const far = key.endsWith(':far');
+      const species = far ? key.slice(0, -4) : key;
+      const b = this.batch(species, far);
       if (list.length > b.capacity) b.grow(list.length);
       const colors = b.mesh.instanceColor!;
       const emis = b.emissiveAttr;
@@ -162,7 +194,12 @@ export class FruitRenderer {
     }
   }
 
-  get speciesCount(): number { return this.batches.size; }
+  get speciesCount(): number { return new Set([...this.batches.values()].map(b => b.species)).size; }
+  get activeDrawBatches(): number {
+    let count = 0;
+    for (const b of this.batches.values()) if (b.mesh.count > 0) count++;
+    return count;
+  }
 
   dispose(): void {
     for (const b of this.batches.values()) b.dispose();

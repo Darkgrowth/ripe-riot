@@ -10,6 +10,8 @@
 
 **Spec:** [Detailed voxel visual overhaul](../../DETAILED_VOXEL_OVERHAUL.md)
 
+**Execution record (26 September 2026):** The Stage 1 pilot has reached the user visual decision gate. The focused contracts, full gameplay scenarios, production build, editable worker-source validation, co-op motion proof, standard and ultrawide normal-input route videos, and baseline→voxel→baseline save round trip are recorded in [the evidence index](../../evidence/detailed-voxel-clearing/README.md). One independent final reviewer found no remaining blocker after the banana collider, connected-frond, and Mimic-eye fixes. The checklist below is the original implementation sequence; visual approval, sustained hardware frame rate, and fully settled ragdoll contact remain open observations.
+
 ## Global Constraints
 
 - Default game visuals and `mimicCompare=A/B` remain available; the pilot activates only through `voxelPilot=1` in normal gameplay.

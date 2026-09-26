@@ -1,7 +1,13 @@
 import * as THREE from 'three';
 import type { EncounterState, Point3 } from './EncounterModel';
+import {
+  makeDetailedVoxelMimicEye, makeDetailedVoxelMimicRootFoot,
+  makeDetailedVoxelMimicRootSegment, makeDetailedVoxelMimicShell,
+  makeDetailedVoxelMimicStem, makeDetailedVoxelMimicTeeth,
+  makeDetailedVoxelMimicThroat,
+} from './VoxelMimicGeometry.ts';
 
-export type MimicStyle = 'polygon' | 'block';
+export type MimicStyle = 'polygon' | 'block' | 'voxel';
 
 const c = (hex: number) => new THREE.Color().setHex(hex, THREE.SRGBColorSpace);
 const RIND = c(0x365e3f);
@@ -173,11 +179,16 @@ export class MimicRig {
     this.body.add(this.lower, this.upper);
     const shell = vertexMaterial();
     const upperShell = addMesh(this.upper,
-      style === 'block' ? blockHemisphere(true) : stripedHemisphere(true), shell,
-      style === 'block' ? 'Mimic block upper batch' : 'Mimic polygon upper shell');
+      style === 'voxel' ? makeDetailedVoxelMimicShell(true)
+        : style === 'block' ? blockHemisphere(true) : stripedHemisphere(true), shell,
+      style === 'voxel' ? 'Mimic detailed voxel upper shell'
+        : style === 'block' ? 'Mimic block upper batch' : 'Mimic polygon upper shell');
     upperShell.position.z = 0.78;
-    addMesh(this.lower, style === 'block' ? blockHemisphere(false) : stripedHemisphere(false),
-      shell, style === 'block' ? 'Mimic block lower batch' : 'Mimic polygon lower shell');
+    addMesh(this.lower,
+      style === 'voxel' ? makeDetailedVoxelMimicShell(false)
+        : style === 'block' ? blockHemisphere(false) : stripedHemisphere(false),
+      shell, style === 'voxel' ? 'Mimic detailed voxel lower shell'
+        : style === 'block' ? 'Mimic block lower batch' : 'Mimic polygon lower shell');
 
     if (style === 'polygon') {
       const upperFlesh = addMesh(this.upper, new THREE.CircleGeometry(1.03, 16),
@@ -192,12 +203,17 @@ export class MimicRig {
       lowerFlesh.scale.set(1.12, 1, 0.98);
     }
     const throat = addMesh(this.lower,
-      style === 'block' ? new THREE.BoxGeometry(1.55, 0.04, 0.72)
-        : new THREE.SphereGeometry(1, 12, 6), solidMaterial(THROAT), 'Mimic throat');
+      style === 'voxel' ? makeDetailedVoxelMimicThroat()
+        : style === 'block' ? new THREE.BoxGeometry(1.55, 0.04, 0.72)
+          : new THREE.SphereGeometry(1, 12, 6),
+      style === 'voxel' ? shell : solidMaterial(THROAT), 'Mimic throat');
     throat.position.set(0, 0.024, 0.40);
     if (style === 'polygon') throat.scale.set(0.77, 0.025, 0.42);
 
-    if (style === 'block') {
+    if (style === 'voxel') {
+      addMesh(this.upper, makeDetailedVoxelMimicTeeth(), shell, 'Mimic detailed voxel teeth');
+      addMesh(this.upper, makeDetailedVoxelMimicStem(), shell, 'Mimic detailed voxel stem');
+    } else if (style === 'block') {
       const teeth: Block[] = [];
       for (let n = -2; n <= 2; n++) teeth.push({ x: n * 0.28, y: -0.105, z: 1.46,
         w: 0.13, h: 0.21, d: 0.16, color: TOOTH });
@@ -225,10 +241,11 @@ export class MimicRig {
 
     for (const x of [-0.43, 0.43]) {
       const eye = addMesh(this.upper,
-        style === 'block' ? new THREE.BoxGeometry(0.14, 0.14, 0.09)
-          : new THREE.SphereGeometry(0.075, 6, 4),
-        solidMaterial(EYE, 0.2), 'Mimic seed eye');
-      eye.position.set(x, 0.42, 1.60);
+        style === 'voxel' ? makeDetailedVoxelMimicEye()
+          : style === 'block' ? new THREE.BoxGeometry(0.14, 0.14, 0.09)
+            : new THREE.SphereGeometry(0.075, 6, 4),
+        style === 'voxel' ? shell : solidMaterial(EYE, 0.2), 'Mimic seed eye');
+      eye.position.set(x, 0.42, style === 'voxel' ? 1.66 : 1.60);
       this.eyes.push(eye);
     }
 
@@ -237,14 +254,17 @@ export class MimicRig {
       legRoot.name = `Mimic root ${side < 0 ? 'L' : 'R'}${fore < 0 ? 'B' : 'F'}`;
       this.roots.add(legRoot);
       const makeSegment = (name: string) => addMesh(legRoot,
-        style === 'block' ? new THREE.BoxGeometry(0.38, 1, 0.34)
-          : new THREE.CylinderGeometry(0.15, 0.25, 1, 6),
-        solidMaterial(ROOT), name);
+        style === 'voxel' ? makeDetailedVoxelMimicRootSegment()
+          : style === 'block' ? new THREE.BoxGeometry(0.38, 1, 0.34)
+            : new THREE.CylinderGeometry(0.15, 0.25, 1, 6),
+        style === 'voxel' ? shell : solidMaterial(ROOT), name);
       const upper = makeSegment('root upper');
       const lower = makeSegment('root lower');
       const foot = addMesh(legRoot,
-        style === 'block' ? new THREE.BoxGeometry(0.42, 0.18, 0.56)
-          : new THREE.SphereGeometry(1, 7, 5), solidMaterial(RIND_DARK), 'root foot');
+        style === 'voxel' ? makeDetailedVoxelMimicRootFoot()
+          : style === 'block' ? new THREE.BoxGeometry(0.42, 0.18, 0.56)
+            : new THREE.SphereGeometry(1, 7, 5),
+        style === 'voxel' ? shell : solidMaterial(RIND_DARK), 'root foot');
       if (style === 'polygon') foot.scale.set(0.29, 0.09, 0.36);
       this.legs.push({ side, fore, upper, lower, foot });
     }
@@ -294,7 +314,13 @@ export class MimicRig {
     const compression = warning ? warnProgress * 0.10 : attack ? 0.06 : 0;
     this.body.scale.set(1 + compression * 0.25, defeated ? 0.42 : 1 - compression,
       1 + compression * 0.45);
-    this.body.position.y = defeated ? -0.28 : breathe - compression * 0.1;
+    // In the orchard, the closed voxel rind rests low enough to pass as a
+    // fallen melon. Its root limbs unfold as the warning raises the shell.
+    const disguised = this.style === 'voxel' && state.phase === 'idle';
+    this.body.position.y = defeated ? -0.28
+      : breathe - compression * 0.1
+        - (this.style === 'voxel' ? 0.22 * (warning ? 1 - warnProgress : disguised ? 1 : 0) : 0);
+    this.roots.visible = !disguised;
     for (const eye of this.eyes) eye.visible = !defeated && state.phase !== 'idle';
 
     for (const leg of this.legs) {

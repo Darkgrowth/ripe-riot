@@ -8,6 +8,7 @@ import { framingFor } from '@/interaction/CarryRules';
 import { VIEWMODEL_FOV_SCALE } from '@/render/Renderer';
 import { damp, clamp } from '@/core/MathUtils';
 import { disposeWorkerHands, workerHandsSource } from '@/render/WorkerHands';
+import type { VisualMode } from '@/art/voxel/VisualMode';
 
 /** Framing is authored at 16:9; anything narrower gets a smaller tool. */
 const REFERENCE_ASPECT = 16 / 9;
@@ -24,6 +25,7 @@ const REFERENCE_ASPECT = 16 / 9;
  */
 export class ViewmodelSystem implements System {
   readonly name = 'viewmodel';
+  constructor(private readonly visualMode: VisualMode = 'baseline') {}
   private g!: Game;
   private tools!: ToolInventory;
   private interaction!: InteractionSystem;
@@ -72,7 +74,7 @@ export class ViewmodelSystem implements System {
     });
     this.material.name = 'viewmodel';
     g.renderer.enableViewmodel();
-    this.carry = new CarryViewmodel(this.material);
+    this.carry = new CarryViewmodel(this.material, this.visualMode);
     g.renderer.viewScene.add(this.carry.root);
 
     g.bus.on('tool:fired', (p) => this.punch(clamp(p.power ?? 1, 0.15, 2.2)));
@@ -113,7 +115,7 @@ export class ViewmodelSystem implements System {
   private modelFor(id: string): ViewModel {
     let vm = this.cache.get(id);
     if (!vm) {
-      vm = buildViewModel(id, this.material);
+      vm = buildViewModel(id, this.material, this.visualMode);
       this.cache.set(id, vm);
     }
     return vm;

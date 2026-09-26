@@ -59,7 +59,7 @@ async function main(): Promise<void> {
   (window as unknown as { __GAME: Game }).__GAME = game;
 
   progress(12, 'loading physics');
-  const world = new Sunpatch(!!comparison);
+  const world = new Sunpatch(!!comparison, visualMode);
   // A provisional spawn; corrected once the terrain exists.
   await game.boot(canvas, new THREE.Vector3(55, 6, 64));
   const visualWarnings: string[] = [];
@@ -68,13 +68,15 @@ async function main(): Promise<void> {
   // with a conspicuous diagnostic rig if this asset is missing or corrupt.
   const missingWorker = new URLSearchParams(window.location.search).get('workerAsset') === 'missing';
   try {
-    await loadWorkerAsset(missingWorker ? '/models/missing-worker.glb' : '/models/worker.glb');
+    await loadWorkerAsset(missingWorker ? '/models/missing-worker.glb'
+      : visualMode === 'voxel' ? '/models/worker-detailed-voxel-v1.glb' : '/models/worker.glb');
   } catch (error) {
     console.error('Connected worker asset failed to load', error);
     visualWarnings.push('Worker visual missing; diagnostic avatar active');
   }
   try {
-    await loadWorkerHands('/models/worker-hands.glb');
+    await loadWorkerHands(visualMode === 'voxel'
+      ? '/models/worker-hands-detailed-voxel-v1.glb' : '/models/worker-hands.glb');
   } catch (error) {
     console.error('Connected worker hands failed to load', error);
     installDiagnosticWorkerHands();
@@ -90,7 +92,7 @@ async function main(): Promise<void> {
   // Order matters: later systems resolve earlier ones by name during init().
   game.add(world);
   game.add(new Economy());
-  game.add(new FruitSystem());
+  game.add(new FruitSystem(visualMode));
   game.add(new PlayerRagdoll());
   game.add(new PlayerVitals({
     onLoseUnsecured: () => {
@@ -118,7 +120,8 @@ async function main(): Promise<void> {
       });
     },
   }));
-  game.add(new EncounterSystem(comparison === 'B' ? 'block' : comparison === 'A' ? 'polygon' : null));
+  game.add(new EncounterSystem(comparison === 'B' ? 'block' : comparison === 'A' ? 'polygon' : null,
+    visualMode === 'voxel'));
   game.add(new KingVine({
     onDamagePlayer: (victimId, amount, source) => {
       const net = game.get<MultiplayerAuthority>('net');
@@ -135,7 +138,7 @@ async function main(): Promise<void> {
   game.add(new HarvestScoring());
   game.add(new ImpactFX());
   game.add(new ToolInventory());
-  game.add(new ViewmodelSystem());
+  game.add(new ViewmodelSystem(visualMode));
   game.add(new Shop());
   game.add(new HarvestBook());
   game.add(new LegendaryHarvest());

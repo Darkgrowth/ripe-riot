@@ -3,6 +3,8 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { Palette } from '@/render/Palette';
 import { fbm2, clamp, smoothstep, TAU } from '@/core/MathUtils';
 import { Rng } from '@/core/Rng';
+import { voxelDressingGeometry, type VoxelDressingKind } from '@/art/voxel/VoxelDressing';
+import type { VisualMode } from '@/art/voxel/VisualMode';
 import type { Terrain } from './Terrain';
 import { orchardProofWeight } from './VisualProof';
 
@@ -86,6 +88,8 @@ export class Dressing {
   /** Pieces placed per kind, for the harness and the perf report. */
   counts: Record<string, number> = {};
 
+  constructor(private readonly visualMode: VisualMode = 'baseline') {}
+
   build(scene: THREE.Scene, terrain: Terrain): void {
     const kinds = buildKinds();
     const places = scatter(terrain);
@@ -95,11 +99,8 @@ export class Dressing {
     const pos = new THREE.Vector3();
     const scl = new THREE.Vector3();
 
-    for (const k of kinds) {
-      const mine = places.filter((p) => p.kind === k.name);
-      this.counts[k.name] = mine.length;
-      if (!mine.length) { k.geometry.dispose(); continue; }
-      const mesh = this.makeMesh(k, mine.length);
+    const addInstances = (k: Kind, mine: Placement[], voxel: boolean) => {
+      const mesh = this.makeMesh(k, mine.length, voxel);
       for (let i = 0; i < mine.length; i++) {
         const p = mine[i];
         pos.set(p.x, p.y, p.z);
@@ -132,11 +133,29 @@ export class Dressing {
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
       mesh.computeBoundingSphere();
       scene.add(mesh);
-      this.meshes.set(k.name, mesh);
+      this.meshes.set(mesh.name, mesh);
+    };
+
+    for (const k of kinds) {
+      const mine = places.filter((p) => p.kind === k.name);
+      this.counts[k.name] = mine.length;
+      const voxel = this.visualMode === 'voxel'
+        ? mine.filter((p) => Math.hypot(p.x + 24, p.z - 22) <= 30) : [];
+      const baseline = voxel.length
+        ? mine.filter((p) => Math.hypot(p.x + 24, p.z - 22) > 30) : mine;
+      if (baseline.length) addInstances(k, baseline, false);
+      else k.geometry.dispose();
+      if (voxel.length) {
+        const voxelKind: Kind = {
+          ...k, geometry: voxelDressingGeometry(k.name as VoxelDressingKind),
+          doubleSide: false,
+        };
+        addInstances(voxelKind, voxel, true);
+      }
     }
   }
 
-  private makeMesh(k: Kind, count: number): THREE.InstancedMesh {
+  private makeMesh(k: Kind, count: number, voxel: boolean): THREE.InstancedMesh {
     const mat = new THREE.MeshStandardMaterial({
       color: 0xffffff,
       vertexColors: true,
@@ -147,7 +166,7 @@ export class Dressing {
       side: k.doubleSide ? THREE.DoubleSide : THREE.FrontSide,
       flatShading: true,
     });
-    mat.name = `dressing:${k.name}`;
+    mat.name = `dressing:${voxel ? 'voxel:' : ''}${k.name}`;
     mat.envMapIntensity = 0.45;
     if (k.sway) {
       const u = this.uniforms;
@@ -166,7 +185,7 @@ export class Dressing {
       mat.customProgramCacheKey = () => 'dressing-sway';
     }
     const mesh = new THREE.InstancedMesh(k.geometry, mat, count);
-    mesh.name = `Dressing:${k.name}`;
+    mesh.name = `Dressing:${voxel ? 'voxel:' : ''}${k.name}`;
     mesh.castShadow = k.castShadow ?? false;
     mesh.receiveShadow = true;
     mesh.matrixAutoUpdate = false;   // identity model matrix; see the sway patch

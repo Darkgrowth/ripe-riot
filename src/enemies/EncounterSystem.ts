@@ -39,7 +39,8 @@ export class EncounterSystem implements System {
   private currentTargets: EncounterTarget[] = [];
   private suspendedForHarness = false;
 
-  constructor(private readonly comparisonStyle: 'polygon' | 'block' | null = null) {}
+  constructor(private readonly comparisonStyle: 'polygon' | 'block' | null = null,
+    private readonly detailedVoxelClearing = false) {}
 
   init(g: Game): void {
     this.g = g;
@@ -47,7 +48,7 @@ export class EncounterSystem implements System {
     this.resetModel();
     for (const state of this.model.snapshot().encounters) {
       this.visuals.set(state.kind, new EncounterVisual(state.kind, g.renderer.scene,
-        this.comparisonStyle ?? 'polygon'));
+        this.comparisonStyle ?? (this.detailedVoxelClearing ? 'voxel' : 'polygon')));
     }
     g.debug?.addProbe('encounters', () => this.info());
     g.debug?.addAction('encounters.info', () => this.info());

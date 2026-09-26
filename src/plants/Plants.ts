@@ -4,6 +4,8 @@ import { plantShape, swayCurve, SHAPE_VARIANTS, type PlantType } from './PlantGe
 import type { PhysicsWorld, PhysicsOwner, RBody, RCollider } from '@/physics/PhysicsWorld';
 import { Groups } from '@/physics/Layers';
 import { Rng } from '@/core/Rng';
+import { voxelPlantShape } from '@/art/voxel/VoxelTrees';
+import type { VisualMode } from '@/art/voxel/VisualMode';
 
 export interface PlantNode {
   local: THREE.Vector3;
@@ -39,6 +41,7 @@ export interface Plant extends PhysicsOwner {
 
 interface Batch {
   harvestCrown: boolean;
+  voxel: boolean;
   mesh: THREE.InstancedMesh;
   plants: Plant[];
   capacity: number;
@@ -55,6 +58,13 @@ const _v = new THREE.Vector3();
 const _off = new THREE.Vector3();
 const _wind = new THREE.Vector3(1, 0, 0);
 const _perp = new THREE.Vector3();
+// Matches Sunpatch's authored Old Orchard landmark. This pilot replaces only
+// the clearing and leaves the hill farm and cave orchard on their old batches.
+const VOXEL_ORCHARD_X = -24;
+const VOXEL_ORCHARD_Z = 22;
+const VOXEL_ORCHARD_RADIUS_SQ = 26 * 26;
+const batchKey = (type: PlantType, variant: number, harvestCrown: boolean, voxel: boolean) =>
+  `${type}:${variant}${harvestCrown ? ':harvest' : ''}${voxel ? ':voxel' : ''}`;
 
 /**
  * Instanced plants with GPU wind sway. The exact sway curve is duplicated on
@@ -74,29 +84,32 @@ export class PlantSystem {
   windDir = new THREE.Vector3(1, 0, 0);
   windStrength = 0.12;
 
-  constructor(scene: THREE.Scene, physics: PhysicsWorld) {
+  constructor(scene: THREE.Scene, physics: PhysicsWorld,
+    private readonly visualMode: VisualMode = 'baseline') {
     this.scene = scene;
     this.physics = physics;
   }
 
   // ---- creation -----------------------------------------------------------
-  private batchFor(type: PlantType, variant: number, harvestCrown: boolean): Batch {
-    const key = `${type}:${variant}${harvestCrown ? ':harvest' : ''}`;
+  private batchFor(type: PlantType, variant: number, harvestCrown: boolean, voxel: boolean): Batch {
+    const key = batchKey(type, variant, harvestCrown, voxel);
     let b = this.batches.get(key);
     if (b) return b;
-    b = this.makeBatch(type, variant, 32, harvestCrown);
+    b = this.makeBatch(type, variant, 32, harvestCrown, voxel);
     this.batches.set(key, b);
     return b;
   }
 
-  private makeBatch(type: PlantType, variant: number, capacity: number, harvestCrown: boolean): Batch {
-    const shape = plantShape(type, variant, harvestCrown);
+  private makeBatch(type: PlantType, variant: number, capacity: number,
+    harvestCrown: boolean, voxel: boolean): Batch {
+    const shape = voxel ? voxelPlantShape(type, variant, harvestCrown)
+      : plantShape(type, variant, harvestCrown);
     const geo = shape.geometry.clone();
     const mat = new THREE.MeshStandardMaterial({
       color: 0xffffff, vertexColors: true, roughness: 0.88, metalness: 0,
       side: type === 'bananaPlant' || type === 'melonVine' ? THREE.DoubleSide : THREE.FrontSide,
     });
-    mat.name = `plant:${type}`;
+    mat.name = `plant:${type}${voxel ? ':voxel' : ''}`;
     mat.envMapIntensity = 0.4;
     const u = this.uniforms;
     mat.onBeforeCompile = (shader) => {
@@ -134,7 +147,7 @@ export class PlantSystem {
     mat.customProgramCacheKey = () => 'plant-sway';
 
     const mesh = new THREE.InstancedMesh(geo, mat, capacity);
-    mesh.name = `Plants:${type}:${variant}${harvestCrown ? ':harvest' : ''}`;
+    mesh.name = `Plants:${batchKey(type, variant, harvestCrown, voxel)}`;
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(capacity * 3).fill(1), 3);
     mesh.castShadow = true;
@@ -148,14 +161,14 @@ export class PlantSystem {
     geo.setAttribute('instancePhase', phaseAttr);
     geo.setAttribute('instanceShake', shakeAttr);
     this.scene.add(mesh);
-    return { mesh, plants: [], capacity, phaseAttr, shakeAttr, type, variant, harvestCrown };
+    return { mesh, plants: [], capacity, phaseAttr, shakeAttr, type, variant, harvestCrown, voxel };
   }
 
   private growBatch(b: Batch): void {
-    const key = `${b.type}:${b.variant}${b.harvestCrown ? ':harvest' : ''}`;
+    const key = batchKey(b.type, b.variant, b.harvestCrown, b.voxel);
     const cap = Math.ceil(b.capacity * 1.8) + 8;
     const old = b.mesh;
-    const fresh = this.makeBatch(b.type, b.variant, cap, b.harvestCrown);
+    const fresh = this.makeBatch(b.type, b.variant, cap, b.harvestCrown, b.voxel);
     fresh.plants = b.plants;
     this.scene.remove(old);
     old.geometry.dispose();
@@ -175,14 +188,21 @@ export class PlantSystem {
   }
 
   plant(id: number, type: PlantType, position: THREE.Vector3, rng: Rng,
-    opts: { scale?: number; rotationY?: number; variant?: number } = {}): Plant {
+    opts: { scale?: number; rotationY?: number; variant?: number; hiddenCosmetic?: boolean } = {}): Plant {
     const variant = opts.variant ?? rng.int(0, SHAPE_VARIANTS - 1);
-    // The reviewed pruning treatment now covers every orchard on Sunpatch.
-    // Reusing the existing type/variant batches avoids a second regional set.
+    // The original pruning and gameplay nodes remain common to every orchard;
+    // only this pilot clearing receives a separate visual batch.
     const harvestCrown = type === 'appleTree' || type === 'orangeTree';
-    const shape = plantShape(type, variant, harvestCrown);
-    const b = this.batchFor(type, variant, harvestCrown);
-    if (b.plants.length + 1 > b.capacity) this.growBatch(b);
+    const dx = position.x - VOXEL_ORCHARD_X, dz = position.z - VOXEL_ORCHARD_Z;
+    const voxel = this.visualMode === 'voxel'
+      && (harvestCrown || type === 'melonVine' || type === 'bananaPlant')
+      && dx * dx + dz * dz <= VOXEL_ORCHARD_RADIUS_SQ;
+    const shape = voxel ? voxelPlantShape(type, variant, harvestCrown)
+      : plantShape(type, variant, harvestCrown);
+    // A visual-only omission still consumes the normal id and RNG draws, so
+    // later seeded fruit and network node ids do not move between art modes.
+    const b = opts.hiddenCosmetic ? null : this.batchFor(type, variant, harvestCrown, voxel);
+    if (b && b.plants.length + 1 > b.capacity) this.growBatch(b);
 
     const scale = opts.scale ?? rng.range(0.85, 1.2);
     const rotationY = opts.rotationY ?? rng.range(0, Math.PI * 2);
@@ -202,25 +222,27 @@ export class PlantSystem {
         local: local.clone(), world: new THREE.Vector3(), quat: new THREE.Quaternion(),
         fruitId: -1, grip: rng.range(0.85, 1.25),
       })),
-      batchKey: `${type}:${variant}${harvestCrown ? ':harvest' : ''}`,
-      instanceIndex: b.plants.length,
+      batchKey: batchKey(type, variant, harvestCrown, voxel),
+      instanceIndex: b?.plants.length ?? -1,
       body: null, colliders: [],
     };
-    b.plants.push(p);
     this.plantsById.set(id, p);
 
-    _q.setFromAxisAngle(UP, rotationY);
-    _s.setScalar(scale);
-    _m.compose(position, _q, _s);
-    b.mesh.setMatrixAt(p.instanceIndex, _m);
-    b.phaseAttr.setX(p.instanceIndex, p.phase);
-    b.mesh.instanceColor!.setXYZ(p.instanceIndex, tint[0], tint[1], tint[2]);
-    b.mesh.count = b.plants.length;
-    b.mesh.instanceMatrix.needsUpdate = true;
-    b.phaseAttr.needsUpdate = true;
-    b.mesh.instanceColor!.needsUpdate = true;
+    if (b) {
+      b.plants.push(p);
+      _q.setFromAxisAngle(UP, rotationY);
+      _s.setScalar(scale);
+      _m.compose(position, _q, _s);
+      b.mesh.setMatrixAt(p.instanceIndex, _m);
+      b.phaseAttr.setX(p.instanceIndex, p.phase);
+      b.mesh.instanceColor!.setXYZ(p.instanceIndex, tint[0], tint[1], tint[2]);
+      b.mesh.count = b.plants.length;
+      b.mesh.instanceMatrix.needsUpdate = true;
+      b.phaseAttr.needsUpdate = true;
+      b.mesh.instanceColor!.needsUpdate = true;
+    }
 
-    if (shape.collider) {
+    if (b && shape.collider) {
       const c = shape.collider;
       const body = this.physics.createFixed(
         _v.copy(position).setY(position.y + c.offset * scale));

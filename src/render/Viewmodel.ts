@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { toolHand } from './WorkerHands.ts';
+import { voxelAirCannonGeometry, voxelMalletGeometry } from '../art/voxel/VoxelTools.ts';
+import type { VisualMode } from '../art/voxel/VisualMode.ts';
 
 const C = (hex: number) => new THREE.Color().setHex(hex, THREE.SRGBColorSpace);
 
@@ -267,6 +269,25 @@ const BUILDERS: Record<string, Builder> = {
   },
 };
 
+const VOXEL_BUILDERS: Partial<Record<string, Builder>> = {
+  hand: () => ({
+    parts: [
+      toolHand('L', new THREE.Vector3(-0.17, -0.08, -0.26), 0.25),
+      toolHand('R', new THREE.Vector3(0.16, -0.11, -0.22), -0.3),
+      voxelMalletGeometry(),
+    ],
+    hold: new THREE.Vector3(0.0, -0.04, -0.40),
+  }),
+  aircannon: () => ({
+    parts: [
+      toolHand('R', new THREE.Vector3(0.085, -0.195, -0.09), 0.12),
+      toolHand('L', new THREE.Vector3(-0.10, -0.135, -0.32), 0.40),
+      voxelAirCannonGeometry(),
+    ],
+    hold: new THREE.Vector3(0.04, -0.02, -0.46),
+  }),
+};
+
 /**
  * Where a held tool sits relative to the eye: down and to the right, and far
  * enough forward not to fill the screen.
@@ -298,8 +319,10 @@ export const VIEW_DEPTH = 0.5;
  *  half-width at VIEW_DEPTH. */
 export const VIEW_LATERAL = 0.37;
 
-export function buildViewModel(toolId: string, material: THREE.Material): ViewModel {
-  const builder = BUILDERS[toolId] ?? BUILDERS.hand;
+export function buildViewModel(toolId: string, material: THREE.Material,
+  visualMode: VisualMode = 'baseline'): ViewModel {
+  const builder = (visualMode === 'voxel' ? VOXEL_BUILDERS[toolId] : undefined)
+    ?? BUILDERS[toolId] ?? BUILDERS.hand;
   const { parts, hold } = builder();
   const mesh = assemble(parts, material, toolId);
   mesh.position.copy(VIEW_OFFSET);

@@ -22,6 +22,8 @@ The worker must fit the existing 17-bone co-op/ragdoll contract or a verified eq
 
 Stage 1 is complete only after source inspection, matched gameplay views, continuous animation review, the affected test suites/build, a normal-input harvest/fight/delivery run, and a clear account of performance and unverified hardware limits. The user decides whether the visual standard is good enough to expand.
 
+**Stage 1 implementation status (26 September 2026):** The opt-in orchard clearing is implemented and has reached the visual decision gate on branch `codex/detailed-voxel-clearing`. The connected skinned worker and grips, batched fruit/trees/ground/dressing, tools, and Mimic are integrated into the existing game. The standard and ultrawide normal-input route, co-op worker motion, source topology, build, focused contracts, full scenario suite, and cross-mode save round trip have been recorded in [the Stage 1 evidence](evidence/detailed-voxel-clearing/README.md). The user has **not** approved the visual standard yet. The worker gait is brief in the co-op recording and its fallen pose appears slightly high over the slope, so foot planting and fully settled ragdoll contact remain visual concerns. Sustained hardware frame rate has not been measured. No later-stage conversion is authorized by this status.
+
 ### Stage 2: reusable art workflow
 
 Keep editable source and reproducible exports; lock palette, detail hierarchy, joint conventions and material treatment from the successful clearing. Create only helpers demonstrated by Stage 1 assets. Preserve and label the older connected-worker specification as superseded where it conflicts with this direction.

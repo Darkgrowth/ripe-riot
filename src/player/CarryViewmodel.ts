@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { fruitGeometry } from '@/fruit/FruitGeometry';
+import { voxelFruitGeometry } from '@/art/voxel/VoxelFruit';
+import type { VisualMode } from '@/art/voxel/VisualMode';
 import { damp } from '@/core/MathUtils';
 import { gripHand } from '@/render/WorkerHands';
 import { framingFor, screenHeightPctFor, type CarryClass } from '@/interaction/CarryRules';
@@ -51,7 +53,8 @@ export class CarryViewmodel {
   private cur = { d: 0.55, x: 0, y: -0.2, r: 0.08 };
   private settled = false;
 
-  constructor(handMaterial: THREE.Material) {
+  constructor(handMaterial: THREE.Material,
+    private readonly visualMode: VisualMode = 'baseline') {
     this.root.name = 'CarryModel';
     this.root.visible = false;
 
@@ -62,10 +65,11 @@ export class CarryViewmodel {
     // in the world batch.
     this.material = new THREE.MeshStandardMaterial({
       color: 0xffffff, vertexColors: true, roughness: 0.55, metalness: 0.02,
+      flatShading: visualMode === 'voxel',
     });
     this.material.name = 'carry-proxy';
 
-    this.fruitMesh = new THREE.Mesh(fruitGeometry('apple'), this.material);
+    this.fruitMesh = new THREE.Mesh(this.geometryFor('apple'), this.material);
     this.fruitMesh.name = 'CarryFruit';
     this.root.add(this.fruitMesh);
     this.setSpecies('apple');
@@ -81,7 +85,7 @@ export class CarryViewmodel {
   private setSpecies(species: string): void {
     if (species === this.species) return;
     this.species = species;
-    const geo = fruitGeometry(species);
+    const geo = this.geometryFor(species);
     this.fruitMesh.geometry = geo;
     const bs = geo.boundingSphere;
     // Normalising by the real bounding sphere rather than by "unit diameter" is
@@ -89,6 +93,13 @@ export class CarryViewmodel {
     // apple, not only for the species that happen to be balls.
     this.geoRadius = bs ? Math.max(0.1, bs.radius) : 0.5;
     this.geoCentre.copy(bs ? bs.center : _zero);
+  }
+
+  private geometryFor(species: string): THREE.BufferGeometry {
+    if (this.visualMode === 'voxel'
+      && (species === 'apple' || species === 'orange' || species === 'watermelon'))
+      return voxelFruitGeometry(species);
+    return fruitGeometry(species);
   }
 
   /**

@@ -4,6 +4,8 @@ import { Terrain } from './Terrain';
 import { Ocean } from './Ocean';
 import { buildLandmarks, type BuiltLandmarks } from './Landmarks';
 import { Dressing } from './Dressing';
+import { buildVoxelClearingTerrain } from '@/art/voxel/VoxelClearingTerrain';
+import type { VisualMode } from '@/art/voxel/VisualMode';
 
 export interface Landmark {
   id: string;
@@ -22,18 +24,23 @@ export class Sunpatch implements System {
   readonly name = 'world';
   terrain = new Terrain();
   ocean = new Ocean();
-  dressing = new Dressing();
+  dressing: Dressing;
   landmarks = new Map<string, Landmark>();
   root = new THREE.Group();
   built!: BuiltLandmarks;
   private comparisonPad: THREE.Vector3 | null = null;
 
-  constructor(private readonly mimicComparison = false) {}
+  constructor(private readonly mimicComparison = false,
+    private readonly visualMode: VisualMode = 'baseline') {
+    this.dressing = new Dressing(visualMode);
+  }
 
   init(g: Game): void {
     this.root.name = 'Sunpatch';
     g.renderer.scene.add(this.root);
     this.terrain.build(g.renderer.scene, g.physics, true);
+    if (this.visualMode === 'voxel')
+      this.root.add(buildVoxelClearingTerrain(this.terrain));
     this.ocean.build(g.renderer.scene, this.terrain, g.renderer.sunDir);
     this.defineLandmarks();
     this.built = buildLandmarks(g.renderer.scene, g.physics, this.terrain);

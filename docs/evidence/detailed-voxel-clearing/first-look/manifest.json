@@ -1,0 +1,421 @@
+{
+  "base": "http://127.0.0.1:5203",
+  "captures": [
+    {
+      "id": "orchard-approach-1920x1080",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "pos": [
+          71.5,
+          2.351,
+          71.5
+        ],
+        "vel": [
+          0,
+          0,
+          0
+        ],
+        "yaw": 0.9273,
+        "pitch": -0.11,
+        "grounded": true,
+        "speed": 0,
+        "state": "active",
+        "height": 1.82
+      },
+      "viewmodel": {
+        "tool": "hand",
+        "handsSource": "glb",
+        "stow": 1,
+        "kick": 0,
+        "visible": true,
+        "cached": 1,
+        "toolShown": false,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 0
+      },
+      "render": {
+        "drawCalls": 240,
+        "triangles": 1662300,
+        "geometries": 196,
+        "textures": 17,
+        "programs": 36
+      },
+      "profile": {
+        "physics": 0.4,
+        "fixed": 1.2,
+        "frame": 0.8,
+        "render": 1.7,
+        "total": 4.1
+      },
+      "errors": []
+    },
+    {
+      "id": "mimic-near-1920x1080",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "pos": [
+          71.5,
+          2.351,
+          71.5
+        ],
+        "vel": [
+          0,
+          0,
+          0
+        ],
+        "yaw": 0.9273,
+        "pitch": -0.11,
+        "grounded": true,
+        "speed": 0,
+        "state": "active",
+        "height": 1.82
+      },
+      "viewmodel": {
+        "tool": "hand",
+        "handsSource": "glb",
+        "stow": 1,
+        "kick": 0,
+        "visible": true,
+        "cached": 1,
+        "toolShown": false,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 0
+      },
+      "render": {
+        "drawCalls": 233,
+        "triangles": 1694548,
+        "geometries": 197,
+        "textures": 17,
+        "programs": 36
+      },
+      "profile": {
+        "physics": 0.3,
+        "fixed": 0.5,
+        "frame": 0.9,
+        "render": 1.9,
+        "total": 3.6
+      },
+      "errors": []
+    },
+    {
+      "id": "mallet-first-person-1920x1080",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "pos": [
+          -4,
+          7.52,
+          30
+        ],
+        "vel": [
+          0,
+          0,
+          0
+        ],
+        "yaw": 1.222,
+        "pitch": -0.08,
+        "grounded": true,
+        "speed": 0,
+        "state": "active",
+        "height": 1.82
+      },
+      "viewmodel": {
+        "tool": "hand",
+        "handsSource": "glb",
+        "stow": 0,
+        "kick": 0,
+        "visible": true,
+        "cached": 1,
+        "toolShown": true,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 0
+      },
+      "render": {
+        "drawCalls": 243,
+        "triangles": 1820020,
+        "geometries": 197,
+        "textures": 17,
+        "programs": 36
+      },
+      "profile": {
+        "physics": 0.6,
+        "fixed": 0.6,
+        "frame": 0.9,
+        "render": 2.4,
+        "total": 4.5
+      },
+      "errors": []
+    },
+    {
+      "id": "aircannon-first-person-1920x1080",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "pos": [
+          -4,
+          7.52,
+          30
+        ],
+        "vel": [
+          0,
+          0,
+          0
+        ],
+        "yaw": 1.222,
+        "pitch": -0.08,
+        "grounded": true,
+        "speed": 0,
+        "state": "active",
+        "height": 1.82
+      },
+      "viewmodel": {
+        "tool": "aircannon",
+        "handsSource": "glb",
+        "stow": 0.01,
+        "kick": 0,
+        "visible": true,
+        "cached": 2,
+        "toolShown": true,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 0
+      },
+      "render": {
+        "drawCalls": 244,
+        "triangles": 1826536,
+        "geometries": 199,
+        "textures": 17,
+        "programs": 36
+      },
+      "profile": {
+        "physics": 0.3,
+        "fixed": 0.5,
+        "frame": 0.8,
+        "render": 1.7,
+        "total": 3.3
+      },
+      "errors": []
+    },
+    {
+      "id": "orchard-approach-3434x1270",
+      "viewport": [
+        3434,
+        1270
+      ],
+      "camera": {
+        "pos": [
+          71.5,
+          2.351,
+          71.5
+        ],
+        "vel": [
+          0,
+          0,
+          0
+        ],
+        "yaw": 0.9273,
+        "pitch": -0.11,
+        "grounded": true,
+        "speed": 0,
+        "state": "active",
+        "height": 1.82
+      },
+      "viewmodel": {
+        "tool": "hand",
+        "handsSource": "glb",
+        "stow": 1,
+        "kick": 0,
+        "visible": true,
+        "cached": 1,
+        "toolShown": false,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 0
+      },
+      "render": {
+        "drawCalls": 272,
+        "triangles": 1668912,
+        "geometries": 196,
+        "textures": 17,
+        "programs": 36
+      },
+      "profile": {
+        "physics": 0.1,
+        "fixed": 0.7,
+        "frame": 0.9,
+        "render": 1.8,
+        "total": 3.5
+      },
+      "errors": []
+    },
+    {
+      "id": "mimic-near-3434x1270",
+      "viewport": [
+        3434,
+        1270
+      ],
+      "camera": {
+        "pos": [
+          71.5,
+          2.351,
+          71.5
+        ],
+        "vel": [
+          0,
+          0,
+          0
+        ],
+        "yaw": 0.9273,
+        "pitch": -0.11,
+        "grounded": true,
+        "speed": 0,
+        "state": "active",
+        "height": 1.82
+      },
+      "viewmodel": {
+        "tool": "hand",
+        "handsSource": "glb",
+        "stow": 1,
+        "kick": 0,
+        "visible": true,
+        "cached": 1,
+        "toolShown": false,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 0
+      },
+      "render": {
+        "drawCalls": 262,
+        "triangles": 1695096,
+        "geometries": 197,
+        "textures": 17,
+        "programs": 36
+      },
+      "profile": {
+        "physics": 0,
+        "fixed": 0,
+        "frame": 0.7,
+        "render": 1.6,
+        "total": 2.3
+      },
+      "errors": []
+    },
+    {
+      "id": "mallet-first-person-3434x1270",
+      "viewport": [
+        3434,
+        1270
+      ],
+      "camera": {
+        "pos": [
+          -4,
+          7.52,
+          30
+        ],
+        "vel": [
+          0,
+          0,
+          0
+        ],
+        "yaw": 1.222,
+        "pitch": -0.08,
+        "grounded": true,
+        "speed": 0,
+        "state": "active",
+        "height": 1.82
+      },
+      "viewmodel": {
+        "tool": "hand",
+        "handsSource": "glb",
+        "stow": 0,
+        "kick": 0,
+        "visible": true,
+        "cached": 1,
+        "toolShown": true,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 0
+      },
+      "render": {
+        "drawCalls": 245,
+        "triangles": 1820024,
+        "geometries": 197,
+        "textures": 17,
+        "programs": 36
+      },
+      "profile": {
+        "physics": 0.4,
+        "fixed": 0.8,
+        "frame": 0.9,
+        "render": 1.8,
+        "total": 3.9
+      },
+      "errors": []
+    },
+    {
+      "id": "aircannon-first-person-3434x1270",
+      "viewport": [
+        3434,
+        1270
+      ],
+      "camera": {
+        "pos": [
+          -4,
+          7.52,
+          30
+        ],
+        "vel": [
+          0,
+          0,
+          0
+        ],
+        "yaw": 1.222,
+        "pitch": -0.08,
+        "grounded": true,
+        "speed": 0,
+        "state": "active",
+        "height": 1.82
+      },
+      "viewmodel": {
+        "tool": "aircannon",
+        "handsSource": "glb",
+        "stow": 0,
+        "kick": 0,
+        "visible": true,
+        "cached": 2,
+        "toolShown": true,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 0
+      },
+      "render": {
+        "drawCalls": 246,
+        "triangles": 1826540,
+        "geometries": 199,
+        "textures": 17,
+        "programs": 36
+      },
+      "profile": {
+        "physics": 0.4,
+        "fixed": 1.1,
+        "frame": 1.1,
+        "render": 2.3,
+        "total": 4.9
+      },
+      "errors": []
+    }
+  ]
+}
