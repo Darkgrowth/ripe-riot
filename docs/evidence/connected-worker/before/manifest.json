@@ -1,0 +1,374 @@
+{
+  "stage": "before",
+  "source": "http://127.0.0.1:5199",
+  "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+  "frames": [
+    {
+      "id": "remote-front",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "mode": "player",
+        "x": 15,
+        "z": 43.2,
+        "yaw": 0,
+        "pitch": -0.2033978887253536,
+        "target": [
+          15,
+          4.424,
+          40
+        ],
+        "note": "tool hidden for silhouette",
+        "position": [
+          14.999996417818016,
+          4.963573243029882,
+          43.20011575086592
+        ]
+      },
+      "pose": "remote idle facing camera",
+      "drawCalls": 243,
+      "triangles": 931792,
+      "errors": [
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "remote-side",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "mode": "player",
+        "x": 18.2,
+        "z": 40,
+        "yaw": 1.5707963267948966,
+        "pitch": -0.2222065889882113,
+        "target": [
+          15,
+          4.424,
+          40
+        ],
+        "note": "tool hidden for silhouette",
+        "position": [
+          18.199663692725974,
+          5.056067283904733,
+          39.999982457815406
+        ]
+      },
+      "pose": "remote idle profile",
+      "drawCalls": 264,
+      "triangles": 926776,
+      "errors": [
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "remote-rear",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "mode": "player",
+        "x": 15,
+        "z": 36.8,
+        "yaw": -3.141592653589793,
+        "pitch": -0.20579469039140552,
+        "target": [
+          15,
+          4.424,
+          40
+        ],
+        "note": "tool hidden for silhouette",
+        "position": [
+          15.000757894380513,
+          5.024615507041192,
+          36.80044866609306
+        ]
+      },
+      "pose": "remote idle from behind",
+      "drawCalls": 166,
+      "triangles": 921132,
+      "errors": [
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "remote-walk",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "mode": "player",
+        "x": 19.2,
+        "z": 44.2,
+        "yaw": 0.7853981633974478,
+        "pitch": -0.15761244722787737,
+        "target": [
+          15,
+          4.424,
+          40
+        ],
+        "note": "tool hidden for silhouette",
+        "position": [
+          19.199796101741594,
+          5.2730552192493345,
+          44.20002328435682
+        ]
+      },
+      "pose": "remote moving under normal input",
+      "drawCalls": 297,
+      "triangles": 935630,
+      "errors": [
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "ragdoll-early",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "mode": "ragdoll chase",
+        "seconds": 0.18,
+        "position": [
+          15.96963882446289,
+          6.069071292877197,
+          47.380723571777345
+        ]
+      },
+      "pose": "debug-triggered fall",
+      "drawCalls": 280,
+      "triangles": 934766,
+      "errors": [
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "ragdoll-mid",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "mode": "ragdoll chase",
+        "seconds": 0.63,
+        "position": [
+          15.826751708984375,
+          4.884456634521484,
+          47.47398147583008
+        ]
+      },
+      "pose": "debug-triggered fall",
+      "drawCalls": 282,
+      "triangles": 934910,
+      "errors": [
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "mallet",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "mode": "player",
+        "yaw": 0.6,
+        "pitch": -0.05,
+        "position": [
+          16.00681991395777,
+          4.968271816712731,
+          45.922780485509975
+        ]
+      },
+      "pose": "starter mallet in hands",
+      "drawCalls": 302,
+      "triangles": 940342,
+      "errors": [
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "aircannon",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "mode": "player",
+        "yaw": 0.6,
+        "pitch": -0.05,
+        "position": [
+          16.006415564969302,
+          4.968070192392988,
+          45.92223617262789
+        ]
+      },
+      "pose": "Air Cannon grip",
+      "drawCalls": 303,
+      "triangles": 943062,
+      "errors": [
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "carry-small",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "mode": "player",
+        "yaw": 0.6,
+        "pitch": -0.05,
+        "position": [
+          16.00558387015917,
+          4.967800364785434,
+          45.921117816516016
+        ]
+      },
+      "pose": "apple carry grip",
+      "drawCalls": 303,
+      "triangles": 938634,
+      "errors": [
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "carry-large",
+      "viewport": [
+        1920,
+        1080
+      ],
+      "camera": {
+        "mode": "player",
+        "yaw": 0.6,
+        "pitch": -0.05,
+        "position": [
+          16.005151465356903,
+          4.967869903899954,
+          45.920536362400526
+        ]
+      },
+      "pose": "watermelon carry grip",
+      "drawCalls": 304,
+      "triangles": 941710,
+      "errors": [
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "carry-large-uw",
+      "viewport": [
+        3434,
+        1270
+      ],
+      "camera": {
+        "mode": "player",
+        "yaw": 0.6,
+        "pitch": -0.05,
+        "position": [
+          16.00472514101648,
+          4.967764432695221,
+          45.919961167512156
+        ]
+      },
+      "pose": "watermelon carry grip, ultrawide",
+      "drawCalls": 304,
+      "triangles": 941710,
+      "errors": [
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "mallet-uw",
+      "viewport": [
+        3434,
+        1270
+      ],
+      "camera": {
+        "mode": "player",
+        "yaw": 0.6,
+        "pitch": -0.05,
+        "position": [
+          16.004376520594178,
+          4.967747436858589,
+          45.91949282704854
+        ]
+      },
+      "pose": "starter mallet, ultrawide",
+      "drawCalls": 302,
+      "triangles": 940342,
+      "errors": [
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    },
+    {
+      "id": "ragdoll-mid-uw",
+      "viewport": [
+        3434,
+        1270
+      ],
+      "camera": {
+        "mode": "ragdoll chase",
+        "seconds": 0.63,
+        "position": [
+          16.990285146090134,
+          4.527156591415405,
+          46.63405095000111
+        ]
+      },
+      "pose": "debug-triggered fall, ultrawide",
+      "drawCalls": 315,
+      "triangles": 938016,
+      "errors": [
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+        "warning: [.WebGL-0x1f5c001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+      ]
+    }
+  ]
+}
