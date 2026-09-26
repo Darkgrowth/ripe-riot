@@ -3,7 +3,8 @@ import path from 'node:path';
 import { chromium } from 'playwright';
 
 const base = process.env.RIPE_URL || 'http://127.0.0.1:5203';
-const out = path.resolve('docs/evidence/detailed-voxel-clearing/worker-in-game');
+const out = path.resolve(process.env.RIPE_OUT
+  || 'docs/evidence/detailed-voxel-clearing/worker-in-game');
 mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ headless: true,
   args: ['--use-gl=angle', '--use-angle=d3d11'] });
@@ -72,7 +73,32 @@ try {
   await host.evaluate(([x, y, z]) => window.__RIPE.freeCam(x + 1.6, y + 1.5, z - 2.0,
     x, y + 0.9, z), fallen);
   await shot('worker-ragdoll');
-  await host.waitForTimeout(650);
+  const groundAtRemote = async name => host.evaluate(name => {
+    const remote = [...window.__GAME.get('net').remotes.values()][0];
+    const root = remote.rig.root;
+    const vertex = remote.pos.clone();
+    const visualBottom = remote.pos.clone().set(0, Infinity, 0);
+    root.updateMatrixWorld(true);
+    root.traverse(object => {
+      if (!object.isMesh) return;
+      const positions = object.geometry.getAttribute('position');
+      for (let i = 0; i < positions.count; i++) {
+        if (object.isSkinnedMesh) object.getVertexPosition(i, vertex);
+        else vertex.fromBufferAttribute(positions, i);
+        vertex.applyMatrix4(object.matrixWorld);
+        if (vertex.y < visualBottom.y) visualBottom.copy(vertex);
+      }
+    });
+    return { name, remotePosition: remote.pos.toArray(),
+      visualRoot: root.position.toArray(), visualBottom: visualBottom.toArray(),
+      terrainHeight: window.__GAME.get('world').terrain.height(remote.pos.x, remote.pos.z),
+      groundAtVisualBottom: window.__GAME.get('world').terrain.height(visualBottom.x, visualBottom.z),
+      playerHeight: remote.height, state: remote.state };
+  }, name);
+  frames.push(await groundAtRemote('remote-ground-early'));
+  await host.waitForTimeout(2200);
+  await shot('worker-ragdoll-settled');
+  frames.push(await groundAtRemote('remote-ground-late'));
   const hostVideo = host.video();
   const clientVideo = client.video();
   await host.close();
