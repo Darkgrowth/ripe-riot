@@ -9,7 +9,7 @@
 
 ## Evidence
 
-- [Front](worker/worker-front.png), [rear](worker/worker-rear.png), [walk](worker/worker-walk.png), [remote fallen pose](worker/worker-ragdoll.png), and [recovery](worker/worker-ragdoll-settled.png) captures, plus the [co-op motion video](worker/worker-coop-motion.webm). The [manifest](worker/manifest.json) records the remote pose's visual bottom about 7 cm over the terrain at one early frame; this does not establish local physics ragdoll contact.
+- [Front](worker/worker-front.png), [rear](worker/worker-rear.png), [walk](worker/worker-walk.png), and [remote fallen pose](worker/worker-ragdoll.png) captures, plus the [co-op motion video](worker/worker-coop-motion.webm). The later camera frame does not visibly show recovery; the [manifest](worker/manifest.json) records a return to the `active` state. It also records the remote pose's visual bottom about 7 cm over the terrain at one early frame; this does not establish local physics ragdoll contact.
 - [Orchard path](orchard-path.png), [crowns](orchard-crowns.png), and [return view](orchard-return.png) at 1920×1080.
 - [Full normal-input loop](normal-loop/1920x1080/normal-loop.webm) and [report](normal-loop/1920x1080/report.json): dock → warning → 28-point hit → recovery → three Mallet strikes → physical prize → E pickup → real sell pad → E sale. All nine beats were recorded with no page errors.
 
