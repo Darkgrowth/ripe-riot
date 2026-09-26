@@ -14,6 +14,7 @@ export default defineConfig({
       input: {
         main: fileURLToPath(new URL('./index.html', import.meta.url)),
         voxelProof: fileURLToPath(new URL('./voxel-proof.html', import.meta.url)),
+        blockProof: fileURLToPath(new URL('./block-proof.html', import.meta.url)),
       },
     },
   },

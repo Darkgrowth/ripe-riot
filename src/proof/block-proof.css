@@ -1,0 +1,4 @@
+.masthead::before { background: linear-gradient(90deg, rgba(199,222,218,.96), rgba(199,222,218,.76) 70%, rgba(199,222,218,0)); }
+.compare { position: absolute; top: clamp(76px, 6.6vw, 118px); right: clamp(22px, 4.2vw, 78px); color: #23584d; background: rgba(248,242,220,.92); border: 1px solid #ede4c3; border-radius: 6px; padding: 10px 14px; font: 700 11px 'DM Sans', system-ui, sans-serif; letter-spacing: .03em; text-decoration: none; box-shadow: 0 8px 24px #3c7f7330; }
+.compare:hover { background: #fff9e8; }
+@media (max-width: 610px) { .compare { top: auto; bottom: 125px; right: 20px; } }

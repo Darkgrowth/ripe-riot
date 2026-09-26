@@ -6,7 +6,7 @@ type VoxelOptions = { cellSize: number; origin?: THREE.Vector3; roughness?: numb
 const key = (x: number, y: number, z: number) => `${x},${y},${z}`;
 const color = (hex: number) => new THREE.Color(hex);
 
-class VoxelVolume {
+export class VoxelVolume {
   readonly cells = new Map<string, Cell>();
 
   put(x: number, y: number, z: number, pigment: number): void {
