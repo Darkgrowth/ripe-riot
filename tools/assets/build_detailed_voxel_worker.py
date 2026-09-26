@@ -69,7 +69,7 @@ palette_image = bpy.data.images.new('WorkerPalette', width=4, height=1, alpha=Tr
 palette_image.pixels = [channel for name in BODY_ROLES
                         for channel in (*COLORS[name], 1)]
 palette_image.pack()
-body_mat = MATS['suit']
+body_mat = material('WorkerBodyPalette', (1, 1, 1))
 tex = body_mat.node_tree.nodes.new('ShaderNodeTexImage')
 tex.image = palette_image
 tex.interpolation = 'Closest'
@@ -248,6 +248,7 @@ def body_face(key, direction, role):
 
 
 body = BODY.mesh('WorkerBody', BODY_ROLES, face_override=body_face)
+body.data.materials[0] = body_mat
 
 # Each segment is an authored voxel shell rather than loose cube meshes.  The
 # spherical cut ends overlap around fixed joint centers, so a bend leaves

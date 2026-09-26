@@ -35,6 +35,21 @@ test('versioned worker keeps the co-op rig, four-color body palette and fitted l
   assert.ok(body.geometry.getAttribute('position').count > 500);
   assert.ok(body.material.map, 'co-op palette image must remain on WorkerBody');
   assert.equal(body.material.map.image.width, 4);
+  for (const side of ['L', 'R']) {
+    for (const name of ['UpperSleeve', 'ForeSleeve', 'ThighSuit', 'ShinSuit']) {
+      const part = scene.getObjectByName(`${name}_${side}`);
+      assert.ok(part, `${name}_${side} missing`);
+      const materials = [];
+      part.traverse(object => {
+        if (object.isMesh) materials.push(...(Array.isArray(object.material)
+          ? object.material : [object.material]));
+      });
+      const suit = materials.find(material => material.name === 'suit');
+      assert.ok(suit, `${name}_${side} must retain its team-tinted suit material`);
+      assert.equal(suit.map, null,
+        `${name}_${side} must not multiply its team color by the body palette texture`);
+    }
+  }
   const uv = body.geometry.getAttribute('uv');
   assert.ok(Array.from({ length: uv.count }, (_, i) => uv.getX(i))
     .some(x => x > 0.6 && x < 0.65), 'skin faces must sample the third palette pixel');
