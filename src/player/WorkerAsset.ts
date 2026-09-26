@@ -6,6 +6,11 @@ import type { RigColors } from './PlayerRig.ts';
 let template: THREE.Group | null = null;
 let loadedUrl: string | null = null;
 let pending: Promise<void> | null = null;
+const REQUIRED_BONES = [
+  'Pelvis', 'Spine', 'Chest', 'Neck', 'Head',
+  'UpperArm_L', 'UpperArm_R', 'Forearm_L', 'Forearm_R', 'Hand_L', 'Hand_R',
+  'Thigh_L', 'Thigh_R', 'Shin_L', 'Shin_R', 'Foot_L', 'Foot_R',
+];
 
 /** Parse once; failed loads remain retryable and are reported to the caller. */
 export function loadWorkerAsset(url: string): Promise<void> {
@@ -16,6 +21,9 @@ export function loadWorkerAsset(url: string): Promise<void> {
     const body = gltf.scene.getObjectByName('WorkerBody');
     if (!(body instanceof THREE.SkinnedMesh))
       throw new Error('worker GLB has no skinned WorkerBody');
+    const present = new Set(body.skeleton.bones.map((bone) => bone.name));
+    const missing = REQUIRED_BONES.filter((name) => !present.has(name));
+    if (missing.length) throw new Error(`worker GLB missing bones: ${missing.join(', ')}`);
     template = gltf.scene;
   }).catch((error: unknown) => {
     template = null;

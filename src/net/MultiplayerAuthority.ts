@@ -121,6 +121,8 @@ interface RemoteState {
   suit: number;
   rig: PlayerRig;
   lastSeen: number;
+  lastMoveAt: number;
+  hasPlayerPacket: boolean;
 }
 
 /**
@@ -1557,7 +1559,14 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   private applyPlayerPacket(m: NetMessage): void {
     const from = m.from!;
     const r = this.ensureRemote(from, 'Harvester', 0);
-    r.targetPos.set(Number(m.x), Number(m.y), Number(m.z));
+    const x = Number(m.x), y = Number(m.y), z = Number(m.z);
+    const dx = x - r.targetPos.x, dz = z - r.targetPos.z;
+    // Interpolation can nearly catch its target between 20 Hz packets even
+    // while the peer keeps walking. Detect motion from reported travel instead.
+    if (r.hasPlayerPacket && dx * dx + dz * dz > .000025)
+      r.lastMoveAt = performance.now() / 1000;
+    r.hasPlayerPacket = true;
+    r.targetPos.set(x, y, z);
     r.targetYaw = Number(m.yaw);
     r.height = Number(m.h ?? 1.82);
     r.state = String(m.s ?? 'active');
@@ -1802,7 +1811,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       pos: new THREE.Vector3(), targetPos: new THREE.Vector3(),
       yaw: 0, targetYaw: 0, height: 1.82, state: 'active', carrying: null,
       busy: false, hasNet: false,
-      rig, lastSeen: performance.now(),
+      rig, lastSeen: performance.now(), lastMoveAt: -Infinity, hasPlayerPacket: false,
     };
     this.remotes.set(id, r);
     if (this.isHost) this.authority.holdingFor(id, name);
@@ -1902,7 +1911,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   /** Stand the rig up at the reported transform, with a simple walk cycle. */
   private poseRig(r: RemoteState): void {
     const t = performance.now() / 1000;
-    const moving = r.pos.distanceToSquared(r.targetPos) > 0.004;
+    const moving = t - r.lastMoveAt < .22;
     r.rig.poseActive({ position: r.pos, yaw: r.yaw, height: r.height, time: t,
       moving, down: r.state !== 'active', carrying: !!r.carrying, busy: r.busy });
   }

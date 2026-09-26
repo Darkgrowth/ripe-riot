@@ -14,219 +14,339 @@
       "phases": [
         {
           "frame": 0,
-          "time": 15.75,
+          "time": 15.25,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": {
+            "x": 15.374369145208412,
+            "thighL": 2.6237554799757734,
+            "armL": 2.84061235765561
+          }
         },
         {
           "frame": 1,
-          "time": 17.25,
+          "time": 16.5,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": {
+            "x": 16.121391343353146,
+            "thighL": -2.713155258780217,
+            "armL": -2.629645223782025
+          }
         },
         {
           "frame": 2,
-          "time": 18.75,
+          "time": 17.75,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": {
+            "x": 16.851515018366747,
+            "thighL": 3.133544124582447,
+            "armL": -2.9781945360600313
+          }
         },
         {
           "frame": 3,
+          "time": 19,
+          "player": "active",
+          "interaction": null,
+          "viewmodel": "hand",
+          "remote": null,
+          "hostPlayer": "active",
+          "gait": {
+            "x": 17.53652319140362,
+            "thighL": 2.9091422780128484,
+            "armL": 3.1089463172602767
+          }
+        },
+        {
+          "frame": 4,
           "time": 20.25,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
-        },
-        {
-          "frame": 4,
-          "time": 21.75,
-          "player": "active",
-          "interaction": null,
-          "viewmodel": "hand",
-          "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": {
+            "x": 18.206526566251334,
+            "thighL": -2.7404744988057024,
+            "armL": -2.650465221982465
+          }
         },
         {
           "frame": 5,
-          "time": 23.25,
+          "time": 21.5,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": {
+            "x": 18.921518421783823,
+            "thighL": 2.8057152007661617,
+            "armL": 3.0141193271308637
+          }
         },
         {
           "frame": 6,
-          "time": 24.75,
+          "time": 22.75,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": {
+            "x": 19.63155427425294,
+            "thighL": -2.8222932788061743,
+            "armL": -2.713479671797706
+          }
         },
         {
           "frame": 7,
-          "time": 26.25,
+          "time": 24,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": {
+            "x": 20.351404326546785,
+            "thighL": 2.9096489617659627,
+            "armL": 3.1094038655849956
+          }
         },
         {
           "frame": 8,
-          "time": 27.75,
+          "time": 25.25,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": {
+            "x": 21.081515021286243,
+            "thighL": -3.0406423040378763,
+            "armL": -2.8875060814920928
+          }
         },
         {
           "frame": 9,
+          "time": 26.5,
+          "player": "active",
+          "interaction": null,
+          "viewmodel": "hand",
+          "remote": null,
+          "hostPlayer": "active",
+          "gait": {
+            "x": 21.781570262454352,
+            "thighL": 2.743729979673508,
+            "armL": 2.9559416455396224
+          }
+        },
+        {
+          "frame": 10,
+          "time": 28,
+          "player": "active",
+          "interaction": null,
+          "viewmodel": "hand",
+          "remote": null,
+          "hostPlayer": "active",
+          "gait": {
+            "x": 21.917015228010243,
+            "thighL": 3.108694082663262,
+            "armL": -2.999268692423381
+          }
+        },
+        {
+          "frame": 11,
           "time": 29.25,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
-        },
-        {
-          "frame": 10,
-          "time": 31,
-          "player": "active",
-          "interaction": null,
-          "viewmodel": "hand",
-          "remote": null,
-          "hostPlayer": "active"
-        },
-        {
-          "frame": 11,
-          "time": 32.5,
-          "player": "active",
-          "interaction": null,
-          "viewmodel": "hand",
-          "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": {
+            "x": 21.116083082812978,
+            "thighL": 2.730753202839283,
+            "armL": 2.9436373376376874
+          }
         },
         {
           "frame": 12,
-          "time": 34,
+          "time": 30.5,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": {
+            "x": 20.326045894566814,
+            "thighL": -2.6718009563363747,
+            "armL": -2.598317865419566
+          }
         },
         {
           "frame": 13,
+          "time": 31.75,
+          "player": "active",
+          "interaction": null,
+          "viewmodel": "hand",
+          "remote": null,
+          "hostPlayer": "active",
+          "gait": {
+            "x": 19.526202712119012,
+            "thighL": -3.0171887603730365,
+            "armL": -2.8683484050967967
+          }
+        },
+        {
+          "frame": 14,
+          "time": 33,
+          "player": "active",
+          "interaction": null,
+          "viewmodel": "hand",
+          "remote": null,
+          "hostPlayer": "active",
+          "gait": {
+            "x": 18.663494643348816,
+            "thighL": 2.626093915699131,
+            "armL": 2.8428927894015117
+          }
+        },
+        {
+          "frame": 15,
+          "time": 34.25,
+          "player": "active",
+          "interaction": null,
+          "viewmodel": "hand",
+          "remote": null,
+          "hostPlayer": "active",
+          "gait": {
+            "x": 17.883618912468766,
+            "thighL": 3.1154102278607207,
+            "armL": -2.9935579807218367
+          }
+        },
+        {
+          "frame": 16,
           "time": 35.5,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
-        },
-        {
-          "frame": 14,
-          "time": 37,
-          "player": "active",
-          "interaction": null,
-          "viewmodel": "hand",
-          "remote": null,
-          "hostPlayer": "active"
-        },
-        {
-          "frame": 15,
-          "time": 38.5,
-          "player": "active",
-          "interaction": null,
-          "viewmodel": "hand",
-          "remote": null,
-          "hostPlayer": "active"
-        },
-        {
-          "frame": 16,
-          "time": 40,
-          "player": "active",
-          "interaction": null,
-          "viewmodel": "hand",
-          "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": {
+            "x": 17.023650670091595,
+            "thighL": -2.7374231046061297,
+            "armL": -2.648134588190087
+          }
         },
         {
           "frame": 17,
-          "time": 41.5,
+          "time": 36.75,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": {
+            "x": 16.23372933372546,
+            "thighL": 2.6333467642542616,
+            "armL": 2.8499578493174247
+          }
         },
         {
           "frame": 18,
-          "time": 43,
+          "time": 38,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": {
+            "x": 15.468647456367307,
+            "thighL": -2.6728491237048475,
+            "armL": -2.5991092255852366
+          }
         },
         {
           "frame": 19,
+          "time": 39.25,
+          "player": "active",
+          "interaction": null,
+          "viewmodel": "hand",
+          "remote": null,
+          "hostPlayer": "active",
+          "gait": {
+            "x": 14.793354749180942,
+            "thighL": 2.762435681273121,
+            "armL": 2.9736026897736294
+          }
+        },
+        {
+          "frame": 20,
+          "time": 40.75,
+          "player": "active",
+          "interaction": null,
+          "viewmodel": "hand",
+          "remote": null,
+          "hostPlayer": "active",
+          "gait": {
+            "x": 14.330746333662328,
+            "thighL": -3.1398580510901195,
+            "armL": -2.969939562485091
+          }
+        },
+        {
+          "frame": 21,
+          "time": 42,
+          "player": "active",
+          "interaction": null,
+          "viewmodel": "hand",
+          "remote": null,
+          "hostPlayer": "active",
+          "gait": {
+            "x": 14.337534198186637,
+            "thighL": -2.766639683461046,
+            "armL": -2.67050536848244
+          }
+        },
+        {
+          "frame": 22,
+          "time": 43.25,
+          "player": "active",
+          "interaction": null,
+          "viewmodel": "hand",
+          "remote": null,
+          "hostPlayer": "active",
+          "gait": {
+            "x": 14.339999445521745,
+            "thighL": -3.1398580510901195,
+            "armL": -2.969939562485091
+          }
+        },
+        {
+          "frame": 23,
           "time": 44.5,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
-        },
-        {
-          "frame": 20,
-          "time": 46.25,
-          "player": "active",
-          "interaction": null,
-          "viewmodel": "hand",
-          "remote": null,
-          "hostPlayer": "active"
-        },
-        {
-          "frame": 21,
-          "time": 47.75,
-          "player": "active",
-          "interaction": null,
-          "viewmodel": "hand",
-          "remote": null,
-          "hostPlayer": "active"
-        },
-        {
-          "frame": 22,
-          "time": 49.25,
-          "player": "active",
-          "interaction": null,
-          "viewmodel": "hand",
-          "remote": null,
-          "hostPlayer": "active"
-        },
-        {
-          "frame": 23,
-          "time": 50.75,
-          "player": "active",
-          "interaction": null,
-          "viewmodel": "hand",
-          "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": {
+            "x": 14.339999999875316,
+            "thighL": -3.1398580510901195,
+            "armL": -2.969939562485091
+          }
         }
       ],
       "file": "worker-walk.mp4"
@@ -242,291 +362,323 @@
       "phases": [
         {
           "frame": 0,
-          "time": 52.583,
+          "time": 46.583,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 1,
-          "time": 52.667,
+          "time": 46.667,
           "player": "ragdoll",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "ragdoll"
+          "hostPlayer": "ragdoll",
+          "gait": null
         },
         {
           "frame": 2,
-          "time": 52.75,
+          "time": 46.75,
           "player": "ragdoll",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "ragdoll"
+          "hostPlayer": "ragdoll",
+          "gait": null
         },
         {
           "frame": 3,
-          "time": 52.833,
+          "time": 46.833,
           "player": "ragdoll",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "ragdoll"
+          "hostPlayer": "ragdoll",
+          "gait": null
         },
         {
           "frame": 4,
-          "time": 52.917,
+          "time": 46.917,
           "player": "ragdoll",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "ragdoll"
+          "hostPlayer": "ragdoll",
+          "gait": null
         },
         {
           "frame": 5,
-          "time": 53,
+          "time": 47,
           "player": "ragdoll",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "ragdoll"
+          "hostPlayer": "ragdoll",
+          "gait": null
         },
         {
           "frame": 6,
-          "time": 53.083,
+          "time": 47.083,
           "player": "ragdoll",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "ragdoll"
+          "hostPlayer": "ragdoll",
+          "gait": null
         },
         {
           "frame": 7,
-          "time": 53.167,
+          "time": 47.167,
           "player": "ragdoll",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "ragdoll"
+          "hostPlayer": "ragdoll",
+          "gait": null
         },
         {
           "frame": 8,
-          "time": 53.25,
+          "time": 47.25,
           "player": "ragdoll",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "ragdoll"
+          "hostPlayer": "ragdoll",
+          "gait": null
         },
         {
           "frame": 9,
-          "time": 53.333,
+          "time": 47.333,
           "player": "ragdoll",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "ragdoll"
+          "hostPlayer": "ragdoll",
+          "gait": null
         },
         {
           "frame": 10,
-          "time": 53.417,
+          "time": 47.417,
           "player": "ragdoll",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "ragdoll"
+          "hostPlayer": "ragdoll",
+          "gait": null
         },
         {
           "frame": 11,
-          "time": 53.5,
+          "time": 47.5,
           "player": "ragdoll",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "ragdoll"
+          "hostPlayer": "ragdoll",
+          "gait": null
         },
         {
           "frame": 12,
-          "time": 53.583,
+          "time": 47.583,
           "player": "ragdoll",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "ragdoll"
+          "hostPlayer": "ragdoll",
+          "gait": null
         },
         {
           "frame": 13,
-          "time": 53.667,
+          "time": 47.667,
           "player": "ragdoll",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "ragdoll"
+          "hostPlayer": "ragdoll",
+          "gait": null
         },
         {
           "frame": 14,
-          "time": 53.75,
+          "time": 47.75,
           "player": "ragdoll",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "ragdoll"
+          "hostPlayer": "ragdoll",
+          "gait": null
         },
         {
           "frame": 15,
-          "time": 53.833,
+          "time": 47.833,
           "player": "ragdoll",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "ragdoll"
+          "hostPlayer": "ragdoll",
+          "gait": null
         },
         {
           "frame": 16,
-          "time": 53.917,
+          "time": 47.917,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 17,
-          "time": 54,
+          "time": 48,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 18,
-          "time": 54.083,
+          "time": 48.083,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 19,
-          "time": 54.167,
+          "time": 48.167,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 20,
-          "time": 54.25,
+          "time": 48.25,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 21,
-          "time": 54.333,
+          "time": 48.333,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 22,
-          "time": 54.417,
+          "time": 48.417,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 23,
-          "time": 54.5,
+          "time": 48.5,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 24,
-          "time": 54.583,
+          "time": 48.583,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 25,
-          "time": 54.667,
+          "time": 48.667,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 26,
-          "time": 54.75,
+          "time": 48.75,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 27,
-          "time": 54.833,
+          "time": 48.833,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 28,
-          "time": 54.917,
+          "time": 48.917,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 29,
-          "time": 55,
+          "time": 49,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 30,
-          "time": 55.083,
+          "time": 49.083,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 31,
-          "time": 55.167,
+          "time": 49.167,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         }
       ],
       "file": "worker-fall-recover.mp4"
@@ -542,301 +694,333 @@
       "phases": [
         {
           "frame": 0,
-          "time": 56.667,
+          "time": 50.667,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 1,
-          "time": 57.417,
+          "time": 51.417,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 2,
-          "time": 58.167,
+          "time": 52.167,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 3,
-          "time": 58.917,
+          "time": 52.917,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 4,
-          "time": 59.667,
+          "time": 53.667,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 5,
-          "time": 60.417,
+          "time": 54.417,
           "player": "active",
           "interaction": null,
           "viewmodel": "hand",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 6,
-          "time": 61.667,
+          "time": 55.667,
           "player": "active",
           "interaction": null,
           "viewmodel": "aircannon",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 7,
-          "time": 62.417,
+          "time": 56.667,
           "player": "active",
           "interaction": null,
           "viewmodel": "aircannon",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 8,
-          "time": 63.167,
+          "time": 57.417,
           "player": "active",
           "interaction": null,
           "viewmodel": "aircannon",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 9,
-          "time": 63.917,
+          "time": 58.167,
           "player": "active",
           "interaction": null,
           "viewmodel": "aircannon",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 10,
-          "time": 64.667,
+          "time": 58.917,
           "player": "active",
           "interaction": null,
           "viewmodel": "aircannon",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 11,
-          "time": 65.417,
+          "time": 59.667,
           "player": "active",
           "interaction": null,
           "viewmodel": "aircannon",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 12,
-          "time": 66.167,
+          "time": 60.417,
           "player": "active",
           "interaction": null,
           "viewmodel": "aircannon",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 13,
-          "time": 67.167,
+          "time": 61.417,
           "player": "active",
           "interaction": null,
           "viewmodel": "basket",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 14,
-          "time": 67.917,
+          "time": 62.167,
           "player": "active",
           "interaction": null,
           "viewmodel": "basket",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 15,
-          "time": 68.667,
+          "time": 62.917,
           "player": "active",
           "interaction": null,
           "viewmodel": "basket",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 16,
-          "time": 69.417,
+          "time": 63.667,
           "player": "active",
           "interaction": null,
           "viewmodel": "basket",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 17,
-          "time": 70.167,
+          "time": 64.417,
           "player": "active",
           "interaction": null,
           "viewmodel": "basket",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 18,
-          "time": 71.667,
+          "time": 65.917,
           "player": "active",
           "interaction": "apple",
           "viewmodel": "basket",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 19,
-          "time": 72.417,
+          "time": 66.667,
           "player": "active",
           "interaction": "apple",
           "viewmodel": "basket",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 20,
-          "time": 73.167,
+          "time": 67.417,
           "player": "active",
           "interaction": "apple",
           "viewmodel": "basket",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 21,
-          "time": 73.917,
+          "time": 68.167,
           "player": "active",
           "interaction": "apple",
           "viewmodel": "basket",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 22,
-          "time": 74.667,
+          "time": 68.917,
           "player": "active",
           "interaction": "apple",
           "viewmodel": "basket",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 23,
-          "time": 75.417,
+          "time": 69.667,
           "player": "active",
           "interaction": "apple",
           "viewmodel": "basket",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 24,
-          "time": 76.167,
+          "time": 70.417,
           "player": "active",
           "interaction": "apple",
           "viewmodel": "basket",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 25,
-          "time": 78.167,
+          "time": 72.417,
           "player": "active",
           "interaction": "watermelon",
           "viewmodel": "basket",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 26,
-          "time": 78.917,
+          "time": 73.167,
           "player": "active",
           "interaction": "watermelon",
           "viewmodel": "basket",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 27,
-          "time": 79.667,
+          "time": 73.917,
           "player": "active",
           "interaction": "watermelon",
           "viewmodel": "basket",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 28,
-          "time": 80.417,
+          "time": 74.667,
           "player": "active",
           "interaction": "watermelon",
           "viewmodel": "basket",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 29,
-          "time": 81.167,
+          "time": 75.417,
           "player": "active",
           "interaction": "watermelon",
           "viewmodel": "basket",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 30,
-          "time": 81.917,
+          "time": 76.167,
           "player": "active",
           "interaction": "watermelon",
           "viewmodel": "basket",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         },
         {
           "frame": 31,
-          "time": 82.667,
+          "time": 76.917,
           "player": "active",
           "interaction": "watermelon",
           "viewmodel": "basket",
           "remote": null,
-          "hostPlayer": "active"
+          "hostPlayer": "active",
+          "gait": null
         }
       ],
       "file": "worker-tool-carry.mp4"
     }
   ],
   "errors": [
-    "warning: [.WebGL-0x11fc00b5e000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
-    "warning: [.WebGL-0x11fc00b5e000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
-    "warning: [.WebGL-0x11fc00b5e000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
-    "warning: [.WebGL-0x11fc00b5e000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
+    "warning: [.WebGL-0x7cfc001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+    "warning: [.WebGL-0x7cfc001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+    "warning: [.WebGL-0x7cfc001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5199/?fresh=1)",
+    "warning: [.WebGL-0x7cfc001b9a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5199/?fresh=1)"
   ],
   "authored": "positions, fall trigger, inventory and fruit spawn/pickup",
   "normalInput": "worker-walk lateral movement and every game-rendered frame"

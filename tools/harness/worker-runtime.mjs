@@ -59,6 +59,25 @@ try {
         visible: rag.rig.root.visible, body: rag.rig.body };
     });
     assert.deepEqual(fallback, { ready: true, source: 'fallback', visible: true, body: null });
+    const workerWarning = await page.locator('#visual-asset-warning').textContent();
+    assert.match(workerWarning, /worker.*visual.*missing/i);
+    assert.equal(await page.locator('#visual-asset-warning').isVisible(), true);
+
+    const missingHands = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+    await missingHands.route('**/models/worker-hands.glb', route =>
+      route.fulfill({ status: 404, body: 'missing worker hands' }));
+    await missingHands.goto(`${url}/?fresh=1`);
+    await missingHands.waitForFunction(() => window.__RIPE_READY || window.__RIPE_ERROR,
+      null, { timeout: 90_000 });
+    const handFallback = await missingHands.evaluate(() => ({
+      ready: window.__RIPE_READY === true,
+      handsSource: window.__RIPE?.state().viewmodel?.handsSource,
+      warning: document.querySelector('#visual-asset-warning')?.textContent ?? '',
+    }));
+    assert.equal(handFallback.ready, true, 'missing hand GLB must not abort gameplay boot');
+    assert.equal(handFallback.handsSource, 'diagnostic');
+    assert.match(handFallback.warning, /worker.*hands.*missing/i);
+    assert.equal(await missingHands.locator('#visual-asset-warning').isVisible(), true);
     console.log('worker runtime: skinned remote, visible co-op fall, diagnostic boot PASS');
   } finally { await browser.close(); }
 } finally {

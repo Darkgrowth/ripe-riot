@@ -7,7 +7,7 @@ import { CarryViewmodel } from '@/player/CarryViewmodel';
 import { framingFor } from '@/interaction/CarryRules';
 import { VIEWMODEL_FOV_SCALE } from '@/render/Renderer';
 import { damp, clamp } from '@/core/MathUtils';
-import { disposeWorkerHands } from '@/render/WorkerHands';
+import { disposeWorkerHands, workerHandsSource } from '@/render/WorkerHands';
 
 /** Framing is authored at 16:9; anything narrower gets a smaller tool. */
 const REFERENCE_ASPECT = 16 / 9;
@@ -89,6 +89,7 @@ export class ViewmodelSystem implements System {
 
     g.debug?.addProbe('viewmodel', () => ({
       tool: this.currentId,
+      handsSource: workerHandsSource(),
       stow: +this.stow.toFixed(2),
       kick: +this.kick.toFixed(3),
       visible: this.visible,

@@ -6,6 +6,26 @@ const names = ['ToolGrip_L', 'ToolGrip_R', 'CarryGrip_L', 'CarryGrip_R'] as cons
 let templates: Map<string, THREE.BufferGeometry> | null = null;
 let loadedUrl: string | null = null;
 let pending: Promise<void> | null = null;
+let source: 'glb' | 'diagnostic' | 'unloaded' = 'unloaded';
+
+export function workerHandsSource(): typeof source { return source; }
+
+/** Visible, single-piece placeholder used only when the authored GLB fails. */
+export function installDiagnosticWorkerHands(): void {
+  const next = new Map<string, THREE.BufferGeometry>();
+  for (const name of names) {
+    const geo = new THREE.BoxGeometry(.13, .4, .13);
+    geo.translate(0, -.2, 0);
+    const count = geo.getAttribute('position').count;
+    const rgb = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) rgb.set([1, 0, .8], i * 3);
+    geo.setAttribute('color', new THREE.BufferAttribute(rgb, 3));
+    next.set(name, geo);
+  }
+  templates = next;
+  loadedUrl = null;
+  source = 'diagnostic';
+}
 
 export function loadWorkerHands(url: string): Promise<void> {
   if (templates && loadedUrl === url) return Promise.resolve();
@@ -21,8 +41,9 @@ export function loadWorkerHands(url: string): Promise<void> {
       next.set(name, object.geometry);
     }
     templates = next;
+    source = 'glb';
   }).catch((error: unknown) => {
-    loadedUrl = null; templates = null; throw error;
+    loadedUrl = null; templates = null; source = 'unloaded'; throw error;
   }).finally(() => { pending = null; });
   return pending;
 }
@@ -65,4 +86,5 @@ export function disposeWorkerHands(): void {
   if (templates) for (const geometry of templates.values()) geometry.dispose();
   templates = null;
   loadedUrl = null;
+  source = 'unloaded';
 }

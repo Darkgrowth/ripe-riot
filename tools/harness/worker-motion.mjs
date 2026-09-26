@@ -30,10 +30,25 @@ async function frames(name, count, phase, camera = host) {
     await camera.idleFrames(1);
     await camera.shot(String(i).padStart(3, '0'), `worker-motion/${name}`);
     const s = await camera.state();
+    const gait = name === 'worker-walk' ? await host.page.evaluate(() => {
+      const remote = [...window.__GAME.get('net').remotes.values()][0];
+      const bone = (name) => remote?.rig.body?.skeleton.getBoneByName(name)?.rotation.x ?? null;
+      return { x: remote?.pos.x ?? null, thighL: bone('Thigh_L'),
+        armL: bone('UpperArm_L') };
+    }) : null;
     states.push({ frame: i, time: s.elapsed, player: s.player.state,
       interaction: s.interaction?.carrying?.species ?? null,
       viewmodel: s.viewmodel?.tool ?? null, remote: s.net?.remotes?.length ?? null,
-      hostPlayer: (await host.state()).player.state });
+      hostPlayer: (await host.state()).player.state, gait });
+  }
+  if (name === 'worker-walk') {
+    const travel = Math.max(...states.map(s => s.gait.x))
+      - Math.min(...states.map(s => s.gait.x));
+    const bend = (key) => Math.max(...states.map(s => Math.abs(Math.atan2(
+      Math.sin(s.gait[key] - states[0].gait[key]),
+      Math.cos(s.gait[key] - states[0].gait[key])))));
+    if (travel < .1 || bend('thighL') < .12 || bend('armL') < .10)
+      throw new Error(`walk clip lacks movement or articulated gait: x=${travel.toFixed(3)}, thigh=${bend('thighL').toFixed(3)}, arm=${bend('armL').toFixed(3)}`);
   }
   const result = spawnSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y',
     '-framerate', '10', '-i', path.join(dir, '%03d.png'),
@@ -70,19 +85,16 @@ try {
   await host.call('viewmodel.show', false);
   await sleep(1400);
 
-  await peer.pause(true);
+  await host.freeCam([x, hy + 2.2, z + 3.8], [x, hy + .9, z]);
   await frames('worker-walk', 24, async (i) => {
-    if (i === 0) await peer.input({ moveX: .22 });
-    if (i === 10) await peer.input({ moveX: -.22 });
+    if (i === 0) await peer.input({ moveX: .08 });
+    if (i === 10) await peer.input({ moveX: -.08 });
     if (i === 20) await peer.clearInput();
-    await peer.simulate(.08);
     const p = (await peer.state()).player.pos;
-    const h = (await host.state()).player.pos;
-    await host.look(Math.atan2(-(p[0] - h[0]), -(p[2] - h[2])),
-      Math.atan2(p[1] + 1.05 - (h[1] + 1.63), Math.hypot(p[0] - h[0], p[2] - h[2])));
+    await host.freeCam([p[0], p[1] + 2.2, p[2] + 3.8],
+      [p[0], p[1] + .9, p[2]]);
   });
   await peer.clearInput();
-  await peer.pause(false);
   await host.tp(x, hy, hz);
   await host.freeCam([x + 3, hy + 2.3, hz + 3.8], [x, hy + .9, hz]);
   await host.pause(true);

@@ -55,6 +55,24 @@ test('corrupt worker data leaves a visible diagnostic fallback', async () => {
   rig.dispose();
 });
 
+test('parseable worker data missing a required bone rejects before posing', async () => {
+  const bytes = Buffer.from(readFileSync(path.join(root, 'public/models/worker.glb')));
+  const needle = Buffer.from('UpperArm_L');
+  const at = bytes.indexOf(needle);
+  assert.ok(at > 0, 'fixture must contain the named bone');
+  bytes.write('UpperArm_X', at, 'ascii');
+  await assert.rejects(
+    loadWorkerAsset(`data:application/octet-stream;base64,${bytes.toString('base64')}`),
+    /missing.*UpperArm_L/i,
+  );
+  const oldError = console.error;
+  console.error = () => {};
+  let rig;
+  try { rig = makePlayerRig(); } finally { console.error = oldError; }
+  assert.equal(rig.source, 'fallback');
+  rig.dispose();
+});
+
 test('loaded worker clones share geometry but own palette materials and release them', async () => {
   const bytes = readFileSync(path.join(root, 'public/models/worker.glb'));
   await loadWorkerAsset(`data:application/octet-stream;base64,${bytes.toString('base64')}`);

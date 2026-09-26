@@ -26,7 +26,7 @@ import { MultiplayerAuthority } from '@/net/MultiplayerAuthority';
 import { SaveSystem } from '@/save/SaveSystem';
 import { DebugAPI } from '@/debug/DebugAPI';
 import { loadWorkerAsset } from '@/player/WorkerAsset';
-import { loadWorkerHands } from '@/render/WorkerHands';
+import { installDiagnosticWorkerHands, loadWorkerHands } from '@/render/WorkerHands';
 
 const boot = document.getElementById('boot')!;
 const bar = boot.querySelector('.bar > i') as HTMLElement;
@@ -59,6 +59,7 @@ async function main(): Promise<void> {
   const world = new Sunpatch(!!comparison);
   // A provisional spawn; corrected once the terrain exists.
   await game.boot(canvas, new THREE.Vector3(55, 6, 64));
+  const visualWarnings: string[] = [];
 
   // Visual preload precedes synchronous system init. Gameplay can still boot
   // with a conspicuous diagnostic rig if this asset is missing or corrupt.
@@ -67,9 +68,15 @@ async function main(): Promise<void> {
     await loadWorkerAsset(missingWorker ? '/models/missing-worker.glb' : '/models/worker.glb');
   } catch (error) {
     console.error('Connected worker asset failed to load', error);
-    status.textContent = 'worker visual missing; diagnostic avatar active';
+    visualWarnings.push('Worker visual missing; diagnostic avatar active');
   }
-  await loadWorkerHands('/models/worker-hands.glb');
+  try {
+    await loadWorkerHands('/models/worker-hands.glb');
+  } catch (error) {
+    console.error('Connected worker hands failed to load', error);
+    installDiagnosticWorkerHands();
+    visualWarnings.push('Worker hands missing; diagnostic gloves active');
+  }
 
   progress(30, 'building sunpatch');
   // The debug surface exists before systems initialise so each system can
@@ -187,6 +194,13 @@ async function main(): Promise<void> {
   };
 
   game.start();
+  if (visualWarnings.length) {
+    const warning = document.createElement('div');
+    warning.id = 'visual-asset-warning';
+    warning.setAttribute('role', 'alert');
+    warning.textContent = visualWarnings.join(' · ');
+    document.body.appendChild(warning);
+  }
   progress(100, 'ready');
   setTimeout(() => boot.classList.add('hidden'), 260);
   (window as unknown as { __RIPE_READY: boolean }).__RIPE_READY = true;
