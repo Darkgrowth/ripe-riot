@@ -25,6 +25,7 @@ import { IslandEventView } from '@/ui/IslandEventView';
 import { MultiplayerAuthority } from '@/net/MultiplayerAuthority';
 import { SaveSystem } from '@/save/SaveSystem';
 import { DebugAPI } from '@/debug/DebugAPI';
+import { loadWorkerAsset } from '@/player/WorkerAsset';
 
 const boot = document.getElementById('boot')!;
 const bar = boot.querySelector('.bar > i') as HTMLElement;
@@ -57,6 +58,16 @@ async function main(): Promise<void> {
   const world = new Sunpatch(!!comparison);
   // A provisional spawn; corrected once the terrain exists.
   await game.boot(canvas, new THREE.Vector3(55, 6, 64));
+
+  // Visual preload precedes synchronous system init. Gameplay can still boot
+  // with a conspicuous diagnostic rig if this asset is missing or corrupt.
+  const missingWorker = new URLSearchParams(window.location.search).get('workerAsset') === 'missing';
+  try {
+    await loadWorkerAsset(missingWorker ? '/models/missing-worker.glb' : '/models/worker.glb');
+  } catch (error) {
+    console.error('Connected worker asset failed to load', error);
+    status.textContent = 'worker visual missing; diagnostic avatar active';
+  }
 
   progress(30, 'building sunpatch');
   // The debug surface exists before systems initialise so each system can

@@ -1901,28 +1901,10 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
 
   /** Stand the rig up at the reported transform, with a simple walk cycle. */
   private poseRig(r: RemoteState): void {
-    const rig = r.rig;
-    const torsoY = r.pos.y + r.height * 0.62;
-    rig.root.position.set(r.pos.x, 0, r.pos.z);
-    rig.root.rotation.y = r.yaw;
-
-    const down = r.state !== 'active' ? 0.75 : 0;
-    rig.torso.position.set(0, torsoY - down * 0.6, 0);
-    rig.torso.rotation.set(down * 1.4, 0, 0);
-    rig.head.position.set(0, torsoY + 0.33 - down * 0.5, down * 0.3);
-    rig.head.rotation.set(down * 1.2, 0, 0);
-
     const t = performance.now() / 1000;
     const moving = r.pos.distanceToSquared(r.targetPos) > 0.004;
-    const swing = moving && !down ? Math.sin(t * 8) * 0.6 : 0;
-    rig.armL.position.set(-0.34, torsoY + 0.16 - down * 0.5, 0);
-    rig.armR.position.set(0.34, torsoY + 0.16 - down * 0.5, 0);
-    rig.armL.rotation.set(swing, 0, 0.12);
-    rig.armR.rotation.set(-swing, 0, -0.12);
-    rig.legL.position.set(-0.14, torsoY - 0.38 - down * 0.4, 0);
-    rig.legR.position.set(0.14, torsoY - 0.38 - down * 0.4, 0);
-    rig.legL.rotation.set(-swing, 0, 0);
-    rig.legR.rotation.set(swing, 0, 0);
+    r.rig.poseActive({ position: r.pos, yaw: r.yaw, height: r.height, time: t,
+      moving, down: r.state !== 'active', carrying: !!r.carrying, busy: r.busy });
   }
 
   dispose(): void { this.disconnect(); }

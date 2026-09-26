@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import * as THREE from 'three';
 import { solveTwoBone } from '../../src/player/WorkerPose.ts';
 import { loadWorkerAsset, cloneWorkerVisual } from '../../src/player/WorkerAsset.ts';
-import { DEFAULT_COLORS } from '../../src/player/PlayerRig.ts';
+import { DEFAULT_COLORS, makePlayerRig } from '../../src/player/PlayerRig.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 globalThis.self ??= globalThis;
@@ -42,6 +42,19 @@ test('two-bone target clamps too-far and folded goals without NaNs or pole flips
   }
 });
 
+test('corrupt worker data leaves a visible diagnostic fallback', async () => {
+  await assert.rejects(loadWorkerAsset('data:application/octet-stream;base64,YmFk'));
+  const oldError = console.error;
+  console.error = () => {};
+  let rig;
+  try { rig = makePlayerRig(); } finally { console.error = oldError; }
+  assert.equal(rig.source, 'fallback');
+  assert.equal(rig.body, null);
+  rig.setVisible(true);
+  assert.ok(rig.root.visible && rig.root.children.some(o => o.name.includes('MISSING WORKER')));
+  rig.dispose();
+});
+
 test('loaded worker clones share geometry but own palette materials and release them', async () => {
   const bytes = readFileSync(path.join(root, 'public/models/worker.glb'));
   await loadWorkerAsset(`data:application/octet-stream;base64,${bytes.toString('base64')}`);
@@ -62,4 +75,38 @@ test('loaded worker clones share geometry but own palette materials and release 
   assert.equal(geometryDisposed, false);
   assert.ok(red.body.material.map, 'other avatar keeps palette');
   red.dispose();
+});
+
+test('active gait bends elbows and knees as well as shoulders and hips', async () => {
+  const bytes = readFileSync(path.join(root, 'public/models/worker.glb'));
+  await loadWorkerAsset(`data:application/octet-stream;base64,${bytes.toString('base64')}`);
+  const rig = makePlayerRig();
+  assert.equal(rig.source, 'glb');
+  rig.poseActive({ position: new THREE.Vector3(0, 0, 0), yaw: 0,
+    height: 1.82, time: 0.18, moving: true, down: false,
+    carrying: false, busy: false });
+  const names = ['UpperArm_L', 'Forearm_L', 'Thigh_L', 'Shin_L'];
+  for (const name of names) {
+    const bone = rig.body.skeleton.getBoneByName(name);
+    assert.ok(bone.quaternion.angleTo(new THREE.Quaternion()) > .02,
+      `${name} did not articulate`);
+  }
+  rig.dispose();
+});
+
+test('tilted and crossed ragdoll targets leave every bone transform finite', async () => {
+  const bytes = readFileSync(path.join(root, 'public/models/worker.glb'));
+  await loadWorkerAsset(`data:application/octet-stream;base64,${bytes.toString('base64')}`);
+  const rig = makePlayerRig();
+  const torso = new THREE.Vector3(2, 4, 8);
+  const angle = new THREE.Quaternion().setFromEuler(new THREE.Euler(.8, .2, 1.1));
+  const p = (x, y, z) => ({ position: new THREE.Vector3(x, y, z), quaternion: angle.clone() });
+  rig.posePhysics({ torso: { position: torso, quaternion: angle },
+    head: p(2.4, 4.1, 8.2), armL: p(3.5, 3.4, 8), armR: p(.5, 5, 8),
+    legL: p(3.1, 2.4, 8), legR: p(1.1, 3.2, 8) });
+  close(rig.root.position.distanceTo(torso), 0);
+  for (const bone of rig.body.skeleton.bones)
+    assert.ok([...bone.position.toArray(), ...bone.quaternion.toArray()].every(Number.isFinite),
+      `${bone.name} has nonfinite pose`);
+  rig.dispose();
 });

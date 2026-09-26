@@ -98,12 +98,15 @@ try {
     return r ? {
       state: r.state,
       rootVisible: r.rig.root.visible,
-      visibleParts: r.rig.parts.filter((p) => p.visible).length,
+      source: r.rig.source,
+      skinnedBodyVisible: !!r.rig.body?.visible,
+      bones: r.rig.body?.skeleton.bones.length ?? 0,
     } : null;
   });
   ok(remoteRagdoll?.state === 'ragdoll', 'a remote player receives the ragdoll state', JSON.stringify(remoteRagdoll));
-  ok(remoteRagdoll?.rootVisible && remoteRagdoll.visibleParts === 6,
-    'all six remote avatar parts remain visible during the fall', JSON.stringify(remoteRagdoll));
+  ok(remoteRagdoll?.rootVisible && remoteRagdoll.source === 'glb'
+      && remoteRagdoll.skinnedBodyVisible && remoteRagdoll.bones >= 17,
+    'the connected remote worker remains visible during the fall', JSON.stringify(remoteRagdoll));
   await client.call('ragdoll.recover');
   await sleep(220);
 

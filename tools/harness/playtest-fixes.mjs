@@ -89,14 +89,14 @@ async function runSize(width, height) {
     await g.simulate(0.18);
     const earlyClearance = await g.page.evaluate(() => {
       const G = window.__GAME; const rag = G.get('ragdoll'); const cam = G.renderer.camera.position;
-      return Math.min(...rag.parts.map((p) => cam.distanceTo(p.mesh.position)));
+      return Math.min(...rag.parts.map((p) => cam.distanceTo(p.body.translation())));
     });
     const ragEarlyPrompt = await promptText(g);
     const early = await fullShot(g, `${width}x${height}-ragdoll-early`, `${width}×${height} · ragdoll 0.18 s`, ragEarlyPrompt || 'prompt clear');
     await g.simulate(0.45);
     const midClearance = await g.page.evaluate(() => {
       const G = window.__GAME; const rag = G.get('ragdoll'); const cam = G.renderer.camera.position;
-      return Math.min(...rag.parts.map((p) => cam.distanceTo(p.mesh.position)));
+      return Math.min(...rag.parts.map((p) => cam.distanceTo(p.body.translation())));
     });
     const ragMidPrompt = await promptText(g);
     await fullShot(g, `${width}x${height}-ragdoll-mid`, `${width}×${height} · ragdoll 0.63 s`, ragMidPrompt || 'prompt clear');
@@ -133,7 +133,7 @@ async function runSize(width, height) {
     const counter = world.shopCounter;
     await g.tp(counter[0] + 1.0, counter[1] + 0.1, counter[2] + 1.0);
     await g.wait(0.2);
-    await g.page.click('#view', { position: { x: 40, y: 40 } });
+    await g.page.click('#view', { position: { x: 40, y: 40 }, noWaitAfter: true });
     await g.wait(0.15);
     const lockedBeforeShop = await g.page.evaluate(() => document.pointerLockElement === document.getElementById('view'));
     if (!captureOnly) check(lockedBeforeShop, 'normal gameplay path begins with canvas pointer lock');
@@ -214,7 +214,9 @@ async function runSize(width, height) {
   }, { headless: true, width, height, quiet: true });
 }
 
-for (const [w, h] of [[1920, 1080], [3436, 1270]]) await runSize(w, h);
+const sizes = process.argv.includes('--ultrawide-only')
+  ? [[3436, 1270]] : [[1920, 1080], [3436, 1270]];
+for (const [w, h] of sizes) await runSize(w, h);
 
 const sheet = path.join(ensureOut('playtest-fixes'), `${phase}-evidence.png`);
 await contactSheet(shots, sheet, { cols: 2, thumbW: 720, title: `RIPE RIOT · playtest fixes · ${phase}` });

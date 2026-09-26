@@ -3,7 +3,8 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import type { Game, System } from '@/core/Game';
 import type { RBody, RCollider, PhysicsOwner } from '@/physics/PhysicsWorld';
 import { groups, Layer, QueryMask } from '@/physics/Layers';
-import { makePlayerRig, RIG_JOINTS, type PlayerRig } from './PlayerRig';
+import { makePlayerRig, RIG_JOINTS, type PlayerRig, type RigPartName,
+  type RigidPose } from './PlayerRig';
 import type { FruitSystem } from '@/fruit/FruitSystem';
 import type { RopeSystem } from '@/systems/RopeSystem';
 import type { Sunpatch } from '@/world/Sunpatch';
@@ -17,12 +18,9 @@ const RAGDOLL_GROUPS = groups(
 );
 
 interface Part {
-  name: keyof PlayerRig & string;
+  name: RigPartName;
   body: RBody;
   collider: RCollider;
-  mesh: THREE.Mesh;
-  /** Offset from the body's centre to the mesh origin. */
-  meshOffset: THREE.Vector3;
 }
 
 const _v = new THREE.Vector3();
@@ -140,24 +138,20 @@ export class PlayerRagdoll implements System, PhysicsOwner {
 
     const spec: Array<{
       name: Part['name']; offset: THREE.Vector3; halfHeight: number; radius: number;
-      mass: number; mesh: THREE.Mesh; meshOffset: THREE.Vector3;
+      mass: number;
     }> = [
       { name: 'torso', offset: new THREE.Vector3(0, 0, 0), halfHeight: 0.16, radius: 0.24,
-        mass: 34, mesh: this.rig.torso, meshOffset: new THREE.Vector3(0, 0, 0) },
+        mass: 34 },
       { name: 'head', offset: RIG_JOINTS.head.clone(), halfHeight: 0.04, radius: 0.19,
-        mass: 5, mesh: this.rig.head, meshOffset: new THREE.Vector3(0, -0.12, 0) },
+        mass: 5 },
       { name: 'armL', offset: RIG_JOINTS.armL.clone().add(new THREE.Vector3(0, -0.26, 0)),
-        halfHeight: 0.20, radius: 0.10, mass: 4, mesh: this.rig.armL,
-        meshOffset: new THREE.Vector3(0, 0.26, 0) },
+        halfHeight: 0.20, radius: 0.10, mass: 4 },
       { name: 'armR', offset: RIG_JOINTS.armR.clone().add(new THREE.Vector3(0, -0.26, 0)),
-        halfHeight: 0.20, radius: 0.10, mass: 4, mesh: this.rig.armR,
-        meshOffset: new THREE.Vector3(0, 0.26, 0) },
+        halfHeight: 0.20, radius: 0.10, mass: 4 },
       { name: 'legL', offset: RIG_JOINTS.legL.clone().add(new THREE.Vector3(0, -0.28, 0)),
-        halfHeight: 0.22, radius: 0.12, mass: 9, mesh: this.rig.legL,
-        meshOffset: new THREE.Vector3(0, 0.28, 0) },
+        halfHeight: 0.22, radius: 0.12, mass: 9 },
       { name: 'legR', offset: RIG_JOINTS.legR.clone().add(new THREE.Vector3(0, -0.28, 0)),
-        halfHeight: 0.22, radius: 0.12, mass: 9, mesh: this.rig.legR,
-        meshOffset: new THREE.Vector3(0, 0.28, 0) },
+        halfHeight: 0.22, radius: 0.12, mass: 9 },
     ];
 
     const byName = new Map<string, Part>();
@@ -179,7 +173,7 @@ export class PlayerRagdoll implements System, PhysicsOwner {
         y: (Math.random() - 0.5) * s.mass * 0.32,
         z: (Math.random() - 0.5) * s.mass * 0.32,
       }, true);
-      const part: Part = { name: s.name, body, collider, mesh: s.mesh, meshOffset: s.meshOffset };
+      const part: Part = { name: s.name, body, collider };
       phys.register(this, body, [collider]);
       this.parts.push(part);
       byName.set(s.name, part);
@@ -451,18 +445,20 @@ export class PlayerRagdoll implements System, PhysicsOwner {
 
   frameUpdate(): void {
     if (!this.active) return;
+    const poses = {} as Record<RigPartName, RigidPose>;
     for (const part of this.parts) {
       const t = part.body.translation();
       const r = part.body.rotation();
-      _q.set(r.x, r.y, r.z, r.w);
-      _v.copy(part.meshOffset).applyQuaternion(_q);
-      part.mesh.position.set(t.x + _v.x, t.y + _v.y, t.z + _v.z);
-      part.mesh.quaternion.copy(_q);
+      poses[part.name] = {
+        position: new THREE.Vector3(t.x, t.y, t.z),
+        quaternion: new THREE.Quaternion(r.x, r.y, r.z, r.w),
+      };
       if (part.name === 'head') {
         // The camera derives a stable chase offset from this physical anchor.
         this.anchor.position.set(t.x, t.y + 0.1, t.z);
       }
     }
+    this.rig.posePhysics(poses);
   }
 
   dispose(): void {
