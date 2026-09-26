@@ -46,6 +46,15 @@ for name, rgba in palette.items():
     bsdf.inputs['Roughness'].default_value = 0.78
     mats[name] = mat
 
+hand_mat = bpy.data.materials.new('ViewGloves')
+hand_mat.diffuse_color = (1, 1, 1, 1)
+hand_mat.use_nodes = True
+hand_bsdf = hand_mat.node_tree.nodes.get('Principled BSDF')
+hand_color = hand_mat.node_tree.nodes.new('ShaderNodeVertexColor')
+hand_color.layer_name = 'COLOR_0'
+hand_mat.node_tree.links.new(hand_color.outputs['Color'], hand_bsdf.inputs['Base Color'])
+hand_bsdf.inputs['Roughness'].default_value = .78
+
 
 def graph_mesh(name, nodes, edges, subdiv=1):
     mesh = bpy.data.meshes.new(name)
@@ -253,6 +262,11 @@ def glove(name, side, carry):
         nodes += [((sign*.047, .003, .016), (.018, .018)),
                   ((sign*.056, .032, .035), (.013, .014))]
         edges += [(2, j), (j, j+1)]
+        # One continuous wrist and sleeve, extending below the gameplay frame.
+        j = len(nodes)
+        nodes += [((0, -.145, -.005), (.037, .033)),
+                  ((0, -.205, -.012), (.045, .039))]
+        edges += [(0, j), (j, j+1)]
     else:
         nodes = [((0, 0, .145), (.032, .029)),
                  ((0, 0, .075), (.037, .032)),
@@ -268,6 +282,12 @@ def glove(name, side, carry):
         nodes += [((sign*.044, -.002, .010), (.018, .018)),
                   ((sign*.055, .008, -.020), (.012, .013))]
         edges += [(2, j), (j, j+1)]
+        # Keep the tool's original near-plane envelope: the forearm slopes
+        # down into the frame edge, rather than continuing toward the eye.
+        j = len(nodes)
+        nodes += [((0, -.08, .145), (.038, .033)),
+                  ((0, -.15, .135), (.047, .040))]
+        edges += [(0, j), (j, j+1)]
     obj = graph_mesh(name, nodes, edges, subdiv=1)
     # Skin's branch caps can remain separate islands around densely clustered
     # fingers. A fine voxel union makes palm, fingers, thumb and wrist truly one
@@ -280,11 +300,19 @@ def glove(name, side, carry):
     dec.ratio = min(1.0, 1250 / max(1, len(obj.data.polygons)))
     bpy.ops.object.modifier_apply(modifier=dec.name)
     obj.select_set(False)
-    obj.data.materials.append(mats['gloves'])
+    obj.data.materials.append(hand_mat)
     # Named linear vertex colors are consumed by the current viewmodel merge.
     col = obj.data.color_attributes.new(name='COLOR_0', type='FLOAT_COLOR', domain='CORNER')
     for loop in obj.data.loops:
-        col.data[loop.index].color = (0.48, 0.22, 0.08, 1)
+        point = obj.data.vertices[loop.vertex_index].co
+        along = -point.z  # negative game Y enters from the frame bottom
+        if along > (.15 if carry else .105):
+            rgba = (.76, .48, .13, 1)  # worker's ochre sleeve
+        elif along > (.085 if carry else .065):
+            rgba = (.65, .40, .15, 1)  # continuous fabric/leather cuff
+        else:
+            rgba = (.48, .22, .08, 1)  # palm and individual fingers
+        col.data[loop.index].color = rgba
     return obj
 
 

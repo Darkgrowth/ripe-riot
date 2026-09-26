@@ -7,6 +7,7 @@ import { CarryViewmodel } from '@/player/CarryViewmodel';
 import { framingFor } from '@/interaction/CarryRules';
 import { VIEWMODEL_FOV_SCALE } from '@/render/Renderer';
 import { damp, clamp } from '@/core/MathUtils';
+import { disposeWorkerHands } from '@/render/WorkerHands';
 
 /** Framing is authored at 16:9; anything narrower gets a smaller tool. */
 const REFERENCE_ASPECT = 16 / 9;
@@ -304,6 +305,7 @@ export class ViewmodelSystem implements System {
     this.cache.clear();
     this.carry.dispose();
     this.material.dispose();
+    disposeWorkerHands();
   }
 }
 

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { fruitGeometry } from '@/fruit/FruitGeometry';
 import { damp } from '@/core/MathUtils';
-import { gripHand } from '@/render/Viewmodel';
+import { gripHand } from '@/render/WorkerHands';
 import { framingFor, screenHeightPctFor, type CarryClass } from '@/interaction/CarryRules';
 
 const AXIS_Z = new THREE.Vector3(0, 0, 1);

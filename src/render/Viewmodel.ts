@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { toolHand } from './WorkerHands.ts';
 
 const C = (hex: number) => new THREE.Color().setHex(hex, THREE.SRGBColorSpace);
 
@@ -113,90 +114,6 @@ function paint(g: THREE.BufferGeometry, color: THREE.Color): THREE.BufferGeometr
  * version filled the bottom third of every frame with two yellow slabs. It only
  * has to bridge the gap between the glove and the bottom of the frame.
  */
-function hand(x: number, y: number, z: number, roll = 0, inward = 1): THREE.BufferGeometry[] {
-  const parts: THREE.BufferGeometry[] = [];
-  const at = (dx: number, dy: number, dz: number): [number, number, number] =>
-    [x + dx * inward, y + dy, z + dz];
-  const r: [number, number, number] = [0, 0, roll];
-
-  // Chamfered leather keeps the original palm/finger envelope and spacing.
-  // One leather tone unifies the fingers; small knuckle pads supply the seams
-  // instead of the old alternating dark/light rectangular comb.
-  parts.push(padded(0.075, 0.052, 0.052, 0.009, GLOVE, at(0, 0, 0.024), r));
-  parts.push(padded(0.056, 0.005, 0.032, 0.002, GLOVE_PANEL, at(0, 0.0255, 0.024), r));
-  for (let i = 0; i < 4; i++) {
-    const fx = -0.0275 + i * 0.0183;
-    // Middle fingers longest, little finger shortest and set slightly low:
-    // the stagger is what stops four identical boxes reading as a comb.
-    const len = 0.050 - Math.abs(i - 1.15) * 0.0055;
-    parts.push(padded(0.0145, 0.029, len, 0.0055, GLOVE,
-      at(fx, 0.006 - (i === 3 ? 0.005 : 0), -0.024 - (len - 0.050) / 2), r));
-    parts.push(padded(0.013, 0.013, 0.018, 0.004, GLOVE_PANEL,
-      at(fx, 0.019, 0.001), r));
-    // Four short stitches lie inside the old knuckle bar's silhouette.
-    parts.push(box(0.006, 0.0015, 0.0015, STITCH, at(fx, 0.027, 0.006), r));
-  }
-  // Thumb, in two segments, angled in across the palm. It is placed on the
-  // INBOARD side deliberately: a thumb on the outer edge widens the viewmodel
-  // toward the frame edge, which the startup check exists to prevent.
-  parts.push(padded(0.021, 0.025, 0.040, 0.006, GLOVE, at(0.033, -0.004, 0.006), [0, 0.45 * inward, roll]));
-  parts.push(padded(0.018, 0.021, 0.030, 0.006, GLOVE, at(0.043, 0.004, -0.018), [0, 0.85 * inward, roll]));
-  // Heel of the hand.
-  parts.push(padded(0.077, 0.026, 0.044, 0.007, GLOVE_DARK, at(0, -0.029, 0.014), r));
-  // Wrist: a narrower section between glove and cuff. Without it the arm is one
-  // extruded stick from the fingertips to the bottom of the frame.
-  parts.push(padded(0.060, 0.048, 0.028, 0.007, GLOVE_DARK, at(0, 0.003, 0.057), r));
-  parts.push(padded(0.072, 0.070, 0.030, 0.008, SLEEVE_DARK, at(0, 0.008, 0.079), r));
-  // A rolled golden cuff and a single broad fabric facet keep the sleeve
-  // short, with no new geometry extending toward the eye or frame edges.
-  parts.push(padded(0.071, 0.069, 0.014, 0.008, SLEEVE, at(0, 0.008, 0.076), r));
-  parts.push(padded(0.064, 0.060, 0.10, 0.010, SLEEVE, at(0, 0.008, 0.128), r));
-  parts.push(padded(0.028, 0.003, 0.052, 0.0014, SLEEVE_PANEL, at(0, 0.0385, 0.131), r));
-  return parts;
-}
-
-/**
- * A single hand on its own, for the carry rig.
- *
- * The tool models bake their hands into one merged mesh because a tool never
- * changes shape. A carried fruit does — a Puff Melon triples in size in under a
- * second — so the hands have to be separate objects the carry rig can move
- * apart. The carry pose uses the same leather and cuff as a tool hand, but
- * cups the palm and curls the fingers instead of rotating a straight tool
- * grip upright. Its local +Y points up the fruit and +Z faces the player.
- */
-export function gripHand(material: THREE.Material, inward: 1 | -1): THREE.Mesh {
-  const parts: THREE.BufferGeometry[] = [];
-  const p = (x: number, y: number, z: number): [number, number, number] => [x * inward, y, z];
-  // A broad palm and overlapping heel make one weight-bearing glove, with no
-  // narrow wrist stalk between a small fruit and its supporting hand.
-  parts.push(padded(0.092, 0.070, 0.045, 0.014, GLOVE, p(0, -0.003, 0)));
-  parts.push(padded(0.080, 0.034, 0.042, 0.011, GLOVE_DARK, p(0, -0.031, 0)));
-  parts.push(padded(0.062, 0.043, 0.010, 0.004, GLOVE_PANEL, p(0.003, -0.005, 0.022)));
-  for (let i = 0; i < 4; i++) {
-    const fx = -0.030 + i * 0.020;
-    const stagger = Math.abs(i - 1.2) * 0.006;
-    // Finger pads climb the near surface. Their curved +Z profile follows the
-    // visible face of a round fruit rather than disappearing behind it.
-    parts.push(padded(0.019, 0.039, 0.025, 0.007, GLOVE,
-      p(fx, 0.024 - stagger, 0.014), [0.30, 0, 0]));
-    parts.push(padded(0.018, 0.028, 0.024, 0.007, GLOVE_PANEL,
-      p(fx, 0.050 - stagger, 0.030), [0.72, 0, 0]));
-  }
-  // The thumb opposes the curled fingers across the inner edge of the palm.
-  parts.push(padded(0.031, 0.045, 0.034, 0.010, GLOVE,
-    p(0.041, 0.001, 0.018), [0.1, 0, -0.62 * inward]));
-  parts.push(padded(0.027, 0.033, 0.030, 0.009, GLOVE_PANEL,
-    p(0.050, 0.024, 0.034), [0.5, 0, 0.40 * inward]));
-  // Cuff nests into the heel. The short sleeve grows wider toward the frame
-  // edge, so it reads as a forearm entering the shot rather than a thin post.
-  parts.push(padded(0.079, 0.029, 0.058, 0.008, SLEEVE_DARK, p(0, -0.052, -0.003)));
-  parts.push(padded(0.078, 0.018, 0.057, 0.008, SLEEVE, p(0, -0.050, 0)));
-  parts.push(padded(0.079, 0.079, 0.056, 0.010, SLEEVE, p(0, -0.096, -0.006)));
-  parts.push(padded(0.044, 0.048, 0.004, 0.0015, SLEEVE_PANEL, p(0, -0.092, 0.023)));
-  return assemble(parts, material, `grip${inward > 0 ? 'L' : 'R'}`);
-}
-
 function assemble(parts: THREE.BufferGeometry[], material: THREE.Material, name: string): THREE.Mesh {
   const merged = mergeGeometries(parts, false);
   if (!merged) throw new Error(`viewmodel merge failed: ${name}`);
@@ -216,8 +133,8 @@ const BUILDERS: Record<string, Builder> = {
     // The starter mallet is short and low in frame so it reads as a tool
     // without hiding fruit at the crosshair or the way through the orchard.
     parts: [
-      ...hand(-0.17, -0.08, -0.26, 0.25, 1),
-      ...hand(0.16, -0.11, -0.22, -0.3, -1),
+      toolHand('L', new THREE.Vector3(-0.17, -0.08, -0.26), 0.25),
+      toolHand('R', new THREE.Vector3(0.16, -0.11, -0.22), -0.3),
       cyl(0.018, 0.022, 0.34, 8, WOOD_DARK, [0.16, 0.08, -0.24], [0, 0, -0.18]),
       box(0.16, 0.075, 0.09, STEEL_DARK, [0.16, 0.25, -0.24]),
       box(0.12, 0.015, 0.095, STEEL, [0.16, 0.294, -0.24]),
@@ -236,7 +153,7 @@ const BUILDERS: Record<string, Builder> = {
     parts.push(torus(0.14, 0.014, WOOD_DARK, [0, -0.03, -0.02], [Math.PI / 2, 0, 0]));
     parts.push(torus(0.14, 0.012, WOOD_DARK, [0, -0.17, -0.02], [Math.PI / 2, 0, 0]));
     parts.push(box(0.26, 0.012, 0.24, WICKER, [0, -0.18, -0.02]));
-    parts.push(...hand(-0.19, -0.06, 0.02, 0.4, 1));
+    parts.push(toolHand('L', new THREE.Vector3(-0.19, -0.06, 0.02), 0.4));
     return { parts, hold: new THREE.Vector3(0, -0.06, -0.06) };
   },
 
@@ -248,7 +165,7 @@ const BUILDERS: Record<string, Builder> = {
     for (let i = 0; i < 5; i++) {
       parts.push(box(0.15, 0.02, 0.02, WOOD_DARK, [0, -0.14, -0.05 - i * 0.12]));
     }
-    parts.push(...hand(-0.15, -0.09, -0.02, 0.3, 1));
+    parts.push(toolHand('L', new THREE.Vector3(-0.15, -0.09, -0.02), 0.3));
     return { parts, hold: new THREE.Vector3(0.05, -0.05, -0.26) };
   },
 
@@ -262,7 +179,7 @@ const BUILDERS: Record<string, Builder> = {
     cone.rotateY(-0.2);
     cone.translate(0.18, -0.05, -0.25);
     parts.push(paint(cone, NETTING));
-    parts.push(...hand(0.03, -0.22, -0.08, 0.2, -1));
+    parts.push(toolHand('R', new THREE.Vector3(0.03, -0.22, -0.08), 0.2));
     return { parts, hold: new THREE.Vector3(0.18, -0.06, -0.33) };
   },
 
@@ -274,7 +191,7 @@ const BUILDERS: Record<string, Builder> = {
     parts.push(box(0.04, 0.13, 0.05, STEEL, [0.02, -0.12, -0.37], [0, 0, 0.22]));
     parts.push(box(0.04, 0.13, 0.05, STEEL, [0.10, -0.12, -0.37], [0, 0, -0.22]));
     parts.push(cyl(0.02, 0.02, 0.16, 6, RUBBER, [-0.03, -0.16, -0.14], [0, 0, 0.5]));
-    parts.push(...hand(-0.08, -0.20, -0.10, 0.35, 1));
+    parts.push(toolHand('L', new THREE.Vector3(-0.08, -0.20, -0.10), 0.35));
     return { parts, hold: new THREE.Vector3(0.06, -0.06, -0.34) };
   },
 
@@ -285,8 +202,8 @@ const BUILDERS: Record<string, Builder> = {
     parts.push(torus(0.055, 0.016, WOOD, [0.05, -0.14, -0.16], [0, Math.PI / 2, 0]));  // spool
     parts.push(box(0.05, 0.11, 0.06, RUBBER, [0.05, -0.19, -0.11], [0.25, 0, 0]));     // grip
     parts.push(box(0.03, 0.05, 0.03, PAINT, [0.05, -0.05, -0.42]));                    // sight
-    parts.push(...hand(0.05, -0.24, -0.10, 0.1, -1));
-    parts.push(...hand(-0.09, -0.17, -0.26, 0.5, 1));
+    parts.push(toolHand('R', new THREE.Vector3(0.05, -0.24, -0.10), 0.1));
+    parts.push(toolHand('L', new THREE.Vector3(-0.09, -0.17, -0.26), 0.5));
     return { parts, hold: new THREE.Vector3(0.05, -0.02, -0.40) };
   },
 
@@ -344,8 +261,8 @@ const BUILDERS: Record<string, Builder> = {
     parts.push(torus(0.034, 0.007, brass, [0.05, -0.155, -0.15], [0, Math.PI / 2, 0]));
     parts.push(padded(0.09, 0.034, 0.11, 0.008, RUBBER, [-0.01, -0.158, -0.29]));
     for (let i = 0; i < 4; i++) parts.push(box(0.092, 0.005, 0.009, STEEL_DARK, [-0.01, -0.177, -0.325 + i * 0.023]));
-    parts.push(...hand(0.085, -0.195, -0.09, 0.12, -1));
-    parts.push(...hand(-0.10, -0.135, -0.32, 0.40, 1));
+    parts.push(toolHand('R', new THREE.Vector3(0.085, -0.195, -0.09), 0.12));
+    parts.push(toolHand('L', new THREE.Vector3(-0.10, -0.135, -0.32), 0.40));
     return { parts, hold: new THREE.Vector3(0.04, -0.02, -0.46) };
   },
 };

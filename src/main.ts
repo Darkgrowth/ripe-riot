@@ -26,6 +26,7 @@ import { MultiplayerAuthority } from '@/net/MultiplayerAuthority';
 import { SaveSystem } from '@/save/SaveSystem';
 import { DebugAPI } from '@/debug/DebugAPI';
 import { loadWorkerAsset } from '@/player/WorkerAsset';
+import { loadWorkerHands } from '@/render/WorkerHands';
 
 const boot = document.getElementById('boot')!;
 const bar = boot.querySelector('.bar > i') as HTMLElement;
@@ -68,6 +69,7 @@ async function main(): Promise<void> {
     console.error('Connected worker asset failed to load', error);
     status.textContent = 'worker visual missing; diagnostic avatar active';
   }
+  await loadWorkerHands('/models/worker-hands.glb');
 
   progress(30, 'building sunpatch');
   // The debug surface exists before systems initialise so each system can
