@@ -3,7 +3,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import type { Game, System } from '@/core/Game';
 import type { RBody, RCollider, PhysicsOwner } from '@/physics/PhysicsWorld';
 import { groups, Layer, QueryMask } from '@/physics/Layers';
-import { makePlayerRig, RIG_JOINTS, type PlayerRig, type RigPartName,
+import { makePlayerRig, RAGDOLL_PART_NAMES, RIG_JOINTS, type PlayerRig, type RigPartName,
   type RigidPose } from './PlayerRig';
 import type { FruitSystem } from '@/fruit/FruitSystem';
 import type { RopeSystem } from '@/systems/RopeSystem';
@@ -21,6 +21,7 @@ interface Part {
   name: RigPartName;
   body: RBody;
   collider: RCollider;
+  extraColliders: RCollider[];
 }
 
 const _v = new THREE.Vector3();
@@ -63,6 +64,19 @@ export class PlayerRagdoll implements System, PhysicsOwner {
   private rescueHold = 0;
   private rescueLatched = false;
   lastSpeed = 0;
+
+  /** Six world-space body transforms, sent only while the player is tumbling. */
+  networkPose(): number[] | null {
+    if (!this.active || this.parts.length !== RAGDOLL_PART_NAMES.length) return null;
+    const packet: number[] = [];
+    for (const name of RAGDOLL_PART_NAMES) {
+      const part = this.parts.find(p => p.name === name);
+      if (!part) return null;
+      const t = part.body.translation(), q = part.body.rotation();
+      packet.push(t.x, t.y, t.z, q.x, q.y, q.z, q.w);
+    }
+    return packet;
+  }
 
   init(g: Game): void {
     this.g = g;
@@ -140,18 +154,22 @@ export class PlayerRagdoll implements System, PhysicsOwner {
       name: Part['name']; offset: THREE.Vector3; halfHeight: number; radius: number;
       mass: number;
     }> = [
-      { name: 'torso', offset: new THREE.Vector3(0, 0, 0), halfHeight: 0.16, radius: 0.24,
+      { name: 'torso', offset: new THREE.Vector3(0, 0, 0), halfHeight: 0.21, radius: 0.27,
         mass: 34 },
-      { name: 'head', offset: RIG_JOINTS.head.clone(), halfHeight: 0.04, radius: 0.19,
+      // The neck joint is at +.33, but the helmet actually reaches +.77.
+      // Centre the head capsule above its neck anchor so the brim, not an
+      // invisible low sphere, meets the floor when the worker rolls over.
+      { name: 'head', offset: RIG_JOINTS.head.clone().add(new THREE.Vector3(0, 0.23, 0)),
+        halfHeight: 0.04, radius: 0.28,
         mass: 5 },
       { name: 'armL', offset: RIG_JOINTS.armL.clone().add(new THREE.Vector3(0, -0.26, 0)),
-        halfHeight: 0.20, radius: 0.10, mass: 4 },
+        halfHeight: 0.31, radius: 0.12, mass: 4 },
       { name: 'armR', offset: RIG_JOINTS.armR.clone().add(new THREE.Vector3(0, -0.26, 0)),
-        halfHeight: 0.20, radius: 0.10, mass: 4 },
+        halfHeight: 0.31, radius: 0.12, mass: 4 },
       { name: 'legL', offset: RIG_JOINTS.legL.clone().add(new THREE.Vector3(0, -0.28, 0)),
-        halfHeight: 0.22, radius: 0.12, mass: 9 },
+        halfHeight: 0.32, radius: 0.14, mass: 9 },
       { name: 'legR', offset: RIG_JOINTS.legR.clone().add(new THREE.Vector3(0, -0.28, 0)),
-        halfHeight: 0.22, radius: 0.12, mass: 9 },
+        halfHeight: 0.32, radius: 0.14, mass: 9 },
     ];
 
     const byName = new Map<string, Part>();
@@ -167,14 +185,40 @@ export class PlayerRagdoll implements System, PhysicsOwner {
       const desc = RAPIER.ColliderDesc.capsule(s.halfHeight, s.radius)
         .setFriction(0.7).setRestitution(0.16).setMass(s.mass);
       const collider = phys.attach(body, desc, RAGDOLL_GROUPS);
+      const extraColliders: RCollider[] = [];
+      if (s.name === 'torso') {
+        // The voxel backpack extends 9.6 cm behind the torso capsule. Match
+        // its authored bounds so a backward fall rests on the pack surface.
+        extraColliders.push(phys.attach(body,
+          RAPIER.ColliderDesc.cuboid(0.236, 0.283, 0.108)
+            .setTranslation(0, 0, -0.258)
+            .setFriction(0.7).setRestitution(0.05), RAGDOLL_GROUPS));
+      }
+      if (s.name === 'legL' || s.name === 'legR') {
+        // The IK-driven boot sweeps around the lower-leg capsule. A round
+        // contact shape follows its sole without the empty box corners that
+        // held some fallen poses visibly above the floor.
+        extraColliders.push(phys.attach(body,
+          RAPIER.ColliderDesc.ball(0.22)
+            .setTranslation(0, -0.28, 0)
+            .setFriction(0.85).setRestitution(0.05), RAGDOLL_GROUPS));
+      }
+      if (s.name === 'armL' || s.name === 'armR') {
+        // The glove is rounded; a broad cuboid's unsupported corners could
+        // stop the ragdoll more than 10 cm above the visible hand.
+        extraColliders.push(phys.attach(body,
+          RAPIER.ColliderDesc.ball(0.15)
+            .setTranslation(0, -0.38, 0)
+            .setFriction(0.7).setRestitution(0.05), RAGDOLL_GROUPS));
+      }
       body.setLinvel({ x: vel.x, y: vel.y, z: vel.z }, true);
       body.applyTorqueImpulse({
         x: (Math.random() - 0.5) * s.mass * 0.32,
         y: (Math.random() - 0.5) * s.mass * 0.32,
         z: (Math.random() - 0.5) * s.mass * 0.32,
       }, true);
-      const part: Part = { name: s.name, body, collider };
-      phys.register(this, body, [collider]);
+      const part: Part = { name: s.name, body, collider, extraColliders };
+      phys.register(this, body, [collider, ...extraColliders]);
       this.parts.push(part);
       byName.set(s.name, part);
     }
@@ -192,7 +236,7 @@ export class PlayerRagdoll implements System, PhysicsOwner {
       const j = this.g.physics.world.createImpulseJoint(params, torso.body, child.body, true);
       this.joints.push(j);
     };
-    link('head', RIG_JOINTS.head, new THREE.Vector3(0, 0, 0));
+    link('head', RIG_JOINTS.head, new THREE.Vector3(0, -0.23, 0));
     link('armL', RIG_JOINTS.armL, new THREE.Vector3(0, 0.26, 0));
     link('armR', RIG_JOINTS.armR, new THREE.Vector3(0, 0.26, 0));
     link('legL', RIG_JOINTS.legL, new THREE.Vector3(0, 0.28, 0));
@@ -321,7 +365,7 @@ export class PlayerRagdoll implements System, PhysicsOwner {
     for (const j of this.joints) this.g.physics.world.removeImpulseJoint(j, false);
     this.joints.length = 0;
     for (const part of this.parts) {
-      this.g.physics.removeBody(part.body, [part.collider]);
+      this.g.physics.removeBody(part.body, [part.collider, ...part.extraColliders]);
     }
     this.parts.length = 0;
   }

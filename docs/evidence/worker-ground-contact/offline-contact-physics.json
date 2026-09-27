@@ -1,0 +1,170 @@
+[
+  {
+    "state": "flat-settling",
+    "angle": 0,
+    "part": "torso",
+    "version": "old",
+    "meshClearance": 0.419
+  },
+  {
+    "state": "flat-settling",
+    "angle": 0,
+    "part": "torso",
+    "version": "fitted",
+    "meshClearance": 0.419
+  },
+  {
+    "state": "flat-settling",
+    "angle": 0,
+    "part": "armR",
+    "version": "old",
+    "meshClearance": 0.164
+  },
+  {
+    "state": "flat-settling",
+    "angle": 0,
+    "part": "armR",
+    "version": "fitted",
+    "meshClearance": 0.048
+  },
+  {
+    "state": "flat-settling",
+    "angle": 0,
+    "part": "legR",
+    "version": "old",
+    "meshClearance": 0.173
+  },
+  {
+    "state": "flat-settling",
+    "angle": 0,
+    "part": "legR",
+    "version": "fitted",
+    "meshClearance": 0.099
+  },
+  {
+    "state": "flat-floor-contact",
+    "angle": 0,
+    "part": "torso",
+    "version": "old",
+    "meshClearance": -0.105
+  },
+  {
+    "state": "flat-floor-contact",
+    "angle": 0,
+    "part": "torso",
+    "version": "fitted",
+    "meshClearance": 0.053
+  },
+  {
+    "state": "flat-floor-contact",
+    "angle": 0,
+    "part": "armR",
+    "version": "old",
+    "meshClearance": 0.099
+  },
+  {
+    "state": "flat-floor-contact",
+    "angle": 0,
+    "part": "armR",
+    "version": "fitted",
+    "meshClearance": -0.001
+  },
+  {
+    "state": "flat-floor-contact",
+    "angle": 0,
+    "part": "legR",
+    "version": "old",
+    "meshClearance": 0.037
+  },
+  {
+    "state": "flat-floor-contact",
+    "angle": 0,
+    "part": "legR",
+    "version": "fitted",
+    "meshClearance": -0.024
+  },
+  {
+    "state": "slope-settling",
+    "angle": 18.1,
+    "part": "torso",
+    "version": "old",
+    "meshClearance": -0.122
+  },
+  {
+    "state": "slope-settling",
+    "angle": 18.1,
+    "part": "torso",
+    "version": "fitted",
+    "meshClearance": 0.037
+  },
+  {
+    "state": "slope-settling",
+    "angle": 18.1,
+    "part": "armR",
+    "version": "old",
+    "meshClearance": 0.169
+  },
+  {
+    "state": "slope-settling",
+    "angle": 18.1,
+    "part": "armR",
+    "version": "fitted",
+    "meshClearance": 0.122
+  },
+  {
+    "state": "slope-settling",
+    "angle": 18.1,
+    "part": "legR",
+    "version": "old",
+    "meshClearance": 0.274
+  },
+  {
+    "state": "slope-settling",
+    "angle": 18.1,
+    "part": "legR",
+    "version": "fitted",
+    "meshClearance": 0.274
+  },
+  {
+    "state": "slope-floor-contact",
+    "angle": 18.1,
+    "part": "torso",
+    "version": "old",
+    "meshClearance": 0.012
+  },
+  {
+    "state": "slope-floor-contact",
+    "angle": 18.1,
+    "part": "torso",
+    "version": "fitted",
+    "meshClearance": 0.082
+  },
+  {
+    "state": "slope-floor-contact",
+    "angle": 18.1,
+    "part": "armR",
+    "version": "old",
+    "meshClearance": 0.144
+  },
+  {
+    "state": "slope-floor-contact",
+    "angle": 18.1,
+    "part": "armR",
+    "version": "fitted",
+    "meshClearance": -0.01
+  },
+  {
+    "state": "slope-floor-contact",
+    "angle": 18.1,
+    "part": "legR",
+    "version": "old",
+    "meshClearance": 0.272
+  },
+  {
+    "state": "slope-floor-contact",
+    "angle": 18.1,
+    "part": "legR",
+    "version": "fitted",
+    "meshClearance": 0.162
+  }
+]

@@ -5,6 +5,8 @@ import { Groups, QueryMask } from '@/physics/Layers';
 import type { InputFrame } from './PlayerInput';
 import { FIXED_DT } from '@/core/Time';
 import { clamp, damp, lerp, wrapAngle } from '@/core/MathUtils';
+import { STAND_HEIGHT, CROUCH_HEIGHT, PLAYER_RADIUS } from './PlayerDimensions';
+export { STAND_HEIGHT, CROUCH_HEIGHT, PLAYER_RADIUS } from './PlayerDimensions';
 
 export interface MoveTuning {
   walk: number; sprint: number; crouch: number;
@@ -31,10 +33,6 @@ export const DEFAULT_TUNING: MoveTuning = {
   snapDist: 0.42,
   maxAirSpeed: 26,
 };
-
-export const STAND_HEIGHT = 1.82;
-export const CROUCH_HEIGHT = 1.16;
-export const PLAYER_RADIUS = 0.34;
 
 export type PlayerState = 'active' | 'ragdoll' | 'downed' | 'captured';
 

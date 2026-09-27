@@ -12,7 +12,9 @@ import { HAND_OFFSET, type RopeSystem, type RopeNet, type Rope, type RopeEnd, ty
 import type { Sunpatch } from '@/world/Sunpatch';
 import { BroadcastTransport, type NetMessage, type PeerId, type Transport } from './Transport';
 import { FruitAuthority, DENY_TEXT, clamp01, type Deny } from './FruitAuthority';
-import { makePlayerRig, SUIT_PRESETS, type PlayerRig } from '@/player/PlayerRig';
+import { makePlayerRig, RAGDOLL_PART_NAMES, SUIT_PRESETS,
+  type PlayerRig, type RigPartName, type RigidPose } from '@/player/PlayerRig';
+import type { PlayerRagdoll } from '@/player/PlayerRagdoll';
 import { clamp, damp } from '@/core/MathUtils';
 import type { IslandCrew, IslandDirector, IslandDirectorState } from '@/systems/IslandDirector';
 import type { IslandCharacters, CharacterNetState } from '@/world/IslandCharacters';
@@ -120,6 +122,7 @@ interface RemoteState {
   name: string;
   suit: number;
   rig: PlayerRig;
+  ragdollPose: Record<RigPartName, RigidPose> | null;
   lastSeen: number;
   lastMoveAt: number;
   hasPlayerPacket: boolean;
@@ -1526,12 +1529,15 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   private sendPlayerPacket(): void {
     const p = this.g.player;
     const held = this.interaction.carried?.fruit ?? null;
+    const ragdollPose = p.state === 'ragdoll'
+      ? this.g.get<PlayerRagdoll>('ragdoll').networkPose() : null;
     this.transport?.send({
       t: 'player',
       x: +p.position.x.toFixed(2), y: +p.position.y.toFixed(2), z: +p.position.z.toFixed(2),
       yaw: +p.yaw.toFixed(3),
       h: +p.height.toFixed(2),
       s: p.state,
+      ...(ragdollPose ? { rp: ragdollPose } : {}),
       busy: !!this.shop?.open || this.g.get<{ open: boolean }>('book').open,
       nt: this.tools?.owned.has('net') ? 1 : 0,
       c: held?.species ?? null,
@@ -1570,6 +1576,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     r.targetYaw = Number(m.yaw);
     r.height = Number(m.h ?? 1.82);
     r.state = String(m.s ?? 'active');
+    r.ragdollPose = r.state === 'ragdoll' ? parseRagdollPose(m.rp) : null;
     r.busy = m.busy === true;
     r.hasNet = Number(m.nt ?? 0) === 1;
     r.carrying = (m.c as string | null) ?? null;
@@ -1812,6 +1819,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       yaw: 0, targetYaw: 0, height: 1.82, state: 'active', carrying: null,
       busy: false, hasNet: false,
       rig, lastSeen: performance.now(), lastMoveAt: -Infinity, hasPlayerPacket: false,
+      ragdollPose: null,
     };
     this.remotes.set(id, r);
     if (this.isHost) this.authority.holdingFor(id, name);
@@ -1910,6 +1918,10 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
 
   /** Stand the rig up at the reported transform, with a simple walk cycle. */
   private poseRig(r: RemoteState): void {
+    if (r.state === 'ragdoll' && r.ragdollPose) {
+      r.rig.posePhysics(r.ragdollPose);
+      return;
+    }
     const t = performance.now() / 1000;
     const moving = t - r.lastMoveAt < .22;
     r.rig.poseActive({ position: r.pos, yaw: r.yaw, height: r.height, time: t,
@@ -1920,3 +1932,17 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
 }
 
 const UP = new THREE.Vector3(0, 1, 0);
+
+function parseRagdollPose(raw: unknown): Record<RigPartName, RigidPose> | null {
+  if (!Array.isArray(raw) || raw.length !== RAGDOLL_PART_NAMES.length * 7
+    || !raw.every(value => typeof value === 'number' && Number.isFinite(value))) return null;
+  const parts = {} as Record<RigPartName, RigidPose>;
+  for (const [index, name] of RAGDOLL_PART_NAMES.entries()) {
+    const i = index * 7;
+    const quaternion = new THREE.Quaternion(raw[i + 3], raw[i + 4], raw[i + 5], raw[i + 6]);
+    if (quaternion.lengthSq() < 0.5) return null;
+    parts[name] = { position: new THREE.Vector3(raw[i], raw[i + 1], raw[i + 2]),
+      quaternion: quaternion.normalize() };
+  }
+  return parts;
+}

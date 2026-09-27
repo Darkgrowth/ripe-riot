@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { cloneWorkerVisual, type WorkerVisual } from './WorkerAsset.ts';
 import { solveTwoBone } from './WorkerPose.ts';
+import { STAND_HEIGHT } from './PlayerDimensions.ts';
 
 const C = (hex: number) => new THREE.Color().setHex(hex, THREE.SRGBColorSpace);
 export interface RigColors {
@@ -19,6 +20,9 @@ export const SUIT_PRESETS: Array<{ id: string; label: string; colors: Partial<Ri
   { id: 'hazmat', label: 'Volatile Handling', colors: { suit: C(0xe8e2d0), suitDark: C(0xb8b2a0), hat: C(0xe8a020), gloves: C(0x3a3a44) } },
 ];
 export type RigPartName = 'torso' | 'head' | 'armL' | 'armR' | 'legL' | 'legR';
+/** Fixed order for the six physical bodies sent during a short co-op ragdoll. */
+export const RAGDOLL_PART_NAMES: readonly RigPartName[] =
+  ['torso', 'head', 'armL', 'armR', 'legL', 'legR'];
 export interface RigidPose { position: THREE.Vector3; quaternion: THREE.Quaternion }
 export interface ActivePose {
   position: THREE.Vector3; yaw: number; height: number; time: number;
@@ -69,6 +73,23 @@ export function makePlayerRig(overrides: Partial<RigColors> = {}): PlayerRig {
   }
   const { root, body } = visual;
   root.visible = false;
+  // The imported pivot is at the torso, but each worker mesh has its own boot
+  // sole depth. Calibrate against the actual authored boots once, so the active
+  // pose puts them at the controller's foot instead of inside the ground.
+  root.updateMatrixWorld(true);
+  const vertex = new THREE.Vector3();
+  let soleY = Infinity;
+  root.traverse(object => {
+    if (!(object instanceof THREE.Mesh) || !/^Boot_[LR]/.test(object.name)) return;
+    const positions = object.geometry.getAttribute('position');
+    for (let i = 0; i < positions.count; i++) {
+      if (object instanceof THREE.SkinnedMesh) object.getVertexPosition(i, vertex);
+      else vertex.fromBufferAttribute(positions, i);
+      vertex.applyMatrix4(object.matrixWorld);
+      soleY = Math.min(soleY, vertex.y);
+    }
+  });
+  const standingPivot = Number.isFinite(soleY) ? -soleY + .012 : STAND_HEIGHT * .58;
   const bones = new Map(body.skeleton.bones.map((bone) => [bone.name, bone]));
   const rest = new Map(body.skeleton.bones.map((bone) => [bone.name, bone.quaternion.clone()]));
   const get = (name: string): THREE.Bone => {
@@ -101,7 +122,8 @@ export function makePlayerRig(overrides: Partial<RigColors> = {}): PlayerRig {
     setVisible(v) { root.visible = v; },
     poseActive(input) {
       reset();
-      root.position.set(input.position.x, input.position.y + input.height * .58,
+      root.position.set(input.position.x,
+        input.position.y + standingPivot + (input.height - STAND_HEIGHT) * .58,
         input.position.z);
       root.rotation.set(0, input.yaw, 0);
       if (input.down) { root.position.y -= .36; root.rotateX(1.1); }
