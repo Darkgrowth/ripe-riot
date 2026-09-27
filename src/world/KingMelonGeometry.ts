@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { VoxelVolume } from '../art/voxel/VoxelSurface.ts';
+import type { VisualMode } from '../art/voxel/VisualMode.ts';
 
 const color = (hex: number) => new THREE.Color().setHex(hex, THREE.SRGBColorSpace);
 
@@ -76,4 +78,62 @@ export function buildKingMelonGeometry(radius: number): THREE.BufferGeometry {
   geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
   return geometry;
+}
+
+/** The opt-in rind keeps the legendary's original center and collision envelope.
+ * One connected, hidden-face-culled surface follows the six familiar stripes;
+ * the shallow crown has an inset stem rather than extra height. */
+export function buildVoxelKingMelonGeometry(radius: number): THREE.BufferGeometry {
+  const volume = new VoxelVolume();
+  // Thirty-six broad cells across the landmark: rounded at game scale without
+  // filling the ravine with tiny blocks. This step also divides its 0.9r
+  // vertical envelope into exactly thirty cells.
+  const step = radius * 2.16 / 36;
+  const horizontal = radius * 1.08;
+  const vertical = radius * 0.9;
+  const origin = new THREE.Vector3(-horizontal, -vertical, -horizontal);
+  const pale = 0xa9d95c;
+  const dark = 0x245323;
+  const transition = 0x628d37;
+  const calyx = 0x496e2f;
+  const calyxLight = 0x64823b;
+  const stem = 0x796d3d;
+  for (let ix = 0; ix < 36; ix++) for (let iy = 0; iy < 30; iy++) {
+    for (let iz = 0; iz < 36; iz++) {
+      const x = origin.x + (ix + 0.5) * step;
+      const y = origin.y + (iy + 0.5) * step;
+      const z = origin.z + (iz + 0.5) * step;
+      const radial = Math.hypot(x, z);
+      const ellipsoid = (x / horizontal) ** 2 + (y / vertical) ** 2
+        + (z / horizontal) ** 2;
+      if (ellipsoid > 1) continue;
+      // The stem is recessed into the top. Its narrow column reconnects to
+      // the body below the recess, so detached decoration cannot fall away.
+      const crownRecess = y > radius * 0.78 && radial < radius * 0.16;
+      const stemCell = y > radius * 0.73 && radial < step * 1.1;
+      if (crownRecess && !stemCell) continue;
+      if (stemCell) { volume.put(ix, iy, iz, stem); continue; }
+      const theta = Math.atan2(z, x);
+      const latitude = Math.asin(THREE.MathUtils.clamp(y / vertical, -1, 1));
+      const stripe = Math.sin(theta * 6 + Math.sin(latitude * 3.4) * 0.16
+        + Math.sin(theta * 3 + latitude * 5) * 0.075);
+      let tint = stripe > 0.18 ? dark : stripe < -0.18 ? pale : transition;
+      if (y > radius * 0.70 && radial < radius * 0.35) {
+        // Five large calyx lobes, colored on the rind rather than separate
+        // overlapping meshes that would break the single-surface silhouette.
+        tint = Math.cos(theta * 5) > -0.15 ? calyx : calyxLight;
+      } else if (y < -radius * 0.79 && radial < radius * 0.19) {
+        tint = 0x716b38;
+      }
+      volume.put(ix, iy, iz, tint);
+    }
+  }
+  const geometry = volume.geometry({ cellSize: step, origin });
+  geometry.name = 'VoxelKingMelon';
+  return geometry;
+}
+
+export function kingMelonGeometryForMode(radius: number, visualMode: VisualMode): THREE.BufferGeometry {
+  return visualMode === 'voxel'
+    ? buildVoxelKingMelonGeometry(radius) : buildKingMelonGeometry(radius);
 }

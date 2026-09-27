@@ -4,6 +4,7 @@ import type { RBody } from '@/physics/PhysicsWorld';
 import type { FruitSystem } from '@/fruit/FruitSystem';
 import { Palette } from '@/render/Palette';
 import { clamp } from '@/core/MathUtils';
+import type { VisualMode } from '@/art/voxel/VisualMode';
 
 /**
  * What a rope end is tied to.
@@ -126,6 +127,7 @@ interface EndState {
 }
 
 const SEGMENTS = 12;
+const VOXEL_VINE_SEGMENTS = 24;
 const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
 const _mid = new THREE.Vector3();
@@ -142,6 +144,40 @@ function newEndState(): EndState {
     alive: false, pos: new THREE.Vector3(), vel: new THREE.Vector3(), body: null,
     player: false, invMass: 0, stuck: false, fruitId: -1,
   };
+}
+
+/** Only the visual surface changes; the rope endpoints, radius, and solver
+ * length continue to come from the same Rope. Flat bands are authored per
+ * triangle so there is no gradient between the chunky sections. */
+export function buildVoxelHoldingVineGeometry(curve: THREE.Curve<THREE.Vector3>,
+  radius: number, tint: THREE.Color): THREE.BufferGeometry {
+  const tube = new THREE.TubeGeometry(curve, VOXEL_VINE_SEGMENTS, radius, 4, false);
+  const geometry = tube.toNonIndexed();
+  tube.dispose();
+  const uv = geometry.getAttribute('uv');
+  const colors = new Float32Array(geometry.getAttribute('position').count * 3);
+  const pale = tint.clone().multiplyScalar(1.25);
+  const dark = tint.clone().multiplyScalar(0.58);
+  for (let i = 0; i < uv.count; i += 3) {
+    const along = (uv.getX(i) + uv.getX(i + 1) + uv.getX(i + 2)) / 3;
+    const band = Math.min(11, Math.floor(along * 12));
+    const c = band % 2 ? dark : pale;
+    for (let v = i; v < i + 3; v++) colors.set([c.r, c.g, c.b], v * 3);
+  }
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  geometry.name = 'VoxelHoldingVine';
+  return geometry;
+}
+
+/** Cuttable is a general rope capability; the special rind-vine surface is
+ * reserved for the four authored anchors that actually suspend the melon. */
+export function isLegendaryHoldingVine(rope: Pick<Rope, 'a' | 'b' | 'cuttable' | 'shared'>): boolean {
+  return rope.cuttable && !rope.shared && (
+    (rope.a.kind === 'world' && rope.b.kind === 'legendary')
+    || (rope.b.kind === 'world' && rope.a.kind === 'legendary')
+  );
 }
 
 /**
@@ -164,6 +200,7 @@ function newEndState(): EndState {
  */
 export class RopeSystem implements System {
   readonly name = 'ropes';
+  constructor(private readonly visualMode: VisualMode = 'baseline') {}
   private g!: Game;
   private fruitSys!: FruitSystem;
   private legendary: { body: RBody | null; id: number; authoritative: boolean } | null = null;
@@ -172,6 +209,7 @@ export class RopeSystem implements System {
   private meshes = new Map<number, THREE.Mesh>();
   private material!: THREE.MeshStandardMaterial;
   private selectedMaterial!: THREE.MeshStandardMaterial;
+  private vineMaterial: THREE.MeshStandardMaterial | null = null;
   private highlightedRopeId: number | null = null;
   private materials = new Map<string, THREE.MeshStandardMaterial>();
   /** Installed by MultiplayerAuthority. Null in single player. */
@@ -194,6 +232,13 @@ export class RopeSystem implements System {
       color: 0xffd15c, emissive: 0x4b2b00, roughness: 0.8, flatShading: true,
     });
     this.selectedMaterial.name = 'rope:selected';
+    if (this.visualMode === 'voxel') {
+      this.vineMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff, vertexColors: true, roughness: 0.96, metalness: 0,
+        flatShading: true,
+      });
+      this.vineMaterial.name = 'voxel:holding-vine';
+    }
 
     g.debug?.addProbe('ropes', () => ({
       count: this.ropes.size,
@@ -319,12 +364,19 @@ export class RopeSystem implements System {
     return m;
   }
 
+  private materialForRope(rope: Rope): THREE.MeshStandardMaterial {
+    return this.visualMode === 'voxel' && isLegendaryHoldingVine(rope) && this.vineMaterial
+      ? this.vineMaterial : this.materialFor(rope.color);
+  }
+
   private makeMesh(rope: Rope): void {
     const curve = new THREE.CatmullRomCurve3([
       new THREE.Vector3(), new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 2),
     ]);
-    const geo = new THREE.TubeGeometry(curve, SEGMENTS, rope.radius, 5, false);
-    const mesh = new THREE.Mesh(geo, this.materialFor(rope.color));
+    const geo = this.visualMode === 'voxel' && isLegendaryHoldingVine(rope)
+      ? buildVoxelHoldingVineGeometry(curve, rope.radius, rope.color)
+      : new THREE.TubeGeometry(curve, SEGMENTS, rope.radius, 5, false);
+    const mesh = new THREE.Mesh(geo, this.materialForRope(rope));
     mesh.name = `Rope:${rope.id}`;
     mesh.frustumCulled = false;
     mesh.castShadow = false;
@@ -339,7 +391,7 @@ export class RopeSystem implements System {
     if (oldId !== null) {
       const old = this.ropes.get(oldId);
       const mesh = this.meshes.get(oldId);
-      if (old && mesh) mesh.material = this.materialFor(old.color);
+      if (old && mesh) mesh.material = this.materialForRope(old);
     }
     this.highlightedRopeId = id;
     if (id !== null) {
@@ -842,7 +894,9 @@ export class RopeSystem implements System {
       // narrow; neither the shared rope nor its collision/strength changes.
       const radius = rope.radius * (ownA || ownB ? 0.35 : 1)
         * (1 + clamp(rope.tension / 3000, 0, 1) * 0.4);
-      const geo = new THREE.TubeGeometry(drawnCurve, SEGMENTS, radius, 5, false);
+      const geo = this.visualMode === 'voxel' && isLegendaryHoldingVine(rope)
+        ? buildVoxelHoldingVineGeometry(drawnCurve, radius, rope.color)
+        : new THREE.TubeGeometry(drawnCurve, SEGMENTS, radius, 5, false);
       mesh.geometry.dispose();
       mesh.geometry = geo;
     }
@@ -859,6 +913,7 @@ export class RopeSystem implements System {
     this.clear();
     this.material.dispose();
     this.selectedMaterial.dispose();
+    this.vineMaterial?.dispose();
     for (const m of this.materials.values()) m.dispose();
     this.materials.clear();
   }

@@ -5,7 +5,7 @@ import type { PhysicsWorld } from '@/physics/PhysicsWorld';
 import type { Terrain } from './Terrain';
 import { Rng } from '@/core/Rng';
 import { buildAnchorCrags, buildIslandWorksites } from './IslandWorksites';
-import { buildKingMelonGeometry } from './KingMelonGeometry';
+import { kingMelonGeometryForMode } from './KingMelonGeometry';
 import { buildGroveArch } from './GroveArch';
 import { voxelRockGeometry } from '@/art/voxel/VoxelRock';
 import { voxelFruitGeometry } from '@/art/voxel/VoxelFruit';
@@ -1250,7 +1250,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   // instead of lowering the fruit into the ground.
   for (const a of kingMelonAnchors) a.y = Math.max(a.y, kmY + 12);
   const kingMelonPos = new THREE.Vector3(kmX, kmY, kmZ);
-  const kingMelon = buildKingMelon(kingMelonPos);
+  const kingMelon = buildKingMelon(kingMelonPos, visualMode);
   scene.add(kingMelon);
 
   // A rock outcrop under every anchor. Without one the vines read as four
@@ -1421,8 +1421,8 @@ function makeSign(b: PropBuilder, pos: THREE.Vector3, rotY: number, w: number, h
 }
 
 /** The aspirational object. It has to look absurd from 150 metres away. */
-function buildKingMelon(pos: THREE.Vector3): THREE.Mesh {
-  const body = buildKingMelonGeometry(KING_MELON_RADIUS);
+function buildKingMelon(pos: THREE.Vector3, visualMode: VisualMode): THREE.Mesh {
+  const body = kingMelonGeometryForMode(KING_MELON_RADIUS, visualMode);
   const mat = new THREE.MeshStandardMaterial({
     color: 0xffffff, vertexColors: true, roughness: 0.5, metalness: 0.02,
   });

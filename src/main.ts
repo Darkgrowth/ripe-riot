@@ -123,6 +123,7 @@ async function main(): Promise<void> {
   game.add(new EncounterSystem(comparison === 'B' ? 'block' : comparison === 'A' ? 'polygon' : null,
     visualMode === 'voxel'));
   game.add(new KingVine({
+    visualStyle: visualMode === 'voxel' ? 'voxel' : 'baseline',
     onDamagePlayer: (victimId, amount, source) => {
       const net = game.get<MultiplayerAuthority>('net');
       if (!net.connected || victimId === net.me) game.get<PlayerVitals>('vitals').damage(amount, source);
@@ -134,14 +135,14 @@ async function main(): Promise<void> {
     }),
   }));
   game.add(new InteractionSystem());
-  game.add(new RopeSystem());
+  game.add(new RopeSystem(visualMode));
   game.add(new HarvestScoring());
   game.add(new ImpactFX());
   game.add(new ToolInventory());
   game.add(new ViewmodelSystem(visualMode));
   game.add(new Shop());
   game.add(new HarvestBook());
-  game.add(new LegendaryHarvest());
+  game.add(new LegendaryHarvest(visualMode));
   game.add(new Progression(!!comparison));
   game.add(new IslandDirector());
   game.add(new AudioManager());

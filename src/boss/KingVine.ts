@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import type { Game, System } from '@/core/Game';
 import type { Sunpatch } from '@/world/Sunpatch';
+import { voxelKingVineArm, voxelKingVineBase, voxelKingVineConnector,
+  voxelKingVineCore, voxelKingVineGuardLeaf, voxelKingVineSeed } from './VoxelKingVineGeometry.ts';
 
 export type VinePoint = [number, number, number];
 export type KingVineStrike = 'melee' | 'air';
@@ -33,6 +35,8 @@ export interface KingVineNetState {
 }
 export interface KingVineOptions {
   authoritative?: boolean;
+  /** Presentation only; encounter rules and snapshots are identical. */
+  visualStyle?: 'baseline' | 'voxel';
   /** Tests or custom arenas may provide the stem's ground position directly. */
   center?: VinePoint;
   /** Fired only by the simulating peer, once per victim per attack. */
@@ -90,6 +94,13 @@ export class KingVine implements System {
   private seedLane: THREE.Mesh | null = null;
   private core: THREE.Mesh | null = null;
   private seedVisual: THREE.Mesh | null = null;
+  private voxelBody: THREE.Group | null = null;
+  private voxelConnector: THREE.Mesh | null = null;
+  private voxelGuards: THREE.Group[] = [];
+  private visualHealth: number | null = null;
+  private visualHitAge = 99;
+  private visualSubduedAge = 99;
+  private visualWasSubdued = false;
   private visualTime = 0;
 
   constructor(options: KingVineOptions = {}) {
@@ -274,13 +285,14 @@ export class KingVine implements System {
       (this.seedLane.material as THREE.MeshBasicMaterial).opacity = charging
         ? 0.2 + 0.2 * Math.sin(this.visualTime * 18) ** 2 : 0;
     }
-    if (this.arm) {
+    if (this.options.visualStyle === 'voxel') this.updateVoxelPose(dt);
+    else if (this.arm) {
       this.arm.rotation.y = this.heading;
       this.arm.rotation.z = this.subdued ? -0.9
         : this.phase === 'sweep' ? Math.sin((1 - this.timeLeft / SWEEP_TIME) * Math.PI) * 0.65
           : this.phase === 'telegraph' ? -0.18 : 0;
     }
-    if (this.core) {
+    if (this.core && this.options.visualStyle !== 'voxel') {
       const mat = this.core.material as THREE.MeshStandardMaterial;
       mat.emissiveIntensity = this.phase === 'recover'
         ? 1.2 + 0.3 * Math.sin(this.visualTime * 13) : 0.16;
@@ -292,8 +304,59 @@ export class KingVine implements System {
         this.projectile.position[0] - this.center[0],
         this.projectile.position[1] - this.center[1],
         this.projectile.position[2] - this.center[2]);
+      if (this.projectile && this.options.visualStyle === 'voxel') {
+        const velocity = new THREE.Vector3(...this.projectile.velocity).normalize();
+        if (velocity.lengthSq() > 0) this.seedVisual.quaternion.setFromUnitVectors(
+          new THREE.Vector3(0, 0, 1), velocity);
+      }
     }
-    this.root.scale.y = this.subdued ? 0.62 : 1;
+    this.root.scale.y = this.options.visualStyle === 'voxel' ? 1 : this.subdued ? 0.62 : 1;
+  }
+
+  private updateVoxelPose(dt: number): void {
+    if (this.visualHealth !== null && this.health < this.visualHealth)
+      this.visualHitAge = 0;
+    this.visualHitAge += Math.max(0, dt);
+    if (this.subdued && !this.visualWasSubdued) {
+      this.visualSubduedAge = this.visualHealth === null ? 0.72 : 0;
+      this.visualWasSubdued = true;
+    }
+    if (!this.subdued && this.visualWasSubdued) {
+      this.visualSubduedAge = 99;
+      this.visualWasSubdued = false;
+    }
+    if (this.visualWasSubdued) this.visualSubduedAge += Math.max(0, dt);
+    this.visualHealth = this.health;
+    const fall = this.visualWasSubdued
+      ? THREE.MathUtils.smoothstep(this.visualSubduedAge, 0, 0.72) : 0;
+    const hit = Math.max(0, 1 - this.visualHitAge / 0.4);
+    if (this.voxelBody) {
+      this.voxelBody.rotation.x = fall * 0.72 - hit * 0.10;
+      this.voxelBody.rotation.z = fall * 0.28 + hit * 0.17;
+      this.voxelBody.position.y = -fall * 0.52;
+      this.voxelBody.scale.y = 1 - fall * 0.35;
+    }
+    if (this.voxelConnector) this.voxelConnector.visible = fall < 0.8;
+    const sweepProgress = THREE.MathUtils.clamp(1 - this.timeLeft / SWEEP_TIME, 0, 1);
+    if (this.arm) {
+      this.arm.rotation.y = this.heading + (this.subdued ? 0.1
+        : this.phase === 'sweep' ? -0.75 + sweepProgress * 1.5
+          : this.phase === 'telegraph' && this.attack === 'sweep' ? -0.75
+            : 0);
+      this.arm.rotation.x = this.phase === 'telegraph' && this.attack === 'seed' ? -0.14
+        : this.phase === 'seed' ? 0.22 : 0;
+      this.arm.rotation.z = fall * -0.82 + hit * 0.12;
+    }
+    const open = this.subdued ? 0.32
+      : this.phase === 'recover' ? 1.05
+        : this.attack === 'seed' && (this.phase === 'telegraph' || this.phase === 'seed') ? 0.48 : 0;
+    for (let i = 0; i < this.voxelGuards.length; i++)
+      this.voxelGuards[i].rotation.y = (i === 0 ? -1 : 1) * open;
+    if (this.core) {
+      this.core.visible = this.phase === 'recover';
+      (this.core.material as THREE.MeshStandardMaterial).emissiveIntensity =
+        this.phase === 'recover' ? 0.17 + 0.07 * Math.sin(this.visualTime * 11) ** 2 : 0.03;
+    }
   }
 
   dispose(): void {
@@ -425,6 +488,10 @@ export class KingVine implements System {
     root.position.set(...this.center);
     this.g.renderer.scene.add(root);
     this.root = root;
+    if (this.options.visualStyle === 'voxel') {
+      this.buildVoxelVisuals(root);
+      return;
+    }
     const bark = mat(0x37543a);
     const edge = mat(0x6b8141);
     const dark = mat(0x233a32);
@@ -490,6 +557,75 @@ export class KingVine implements System {
     const melon = world.kingMelonPos;
     const top: VinePoint = [melon.x - this.center[0], melon.y - this.center[1] - 2, melon.z - this.center[2]];
     if (top[1] > 3.5) segment(root, [0, 3, 0], top, 0.21, bark);
+  }
+
+  private buildVoxelVisuals(root: THREE.Group): void {
+    const shell = new THREE.MeshStandardMaterial({ vertexColors: true,
+      roughness: 0.88, metalness: 0, flatShading: true });
+    const coreMat = new THREE.MeshStandardMaterial({ vertexColors: true,
+      roughness: 0.67, emissive: new THREE.Color().setHex(0xaa4d21, THREE.SRGBColorSpace),
+      emissiveIntensity: 0.03, flatShading: true });
+    const podMat = new THREE.MeshStandardMaterial({ vertexColors: true,
+      roughness: 0.72, emissive: new THREE.Color().setHex(0x8a351b, THREE.SRGBColorSpace),
+      emissiveIntensity: 0.10, flatShading: true });
+    const body = new THREE.Group();
+    body.name = 'King Vine rooted body';
+    root.add(body);
+    this.voxelBody = body;
+    mesh(body, voxelKingVineBase(), shell, 0, 0, 0);
+    this.core = mesh(body, voxelKingVineCore(), coreMat, 0, 0, 0);
+    this.core.name = 'King Vine exposed stem';
+    this.core.visible = false;
+    const guardGeometry = voxelKingVineGuardLeaf();
+    for (const side of [-1, 1]) {
+      const hinge = new THREE.Group();
+      hinge.name = side < 0 ? 'King Vine guard left' : 'King Vine guard right';
+      hinge.position.set(side * 0.65, 1.7, 0.45);
+      body.add(hinge);
+      const leaf = mesh(hinge, guardGeometry, shell, 0, 0, 0);
+      if (side > 0) leaf.scale.x = -1;
+      this.voxelGuards.push(hinge);
+    }
+    const arm = new THREE.Group();
+    arm.name = 'King Vine sweeping arm';
+    arm.position.y = 2.2;
+    body.add(arm);
+    this.arm = arm;
+    mesh(arm, voxelKingVineArm(), shell, 0, 0, 0);
+
+    const warningMat = new THREE.MeshBasicMaterial({
+      color: new THREE.Color().setHex(0xff713e, THREE.SRGBColorSpace),
+      transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false,
+    });
+    this.warning = mesh(root,
+      new THREE.RingGeometry(1.8, SWEEP_RANGE, 32, 1, -Math.PI / 2 - 0.85, 1.7),
+      warningMat, 0, 0.12, 0);
+    this.warning.name = 'King Vine sweep warning';
+    this.warning.rotation.x = -Math.PI / 2;
+    this.warning.visible = false;
+    this.warning.castShadow = false;
+    this.warning.receiveShadow = false;
+    const laneMat = new THREE.MeshBasicMaterial({
+      color: new THREE.Color().setHex(0xffa24e, THREE.SRGBColorSpace),
+      transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false,
+    });
+    this.seedLane = mesh(root, new THREE.PlaneGeometry(2.2, 27), laneMat, 0, 0.13, 13.5);
+    this.seedLane.name = 'King Vine seed lane';
+    this.seedLane.rotation.x = -Math.PI / 2;
+    this.seedLane.visible = false;
+    this.seedLane.castShadow = false;
+    this.seedLane.receiveShadow = false;
+    this.seedVisual = mesh(root, voxelKingVineSeed(), podMat, 0, 1.5, 0);
+    this.seedVisual.name = 'King Vine seed pod';
+    this.seedVisual.visible = false;
+
+    // This single noncolliding stem connects to the existing suspended melon.
+    const melon = this.g!.get<Sunpatch>('world').kingMelonPos;
+    const topY = melon.y - this.center[1] - 2;
+    if (topY > 3.5) {
+      this.voxelConnector = mesh(root, voxelKingVineConnector(topY), shell, 0, 0, 0);
+      this.voxelConnector.name = 'King Vine melon connector';
+    }
   }
 }
 

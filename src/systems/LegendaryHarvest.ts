@@ -11,6 +11,7 @@ import { Groups } from '@/physics/Layers';
 import { Palette } from '@/render/Palette';
 import { KING_MELON_RADIUS } from '@/world/Landmarks';
 import { clamp, damp } from '@/core/MathUtils';
+import type { VisualMode } from '@/art/voxel/VisualMode';
 
 export type LegendaryPhase = 'prepare' | 'tether' | 'detach' | 'drop' | 'recover' | 'complete' | 'failed';
 const PHASES: LegendaryPhase[] = ['prepare', 'tether', 'detach', 'drop', 'recover', 'complete', 'failed'];
@@ -27,6 +28,49 @@ const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
 const _eye = new THREE.Vector3();
 const _dir = new THREE.Vector3();
+
+/** A single noncolliding mesh of separated amber pieces just inside the
+ * authoritative circular pad. The gaps make the extraction boundary readable
+ * against grass without inventing another physics target. */
+export function buildVoxelExtractionBorderGeometry(radius: number): THREE.BufferGeometry {
+  const positions: number[] = [], normals: number[] = [], colors: number[] = [];
+  const inner = radius - 1.0, outer = radius - 0.18;
+  const height = 0.10;
+  const pale = new THREE.Color().setHex(0xffd67a, THREE.SRGBColorSpace);
+  const dark = new THREE.Color().setHex(0xc4863e, THREE.SRGBColorSpace);
+  const add = (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3,
+    normal: THREE.Vector3, tint: THREE.Color): void => {
+    for (const point of [a, b, c]) {
+      positions.push(point.x, point.y, point.z);
+      normals.push(normal.x, normal.y, normal.z);
+      colors.push(tint.r, tint.g, tint.b);
+    }
+  };
+  for (let i = 0; i < 24; i++) {
+    const step = Math.PI * 2 / 24;
+    const a0 = (i + 0.10) * step, a1 = (i + 0.90) * step;
+    const point = (r: number, a: number, y: number) =>
+      new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r);
+    const i0 = point(inner, a0, height), i1 = point(inner, a1, height);
+    const o0 = point(outer, a0, height), o1 = point(outer, a1, height);
+    const b0 = point(outer, a0, 0), b1 = point(outer, a1, 0);
+    const tint = i % 2 ? dark : pale;
+    const side = tint.clone().multiplyScalar(0.72);
+    const up = new THREE.Vector3(0, 1, 0);
+    const outward = new THREE.Vector3(Math.cos((a0 + a1) * 0.5), 0,
+      Math.sin((a0 + a1) * 0.5));
+    add(i0, o1, o0, up, tint); add(i0, i1, o1, up, tint);
+    add(b0, o1, b1, outward, side); add(b0, o0, o1, outward, side);
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  geometry.name = 'VoxelExtractionBorder';
+  return geometry;
+}
 
 /**
  * The legendary's state as it travels. Deliberately the minimum two peers
@@ -91,6 +135,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
   readonly name = 'legendary';
   readonly kind = 'legendary';
   readonly id: number = -200;
+  constructor(private readonly visualMode: VisualMode = 'baseline') {}
 
   private g!: Game;
   private world!: Sunpatch;
@@ -120,6 +165,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
   extractionPad = new THREE.Vector3();
   extractionRadius = 15;
   private padMesh: THREE.Mesh | null = null;
+  private padBorder: THREE.Mesh | null = null;
   private anchors: THREE.Vector3[] = [];
   private homePosition = new THREE.Vector3();
   private lookingAtVine: Rope | null = null;
@@ -263,6 +309,19 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     this.padMesh.receiveShadow = true;
     this.padMesh.name = 'ExtractionPad';
     this.g.renderer.scene.add(this.padMesh);
+    if (this.visualMode === 'voxel') {
+      const border = new THREE.Mesh(buildVoxelExtractionBorderGeometry(this.extractionRadius),
+        new THREE.MeshStandardMaterial({
+          color: 0xffffff, vertexColors: true, roughness: 0.82,
+          emissive: 0x50310c, emissiveIntensity: 0.16, side: THREE.DoubleSide,
+        }));
+      border.position.copy(this.extractionPad).add(_v.set(0, 0.37, 0));
+      border.receiveShadow = true;
+      border.visible = false;
+      border.name = 'ExtractionPadBorder';
+      this.g.renderer.scene.add(border);
+      this.padBorder = border;
+    }
   }
 
   private build(): void {
@@ -317,6 +376,8 @@ export class LegendaryHarvest implements System, PhysicsOwner {
   }
 
   reset(): void {
+    if (this.padMesh) this.padMesh.visible = false;
+    if (this.padBorder) this.padBorder.visible = false;
     for (const v of this.vines) this.ropes.remove(v.id, 'cut');
     // Every rope on the melon goes with it: tethers, leashes, other peers'
     // copies of both. On a client the host's snapshot would drop the shared
@@ -817,14 +878,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
       this.mesh.quaternion.slerp(this.remoteQuat, 1 - Math.exp(-12 * dt));
     }
 
-    if (this.padMesh) {
-      const active = this.phase === 'drop' || this.phase === 'recover';
-      this.padMesh.visible = active || this.phase === 'complete';
-      if (active) {
-        const pulse = 0.32 + Math.sin(performance.now() / 380) * 0.12;
-        (this.padMesh.material as THREE.MeshStandardMaterial).opacity = pulse;
-      }
-    }
+    this.updatePadVisuals();
 
     // Prompts, only when the player is close enough to act.
     const p = this.g.player;
@@ -855,6 +909,17 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     }
   }
 
+  private updatePadVisuals(): void {
+    if (!this.padMesh) return;
+    const active = this.phase === 'drop' || this.phase === 'recover';
+    this.padMesh.visible = active || this.phase === 'complete';
+    if (this.padBorder) this.padBorder.visible = this.padMesh.visible;
+    if (active) {
+      const pulse = 0.32 + Math.sin(performance.now() / 380) * 0.12;
+      (this.padMesh.material as THREE.MeshStandardMaterial).opacity = pulse;
+    }
+  }
+
   /** Tension on the remaining vines rises as each one is cut. */
   get loadPerVine(): number {
     return this.vines.length ? MELON_MASS / this.vines.length : Infinity;
@@ -880,6 +945,17 @@ export class LegendaryHarvest implements System, PhysicsOwner {
       this.phase = 'complete';
       this.completedAt = d.completedAt ?? 0;
     }
+  }
+
+  dispose(): void {
+    for (const mesh of [this.padBorder, this.padMesh]) {
+      if (!mesh) continue;
+      this.g?.renderer?.scene.remove(mesh);
+      mesh.geometry.dispose();
+      (mesh.material as THREE.Material).dispose();
+    }
+    this.padBorder = null;
+    this.padMesh = null;
   }
 }
 
