@@ -110,6 +110,12 @@ export class EncounterSystem implements System {
 
   frameUpdate(dt: number): void {
     const snapshot = this.model.snapshot();
+    const heldJaw = this.g.player.state === 'captured'
+      ? snapshot.encounters.find(state => state.kind === 'snapjaw'
+        && state.capturedVictimId !== null) : null;
+    this.g.playerCamera.setCaptureThreat(heldJaw
+      ? new THREE.Vector3(heldJaw.position[0], heldJaw.position[1], heldJaw.position[2])
+      : null, heldJaw?.heading ?? 0);
     for (const state of snapshot.encounters) {
       this.visuals.get(state.kind)?.update(state,
         this.world.terrain.height(state.position[0], state.position[2]), dt);

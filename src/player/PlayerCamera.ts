@@ -3,6 +3,7 @@ import { clamp, damp, lerp } from '@/core/MathUtils';
 import type { PlayerController } from './PlayerController';
 import type { PhysicsWorld } from '@/physics/PhysicsWorld';
 import { QueryMask } from '@/physics/Layers';
+import { keepSnapjawOutsideView } from './SnapjawCaptureView';
 
 const _q = new THREE.Quaternion();
 const _e = new THREE.Euler(0, 0, 0, 'YXZ');
@@ -26,6 +27,7 @@ export class PlayerCamera {
   private recoilVel = new THREE.Vector2();
   /** Blend 0..1 toward a free/ragdoll camera. */
   private ragdollBlend = 0;
+  private captureThreat: { position: THREE.Vector3; heading: number } | null = null;
   ragdollAnchor: THREE.Object3D | null = null;
   fovOffset = 0;
 
@@ -57,6 +59,13 @@ export class PlayerCamera {
     this.ragdollTarget = on ? 1 : 0;
   }
   private ragdollTarget = 0;
+
+  /** Local camera framing only; capture authority and player physics stay in their systems. */
+  setCaptureThreat(position: THREE.Vector3 | null, heading = 0): void {
+    if (!position) { this.captureThreat = null; return; }
+    if (!this.captureThreat) this.captureThreat = { position: position.clone(), heading };
+    else { this.captureThreat.position.copy(position); this.captureThreat.heading = heading; }
+  }
 
   update(player: PlayerController, dt: number): void {
     if (!this.enabled) return;
@@ -134,6 +143,8 @@ export class PlayerCamera {
       _v.lerp(a, this.ragdollBlend);
     }
 
+    if (player.state === 'captured' && this.captureThreat)
+      keepSnapjawOutsideView(_v, this.captureThreat.position, this.captureThreat.heading);
     this.camera.position.copy(_v);
     _e.set(player.pitch + this.recoil.y + shakeY, player.yaw + this.recoil.x + shakeX, this.roll + shakeZ, 'YXZ');
     _q.setFromEuler(_e);

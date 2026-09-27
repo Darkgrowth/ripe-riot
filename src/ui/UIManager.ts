@@ -441,6 +441,10 @@ export class UIManager implements System {
   }
 
   private updateCarry(): void {
+    // Capture has its own escape action; ordinary fruit controls cannot be used
+    // until Snapjaw releases the player. Rebuild the panel on the first free frame.
+    this.els.carry.hidden = this.g.player.state === 'captured';
+    if (this.els.carry.hidden) return;
     const inter = this.g.has('interaction') ? this.g.get<InteractionSystem>('interaction') : null;
     if (!inter) return;
     const held = inter.carried;
