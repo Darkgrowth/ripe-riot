@@ -119,7 +119,8 @@ export class EncounterSystem implements System {
       active.add(projectile.id);
       let visual = this.projectileVisuals.get(projectile.id);
       if (!visual) {
-        visual = new EncounterProjectileVisual(this.g.renderer.scene);
+        visual = new EncounterProjectileVisual(this.g.renderer.scene,
+          this.comparisonStyle ?? (this.detailedVoxelClearing ? 'voxel' : 'polygon'));
         this.projectileVisuals.set(projectile.id, visual);
       }
       visual.update(projectile, dt);

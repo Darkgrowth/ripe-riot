@@ -13,7 +13,7 @@ type Lobe = {
 /** Replacement plant geometry with the exact saved fruit/physics nodes. */
 export function voxelPlantShape(type: PlantType, variant: number, harvestCrown: boolean): PlantShape {
   if (type !== 'appleTree' && type !== 'orangeTree' && type !== 'melonVine'
-    && type !== 'bananaPlant' && type !== 'palm') {
+    && type !== 'bananaPlant' && type !== 'palm' && type !== 'boulderBush') {
     throw new Error(`no detailed voxel plant shape for ${type}`);
   }
   const key = `${type}:${variant}:${harvestCrown}`;
@@ -23,7 +23,8 @@ export function voxelPlantShape(type: PlantType, variant: number, harvestCrown: 
   // plantShape caches its geometry and may still supply live legacy trees.
   // Keep that shared cache intact; only use its authored gameplay metadata.
   const original = plantShape(type, variant, harvestCrown);
-  const geometry = type === 'palm' ? buildPalm(variant, original)
+  const geometry = type === 'boulderBush' ? buildBoulderNest(variant, original)
+    : type === 'palm' ? buildPalm(variant, original)
     : type === 'melonVine' ? buildMelonVine(variant, original)
     : type === 'bananaPlant' ? buildBananaPlant(variant, original)
       : buildTree(type, variant, harvestCrown, original);
@@ -35,6 +36,40 @@ export function voxelPlantShape(type: PlantType, variant: number, harvestCrown: 
   };
   CACHE.set(key, result);
   return result;
+}
+
+/** Low woody support and broad stepped leaves under the saved plum sockets. */
+function buildBoulderNest(variant: number, original: PlantShape): THREE.BufferGeometry {
+  const cell = 0.13;
+  const volume = new VoxelVolume();
+  volume.box(-2, 1, 0, 3, -2, 1, 0x62452d);
+  volume.box(-1, 0, 3, 3, -1, 0, 0x80603c);
+  for (let i = 0; i < 9; i++) {
+    const angle = i * Math.PI * 2 / 9 + variant * 0.17;
+    const dx = Math.sin(angle), dz = Math.cos(angle);
+    const px = -dz, pz = dx;
+    let last: [number, number, number] = [0, 3, 0];
+    for (let t = 1; t <= 10; t++) {
+      const tip: [number, number, number] = [
+        Math.round(dx * t), t < 5 ? 3 : 2, Math.round(dz * t),
+      ];
+      fillTwig(volume, last, tip, i % 2 ? 0x355d38 : 0x406d3b);
+      const width = t < 3 || t > 9 ? 1 : t < 5 || t > 7 ? 2 : 3;
+      for (const side of [-1, 1]) {
+        const edge: [number, number, number] = [
+          tip[0] + Math.round(px * width * side), tip[1],
+          tip[2] + Math.round(pz * width * side),
+        ];
+        fillTwig(volume, tip, edge, i % 2 ? 0x456e3c : 0x4f7842);
+      }
+      last = tip;
+    }
+  }
+  const geometry = volume.geometry({ cellSize: cell,
+    origin: new THREE.Vector3(-cell / 2, 0, -cell / 2),
+    swayHeight: original.height });
+  geometry.name = `VoxelTree:boulderBush:${variant}`;
+  return geometry;
 }
 
 function buildPalm(variant: number, original: PlantShape): THREE.BufferGeometry {

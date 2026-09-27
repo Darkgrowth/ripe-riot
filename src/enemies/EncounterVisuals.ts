@@ -4,6 +4,8 @@ import { MimicRig, type MimicStyle } from './MimicRig.ts';
 import { voxelSnapjawBase, voxelSnapjawCore, voxelSnapjawEye,
   voxelSnapjawLowerJaw, voxelSnapjawLowerMouth, voxelSnapjawTeeth,
   voxelSnapjawUpperJaw, voxelSnapjawUpperMouth } from './VoxelSnapjawGeometry.ts';
+import { voxelSpitterBase, voxelSpitterBulb, voxelSpitterLeaves,
+  voxelSpitterMuzzle, voxelSpitterPod } from './VoxelSpitterGeometry.ts';
 
 const color = (hex: number) => new THREE.Color().setHex(hex, THREE.SRGBColorSpace);
 const material = (hex: number, roughness = 0.86, emissive = 0): THREE.MeshStandardMaterial =>
@@ -25,6 +27,7 @@ export class EncounterVisual {
   readonly root = new THREE.Group();
   private kind: EncounterKind;
   private readonly voxelSnapjaw: boolean;
+  private readonly voxelSpitter: boolean;
   private mimicRig: MimicRig | null = null;
   private upperJaw: THREE.Group | null = null;
   private snapjawAnatomy: THREE.Group | null = null;
@@ -33,6 +36,12 @@ export class EncounterVisual {
   private snapjawDefeatAge = 99;
   private snapjawWasDefeated = false;
   private spitterHead: THREE.Group | null = null;
+  private spitterAnatomy: THREE.Group | null = null;
+  private spitterBulb: THREE.Mesh | null = null;
+  private spitterHealth: number | null = null;
+  private spitterHitAge = 99;
+  private spitterDefeatAge = 99;
+  private spitterWasDefeated = false;
   private prize: THREE.Mesh | null = null;
   private eyes: THREE.Mesh[] = [];
   private danger: THREE.Mesh;
@@ -44,6 +53,7 @@ export class EncounterVisual {
   constructor(kind: EncounterKind, scene: THREE.Scene, style: MimicStyle = 'polygon') {
     this.kind = kind;
     this.voxelSnapjaw = kind === 'snapjaw' && style === 'voxel';
+    this.voxelSpitter = kind === 'spitter' && style === 'voxel';
     this.root.name = kind === 'mimic' ? 'Mimic Melon'
       : kind === 'snapjaw' ? 'Snapjaw' : 'Spitter Plant';
     scene.add(this.root);
@@ -52,6 +62,7 @@ export class EncounterVisual {
       if (this.voxelSnapjaw) this.buildVoxelSnapjaw();
       else this.buildSnapjaw();
     }
+    else if (this.voxelSpitter) this.buildVoxelSpitter();
     else this.buildSpitter();
     const ring = new THREE.RingGeometry(kind === 'snapjaw' ? 2.1 : 1.75,
       kind === 'snapjaw' ? 2.34 : 1.95, 40);
@@ -80,7 +91,7 @@ export class EncounterVisual {
 
   update(state: Readonly<EncounterState>, groundY: number, dt: number): void {
     this.time += dt;
-    if (this.kind !== 'mimic' && !this.voxelSnapjaw)
+    if (this.kind !== 'mimic' && !this.voxelSnapjaw && !this.voxelSpitter)
       this.root.visible = state.phase !== 'defeated';
     const target = new THREE.Vector3(state.position[0], groundY, state.position[2]);
     if (!this.positioned) { this.root.position.copy(target); this.positioned = true; }
@@ -158,12 +169,43 @@ export class EncounterVisual {
         if (this.upperJaw && fall > 0) this.upperJaw.rotation.x = fall * 0.34;
       }
     } else {
-      if (this.spitterHead) {
+      if (this.voxelSpitter) {
+        if (this.spitterHealth !== null && state.health < this.spitterHealth)
+          this.spitterHitAge = 0;
+        this.spitterHitAge += Math.max(0, dt);
+        if (state.phase === 'defeated' && !this.spitterWasDefeated) {
+          this.spitterDefeatAge = this.spitterHealth === null ? 0.72 : 0;
+          this.spitterWasDefeated = true;
+        }
+        if (this.spitterWasDefeated) this.spitterDefeatAge += Math.max(0, dt);
+        this.spitterHealth = state.health;
+        this.root.visible = true;
+        const fall = this.spitterWasDefeated
+          ? THREE.MathUtils.smoothstep(this.spitterDefeatAge, 0, 0.72) : 0;
+        const hit = Math.max(0, 1 - this.spitterHitAge / 0.36);
+        if (this.spitterAnatomy) {
+          this.spitterAnatomy.rotation.x = (warning ? -0.07 : 0) + fall * 0.95;
+          this.spitterAnatomy.rotation.z = hit * 0.20 + fall * 0.24;
+          this.spitterAnatomy.position.y = -fall * 0.46;
+          this.spitterAnatomy.scale.y = 1 - fall * 0.43;
+        }
+        if (this.spitterBulb) this.spitterBulb.scale.setScalar(fall ? 1 - fall * 0.34
+          : warning ? 1.13 + pulse * 0.05 : recovering ? 0.94 : 1);
+        if (this.spitterHead) {
+          this.spitterHead.position.y = 2.1 - fall * 0.24;
+          this.spitterHead.rotation.x = fall ? 0.52 * fall
+            : warning ? -0.28 - pulse * 0.04
+              : attacking ? 0.22 + Math.max(0, state.timeLeft / 0.2) * 0.36
+                : recovering ? 0.10 : Math.sin(this.time * 1.5) * 0.025;
+        }
+        if (this.glow) this.glow.emissiveIntensity = fall ? 0
+          : warning ? 0.16 + pulse * 0.08 : attacking ? 0.22 : 0.06;
+      } else if (this.spitterHead) {
         this.spitterHead.position.y = 1.9 + (warning ? 0.22 + pulse * 0.1 : 0);
         this.spitterHead.rotation.x = warning ? -0.22 : attacking ? 0.42
           : recovering ? 0.12 : Math.sin(this.time * 1.8) * 0.035;
       }
-      if (this.glow) this.glow.emissiveIntensity = warning ? 1.6 + pulse * 1.1
+      if (!this.voxelSpitter && this.glow) this.glow.emissiveIntensity = warning ? 1.6 + pulse * 1.1
         : attacking ? 2.2 : 0.45;
     }
   }
@@ -302,29 +344,70 @@ export class EncounterVisual {
       this.eyes.push(eye);
     }
   }
+
+  private buildVoxelSpitter(): void {
+    const shell = new THREE.MeshStandardMaterial({ vertexColors: true,
+      roughness: 0.86, metalness: 0, flatShading: true });
+    const mouth = new THREE.MeshStandardMaterial({ vertexColors: true,
+      roughness: 0.78, metalness: 0, emissive: color(0x9d9a42),
+      emissiveIntensity: 0.06, flatShading: true });
+    this.glow = mouth;
+    this.spitterAnatomy = new THREE.Group();
+    this.spitterAnatomy.name = 'Spitter rooted anatomy';
+    this.root.add(this.spitterAnatomy);
+    mesh(voxelSpitterBase(), shell, this.spitterAnatomy);
+    mesh(voxelSpitterLeaves(), shell, this.spitterAnatomy);
+    this.spitterHead = new THREE.Group();
+    this.spitterHead.name = 'Spitter firing head';
+    this.spitterHead.position.y = 2.1;
+    this.spitterAnatomy.add(this.spitterHead);
+    this.spitterBulb = mesh(voxelSpitterBulb(), shell, this.spitterHead);
+    this.spitterBulb.name = 'Spitter pressure bulb';
+    const muzzle = mesh(voxelSpitterMuzzle(), mouth, this.spitterHead);
+    muzzle.name = 'Spitter muzzle';
+  }
 }
 
-/** Small emissive seed with a larger translucent rim, separate from ordinary fruit. */
+/** Spitter shot presentation; voxel mode keeps its pod on the authoritative position. */
 export class EncounterProjectileVisual {
   readonly root = new THREE.Group();
   private positioned = false;
+  private readonly voxel: boolean;
+  private pod: THREE.Mesh | null = null;
 
-  constructor(scene: THREE.Scene) {
+  constructor(scene: THREE.Scene, style: MimicStyle = 'polygon') {
+    this.voxel = style === 'voxel';
     this.root.name = 'Spitter seed';
     scene.add(this.root);
-    mesh(new THREE.IcosahedronGeometry(0.3, 1),
-      new THREE.MeshBasicMaterial({ color: color(0xf5f58a) }), this.root);
-    const halo = mesh(new THREE.SphereGeometry(0.48, 8, 6),
-      new THREE.MeshBasicMaterial({ color: color(0xdbed65), transparent: true,
-        opacity: 0.25, depthWrite: false }), this.root);
-    halo.castShadow = false;
+    if (this.voxel) {
+      this.pod = mesh(voxelSpitterPod(), new THREE.MeshStandardMaterial({
+        vertexColors: true, roughness: 0.7, flatShading: true,
+        emissive: color(0x8c8430), emissiveIntensity: 0.12,
+      }), this.root);
+      this.pod.name = 'Spitter seed pod';
+    } else {
+      mesh(new THREE.IcosahedronGeometry(0.3, 1),
+        new THREE.MeshBasicMaterial({ color: color(0xf5f58a) }), this.root);
+      const halo = mesh(new THREE.SphereGeometry(0.48, 8, 6),
+        new THREE.MeshBasicMaterial({ color: color(0xdbed65), transparent: true,
+          opacity: 0.25, depthWrite: false }), this.root);
+      halo.castShadow = false;
+    }
   }
 
   update(state: EncounterProjectile, dt: number): void {
     const target = new THREE.Vector3(...state.position);
-    if (!this.positioned) { this.root.position.copy(target); this.positioned = true; }
-    else this.root.position.lerp(target, 1 - Math.exp(-Math.max(0, dt) * 30));
-    this.root.rotation.y += dt * 5;
+    if (this.voxel) {
+      this.root.position.copy(target);
+      const direction = new THREE.Vector3(...state.velocity).normalize();
+      if (direction.lengthSq() > 0)
+        this.root.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction);
+      if (this.pod) this.pod.rotation.z += dt * 6;
+    } else {
+      if (!this.positioned) { this.root.position.copy(target); this.positioned = true; }
+      else this.root.position.lerp(target, 1 - Math.exp(-Math.max(0, dt) * 30));
+      this.root.rotation.y += dt * 5;
+    }
   }
 
   dispose(): void {
