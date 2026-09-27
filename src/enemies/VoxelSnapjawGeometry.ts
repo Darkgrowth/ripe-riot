@@ -13,7 +13,9 @@ const LIP = 0xb36a55;
 const GUM = 0x934953;
 const THROAT = 0x4c2739;
 const TOOTH = 0xf0deae;
-const GOLD = 0xffc666;
+const AMBER = 0xc76825;
+const AMBER_LIGHT = 0xe39132;
+const AMBER_DARK = 0x8c411d;
 
 function volumeGeometry(name: string, draw: (volume: VoxelVolume) => void): THREE.BufferGeometry {
   const volume = new VoxelVolume();
@@ -144,14 +146,16 @@ export function voxelSnapjawEye(): THREE.BufferGeometry {
   });
 }
 
-/** A golden vulnerable seed replaces the floating faceted placeholder. */
+/** Warm amber seed with a shaded underside, distinct from the ivory fangs. */
 export function voxelSnapjawCore(): THREE.BufferGeometry {
   return volumeGeometry('Snapjaw exposed seed', volume => {
     for (let x = -4; x <= 4; x++) for (let y = -4; y <= 4; y++) {
       for (let z = -3; z <= 3; z++) {
         const radius = (x / 4.6) ** 2 + (y / 4.6) ** 2 + (z / 3.7) ** 2;
         if (radius > 1) continue;
-        volume.put(x, y, z, Math.abs(x) <= 1 && z > 0 ? 0xffe297 : GOLD);
+        const tint = y < -1 || z < 0 ? AMBER_DARK
+          : Math.abs(x) <= 1 && y >= 0 && z > 0 ? AMBER_LIGHT : AMBER;
+        volume.put(x, y, z, tint);
       }
     }
   });

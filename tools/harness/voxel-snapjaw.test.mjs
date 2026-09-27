@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { EncounterVisual } from '../../src/enemies/EncounterVisuals.ts';
-import { voxelSnapjawBase, voxelSnapjawLowerJaw, voxelSnapjawUpperJaw } from
+import { voxelSnapjawBase, voxelSnapjawCore, voxelSnapjawLowerJaw,
+  voxelSnapjawTeeth, voxelSnapjawUpperJaw } from
   '../../src/enemies/VoxelSnapjawGeometry.ts';
 
 const state = (phase, health = 2, timeLeft = 0) => ({
@@ -63,4 +64,40 @@ test('a visual created from a defeated snapshot starts settled; polygon baseline
   assert.equal(baseline.root.visible, false);
   voxel.dispose();
   baseline.dispose();
+});
+
+test('exposed seed is saturated amber against ivory fangs', () => {
+  const average = geometry => {
+    const colors = geometry.getAttribute('color');
+    const total = [0, 0, 0];
+    for (let i = 0; i < colors.count; i++) {
+      total[0] += colors.getX(i);
+      total[1] += colors.getY(i);
+      total[2] += colors.getZ(i);
+    }
+    geometry.dispose();
+    return total.map(value => value / colors.count);
+  };
+  const amber = average(voxelSnapjawCore());
+  const ivory = average(voxelSnapjawTeeth());
+  assert.ok(amber[1] < ivory[1] * 0.55, 'amber has less yellow than teeth');
+  assert.ok(amber[2] < ivory[2] * 0.30, 'amber has far less blue than teeth');
+  assert.ok(amber[0] > amber[1] * 1.55, 'seed keeps a warm orange hue');
+});
+
+test('recovery reveals a recessed seed with restrained light and size', () => {
+  const scene = new THREE.Scene();
+  const visual = new EncounterVisual('snapjaw', scene, 'voxel');
+  const seed = visual.root.getObjectByName('Snapjaw exposed seed');
+  assert.ok(seed);
+  visual.update(state('idle'), 0, 0.016);
+  const idleGlow = seed.material.emissiveIntensity;
+  visual.update(state('recover', 2, 1), 0, 0.016);
+  assert.ok(seed.position.z < 0.75, 'seed sits behind the front fangs');
+  assert.ok(seed.scale.x <= 1.10, 'recovery leaves clear space around the seed');
+  assert.ok(seed.material.emissiveIntensity > idleGlow,
+    'recovery still draws attention to the target');
+  assert.ok(seed.material.emissiveIntensity < 0.40,
+    'the pulse does not wash out the amber surface');
+  visual.dispose();
 });

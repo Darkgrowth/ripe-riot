@@ -130,11 +130,16 @@ export class EncounterVisual {
       }
       if (this.prize) {
         if (this.voxelSnapjaw) this.prize.visible = state.phase !== 'defeated';
-        this.prize.position.y = 1.36 + (recovering ? 0.35 : 0.06);
-        this.prize.scale.setScalar(recovering ? 1.23 : 1 + Math.sin(this.time * 3.2) * 0.06);
+        this.prize.position.y = this.voxelSnapjaw
+          ? 1.36 + (recovering ? 0.20 : 0.03)
+          : 1.36 + (recovering ? 0.35 : 0.06);
+        this.prize.scale.setScalar(this.voxelSnapjaw
+          ? recovering ? 1.02 + pulse * 0.06 : 0.92 + Math.sin(this.time * 3.2) * 0.025
+          : recovering ? 1.23 : 1 + Math.sin(this.time * 3.2) * 0.06);
       }
       if (this.glow) this.glow.emissiveIntensity = this.voxelSnapjaw
-        && state.phase === 'defeated' ? 0 : recovering ? 1.7 : 0.65;
+        ? state.phase === 'defeated' ? 0 : recovering ? 0.19 + pulse * 0.08 : 0.07
+        : recovering ? 1.7 : 0.65;
       for (const eye of this.eyes) eye.scale.setScalar(warning || attacking ? 1.25 : 1);
       if (this.voxelSnapjaw && this.eyes[0]?.material instanceof THREE.MeshStandardMaterial)
         this.eyes[0].material.emissiveIntensity = state.phase === 'defeated' ? 0 : 0.33;
@@ -230,7 +235,7 @@ export class EncounterVisual {
       roughness: 0.44, emissive: color(0xff6533), emissiveIntensity: 0.33,
       flatShading: true });
     const core = new THREE.MeshStandardMaterial({ vertexColors: true,
-      roughness: 0.42, emissive: color(0xffb553), emissiveIntensity: 0.65,
+      roughness: 0.7, emissive: color(0x9d4418), emissiveIntensity: 0.07,
       flatShading: true });
     this.glow = core;
     this.snapjawAnatomy = new THREE.Group();
@@ -250,7 +255,7 @@ export class EncounterVisual {
       const eye = mesh(voxelSnapjawEye(), ember, this.upperJaw, x, 0.17, 1.12);
       this.eyes.push(eye);
     }
-    this.prize = mesh(voxelSnapjawCore(), core, body, 0, 1.42, 1.08);
+    this.prize = mesh(voxelSnapjawCore(), core, body, 0, 1.39, 0.55);
     this.prize.name = 'Snapjaw exposed seed';
   }
 
