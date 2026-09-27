@@ -4,7 +4,7 @@ import { Terrain } from './Terrain';
 import { Ocean } from './Ocean';
 import { buildLandmarks, type BuiltLandmarks } from './Landmarks';
 import { Dressing } from './Dressing';
-import { buildVoxelClearingTerrain } from '@/art/voxel/VoxelClearingTerrain';
+import { paintVoxelClearingTerrain } from '@/art/voxel/VoxelClearingTerrain';
 import type { VisualMode } from '@/art/voxel/VisualMode';
 
 export interface Landmark {
@@ -39,8 +39,7 @@ export class Sunpatch implements System {
     this.root.name = 'Sunpatch';
     g.renderer.scene.add(this.root);
     this.terrain.build(g.renderer.scene, g.physics, true);
-    if (this.visualMode === 'voxel')
-      this.root.add(buildVoxelClearingTerrain(this.terrain));
+    if (this.visualMode === 'voxel') paintVoxelClearingTerrain(this.terrain);
     this.ocean.build(g.renderer.scene, this.terrain, g.renderer.sunDir);
     this.defineLandmarks();
     this.built = buildLandmarks(g.renderer.scene, g.physics, this.terrain, this.visualMode);
