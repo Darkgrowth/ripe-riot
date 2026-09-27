@@ -1,0 +1,2287 @@
+{
+  "metadata": {
+    "base": "http://127.0.0.1:5218",
+    "commit": "e60728c037dad3d42a5820f1e73e4a5c4e47a6be",
+    "platform": "win32",
+    "browser": "151.0.7922.34",
+    "viewport": [
+      1920,
+      1080
+    ],
+    "dpr": 1,
+    "chromiumFlags": [
+      "--enable-gpu",
+      "--ignore-gpu-blocklist",
+      "--disable-background-timer-throttling",
+      "--disable-renderer-backgrounding",
+      "--disable-backgrounding-occluded-windows",
+      "--use-angle=d3d11"
+    ],
+    "routeXZ": [
+      [
+        58,
+        62
+      ],
+      [
+        55.5,
+        61
+      ],
+      [
+        50.5,
+        61.5
+      ],
+      [
+        44,
+        62.5
+      ],
+      [
+        37.2,
+        58.2
+      ],
+      [
+        30,
+        54
+      ],
+      [
+        25,
+        46
+      ],
+      [
+        11,
+        38.6
+      ],
+      [
+        -3.5,
+        31.4
+      ],
+      [
+        -7.5,
+        29.5
+      ]
+    ],
+    "secondsPerPhase": 5,
+    "warmupSeconds": 30,
+    "order": [
+      "baseline",
+      "voxel"
+    ],
+    "gpuTimer": true,
+    "created": "2026-09-27T10:33:54.001Z",
+    "caveat": "Scripted matched camera motion and active encounter. rAF is wall-clock pacing; Game.profile is CPU time. Scene inventory ignores frustum culling. No GPU timer queries.",
+    "rawSamples": false
+  },
+  "runs": [
+    {
+      "mode": "baseline",
+      "errors": [],
+      "gpu": {
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "vendor": "Google Inc. (NVIDIA)",
+        "webgl": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+        "timerQuery": true,
+        "softwareRenderer": false
+      },
+      "phases": [
+        {
+          "name": "dock-static",
+          "wallSeconds": 5,
+          "frames": 811,
+          "frameMs": {
+            "n": 811,
+            "mean": 5.56,
+            "p50": 5.6,
+            "p95": 5.6,
+            "p99": 5.7,
+            "max": 5.8
+          },
+          "cpuTotalMs": {
+            "n": 811,
+            "mean": 2.57,
+            "p50": 2.5,
+            "p95": 3.6,
+            "p99": 4.4,
+            "max": 8.1
+          },
+          "cpuRenderMs": {
+            "n": 811,
+            "mean": 1.54,
+            "p50": 1.5,
+            "p95": 2.2,
+            "p99": 2.7,
+            "max": 5.8
+          },
+          "cpuFixedMs": {
+            "n": 811,
+            "mean": 0.16,
+            "p50": 0,
+            "p95": 0.6,
+            "p99": 0.6,
+            "max": 0.8
+          },
+          "cpuPhysicsMs": {
+            "n": 811,
+            "mean": 0.09,
+            "p50": 0,
+            "p95": 0.3,
+            "p99": 0.4,
+            "max": 0.6
+          },
+          "drawCalls": {
+            "n": 811,
+            "mean": 262,
+            "p50": 262,
+            "p95": 262,
+            "p99": 262,
+            "max": 262
+          },
+          "triangles": {
+            "n": 811,
+            "mean": 937604,
+            "p50": 937604,
+            "p95": 937604,
+            "p99": 937604,
+            "max": 937604
+          },
+          "gpuRenderMs": {
+            "n": 300,
+            "mean": 3.53,
+            "p50": 3.59,
+            "p95": 4.08,
+            "p99": 4.45,
+            "max": 5.41
+          },
+          "gpuDisjoint": 0,
+          "lastPosition": [
+            71.50000449926463,
+            2.3508349234685593,
+            71.49999657971124
+          ],
+          "averagePacedFps": 179.86,
+          "over16_67MsPct": 0
+        },
+        {
+          "name": "dock-to-orchard-scripted-motion",
+          "wallSeconds": 5,
+          "frames": 813,
+          "frameMs": {
+            "n": 813,
+            "mean": 5.56,
+            "p50": 5.6,
+            "p95": 5.6,
+            "p99": 5.7,
+            "max": 5.7
+          },
+          "cpuTotalMs": {
+            "n": 813,
+            "mean": 2.26,
+            "p50": 2.2,
+            "p95": 3.1,
+            "p99": 3.4,
+            "max": 4.3
+          },
+          "cpuRenderMs": {
+            "n": 813,
+            "mean": 1.32,
+            "p50": 1.3,
+            "p95": 1.8,
+            "p99": 2,
+            "max": 2.5
+          },
+          "cpuFixedMs": {
+            "n": 813,
+            "mean": 0.15,
+            "p50": 0,
+            "p95": 0.5,
+            "p99": 0.7,
+            "max": 0.7
+          },
+          "cpuPhysicsMs": {
+            "n": 813,
+            "mean": 0.08,
+            "p50": 0,
+            "p95": 0.3,
+            "p99": 0.3,
+            "max": 0.4
+          },
+          "drawCalls": {
+            "n": 813,
+            "mean": 256,
+            "p50": 256,
+            "p95": 289,
+            "p99": 289,
+            "max": 289
+          },
+          "triangles": {
+            "n": 813,
+            "mean": 930891,
+            "p50": 931940,
+            "p95": 934670,
+            "p99": 938182,
+            "max": 938776
+          },
+          "gpuRenderMs": {
+            "n": 301,
+            "mean": 3.57,
+            "p50": 3.68,
+            "p95": 4.11,
+            "p99": 4.21,
+            "max": 4.41
+          },
+          "gpuDisjoint": 0,
+          "lastPosition": [
+            71.50000449926463,
+            2.35083491063377,
+            71.49999657971124
+          ],
+          "averagePacedFps": 179.86,
+          "over16_67MsPct": 0
+        },
+        {
+          "name": "active-mimic-encounter",
+          "wallSeconds": 5,
+          "frames": 813,
+          "frameMs": {
+            "n": 813,
+            "mean": 5.56,
+            "p50": 5.6,
+            "p95": 5.6,
+            "p99": 5.7,
+            "max": 6.7
+          },
+          "cpuTotalMs": {
+            "n": 813,
+            "mean": 2.38,
+            "p50": 2.2,
+            "p95": 3.6,
+            "p99": 4.4,
+            "max": 5.9
+          },
+          "cpuRenderMs": {
+            "n": 813,
+            "mean": 1.25,
+            "p50": 1.2,
+            "p95": 1.8,
+            "p99": 2.2,
+            "max": 3.3
+          },
+          "cpuFixedMs": {
+            "n": 813,
+            "mean": 0.19,
+            "p50": 0,
+            "p95": 0.7,
+            "p99": 0.8,
+            "max": 1.4
+          },
+          "cpuPhysicsMs": {
+            "n": 813,
+            "mean": 0.15,
+            "p50": 0,
+            "p95": 0.5,
+            "p99": 0.6,
+            "max": 0.9
+          },
+          "drawCalls": {
+            "n": 813,
+            "mean": 193.17,
+            "p50": 193,
+            "p95": 194,
+            "p99": 194,
+            "max": 194
+          },
+          "triangles": {
+            "n": 813,
+            "mean": 926182.15,
+            "p50": 926172,
+            "p95": 926228,
+            "p99": 926228,
+            "max": 926228
+          },
+          "gpuRenderMs": {
+            "n": 301,
+            "mean": 3.44,
+            "p50": 3.53,
+            "p95": 4.03,
+            "p99": 4.3,
+            "max": 6.15
+          },
+          "gpuDisjoint": 0,
+          "lastPosition": [
+            -12.499998279311166,
+            7.520213829083514,
+            27.200004860189985
+          ],
+          "averagePacedFps": 179.86,
+          "over16_67MsPct": 0
+        }
+      ],
+      "shadow": {
+        "on": {
+          "name": "orchard-shadows-on",
+          "wallSeconds": 5,
+          "frames": 811,
+          "frameMs": {
+            "n": 811,
+            "mean": 5.56,
+            "p50": 5.6,
+            "p95": 5.6,
+            "p99": 5.7,
+            "max": 5.7
+          },
+          "cpuTotalMs": {
+            "n": 811,
+            "mean": 2.04,
+            "p50": 2,
+            "p95": 2.7,
+            "p99": 3,
+            "max": 3.8
+          },
+          "cpuRenderMs": {
+            "n": 811,
+            "mean": 1.11,
+            "p50": 1.1,
+            "p95": 1.5,
+            "p99": 1.7,
+            "max": 2.1
+          },
+          "cpuFixedMs": {
+            "n": 811,
+            "mean": 0.14,
+            "p50": 0,
+            "p95": 0.5,
+            "p99": 0.6,
+            "max": 0.7
+          },
+          "cpuPhysicsMs": {
+            "n": 811,
+            "mean": 0.08,
+            "p50": 0,
+            "p95": 0.3,
+            "p99": 0.3,
+            "max": 0.5
+          },
+          "drawCalls": {
+            "n": 811,
+            "mean": 256,
+            "p50": 256,
+            "p95": 256,
+            "p99": 256,
+            "max": 256
+          },
+          "triangles": {
+            "n": 811,
+            "mean": 931580,
+            "p50": 931580,
+            "p95": 931580,
+            "p99": 931580,
+            "max": 931580
+          },
+          "gpuRenderMs": {
+            "n": 300,
+            "mean": 3.57,
+            "p50": 3.64,
+            "p95": 4.14,
+            "p99": 4.33,
+            "max": 4.43
+          },
+          "gpuDisjoint": 0,
+          "lastPosition": [
+            71.50000449926463,
+            2.35083495633406,
+            71.49999657971124
+          ],
+          "averagePacedFps": 179.86,
+          "over16_67MsPct": 0
+        },
+        "off": {
+          "name": "orchard-shadows-off",
+          "wallSeconds": 5,
+          "frames": 813,
+          "frameMs": {
+            "n": 813,
+            "mean": 5.56,
+            "p50": 5.6,
+            "p95": 5.6,
+            "p99": 5.7,
+            "max": 5.8
+          },
+          "cpuTotalMs": {
+            "n": 813,
+            "mean": 2.19,
+            "p50": 2.1,
+            "p95": 3.2,
+            "p99": 4,
+            "max": 4.7
+          },
+          "cpuRenderMs": {
+            "n": 813,
+            "mean": 1.12,
+            "p50": 1.1,
+            "p95": 1.7,
+            "p99": 2,
+            "max": 2.6
+          },
+          "cpuFixedMs": {
+            "n": 813,
+            "mean": 0.17,
+            "p50": 0,
+            "p95": 0.6,
+            "p99": 0.7,
+            "max": 0.9
+          },
+          "cpuPhysicsMs": {
+            "n": 813,
+            "mean": 0.09,
+            "p50": 0,
+            "p95": 0.3,
+            "p99": 0.4,
+            "max": 0.8
+          },
+          "drawCalls": {
+            "n": 813,
+            "mean": 141,
+            "p50": 141,
+            "p95": 141,
+            "p99": 141,
+            "max": 141
+          },
+          "triangles": {
+            "n": 813,
+            "mean": 557906,
+            "p50": 557906,
+            "p95": 557906,
+            "p99": 557906,
+            "max": 557906
+          },
+          "gpuRenderMs": {
+            "n": 301,
+            "mean": 2.69,
+            "p50": 2.74,
+            "p95": 3.35,
+            "p99": 3.61,
+            "max": 4.32
+          },
+          "gpuDisjoint": 0,
+          "lastPosition": [
+            71.50000449926463,
+            2.3508348635510483,
+            71.49999657971124
+          ],
+          "averagePacedFps": 179.86,
+          "over16_67MsPct": 0
+        },
+        "medianDraws": 115,
+        "medianTriangles": 373674
+      },
+      "inventory": {
+        "caveat": "Whole scene inventory: includes off-screen meshes and does not multiply for scene and shadow passes.",
+        "groups": [
+          {
+            "root": "Fruit:apple",
+            "meshes": 1,
+            "triangles": 96720,
+            "shadowCasters": 1,
+            "shadowTriangles": 96720
+          },
+          {
+            "root": "Ocean",
+            "meshes": 1,
+            "triangles": 64800,
+            "shadowCasters": 0,
+            "shadowTriangles": 0
+          },
+          {
+            "root": "Terrain",
+            "meshes": 1,
+            "triangles": 59858,
+            "shadowCasters": 0,
+            "shadowTriangles": 0
+          },
+          {
+            "root": "Props",
+            "meshes": 1,
+            "triangles": 46104,
+            "shadowCasters": 1,
+            "shadowTriangles": 46104
+          },
+          {
+            "root": "Fruit:orange",
+            "meshes": 1,
+            "triangles": 29328,
+            "shadowCasters": 1,
+            "shadowTriangles": 29328
+          },
+          {
+            "root": "Dressing:grass",
+            "meshes": 1,
+            "triangles": 25140,
+            "shadowCasters": 0,
+            "shadowTriangles": 0
+          },
+          {
+            "root": "Plants:appleTree:0:harvest",
+            "meshes": 1,
+            "triangles": 20020,
+            "shadowCasters": 1,
+            "shadowTriangles": 20020
+          },
+          {
+            "root": "Plants:appleTree:2:harvest",
+            "meshes": 1,
+            "triangles": 18480,
+            "shadowCasters": 1,
+            "shadowTriangles": 18480
+          },
+          {
+            "root": "Fruit:watermelon",
+            "meshes": 1,
+            "triangles": 17360,
+            "shadowCasters": 1,
+            "shadowTriangles": 17360
+          },
+          {
+            "root": "Dressing:bush",
+            "meshes": 1,
+            "triangles": 13920,
+            "shadowCasters": 0,
+            "shadowTriangles": 0
+          },
+          {
+            "root": "Plants:appleTree:1:harvest",
+            "meshes": 1,
+            "triangles": 13860,
+            "shadowCasters": 1,
+            "shadowTriangles": 13860
+          },
+          {
+            "root": "Fruit:coconut",
+            "meshes": 1,
+            "triangles": 11760,
+            "shadowCasters": 1,
+            "shadowTriangles": 11760
+          },
+          {
+            "root": "Dressing:flowerHead",
+            "meshes": 1,
+            "triangles": 11320,
+            "shadowCasters": 0,
+            "shadowTriangles": 0
+          },
+          {
+            "root": "Fruit:banana",
+            "meshes": 1,
+            "triangles": 11024,
+            "shadowCasters": 1,
+            "shadowTriangles": 11024
+          },
+          {
+            "root": "Dressing:bushBig",
+            "meshes": 1,
+            "triangles": 10200,
+            "shadowCasters": 1,
+            "shadowTriangles": 10200
+          },
+          {
+            "root": "Fruit:gluefruit",
+            "meshes": 1,
+            "triangles": 8976,
+            "shadowCasters": 1,
+            "shadowTriangles": 8976
+          },
+          {
+            "root": "Fruit:spikefruit",
+            "meshes": 1,
+            "triangles": 8448,
+            "shadowCasters": 1,
+            "shadowTriangles": 8448
+          },
+          {
+            "root": "Plants:palm:1",
+            "meshes": 1,
+            "triangles": 8384,
+            "shadowCasters": 1,
+            "shadowTriangles": 8384
+          },
+          {
+            "root": "Fruit:vinebomb",
+            "meshes": 1,
+            "triangles": 8232,
+            "shadowCasters": 1,
+            "shadowTriangles": 8232
+          },
+          {
+            "root": "Plants:orangeTree:0:harvest",
+            "meshes": 1,
+            "triangles": 8120,
+            "shadowCasters": 1,
+            "shadowTriangles": 8120
+          },
+          {
+            "root": "Fruit:puffmelon",
+            "meshes": 1,
+            "triangles": 7752,
+            "shadowCasters": 1,
+            "shadowTriangles": 7752
+          },
+          {
+            "root": "IslandCharacters",
+            "meshes": 9,
+            "triangles": 6364,
+            "shadowCasters": 9,
+            "shadowTriangles": 6364
+          },
+          {
+            "root": "Plants:orangeTree:2:harvest",
+            "meshes": 1,
+            "triangles": 5800,
+            "shadowCasters": 1,
+            "shadowTriangles": 5800
+          },
+          {
+            "root": "Plants:palm:2",
+            "meshes": 1,
+            "triangles": 5764,
+            "shadowCasters": 1,
+            "shadowTriangles": 5764
+          },
+          {
+            "root": "Plants:palm:0",
+            "meshes": 1,
+            "triangles": 5240,
+            "shadowCasters": 1,
+            "shadowTriangles": 5240
+          },
+          {
+            "root": "Dressing:flowerStem",
+            "meshes": 1,
+            "triangles": 4528,
+            "shadowCasters": 0,
+            "shadowTriangles": 0
+          },
+          {
+            "root": "KingMelon",
+            "meshes": 1,
+            "triangles": 4346,
+            "shadowCasters": 1,
+            "shadowTriangles": 4346
+          },
+          {
+            "root": "Rooted vine supports",
+            "meshes": 1,
+            "triangles": 3948,
+            "shadowCasters": 1,
+            "shadowTriangles": 3948
+          },
+          {
+            "root": "ConnectedWorkerVisual",
+            "meshes": 12,
+            "triangles": 3860,
+            "shadowCasters": 12,
+            "shadowTriangles": 3860
+          },
+          {
+            "root": "Plants:puffBush:0",
+            "meshes": 1,
+            "triangles": 2560,
+            "shadowCasters": 1,
+            "shadowTriangles": 2560
+          }
+        ],
+        "largestMeshes": [
+          {
+            "name": "Fruit:apple",
+            "root": "Fruit:apple",
+            "triangles": 96720,
+            "castShadow": true,
+            "geometry": "46074d1e-f9b5-4f11-8724-6fb0c827ada1",
+            "material": "fruit:apple"
+          },
+          {
+            "name": "Ocean",
+            "root": "Ocean",
+            "triangles": 64800,
+            "castShadow": false,
+            "geometry": "1042172b-ff1a-4059-8314-941a2f14aa40",
+            "material": "ShaderMaterial"
+          },
+          {
+            "name": "Terrain",
+            "root": "Terrain",
+            "triangles": 59858,
+            "castShadow": false,
+            "geometry": "c015548b-79d7-4079-ab74-b1578d7bd69f",
+            "material": "terrain"
+          },
+          {
+            "name": "Props",
+            "root": "Props",
+            "triangles": 46104,
+            "castShadow": true,
+            "geometry": "2229602e-0ed3-4953-96a5-0eb631251deb",
+            "material": "props"
+          },
+          {
+            "name": "Fruit:orange",
+            "root": "Fruit:orange",
+            "triangles": 29328,
+            "castShadow": true,
+            "geometry": "abb80f31-61a0-4209-9e64-10765b503e5c",
+            "material": "fruit:orange"
+          },
+          {
+            "name": "Dressing:grass",
+            "root": "Dressing:grass",
+            "triangles": 25140,
+            "castShadow": false,
+            "geometry": "c916f6df-33b1-4d42-8778-e2f7f325124c",
+            "material": "dressing:grass"
+          },
+          {
+            "name": "Plants:appleTree:0:harvest",
+            "root": "Plants:appleTree:0:harvest",
+            "triangles": 20020,
+            "castShadow": true,
+            "geometry": "07221f44-44f9-4ee3-b9f6-1aa485722f63",
+            "material": "plant:appleTree"
+          },
+          {
+            "name": "Plants:appleTree:2:harvest",
+            "root": "Plants:appleTree:2:harvest",
+            "triangles": 18480,
+            "castShadow": true,
+            "geometry": "bc853aeb-2cfe-44bf-9d98-dff610a0553e",
+            "material": "plant:appleTree"
+          },
+          {
+            "name": "Fruit:watermelon",
+            "root": "Fruit:watermelon",
+            "triangles": 17360,
+            "castShadow": true,
+            "geometry": "6c9e1d51-e05d-4434-aa24-17151124380e",
+            "material": "fruit:watermelon"
+          },
+          {
+            "name": "Dressing:bush",
+            "root": "Dressing:bush",
+            "triangles": 13920,
+            "castShadow": false,
+            "geometry": "b98645b8-9d09-4d93-afa2-e03855138858",
+            "material": "dressing:bush"
+          },
+          {
+            "name": "Plants:appleTree:1:harvest",
+            "root": "Plants:appleTree:1:harvest",
+            "triangles": 13860,
+            "castShadow": true,
+            "geometry": "b0d426df-26f9-406e-ba1c-88f27c380118",
+            "material": "plant:appleTree"
+          },
+          {
+            "name": "Fruit:coconut",
+            "root": "Fruit:coconut",
+            "triangles": 11760,
+            "castShadow": true,
+            "geometry": "bad7ae75-a70f-4ec7-ba90-a62371f0b96e",
+            "material": "fruit:coconut"
+          },
+          {
+            "name": "Dressing:flowerHead",
+            "root": "Dressing:flowerHead",
+            "triangles": 11320,
+            "castShadow": false,
+            "geometry": "8a9eb707-5b1b-4f16-842d-b5c1e9c70a7f",
+            "material": "dressing:flowerHead"
+          },
+          {
+            "name": "Fruit:banana",
+            "root": "Fruit:banana",
+            "triangles": 11024,
+            "castShadow": true,
+            "geometry": "55f7fb67-f5af-466f-96e4-0ebde25e1248",
+            "material": "fruit:banana"
+          },
+          {
+            "name": "Dressing:bushBig",
+            "root": "Dressing:bushBig",
+            "triangles": 10200,
+            "castShadow": true,
+            "geometry": "508e4873-031d-40e0-9a98-8fc40130f36a",
+            "material": "dressing:bushBig"
+          },
+          {
+            "name": "Fruit:gluefruit",
+            "root": "Fruit:gluefruit",
+            "triangles": 8976,
+            "castShadow": true,
+            "geometry": "dc700d54-3bdf-43bc-8d65-def10e853893",
+            "material": "fruit:gluefruit"
+          },
+          {
+            "name": "Fruit:spikefruit",
+            "root": "Fruit:spikefruit",
+            "triangles": 8448,
+            "castShadow": true,
+            "geometry": "ef87fe08-5794-4c52-b0ac-484249908f3b",
+            "material": "fruit:spikefruit"
+          },
+          {
+            "name": "Plants:palm:1",
+            "root": "Plants:palm:1",
+            "triangles": 8384,
+            "castShadow": true,
+            "geometry": "62421498-1ce8-41b6-9746-b851f442e9a9",
+            "material": "plant:palm"
+          },
+          {
+            "name": "Fruit:vinebomb",
+            "root": "Fruit:vinebomb",
+            "triangles": 8232,
+            "castShadow": true,
+            "geometry": "ab5bdbc3-48e7-4dfe-af57-df641ff17eb1",
+            "material": "fruit:vinebomb"
+          },
+          {
+            "name": "Plants:orangeTree:0:harvest",
+            "root": "Plants:orangeTree:0:harvest",
+            "triangles": 8120,
+            "castShadow": true,
+            "geometry": "395bd625-eb06-4879-a449-15e7c3741e04",
+            "material": "plant:orangeTree"
+          },
+          {
+            "name": "Fruit:puffmelon",
+            "root": "Fruit:puffmelon",
+            "triangles": 7752,
+            "castShadow": true,
+            "geometry": "8839a802-61d3-4016-9af8-9d37cfba2df2",
+            "material": "fruit:puffmelon"
+          },
+          {
+            "name": "Plants:orangeTree:2:harvest",
+            "root": "Plants:orangeTree:2:harvest",
+            "triangles": 5800,
+            "castShadow": true,
+            "geometry": "8d0d29ca-6418-4f7d-9785-d5e986fe065e",
+            "material": "plant:orangeTree"
+          },
+          {
+            "name": "Plants:palm:2",
+            "root": "Plants:palm:2",
+            "triangles": 5764,
+            "castShadow": true,
+            "geometry": "8fdbfecf-6349-4b21-9ee0-8c0965f0b199",
+            "material": "plant:palm"
+          },
+          {
+            "name": "Plants:palm:0",
+            "root": "Plants:palm:0",
+            "triangles": 5240,
+            "castShadow": true,
+            "geometry": "2025c951-8788-4361-b825-cc7b8b08c4dd",
+            "material": "plant:palm"
+          },
+          {
+            "name": "Dressing:flowerStem",
+            "root": "Dressing:flowerStem",
+            "triangles": 4528,
+            "castShadow": false,
+            "geometry": "94261315-5381-4be8-8ec8-181876367af5",
+            "material": "dressing:flowerStem"
+          },
+          {
+            "name": "KingMelon",
+            "root": "KingMelon",
+            "triangles": 4346,
+            "castShadow": true,
+            "geometry": "08196547-e820-44e9-b7e1-c131472b22b7",
+            "material": "kingMelon"
+          },
+          {
+            "name": "Rooted vine supports",
+            "root": "Rooted vine supports",
+            "triangles": 3948,
+            "castShadow": true,
+            "geometry": "0628fcda-3e4e-4015-aa8a-e63fe6a1238b",
+            "material": "MeshStandardMaterial"
+          },
+          {
+            "name": "WorkerBody",
+            "root": "ConnectedWorkerVisual",
+            "triangles": 3376,
+            "castShadow": true,
+            "geometry": "096fedc0-de11-4eff-a0b8-7bc20fc48dd3",
+            "material": "suit"
+          },
+          {
+            "name": "Plants:puffBush:0",
+            "root": "Plants:puffBush:0",
+            "triangles": 2560,
+            "castShadow": true,
+            "geometry": "5d667c1a-5e13-4c0a-b85d-be20bc9feda7",
+            "material": "plant:puffBush"
+          },
+          {
+            "name": "Plants:orangeTree:1:harvest",
+            "root": "Plants:orangeTree:1:harvest",
+            "triangles": 2320,
+            "castShadow": true,
+            "geometry": "b4efbfcd-36f9-4f43-a82e-3da0af125888",
+            "material": "plant:orangeTree"
+          }
+        ]
+      },
+      "encounter": null,
+      "remoteWorker": {
+        "remoteCount": 1,
+        "measuredWithSecondCanvasRunning": true,
+        "phase": {
+          "name": "two-worker-presentation",
+          "wallSeconds": 5,
+          "frames": 811,
+          "frameMs": {
+            "n": 811,
+            "mean": 5.56,
+            "p50": 5.6,
+            "p95": 5.6,
+            "p99": 5.7,
+            "max": 11.1
+          },
+          "cpuTotalMs": {
+            "n": 811,
+            "mean": 2.27,
+            "p50": 2.2,
+            "p95": 3.2,
+            "p99": 3.8,
+            "max": 7
+          },
+          "cpuRenderMs": {
+            "n": 811,
+            "mean": 1.23,
+            "p50": 1.2,
+            "p95": 1.7,
+            "p99": 1.9,
+            "max": 4.5
+          },
+          "cpuFixedMs": {
+            "n": 811,
+            "mean": 0.18,
+            "p50": 0,
+            "p95": 0.7,
+            "p99": 0.8,
+            "max": 1.1
+          },
+          "cpuPhysicsMs": {
+            "n": 811,
+            "mean": 0.09,
+            "p50": 0,
+            "p95": 0.3,
+            "p99": 0.4,
+            "max": 0.5
+          },
+          "drawCalls": {
+            "n": 811,
+            "mean": 179,
+            "p50": 179,
+            "p95": 179,
+            "p99": 179,
+            "max": 179
+          },
+          "triangles": {
+            "n": 811,
+            "mean": 927222,
+            "p50": 927222,
+            "p95": 927222,
+            "p99": 927222,
+            "max": 927222
+          },
+          "gpuRenderMs": {
+            "n": 301,
+            "mean": 2.06,
+            "p50": 2.23,
+            "p95": 3.86,
+            "p99": 4.31,
+            "max": 6.56
+          },
+          "gpuDisjoint": 0,
+          "lastPosition": [
+            71.50000449926463,
+            2.350834907730663,
+            71.49999657971124
+          ],
+          "averagePacedFps": 179.86,
+          "over16_67MsPct": 0
+        }
+      },
+      "settings": {
+        "canvasPixels": [
+          1920,
+          1080
+        ],
+        "pixelRatio": 1,
+        "antialias": true,
+        "shadow": {
+          "enabled": true,
+          "type": 2,
+          "castShadow": true,
+          "mapSize": [
+            2048,
+            2048
+          ],
+          "lightPos": [
+            121.6,
+            77.6,
+            111.1
+          ],
+          "target": [
+            57.2,
+            4,
+            60.8
+          ],
+          "frustum": [
+            -56,
+            56,
+            56,
+            -56,
+            0.5,
+            220
+          ],
+          "intensity": 2.45
+        },
+        "outputColorSpace": "srgb",
+        "toneMapping": 4,
+        "exposure": 1.06
+      },
+      "encounterBefore": {
+        "revision": 3240,
+        "encounters": [
+          {
+            "kind": "mimic",
+            "position": [
+              -23,
+              7.5,
+              22
+            ],
+            "heading": 1.1109654931531385,
+            "phase": "warn",
+            "timeLeft": 0.2999999999999992,
+            "health": 3,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          {
+            "kind": "snapjaw",
+            "position": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": 0,
+            "phase": "idle",
+            "timeLeft": 0,
+            "health": 2,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          {
+            "kind": "spitter",
+            "position": [
+              -31,
+              16.3015840352825,
+              -8
+            ],
+            "heading": 0,
+            "phase": "idle",
+            "timeLeft": 0,
+            "health": 2,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        ],
+        "projectiles": []
+      },
+      "encounterAfter": {
+        "encounters": {
+          "revision": 3561,
+          "encounters": [
+            {
+              "kind": "mimic",
+              "position": [
+                -14.023414440035282,
+                7.5,
+                26.445546864023484
+              ],
+              "heading": 1.1109625956218474,
+              "phase": "warn",
+              "timeLeft": 0.24999999999999922,
+              "health": 3,
+              "baited": false,
+              "capturedVictimId": null,
+              "captureTimeLeft": 0
+            },
+            {
+              "kind": "snapjaw",
+              "position": [
+                -28,
+                7.5,
+                11
+              ],
+              "heading": 0,
+              "phase": "idle",
+              "timeLeft": 0,
+              "health": 2,
+              "baited": false,
+              "capturedVictimId": null,
+              "captureTimeLeft": 0
+            },
+            {
+              "kind": "spitter",
+              "position": [
+                -31,
+                16.3015840352825,
+                -8
+              ],
+              "heading": 0,
+              "phase": "idle",
+              "timeLeft": 0,
+              "health": 2,
+              "baited": false,
+              "capturedVictimId": null,
+              "captureTimeLeft": 0
+            }
+          ],
+          "projectiles": []
+        },
+        "health": 44,
+        "events": [
+          {
+            "name": "encounter:attack",
+            "gameSeconds": 55.33333333333149,
+            "payload": {
+              "kind": "mimic",
+              "victimId": "solo",
+              "damage": 28
+            }
+          },
+          {
+            "name": "encounter:attack",
+            "gameSeconds": 57.483333333331366,
+            "payload": {
+              "kind": "mimic",
+              "victimId": "solo",
+              "damage": 28
+            }
+          }
+        ]
+      },
+      "encounterActive": true
+    },
+    {
+      "mode": "voxel",
+      "errors": [],
+      "gpu": {
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "vendor": "Google Inc. (NVIDIA)",
+        "webgl": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+        "timerQuery": true,
+        "softwareRenderer": false
+      },
+      "phases": [
+        {
+          "name": "dock-static",
+          "wallSeconds": 5,
+          "frames": 812,
+          "frameMs": {
+            "n": 812,
+            "mean": 5.56,
+            "p50": 5.6,
+            "p95": 5.6,
+            "p99": 5.7,
+            "max": 5.8
+          },
+          "cpuTotalMs": {
+            "n": 812,
+            "mean": 2.09,
+            "p50": 2,
+            "p95": 2.9,
+            "p99": 3.4,
+            "max": 4.1
+          },
+          "cpuRenderMs": {
+            "n": 812,
+            "mean": 1.17,
+            "p50": 1.1,
+            "p95": 1.6,
+            "p99": 1.9,
+            "max": 2.6
+          },
+          "cpuFixedMs": {
+            "n": 812,
+            "mean": 0.16,
+            "p50": 0,
+            "p95": 0.6,
+            "p99": 0.7,
+            "max": 0.8
+          },
+          "cpuPhysicsMs": {
+            "n": 812,
+            "mean": 0.08,
+            "p50": 0,
+            "p95": 0.3,
+            "p99": 0.4,
+            "max": 0.5
+          },
+          "drawCalls": {
+            "n": 812,
+            "mean": 246,
+            "p50": 246,
+            "p95": 246,
+            "p99": 246,
+            "max": 246
+          },
+          "triangles": {
+            "n": 812,
+            "mean": 2358308,
+            "p50": 2358308,
+            "p95": 2358308,
+            "p99": 2358308,
+            "max": 2358308
+          },
+          "gpuRenderMs": {
+            "n": 300,
+            "mean": 3.57,
+            "p50": 3.72,
+            "p95": 4.18,
+            "p99": 4.36,
+            "max": 4.55
+          },
+          "gpuDisjoint": 0,
+          "lastPosition": [
+            71.50000449926463,
+            2.350834870645107,
+            71.49999657971124
+          ],
+          "averagePacedFps": 179.86,
+          "over16_67MsPct": 0
+        },
+        {
+          "name": "dock-to-orchard-scripted-motion",
+          "wallSeconds": 5,
+          "frames": 811,
+          "frameMs": {
+            "n": 811,
+            "mean": 5.56,
+            "p50": 5.6,
+            "p95": 5.6,
+            "p99": 5.7,
+            "max": 5.8
+          },
+          "cpuTotalMs": {
+            "n": 811,
+            "mean": 2.08,
+            "p50": 2,
+            "p95": 2.8,
+            "p99": 3.2,
+            "max": 9.7
+          },
+          "cpuRenderMs": {
+            "n": 811,
+            "mean": 1.14,
+            "p50": 1.1,
+            "p95": 1.5,
+            "p99": 1.7,
+            "max": 2.4
+          },
+          "cpuFixedMs": {
+            "n": 811,
+            "mean": 0.15,
+            "p50": 0,
+            "p95": 0.5,
+            "p99": 0.6,
+            "max": 0.8
+          },
+          "cpuPhysicsMs": {
+            "n": 811,
+            "mean": 0.08,
+            "p50": 0,
+            "p95": 0.3,
+            "p99": 0.3,
+            "max": 0.4
+          },
+          "drawCalls": {
+            "n": 811,
+            "mean": 238.84,
+            "p50": 239,
+            "p95": 270,
+            "p99": 270,
+            "max": 270
+          },
+          "triangles": {
+            "n": 811,
+            "mean": 2372525.53,
+            "p50": 2346186,
+            "p95": 2526944,
+            "p99": 2545084,
+            "max": 2545116
+          },
+          "gpuRenderMs": {
+            "n": 301,
+            "mean": 3.59,
+            "p50": 3.68,
+            "p95": 4.19,
+            "p99": 4.49,
+            "max": 4.68
+          },
+          "gpuDisjoint": 0,
+          "lastPosition": [
+            71.50000449926463,
+            2.350834950607881,
+            71.49999657971124
+          ],
+          "averagePacedFps": 179.86,
+          "over16_67MsPct": 0
+        },
+        {
+          "name": "active-mimic-encounter",
+          "wallSeconds": 5,
+          "frames": 812,
+          "frameMs": {
+            "n": 812,
+            "mean": 5.56,
+            "p50": 5.6,
+            "p95": 5.6,
+            "p99": 5.7,
+            "max": 5.7
+          },
+          "cpuTotalMs": {
+            "n": 812,
+            "mean": 2.1,
+            "p50": 2,
+            "p95": 3.1,
+            "p99": 3.6,
+            "max": 4.1
+          },
+          "cpuRenderMs": {
+            "n": 812,
+            "mean": 1.04,
+            "p50": 1,
+            "p95": 1.5,
+            "p99": 1.7,
+            "max": 2.2
+          },
+          "cpuFixedMs": {
+            "n": 812,
+            "mean": 0.18,
+            "p50": 0,
+            "p95": 0.6,
+            "p99": 0.7,
+            "max": 1
+          },
+          "cpuPhysicsMs": {
+            "n": 812,
+            "mean": 0.14,
+            "p50": 0,
+            "p95": 0.5,
+            "p99": 0.5,
+            "max": 0.6
+          },
+          "drawCalls": {
+            "n": 812,
+            "mean": 205.04,
+            "p50": 205,
+            "p95": 206,
+            "p99": 206,
+            "max": 206
+          },
+          "triangles": {
+            "n": 812,
+            "mean": 2545980.8,
+            "p50": 2545968,
+            "p95": 2546460,
+            "p99": 2546460,
+            "max": 2546460
+          },
+          "gpuRenderMs": {
+            "n": 301,
+            "mean": 3.47,
+            "p50": 3.59,
+            "p95": 4.14,
+            "p99": 4.35,
+            "max": 4.51
+          },
+          "gpuDisjoint": 0,
+          "lastPosition": [
+            -12.500002661470454,
+            7.520100051856571,
+            27.19999720290925
+          ],
+          "averagePacedFps": 179.86,
+          "over16_67MsPct": 0
+        }
+      ],
+      "shadow": {
+        "on": {
+          "name": "orchard-shadows-on",
+          "wallSeconds": 5,
+          "frames": 812,
+          "frameMs": {
+            "n": 812,
+            "mean": 5.56,
+            "p50": 5.6,
+            "p95": 5.6,
+            "p99": 5.7,
+            "max": 5.8
+          },
+          "cpuTotalMs": {
+            "n": 812,
+            "mean": 2.17,
+            "p50": 2.1,
+            "p95": 3,
+            "p99": 3.4,
+            "max": 4.5
+          },
+          "cpuRenderMs": {
+            "n": 812,
+            "mean": 1.21,
+            "p50": 1.2,
+            "p95": 1.7,
+            "p99": 1.9,
+            "max": 2.7
+          },
+          "cpuFixedMs": {
+            "n": 812,
+            "mean": 0.15,
+            "p50": 0,
+            "p95": 0.5,
+            "p99": 0.6,
+            "max": 0.7
+          },
+          "cpuPhysicsMs": {
+            "n": 812,
+            "mean": 0.08,
+            "p50": 0,
+            "p95": 0.3,
+            "p99": 0.3,
+            "max": 0.4
+          },
+          "drawCalls": {
+            "n": 812,
+            "mean": 262,
+            "p50": 262,
+            "p95": 262,
+            "p99": 262,
+            "max": 262
+          },
+          "triangles": {
+            "n": 812,
+            "mean": 2544562,
+            "p50": 2544562,
+            "p95": 2544562,
+            "p99": 2544562,
+            "max": 2544562
+          },
+          "gpuRenderMs": {
+            "n": 300,
+            "mean": 3.65,
+            "p50": 3.76,
+            "p95": 4.24,
+            "p99": 4.45,
+            "max": 4.96
+          },
+          "gpuDisjoint": 0,
+          "lastPosition": [
+            71.50000449926463,
+            2.3508348307000997,
+            71.49999657971124
+          ],
+          "averagePacedFps": 179.86,
+          "over16_67MsPct": 0
+        },
+        "off": {
+          "name": "orchard-shadows-off",
+          "wallSeconds": 5,
+          "frames": 813,
+          "frameMs": {
+            "n": 813,
+            "mean": 5.56,
+            "p50": 5.6,
+            "p95": 5.6,
+            "p99": 5.7,
+            "max": 5.7
+          },
+          "cpuTotalMs": {
+            "n": 813,
+            "mean": 1.84,
+            "p50": 1.8,
+            "p95": 2.5,
+            "p99": 3,
+            "max": 3.5
+          },
+          "cpuRenderMs": {
+            "n": 813,
+            "mean": 0.88,
+            "p50": 0.8,
+            "p95": 1.2,
+            "p99": 1.5,
+            "max": 1.7
+          },
+          "cpuFixedMs": {
+            "n": 813,
+            "mean": 0.16,
+            "p50": 0,
+            "p95": 0.5,
+            "p99": 0.6,
+            "max": 0.8
+          },
+          "cpuPhysicsMs": {
+            "n": 813,
+            "mean": 0.08,
+            "p50": 0,
+            "p95": 0.3,
+            "p99": 0.3,
+            "max": 0.5
+          },
+          "drawCalls": {
+            "n": 813,
+            "mean": 159,
+            "p50": 159,
+            "p95": 159,
+            "p99": 159,
+            "max": 159
+          },
+          "triangles": {
+            "n": 813,
+            "mean": 1622297,
+            "p50": 1622297,
+            "p95": 1622297,
+            "p99": 1622297,
+            "max": 1622297
+          },
+          "gpuRenderMs": {
+            "n": 301,
+            "mean": 3.32,
+            "p50": 3.36,
+            "p95": 3.84,
+            "p99": 4.04,
+            "max": 4.31
+          },
+          "gpuDisjoint": 0,
+          "lastPosition": [
+            71.50000449926463,
+            2.3508349891850084,
+            71.49999657971124
+          ],
+          "averagePacedFps": 179.86,
+          "over16_67MsPct": 0
+        },
+        "medianDraws": 103,
+        "medianTriangles": 922265
+      },
+      "inventory": {
+        "caveat": "Whole scene inventory: includes off-screen meshes and does not multiply for scene and shadow passes.",
+        "groups": [
+          {
+            "root": "Plants:appleTree:0:harvest:voxel",
+            "meshes": 1,
+            "triangles": 141700,
+            "shadowCasters": 1,
+            "shadowTriangles": 141700
+          },
+          {
+            "root": "Props",
+            "meshes": 1,
+            "triangles": 105228,
+            "shadowCasters": 1,
+            "shadowTriangles": 105228
+          },
+          {
+            "root": "Fruit:apple:far",
+            "meshes": 1,
+            "triangles": 102416,
+            "shadowCasters": 0,
+            "shadowTriangles": 0
+          },
+          {
+            "root": "Dressing:voxel:bush",
+            "meshes": 1,
+            "triangles": 87048,
+            "shadowCasters": 0,
+            "shadowTriangles": 0
+          },
+          {
+            "root": "Fruit:apple",
+            "meshes": 1,
+            "triangles": 81488,
+            "shadowCasters": 1,
+            "shadowTriangles": 81488
+          },
+          {
+            "root": "Fruit:coconut:far",
+            "meshes": 1,
+            "triangles": 68160,
+            "shadowCasters": 0,
+            "shadowTriangles": 0
+          },
+          {
+            "root": "Dressing:voxel:grass",
+            "meshes": 1,
+            "triangles": 68136,
+            "shadowCasters": 0,
+            "shadowTriangles": 0
+          },
+          {
+            "root": "Ocean",
+            "meshes": 1,
+            "triangles": 64800,
+            "shadowCasters": 0,
+            "shadowTriangles": 0
+          },
+          {
+            "root": "Plants:palm:1:voxel",
+            "meshes": 1,
+            "triangles": 62720,
+            "shadowCasters": 1,
+            "shadowTriangles": 62720
+          },
+          {
+            "root": "Terrain",
+            "meshes": 1,
+            "triangles": 59858,
+            "shadowCasters": 0,
+            "shadowTriangles": 0
+          },
+          {
+            "root": "Plants:appleTree:2:harvest:voxel",
+            "meshes": 1,
+            "triangles": 59856,
+            "shadowCasters": 1,
+            "shadowTriangles": 59856
+          },
+          {
+            "root": "Plants:appleTree:1:harvest:voxel",
+            "meshes": 1,
+            "triangles": 58212,
+            "shadowCasters": 1,
+            "shadowTriangles": 58212
+          },
+          {
+            "root": "Dressing:voxel:flowerStem",
+            "meshes": 1,
+            "triangles": 56072,
+            "shadowCasters": 0,
+            "shadowTriangles": 0
+          },
+          {
+            "root": "Dressing:voxel:flowerHead",
+            "meshes": 1,
+            "triangles": 54768,
+            "shadowCasters": 0,
+            "shadowTriangles": 0
+          },
+          {
+            "root": "Plants:orangeTree:0:harvest:voxel",
+            "meshes": 1,
+            "triangles": 43512,
+            "shadowCasters": 1,
+            "shadowTriangles": 43512
+          },
+          {
+            "root": "Fruit:orange:far",
+            "meshes": 1,
+            "triangles": 42032,
+            "shadowCasters": 0,
+            "shadowTriangles": 0
+          },
+          {
+            "root": "Plants:palm:2:voxel",
+            "meshes": 1,
+            "triangles": 41800,
+            "shadowCasters": 1,
+            "shadowTriangles": 41800
+          },
+          {
+            "root": "Dressing:voxel:bushBig",
+            "meshes": 1,
+            "triangles": 39520,
+            "shadowCasters": 1,
+            "shadowTriangles": 39520
+          },
+          {
+            "root": "Plants:bananaPlant:2:voxel",
+            "meshes": 1,
+            "triangles": 38916,
+            "shadowCasters": 1,
+            "shadowTriangles": 38916
+          },
+          {
+            "root": "Plants:palm:0:voxel",
+            "meshes": 1,
+            "triangles": 35760,
+            "shadowCasters": 1,
+            "shadowTriangles": 35760
+          },
+          {
+            "root": "Sunpatch",
+            "meshes": 1,
+            "triangles": 29270,
+            "shadowCasters": 0,
+            "shadowTriangles": 0
+          },
+          {
+            "root": "Dressing:voxel:fern",
+            "meshes": 1,
+            "triangles": 26376,
+            "shadowCasters": 0,
+            "shadowTriangles": 0
+          },
+          {
+            "root": "Plants:bananaPlant:1:voxel",
+            "meshes": 1,
+            "triangles": 25560,
+            "shadowCasters": 1,
+            "shadowTriangles": 25560
+          },
+          {
+            "root": "Fruit:orange",
+            "meshes": 1,
+            "triangles": 25256,
+            "shadowCasters": 1,
+            "shadowTriangles": 25256
+          },
+          {
+            "root": "Dressing:grass",
+            "meshes": 1,
+            "triangles": 18460,
+            "shadowCasters": 0,
+            "shadowTriangles": 0
+          },
+          {
+            "root": "Mimic Melon",
+            "meshes": 22,
+            "triangles": 15218,
+            "shadowCasters": 19,
+            "shadowTriangles": 15104
+          },
+          {
+            "root": "Plants:orangeTree:2:harvest:voxel",
+            "meshes": 1,
+            "triangles": 13528,
+            "shadowCasters": 1,
+            "shadowTriangles": 13528
+          },
+          {
+            "root": "Plants:bananaPlant:0:voxel",
+            "meshes": 1,
+            "triangles": 13020,
+            "shadowCasters": 1,
+            "shadowTriangles": 13020
+          },
+          {
+            "root": "Plants:orangeTree:1:harvest:voxel",
+            "meshes": 1,
+            "triangles": 11824,
+            "shadowCasters": 1,
+            "shadowTriangles": 11824
+          },
+          {
+            "root": "Fruit:banana",
+            "meshes": 1,
+            "triangles": 11024,
+            "shadowCasters": 1,
+            "shadowTriangles": 11024
+          }
+        ],
+        "largestMeshes": [
+          {
+            "name": "Plants:appleTree:0:harvest:voxel",
+            "root": "Plants:appleTree:0:harvest:voxel",
+            "triangles": 141700,
+            "castShadow": true,
+            "geometry": "952f2eb0-705d-4da9-b228-ce52074aa562",
+            "material": "plant:appleTree:voxel"
+          },
+          {
+            "name": "Props",
+            "root": "Props",
+            "triangles": 105228,
+            "castShadow": true,
+            "geometry": "43b7b08b-517f-4d15-8ba8-4face3f7b44e",
+            "material": "props"
+          },
+          {
+            "name": "Fruit:apple:far",
+            "root": "Fruit:apple:far",
+            "triangles": 102416,
+            "castShadow": false,
+            "geometry": "5a80709b-e09b-41f4-8b57-7f9659d8f5d1",
+            "material": "fruit:apple"
+          },
+          {
+            "name": "Dressing:voxel:bush",
+            "root": "Dressing:voxel:bush",
+            "triangles": 87048,
+            "castShadow": false,
+            "geometry": "14b8fa68-a399-4a40-8e72-65cfe136afe0",
+            "material": "dressing:voxel:bush"
+          },
+          {
+            "name": "Fruit:apple",
+            "root": "Fruit:apple",
+            "triangles": 81488,
+            "castShadow": true,
+            "geometry": "54bc7540-98c4-42b1-b7e4-e0c55e4dab62",
+            "material": "fruit:apple"
+          },
+          {
+            "name": "Fruit:coconut:far",
+            "root": "Fruit:coconut:far",
+            "triangles": 68160,
+            "castShadow": false,
+            "geometry": "29694332-8641-4e99-a8a3-6dc0fa942ee3",
+            "material": "fruit:coconut"
+          },
+          {
+            "name": "Dressing:voxel:grass",
+            "root": "Dressing:voxel:grass",
+            "triangles": 68136,
+            "castShadow": false,
+            "geometry": "706ed449-1c3c-469f-b5f3-4e9de4b8782b",
+            "material": "dressing:voxel:grass"
+          },
+          {
+            "name": "Ocean",
+            "root": "Ocean",
+            "triangles": 64800,
+            "castShadow": false,
+            "geometry": "34d7ee38-f74a-4666-a1d3-a2c6bfaa52dc",
+            "material": "ShaderMaterial"
+          },
+          {
+            "name": "Plants:palm:1:voxel",
+            "root": "Plants:palm:1:voxel",
+            "triangles": 62720,
+            "castShadow": true,
+            "geometry": "434e5834-9b7d-43d0-a762-60fe45c6a35c",
+            "material": "plant:palm:voxel"
+          },
+          {
+            "name": "Terrain",
+            "root": "Terrain",
+            "triangles": 59858,
+            "castShadow": false,
+            "geometry": "8a7be515-180a-4621-a0d8-5f5170d3e35b",
+            "material": "terrain"
+          },
+          {
+            "name": "Plants:appleTree:2:harvest:voxel",
+            "root": "Plants:appleTree:2:harvest:voxel",
+            "triangles": 59856,
+            "castShadow": true,
+            "geometry": "8b814c90-aa6b-449c-9430-980272ef027f",
+            "material": "plant:appleTree:voxel"
+          },
+          {
+            "name": "Plants:appleTree:1:harvest:voxel",
+            "root": "Plants:appleTree:1:harvest:voxel",
+            "triangles": 58212,
+            "castShadow": true,
+            "geometry": "9d865c36-e8ec-46a3-b1bb-ae5a0103253c",
+            "material": "plant:appleTree:voxel"
+          },
+          {
+            "name": "Dressing:voxel:flowerStem",
+            "root": "Dressing:voxel:flowerStem",
+            "triangles": 56072,
+            "castShadow": false,
+            "geometry": "67319d03-c26a-407c-aa84-cebb04e5aadd",
+            "material": "dressing:voxel:flowerStem"
+          },
+          {
+            "name": "Dressing:voxel:flowerHead",
+            "root": "Dressing:voxel:flowerHead",
+            "triangles": 54768,
+            "castShadow": false,
+            "geometry": "40634ae1-3d18-4803-b836-d281fbc2715b",
+            "material": "dressing:voxel:flowerHead"
+          },
+          {
+            "name": "Plants:orangeTree:0:harvest:voxel",
+            "root": "Plants:orangeTree:0:harvest:voxel",
+            "triangles": 43512,
+            "castShadow": true,
+            "geometry": "e28d1a7c-d8aa-4cc7-8fe2-9e684de60c2e",
+            "material": "plant:orangeTree:voxel"
+          },
+          {
+            "name": "Fruit:orange:far",
+            "root": "Fruit:orange:far",
+            "triangles": 42032,
+            "castShadow": false,
+            "geometry": "cd761429-a075-4baa-97d8-5e13a09b2e99",
+            "material": "fruit:orange"
+          },
+          {
+            "name": "Plants:palm:2:voxel",
+            "root": "Plants:palm:2:voxel",
+            "triangles": 41800,
+            "castShadow": true,
+            "geometry": "6feffa64-53c0-4d40-b2e8-37a397db0069",
+            "material": "plant:palm:voxel"
+          },
+          {
+            "name": "Dressing:voxel:bushBig",
+            "root": "Dressing:voxel:bushBig",
+            "triangles": 39520,
+            "castShadow": true,
+            "geometry": "a814692e-16b4-40d3-986c-c4f1176cd1f5",
+            "material": "dressing:voxel:bushBig"
+          },
+          {
+            "name": "Plants:bananaPlant:2:voxel",
+            "root": "Plants:bananaPlant:2:voxel",
+            "triangles": 38916,
+            "castShadow": true,
+            "geometry": "a0a3ced3-c587-4858-9324-a0764fe0baf0",
+            "material": "plant:bananaPlant:voxel"
+          },
+          {
+            "name": "Plants:palm:0:voxel",
+            "root": "Plants:palm:0:voxel",
+            "triangles": 35760,
+            "castShadow": true,
+            "geometry": "2be32ec6-095f-4d08-a747-5d9c6900d516",
+            "material": "plant:palm:voxel"
+          },
+          {
+            "name": "Detailed voxel orchard ground",
+            "root": "Sunpatch",
+            "triangles": 29270,
+            "castShadow": false,
+            "geometry": "2f1f4d6e-018b-4c4f-baf8-8e49f9308178",
+            "material": "MeshStandardMaterial"
+          },
+          {
+            "name": "Dressing:voxel:fern",
+            "root": "Dressing:voxel:fern",
+            "triangles": 26376,
+            "castShadow": false,
+            "geometry": "34d3b34d-9588-4d31-a188-d72d91ec1835",
+            "material": "dressing:voxel:fern"
+          },
+          {
+            "name": "Plants:bananaPlant:1:voxel",
+            "root": "Plants:bananaPlant:1:voxel",
+            "triangles": 25560,
+            "castShadow": true,
+            "geometry": "37584cc3-1bf1-4009-9480-3c2287a9bf86",
+            "material": "plant:bananaPlant:voxel"
+          },
+          {
+            "name": "Fruit:orange",
+            "root": "Fruit:orange",
+            "triangles": 25256,
+            "castShadow": true,
+            "geometry": "022b58d9-1fb5-4293-acd5-053aa8d8ef16",
+            "material": "fruit:orange"
+          },
+          {
+            "name": "Dressing:grass",
+            "root": "Dressing:grass",
+            "triangles": 18460,
+            "castShadow": false,
+            "geometry": "6cde342b-0523-459c-b418-fab86e1a8897",
+            "material": "dressing:grass"
+          },
+          {
+            "name": "Plants:orangeTree:2:harvest:voxel",
+            "root": "Plants:orangeTree:2:harvest:voxel",
+            "triangles": 13528,
+            "castShadow": true,
+            "geometry": "f03acfca-9a58-4f9a-b75f-b85562e74900",
+            "material": "plant:orangeTree:voxel"
+          },
+          {
+            "name": "Plants:bananaPlant:0:voxel",
+            "root": "Plants:bananaPlant:0:voxel",
+            "triangles": 13020,
+            "castShadow": true,
+            "geometry": "3920f206-a6fd-4cac-a797-c60057e00b28",
+            "material": "plant:bananaPlant:voxel"
+          },
+          {
+            "name": "Plants:orangeTree:1:harvest:voxel",
+            "root": "Plants:orangeTree:1:harvest:voxel",
+            "triangles": 11824,
+            "castShadow": true,
+            "geometry": "185c3159-b269-4803-99b2-1697b8c91d76",
+            "material": "plant:orangeTree:voxel"
+          },
+          {
+            "name": "Fruit:banana",
+            "root": "Fruit:banana",
+            "triangles": 11024,
+            "castShadow": true,
+            "geometry": "9c580ec9-5162-4ead-b272-c42e1ec8349a",
+            "material": "fruit:banana"
+          },
+          {
+            "name": "Plants:appleTree:2:harvest",
+            "root": "Plants:appleTree:2:harvest",
+            "triangles": 9240,
+            "castShadow": true,
+            "geometry": "d613966e-dc23-4c81-8219-be2695f604b5",
+            "material": "plant:appleTree"
+          }
+        ]
+      },
+      "encounter": null,
+      "remoteWorker": {
+        "remoteCount": 1,
+        "measuredWithSecondCanvasRunning": true,
+        "phase": {
+          "name": "two-worker-presentation",
+          "wallSeconds": 5,
+          "frames": 270,
+          "frameMs": {
+            "n": 270,
+            "mean": 16.67,
+            "p50": 16.7,
+            "p95": 16.8,
+            "p99": 16.8,
+            "max": 16.8
+          },
+          "cpuTotalMs": {
+            "n": 270,
+            "mean": 3.74,
+            "p50": 3.7,
+            "p95": 4.3,
+            "p99": 4.6,
+            "max": 4.7
+          },
+          "cpuRenderMs": {
+            "n": 270,
+            "mean": 2.03,
+            "p50": 2,
+            "p95": 2.3,
+            "p99": 2.5,
+            "max": 2.7
+          },
+          "cpuFixedMs": {
+            "n": 270,
+            "mean": 0.6,
+            "p50": 0.6,
+            "p95": 0.8,
+            "p99": 0.9,
+            "max": 1
+          },
+          "cpuPhysicsMs": {
+            "n": 270,
+            "mean": 0.27,
+            "p50": 0.3,
+            "p95": 0.4,
+            "p99": 0.4,
+            "max": 0.6
+          },
+          "drawCalls": {
+            "n": 270,
+            "mean": 203,
+            "p50": 203,
+            "p95": 203,
+            "p99": 203,
+            "max": 203
+          },
+          "triangles": {
+            "n": 270,
+            "mean": 2289002,
+            "p50": 2289002,
+            "p95": 2289002,
+            "p99": 2289002,
+            "max": 2289002
+          },
+          "gpuRenderMs": {
+            "n": 100,
+            "mean": 1.16,
+            "p50": 0.77,
+            "p95": 2.69,
+            "p99": 3.05,
+            "max": 3.32
+          },
+          "gpuDisjoint": 0,
+          "lastPosition": [
+            71.50000449926463,
+            2.350834884884156,
+            71.49999657971124
+          ],
+          "averagePacedFps": 59.99,
+          "over16_67MsPct": 61.5
+        }
+      },
+      "settings": {
+        "canvasPixels": [
+          1920,
+          1080
+        ],
+        "pixelRatio": 1,
+        "antialias": true,
+        "shadow": {
+          "enabled": true,
+          "type": 2,
+          "castShadow": true,
+          "mapSize": [
+            2048,
+            2048
+          ],
+          "lightPos": [
+            121.6,
+            77.6,
+            111.1
+          ],
+          "target": [
+            57.2,
+            4,
+            60.8
+          ],
+          "frustum": [
+            -56,
+            56,
+            56,
+            -56,
+            0.5,
+            220
+          ],
+          "intensity": 2.45
+        },
+        "outputColorSpace": "srgb",
+        "toneMapping": 4,
+        "exposure": 1.06
+      },
+      "encounterBefore": {
+        "revision": 3241,
+        "encounters": [
+          {
+            "kind": "mimic",
+            "position": [
+              -23,
+              7.5,
+              22
+            ],
+            "heading": 1.1109654931531385,
+            "phase": "warn",
+            "timeLeft": 0.2999999999999992,
+            "health": 3,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          {
+            "kind": "snapjaw",
+            "position": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": 0,
+            "phase": "idle",
+            "timeLeft": 0,
+            "health": 2,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          {
+            "kind": "spitter",
+            "position": [
+              -31,
+              16.3015840352825,
+              -8
+            ],
+            "heading": 0,
+            "phase": "idle",
+            "timeLeft": 0,
+            "health": 2,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        ],
+        "projectiles": []
+      },
+      "encounterAfter": {
+        "encounters": {
+          "revision": 3561,
+          "encounters": [
+            {
+              "kind": "mimic",
+              "position": [
+                -14.023419385273563,
+                7.5,
+                26.445545243158765
+              ],
+              "heading": 1.1109665668199091,
+              "phase": "warn",
+              "timeLeft": 0.2666666666666659,
+              "health": 3,
+              "baited": false,
+              "capturedVictimId": null,
+              "captureTimeLeft": 0
+            },
+            {
+              "kind": "snapjaw",
+              "position": [
+                -28,
+                7.5,
+                11
+              ],
+              "heading": 0,
+              "phase": "idle",
+              "timeLeft": 0,
+              "health": 2,
+              "baited": false,
+              "capturedVictimId": null,
+              "captureTimeLeft": 0
+            },
+            {
+              "kind": "spitter",
+              "position": [
+                -31,
+                16.3015840352825,
+                -8
+              ],
+              "heading": 0,
+              "phase": "idle",
+              "timeLeft": 0,
+              "health": 2,
+              "baited": false,
+              "capturedVictimId": null,
+              "captureTimeLeft": 0
+            }
+          ],
+          "projectiles": []
+        },
+        "health": 44,
+        "events": [
+          {
+            "name": "encounter:attack",
+            "gameSeconds": 55.349999999998154,
+            "payload": {
+              "kind": "mimic",
+              "victimId": "solo",
+              "damage": 28
+            }
+          },
+          {
+            "name": "encounter:attack",
+            "gameSeconds": 57.49999999999803,
+            "payload": {
+              "kind": "mimic",
+              "victimId": "solo",
+              "damage": 28
+            }
+          }
+        ]
+      },
+      "encounterActive": true
+    }
+  ]
+}
