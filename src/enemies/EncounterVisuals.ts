@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import type { EncounterKind, EncounterProjectile, EncounterState } from './EncounterModel';
 import { MimicRig, type MimicStyle } from './MimicRig.ts';
+import { voxelSnapjawBase, voxelSnapjawCore, voxelSnapjawEye,
+  voxelSnapjawLowerJaw, voxelSnapjawLowerMouth, voxelSnapjawTeeth,
+  voxelSnapjawUpperJaw, voxelSnapjawUpperMouth } from './VoxelSnapjawGeometry.ts';
 
 const color = (hex: number) => new THREE.Color().setHex(hex, THREE.SRGBColorSpace);
 const material = (hex: number, roughness = 0.86, emissive = 0): THREE.MeshStandardMaterial =>
@@ -21,8 +24,14 @@ function mesh(geometry: THREE.BufferGeometry, mat: THREE.Material, parent: THREE
 export class EncounterVisual {
   readonly root = new THREE.Group();
   private kind: EncounterKind;
+  private readonly voxelSnapjaw: boolean;
   private mimicRig: MimicRig | null = null;
   private upperJaw: THREE.Group | null = null;
+  private snapjawAnatomy: THREE.Group | null = null;
+  private snapjawHealth: number | null = null;
+  private snapjawHitAge = 99;
+  private snapjawDefeatAge = 99;
+  private snapjawWasDefeated = false;
   private spitterHead: THREE.Group | null = null;
   private prize: THREE.Mesh | null = null;
   private eyes: THREE.Mesh[] = [];
@@ -34,11 +43,15 @@ export class EncounterVisual {
 
   constructor(kind: EncounterKind, scene: THREE.Scene, style: MimicStyle = 'polygon') {
     this.kind = kind;
+    this.voxelSnapjaw = kind === 'snapjaw' && style === 'voxel';
     this.root.name = kind === 'mimic' ? 'Mimic Melon'
       : kind === 'snapjaw' ? 'Snapjaw' : 'Spitter Plant';
     scene.add(this.root);
     if (kind === 'mimic') this.mimicRig = new MimicRig(this.root, style);
-    else if (kind === 'snapjaw') this.buildSnapjaw();
+    else if (kind === 'snapjaw') {
+      if (this.voxelSnapjaw) this.buildVoxelSnapjaw();
+      else this.buildSnapjaw();
+    }
     else this.buildSpitter();
     const ring = new THREE.RingGeometry(kind === 'snapjaw' ? 2.1 : 1.75,
       kind === 'snapjaw' ? 2.34 : 1.95, 40);
@@ -67,7 +80,8 @@ export class EncounterVisual {
 
   update(state: Readonly<EncounterState>, groundY: number, dt: number): void {
     this.time += dt;
-    if (this.kind !== 'mimic') this.root.visible = state.phase !== 'defeated';
+    if (this.kind !== 'mimic' && !this.voxelSnapjaw)
+      this.root.visible = state.phase !== 'defeated';
     const target = new THREE.Vector3(state.position[0], groundY, state.position[2]);
     if (!this.positioned) { this.root.position.copy(target); this.positioned = true; }
     else this.root.position.lerp(target, 1 - Math.exp(-Math.max(0, dt) * 24));
@@ -89,19 +103,55 @@ export class EncounterVisual {
     if (this.kind === 'mimic') {
       this.mimicRig?.update(state, dt);
     } else if (this.kind === 'snapjaw') {
-      const open = state.capturedVictimId !== null ? 0.13
-        : warning ? 0.43 + pulse * 0.22 : attacking ? 0.02
+      if (this.voxelSnapjaw) {
+        if (this.snapjawHealth !== null && state.health < this.snapjawHealth)
+          this.snapjawHitAge = 0;
+        this.snapjawHitAge += Math.max(0, dt);
+        if (state.phase === 'defeated' && !this.snapjawWasDefeated) {
+          // A loaded/co-op defeated snapshot is already a wilted remnant. A
+          // live kill takes a short beat to fold down, without changing rules.
+          this.snapjawDefeatAge = this.snapjawHealth === null ? 0.72 : 0;
+          this.snapjawWasDefeated = true;
+        }
+        if (this.snapjawWasDefeated) this.snapjawDefeatAge += Math.max(0, dt);
+        this.snapjawHealth = state.health;
+        this.root.visible = true;
+      }
+      const open = this.voxelSnapjaw && state.phase === 'defeated' ? 0.02
+        : state.capturedVictimId !== null ? 0.13
+        : warning ? 0.43 + pulse * 0.22
+          : attacking && this.voxelSnapjaw
+            ? Math.max(0.02, Math.min(0.74, (state.timeLeft / 0.32) ** 2 * 0.74))
+            : attacking ? 0.02
         : recovering ? 0.95 : 0.16;
       if (this.upperJaw) {
         this.upperJaw.position.y = 1.58 + open * 0.62;
         this.upperJaw.rotation.x = -open * 0.62;
       }
       if (this.prize) {
+        if (this.voxelSnapjaw) this.prize.visible = state.phase !== 'defeated';
         this.prize.position.y = 1.36 + (recovering ? 0.35 : 0.06);
         this.prize.scale.setScalar(recovering ? 1.23 : 1 + Math.sin(this.time * 3.2) * 0.06);
       }
-      if (this.glow) this.glow.emissiveIntensity = recovering ? 1.7 : 0.65;
+      if (this.glow) this.glow.emissiveIntensity = this.voxelSnapjaw
+        && state.phase === 'defeated' ? 0 : recovering ? 1.7 : 0.65;
       for (const eye of this.eyes) eye.scale.setScalar(warning || attacking ? 1.25 : 1);
+      if (this.voxelSnapjaw && this.eyes[0]?.material instanceof THREE.MeshStandardMaterial)
+        this.eyes[0].material.emissiveIntensity = state.phase === 'defeated' ? 0 : 0.33;
+      if (this.snapjawAnatomy) {
+        const hit = Math.max(0, 1 - this.snapjawHitAge / 0.38);
+        const fall = this.snapjawWasDefeated
+          ? THREE.MathUtils.smoothstep(this.snapjawDefeatAge, 0, 0.72) : 0;
+        this.snapjawAnatomy.rotation.x = (warning ? -0.09 - pulse * 0.045
+          : attacking ? 0.15 : recovering ? -0.075
+            : this.snapjawWasDefeated ? 0
+              : Math.sin(this.time * 1.3) * 0.025) - hit * 0.22 + fall * 0.75;
+        this.snapjawAnatomy.rotation.z = hit * Math.sin(this.snapjawHitAge * 35) * 0.16
+          + fall * 0.57;
+        this.snapjawAnatomy.position.y = -fall * 0.50;
+        this.snapjawAnatomy.scale.y = 1 - fall * 0.42;
+        if (this.upperJaw && fall > 0) this.upperJaw.rotation.x = fall * 0.34;
+      }
     } else {
       if (this.spitterHead) {
         this.spitterHead.position.y = 1.9 + (warning ? 0.22 + pulse * 0.1 : 0);
@@ -171,6 +221,37 @@ export class EncounterVisual {
     const crown = mesh(new THREE.TorusGeometry(0.43, 0.045, 5, 18), teeth,
       this.root, 0, 1.47, 1.06);
     crown.rotation.x = 0.35;
+  }
+
+  private buildVoxelSnapjaw(): void {
+    const shell = new THREE.MeshStandardMaterial({ vertexColors: true,
+      roughness: 0.88, metalness: 0, flatShading: true });
+    const ember = new THREE.MeshStandardMaterial({ vertexColors: true,
+      roughness: 0.44, emissive: color(0xff6533), emissiveIntensity: 0.33,
+      flatShading: true });
+    const core = new THREE.MeshStandardMaterial({ vertexColors: true,
+      roughness: 0.42, emissive: color(0xffb553), emissiveIntensity: 0.65,
+      flatShading: true });
+    this.glow = core;
+    this.snapjawAnatomy = new THREE.Group();
+    this.snapjawAnatomy.name = 'Snapjaw rooted anatomy';
+    this.root.add(this.snapjawAnatomy);
+    const body = this.snapjawAnatomy;
+    mesh(voxelSnapjawBase(), shell, body);
+    mesh(voxelSnapjawLowerJaw(), shell, body);
+    mesh(voxelSnapjawLowerMouth(), shell, body);
+    this.upperJaw = new THREE.Group();
+    this.upperJaw.name = 'Snapjaw moving leaf jaw';
+    body.add(this.upperJaw);
+    mesh(voxelSnapjawUpperJaw(), shell, this.upperJaw);
+    mesh(voxelSnapjawUpperMouth(), shell, this.upperJaw);
+    mesh(voxelSnapjawTeeth(), shell, this.upperJaw);
+    for (const x of [-0.71, 0.71]) {
+      const eye = mesh(voxelSnapjawEye(), ember, this.upperJaw, x, 0.17, 1.12);
+      this.eyes.push(eye);
+    }
+    this.prize = mesh(voxelSnapjawCore(), core, body, 0, 1.42, 1.08);
+    this.prize.name = 'Snapjaw exposed seed';
   }
 
   private buildSpitter(): void {

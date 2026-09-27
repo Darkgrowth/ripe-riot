@@ -786,6 +786,12 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   b.box(0.16, 0.05, 0.06, LAMP, false, [0, 2.92, 0.11]);
   b.cylinder(0.55, 0.62, 0.12, 10, METAL, false, [-1.6, 1.90, 0]);
   ropeSwag(b, [-1.6, 2.90, 0], [-1.6, 1.95, 0], 0, 1, 0.03);
+  if (visualMode === 'voxel') {
+    // Hang the instruction on the pad's own gantry, below the scale readout.
+    // It points to the painted pad without occupying the walking space.
+    for (const x of [-1.05, 1.05])
+      b.box(0.055, 0.58, 0.055, METAL_DARK, false, [x, 2.76, 0.15]);
+  }
   lantern(-2.0, 2.35, 0);
   lantern(2.0, 2.35, 0);
   b.pop();
@@ -794,16 +800,25 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     .applyAxisAngle(new THREE.Vector3(0, 1, 0), shopRot)
     .add(new THREE.Vector3(shopX, shopY, shopZ));
 
-  // Mount the shop name above, and in front of, the weighing crossbar.
-  // A roof-mounted face was still hidden by the gantry at walking height.
+  // The large board identifies the shop; the smaller board hangs directly
+  // over the sell pad. Keep both separate from the counter buying label.
+  // A roof-mounted face was hidden by the gantry at walking height.
   for (const x of [-1.45, 1.45]) b.box(0.16, 1.02, 0.16, POST, false, [x, 3.66, sellLocal.z + 0.05]);
   signs.push(makeSign(b,
     new THREE.Vector3(0, 3.92, sellLocal.z + 0.19).applyAxisAngle(new THREE.Vector3(0, 1, 0), shopRot)
       .add(new THREE.Vector3(shopX, shopY, shopZ)),
-    shopRot, 4.0, 1.28,
+    shopRot, visualMode === 'voxel' ? 3.6 : 4.0, visualMode === 'voxel' ? 1.08 : 1.28,
     visualMode === 'voxel'
-      ? signTexture(['FRUIT GOES ON PAD'], { title: 'SELL HERE', h: 200, w: 640 })
+      ? signTexture(['FRUIT · FIELD GEAR'], { title: "MERV'S SUPPLY", h: 200, w: 640 })
       : signTexture(['SELL HERE  \u2022  BUY THINGS'], { title: "MERV'S SUPPLY", h: 200, w: 640 }),
+  ));
+  if (visualMode === 'voxel') signs.push(makeSign(b,
+    new THREE.Vector3(0, 2.34, sellLocal.z + 0.20).applyAxisAngle(new THREE.Vector3(0, 1, 0), shopRot)
+      .add(new THREE.Vector3(shopX, shopY, shopZ)),
+    shopRot, 2.4, 0.48,
+    signTexture(['SELL FRUIT HERE  ↓'], {
+      w: 600, h: 130, bg: '#4a3929', fg: '#f5dfa6', accent: '#9d7b4c', lineScale: 2,
+    }),
   ));
   // The hanging bracket board, legible from the whole approach.
   signs.push(makeSign(b,
@@ -1093,6 +1108,29 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   orchardProp(-6.6, 30.6, 1.9, 'barrow');
   orchardProp(-27.5, 21.0, 2.4, 'crates');
   orchardProp(-18.0, 16.5, 0.2, 'ladder');
+
+  if (visualMode === 'voxel') {
+    // Snapjaw's shallow root runners tie its base into the existing voxel
+    // undergrowth. They sit on the terrain and never add collision or cover
+    // the 2.1 m warning ring at player height.
+    b.reset();
+    const cx = -28, cz = 11;
+    for (const [angle, reach] of [
+      [0.18, 1.75], [1.30, 1.85], [2.54, 1.60],
+      [3.67, 1.90], [4.82, 1.65], [5.72, 1.80],
+    ]) {
+      const midX = cx + Math.sin(angle) * reach * 0.56;
+      const midZ = cz + Math.cos(angle) * reach * 0.56;
+      const endX = cx + Math.sin(angle + 0.10) * reach;
+      const endZ = cz + Math.cos(angle + 0.10) * reach;
+      timberBetween(new THREE.Vector3(cx, ground(cx, cz) + 0.08, cz),
+        new THREE.Vector3(midX, ground(midX, midZ) + 0.08, midZ),
+        0.22, 0.12, C(0x426332));
+      timberBetween(new THREE.Vector3(midX, ground(midX, midZ) + 0.08, midZ),
+        new THREE.Vector3(endX, ground(endX, endZ) + 0.07, endZ),
+        0.13, 0.09, C(0x35512e));
+    }
+  }
 
   // ---- SCATTERED ROCKS ----------------------------------------------------
   const rockRng = new Rng('rocks');
