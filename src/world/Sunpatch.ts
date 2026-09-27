@@ -43,7 +43,7 @@ export class Sunpatch implements System {
       this.root.add(buildVoxelClearingTerrain(this.terrain));
     this.ocean.build(g.renderer.scene, this.terrain, g.renderer.sunDir);
     this.defineLandmarks();
-    this.built = buildLandmarks(g.renderer.scene, g.physics, this.terrain);
+    this.built = buildLandmarks(g.renderer.scene, g.physics, this.terrain, this.visualMode);
     if (this.mimicComparison) this.buildComparisonPad();
     // Clutter goes in AFTER the landmarks so its keep-clear zones are testing
     // against buildings that already exist rather than against coordinates.

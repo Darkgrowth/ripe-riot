@@ -1,0 +1,164 @@
+{
+  "base": "http://127.0.0.1:5212",
+  "frames": [
+    {
+      "name": "worker-front",
+      "render": {
+        "drawCalls": 199,
+        "triangles": 1790978,
+        "geometries": 221,
+        "textures": 19,
+        "programs": 40
+      },
+      "profile": {
+        "physics": 0.3,
+        "fixed": 0.8,
+        "frame": 2,
+        "render": 2.9,
+        "total": 6
+      },
+      "remoteCount": 1,
+      "errors": []
+    },
+    {
+      "name": "worker-side",
+      "render": {
+        "drawCalls": 285,
+        "triangles": 2009924,
+        "geometries": 221,
+        "textures": 19,
+        "programs": 40
+      },
+      "profile": {
+        "physics": 0.4,
+        "fixed": 0.8,
+        "frame": 1.8,
+        "render": 3.9,
+        "total": 6.9
+      },
+      "remoteCount": 1,
+      "errors": []
+    },
+    {
+      "name": "worker-rear",
+      "render": {
+        "drawCalls": 284,
+        "triangles": 2010318,
+        "geometries": 221,
+        "textures": 19,
+        "programs": 40
+      },
+      "profile": {
+        "physics": 0.5,
+        "fixed": 0.9,
+        "frame": 1.9,
+        "render": 3.4,
+        "total": 6.7
+      },
+      "remoteCount": 1,
+      "errors": []
+    },
+    {
+      "name": "worker-walk",
+      "render": {
+        "drawCalls": 222,
+        "triangles": 1998392,
+        "geometries": 221,
+        "textures": 19,
+        "programs": 40
+      },
+      "profile": {
+        "physics": 0.6,
+        "fixed": 1.8,
+        "frame": 1.9,
+        "render": 4,
+        "total": 8.4
+      },
+      "remoteCount": 1,
+      "errors": []
+    },
+    {
+      "name": "worker-ragdoll",
+      "render": {
+        "drawCalls": 222,
+        "triangles": 1998392,
+        "geometries": 221,
+        "textures": 19,
+        "programs": 40
+      },
+      "profile": {
+        "physics": 0.4,
+        "fixed": 0.7,
+        "frame": 1.7,
+        "render": 3.8,
+        "total": 6.7
+      },
+      "remoteCount": 1,
+      "errors": []
+    },
+    {
+      "name": "remote-ground-early",
+      "remotePosition": [
+        15.009999999999996,
+        3.329999899658543,
+        43.35000382580924
+      ],
+      "visualRoot": [
+        15.009999999999996,
+        4.025599899658543,
+        43.35000382580924
+      ],
+      "visualBottom": [
+        15.074129467008957,
+        3.341068628883025,
+        44.25971040189359
+      ],
+      "terrainHeight": 3.3288263089665935,
+      "groundAtVisualBottom": 3.286728002662234,
+      "playerHeight": 1.82,
+      "state": "ragdoll"
+    },
+    {
+      "name": "worker-ragdoll-settled",
+      "render": {
+        "drawCalls": 197,
+        "triangles": 1988392,
+        "geometries": 221,
+        "textures": 19,
+        "programs": 40
+      },
+      "profile": {
+        "physics": 0.4,
+        "fixed": 0.6,
+        "frame": 1.3,
+        "render": 2.7,
+        "total": 5
+      },
+      "remoteCount": 1,
+      "errors": []
+    },
+    {
+      "name": "remote-ground-late",
+      "remotePosition": [
+        15.609999999998944,
+        3.2000000000003537,
+        39.46000000000684
+      ],
+      "visualRoot": [
+        15.609999999998944,
+        4.255600000000354,
+        39.46000000000684
+      ],
+      "visualBottom": [
+        15.67458044517309,
+        3.134385422670036,
+        39.26259447459627
+      ],
+      "terrainHeight": 3.163000430797429,
+      "groundAtVisualBottom": 3.155690971193122,
+      "playerHeight": 1.82,
+      "state": "active"
+    }
+  ],
+  "motionVideo": "worker-coop-motion.webm"
+}

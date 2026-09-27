@@ -9,6 +9,7 @@ const { Rng } = await vite.ssrLoadModule('/src/core/Rng.ts');
 const { PhysicsWorld } = await vite.ssrLoadModule('/src/physics/PhysicsWorld.ts');
 const { PlantSystem } = await vite.ssrLoadModule('/src/plants/Plants.ts');
 const { FruitRenderer } = await vite.ssrLoadModule('/src/fruit/FruitRenderer.ts');
+const { voxelFruitGeometry } = await vite.ssrLoadModule('/src/art/voxel/VoxelFruit.ts');
 const { skipVoxelPilotDecor } = await vite.ssrLoadModule('/src/fruit/FruitSystem.ts');
 
 test('voxel pilot batches orchard trees separately while outer island keeps baseline', async () => {
@@ -57,13 +58,40 @@ test('fruit pilot swaps only the ordinary species within existing instanced batc
   });
   renderer.update([makeFruit(1, 'apple'), makeFruit(2, 'orange'),
     makeFruit(3, 'watermelon'), makeFruit(4, 'coconut')]);
-  for (const species of ['apple', 'orange', 'watermelon']) {
+  for (const species of ['apple', 'orange', 'watermelon', 'coconut']) {
     const batch = scene.children.find(child => child.name === `Fruit:${species}`);
     assert.match(batch?.geometry.name ?? '', new RegExp(`^VoxelFruit:${species}$`));
     assert.equal(batch.count, 1);
+    if (species === 'coconut') assert.ok(batch.geometry.getAttribute('position').count / 3 < 1400,
+      'small fruit must not multiply the route triangle count');
   }
-  const coconut = scene.children.find(child => child.name === 'Fruit:coconut');
-  assert.doesNotMatch(coconut?.geometry.name ?? '', /^VoxelFruit:/);
+  renderer.dispose();
+});
+
+test('small voxel coconuts use a connected, restrained near mesh', () => {
+  const geometry = voxelFruitGeometry('coconut', 12);
+  assert.equal(geometry.userData.voxelConnectedComponents, 1);
+  assert.ok(geometry.getAttribute('position').count / 3 < 1400,
+    'many coconuts can be visible together along the route');
+});
+
+test('distant coconuts leave the near batch while aimed coconuts regain detail', () => {
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera();
+  const renderer = new FruitRenderer(scene, 'voxel', camera);
+  const coconut = { id: 81, species: 'coconut', visible: true, renderScale: 0.25,
+    position: new THREE.Vector3(0, 0, 30), quaternion: new THREE.Quaternion(),
+    tint: new THREE.Color(0xffffff), emissive: false };
+  renderer.update([coconut]);
+  const far = scene.children.find(child => child.name === 'Fruit:coconut:far');
+  assert.equal(far?.count, 1);
+  renderer.highlightId = coconut.id;
+  renderer.update([coconut]);
+  const near = scene.children.find(child => child.name === 'Fruit:coconut');
+  assert.equal(near.count, 1);
+  assert.equal(far.count, 0);
+  assert.ok(far.geometry.getAttribute('position').count
+    < near.geometry.getAttribute('position').count);
   renderer.dispose();
 });
 
@@ -151,6 +179,11 @@ test('hidden colliderless puff consumes the usual RNG while voxel banana retains
   assert.match(banana.batchKey, /voxel/);
   assert.ok(banana.body, 'banana visual must retain the original trunk collider');
   assert.equal(banana.colliders.length, 1);
+  const shopBanana = hiddenPlants.plant(24, 'bananaPlant', new THREE.Vector3(43.5, 3, 60.5),
+    new Rng(24), { scale: 1.15 });
+  assert.match(shopBanana.batchKey, /voxel/,
+    'the shop approach should not retain flat banana blades among voxel palms');
+  assert.ok(shopBanana.body);
   hiddenPlants.dispose();
   visiblePlants.dispose();
   physics.world.free();

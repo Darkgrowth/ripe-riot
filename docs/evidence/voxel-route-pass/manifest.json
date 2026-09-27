@@ -1,0 +1,100 @@
+{
+  "base": "http://127.0.0.1:5212",
+  "views": [
+    [
+      "dock-arrival",
+      58,
+      62,
+      45,
+      52
+    ],
+    [
+      "shop-approach",
+      48,
+      58,
+      20,
+      44
+    ],
+    [
+      "orchard-entry",
+      -1,
+      38,
+      -22,
+      24
+    ]
+  ],
+  "captures": [
+    {
+      "mode": "baseline",
+      "name": "dock-arrival",
+      "render": {
+        "drawCalls": 262,
+        "triangles": 937604,
+        "geometries": 197,
+        "textures": 17,
+        "programs": 35
+      },
+      "errors": []
+    },
+    {
+      "mode": "baseline",
+      "name": "shop-approach",
+      "render": {
+        "drawCalls": 281,
+        "triangles": 938612,
+        "geometries": 197,
+        "textures": 17,
+        "programs": 35
+      },
+      "errors": []
+    },
+    {
+      "mode": "baseline",
+      "name": "orchard-entry",
+      "render": {
+        "drawCalls": 254,
+        "triangles": 929094,
+        "geometries": 197,
+        "textures": 17,
+        "programs": 35
+      },
+      "errors": []
+    },
+    {
+      "mode": "voxel",
+      "name": "dock-arrival",
+      "render": {
+        "drawCalls": 246,
+        "triangles": 2358308,
+        "geometries": 197,
+        "textures": 17,
+        "programs": 36
+      },
+      "errors": []
+    },
+    {
+      "mode": "voxel",
+      "name": "shop-approach",
+      "render": {
+        "drawCalls": 265,
+        "triangles": 2357892,
+        "geometries": 197,
+        "textures": 17,
+        "programs": 36
+      },
+      "errors": []
+    },
+    {
+      "mode": "voxel",
+      "name": "orchard-entry",
+      "render": {
+        "drawCalls": 236,
+        "triangles": 2372218,
+        "geometries": 197,
+        "textures": 17,
+        "programs": 36
+      },
+      "errors": []
+    }
+  ]
+}

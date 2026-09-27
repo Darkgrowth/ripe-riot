@@ -60,7 +60,20 @@ COLORS = {
     'canvas': (.18, .265, .115),
     'eyes': (.065, .045, .035),
 }
-MATS = {name: material(name, rgb) for name, rgb in COLORS.items()}
+
+
+def srgb_to_linear(value):
+    return value / 12.92 if value <= .04045 else ((value + .055) / 1.055) ** 2.4
+
+
+# The body palette is an sRGB image, while glTF material base colors are linear.
+# Match the default cloth and glove previews to those pixels.  Runtime team
+# colors still replace these named material factors on each worker instance.
+MATS = {
+    name: material(name, tuple(srgb_to_linear(c) for c in rgb)
+                   if name in ('suit', 'suitDark', 'gloves') else rgb)
+    for name, rgb in COLORS.items()
+}
 HAND_MAT = material('ViewGloves', (1, 1, 1), vertex_color=True)
 
 # The four-pixel UV texture and its order are the existing co-op suit contract.
@@ -233,10 +246,8 @@ def body_face(key, direction, role):
     if role == 'skin' and direction[2] == 1 and z > .11:
         if .53 < y < .58 and .065 < abs(x) < .145:
             return 'suitDark'  # two-pixel eyes, visible at play distance
-        if .625 < y < .655 and .04 < abs(x) < .145:
-            return 'suitDark'  # short eyebrows below the hat brim
-        if .39 < y < .44 and abs(x) < .065:
-            return 'suitDark'  # small mouth
+        if .35 < y < .39 and abs(x) < .03:
+            return 'suitDark'  # one-voxel mouth, clear of the nose
     if role == 'suit' and direction[2] == 1 and z > .12:
         if .16 < y < .26 and abs(x) < .065:
             return 'suitDark'  # jacket opening behind the fitted bib
@@ -251,28 +262,22 @@ body = BODY.mesh('WorkerBody', BODY_ROLES, face_override=body_face)
 body.data.materials[0] = body_mat
 
 # Each segment is an authored voxel shell rather than loose cube meshes.  The
-# spherical cut ends overlap around fixed joint centers, so a bend leaves
-# fitted contact and preserves the stepped surface instead of skin shearing.
+# capsule ends overlap around fixed joint centers so bends keep fitted contact.
+# The cloth follows those joints without raised shoulder, elbow, or knee plates.
 PARTS = []
 for side, sign in (('L', -1), ('R', 1)):
     upper = Volume(CELL, origin=BODY.origin)
     upper.capsule((sign * .285, .17, 0), (sign * .398, -.08, 0),
                   (.101, .105, .102), 'suit')
-    upper.ellipsoid((sign * .30, .15, 0), (.122, .125, .116), 'suit')
-    PARTS.append((upper.mesh(f'UpperSleeve_{side}', ('suit', 'suitDark'),
-                             face_override=lambda key, direction, role:
-                             'suitDark' if upper.point(key)[1] < -.065 or (
-                                 direction[2] == 1 and upper.point(key)[2] > .07
-                                 and .06 < upper.point(key)[1] < .19) else role),
+    PARTS.append((upper.mesh(f'UpperSleeve_{side}', ('suit', 'suitDark')),
                   f'UpperArm_{side}'))
 
     fore = Volume(CELL, origin=BODY.origin)
     fore.capsule((sign * .398, -.08, 0), (sign * .445, -.365, 0),
                  (.086, .092, .086), 'suit')
-    fore.ellipsoid((sign * .4, -.08, 0), (.095, .102, .095), 'suit')
     PARTS.append((fore.mesh(f'ForeSleeve_{side}', ('suit', 'suitDark'),
                             face_override=lambda key, direction, role:
-                            'suitDark' if fore.point(key)[1] < -.32 else role),
+                             'suitDark' if fore.point(key)[1] < -.345 else role),
                   f'Forearm_{side}'))
 
     glove = Volume(CELL, origin=BODY.origin)
@@ -285,21 +290,15 @@ for side, sign in (('L', -1), ('R', 1)):
     thigh = Volume(CELL, origin=BODY.origin)
     thigh.capsule((sign * .15, -.455, 0), (sign * .157, -.725, 0),
                   (.105, .114, .105), 'suit')
-    thigh.ellipsoid((sign * .15, -.47, 0), (.108, .113, .108), 'suit')
-    PARTS.append((thigh.mesh(f'ThighSuit_{side}', ('suit', 'suitDark'),
-                             face_override=lambda key, direction, role:
-                             'suitDark' if thigh.point(key)[1] < -.71 else role),
+    PARTS.append((thigh.mesh(f'ThighSuit_{side}', ('suit', 'suitDark')),
                   f'Thigh_{side}'))
 
     shin = Volume(CELL, origin=BODY.origin)
     shin.capsule((sign * .157, -.72, 0), (sign * .158, -.995, -.002),
                  (.092, .10, .092), 'suit')
-    shin.ellipsoid((sign * .157, -.72, 0), (.098, .103, .098), 'suit')
     PARTS.append((shin.mesh(f'ShinSuit_{side}', ('suit', 'suitDark'),
                             face_override=lambda key, direction, role:
-                            'suitDark' if shin.point(key)[1] < -.91 or (
-                                direction[2] == 1 and shin.point(key)[2] > .06
-                                and -.81 < shin.point(key)[1] < -.72) else role),
+                             'suitDark' if shin.point(key)[1] < -.955 else role),
                   f'Shin_{side}'))
 
 # The fitted accessories each remain a single optimized surface and follow
@@ -359,12 +358,14 @@ pack = PACK.mesh('Backpack', ('pack', 'suitDark'),
 def boot_volume(sign, name):
     boot = Volume(CELL, origin=BODY.origin)
     center = sign * .158
-    boot.box((center - .112, -1.10, -.11),
-             (center + .112, -.945, .19), 'boots')
-    boot.box((center - .105, -1.055, .17),
-             (center + .105, -.98, .255), 'boots')
-    boot.box((center - .095, -.975, -.105),
-             (center + .095, -.88, .11), 'boots')
+    # A narrower ankle rises out of the trouser cuff; the wider foot and short
+    # forward toe make the boot read as footwear at the co-op camera distance.
+    boot.box((center - .092, -1.025, -.105),
+             (center + .092, -.88, .11), 'boots')
+    boot.box((center - .105, -1.10, -.11),
+             (center + .105, -1.005, .205), 'boots')
+    boot.box((center - .09, -1.10, .17),
+             (center + .09, -1.035, .255), 'boots')
     assert boot.components() == [len(boot.cells)]
     return boot.mesh(name, ('boots', 'suitDark'),
                      face_override=lambda key, direction, role:

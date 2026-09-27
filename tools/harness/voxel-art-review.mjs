@@ -3,7 +3,7 @@ import path from 'node:path';
 import { chromium } from 'playwright';
 
 const base = process.env.RIPE_URL || 'http://127.0.0.1:5205';
-const out = path.resolve('docs/evidence/voxel-art-polish');
+const out = path.resolve(process.env.RIPE_OUT || 'docs/evidence/voxel-art-polish');
 mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ headless: true,
   args: ['--use-gl=angle', '--use-angle=d3d11'] });

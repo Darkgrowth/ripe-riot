@@ -1,0 +1,38 @@
+{
+  "base": "http://127.0.0.1:5212",
+  "captures": [
+    {
+      "name": "orchard-path",
+      "render": {
+        "drawCalls": 234,
+        "triangles": 2457304,
+        "geometries": 198,
+        "textures": 17,
+        "programs": 36
+      },
+      "errors": []
+    },
+    {
+      "name": "orchard-crowns",
+      "render": {
+        "drawCalls": 273,
+        "triangles": 2577980,
+        "geometries": 198,
+        "textures": 17,
+        "programs": 36
+      },
+      "errors": []
+    },
+    {
+      "name": "orchard-return",
+      "render": {
+        "drawCalls": 204,
+        "triangles": 2545350,
+        "geometries": 198,
+        "textures": 17,
+        "programs": 36
+      },
+      "errors": []
+    }
+  ]
+}

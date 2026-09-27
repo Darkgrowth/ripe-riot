@@ -139,10 +139,17 @@ export class Dressing {
     for (const k of kinds) {
       const mine = places.filter((p) => p.kind === k.name);
       this.counts[k.name] = mine.length;
-      const voxel = this.visualMode === 'voxel'
-        ? mine.filter((p) => Math.hypot(p.x + 24, p.z - 22) <= 30) : [];
-      const baseline = voxel.length
-        ? mine.filter((p) => Math.hypot(p.x + 24, p.z - 22) > 30) : mine;
+      const onVoxelRoute = (p: Placement) => {
+        if (Math.hypot(p.x + 24, p.z - 22) <= 30) return true;
+        // The dock, shop, and orchard form the first playable route. A broad
+        // corridor converts its foliage together instead of leaving a ring of
+        // faceted bushes at the clearing edge.
+        const t = THREE.MathUtils.clamp(((p.x + 24) * 82 + (p.z - 22) * 40)
+          / (82 * 82 + 40 * 40), 0, 1);
+        return Math.hypot(p.x - (-24 + 82 * t), p.z - (22 + 40 * t)) <= 18;
+      };
+      const voxel = this.visualMode === 'voxel' ? mine.filter(onVoxelRoute) : [];
+      const baseline = voxel.length ? mine.filter((p) => !onVoxelRoute(p)) : mine;
       if (baseline.length) addInstances(k, baseline, false);
       else k.geometry.dispose();
       if (voxel.length) {

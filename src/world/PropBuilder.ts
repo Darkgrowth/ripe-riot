@@ -96,8 +96,8 @@ export class PropBuilder {
   }
 
   sphere(r: number, seg: number, color: PropColor, collide = this.solid,
-    at: [number, number, number] = [0, 0, 0]): this {
-    const g = new THREE.IcosahedronGeometry(r, seg);
+    at: [number, number, number] = [0, 0, 0], visual?: THREE.BufferGeometry): this {
+    const g = visual ?? new THREE.IcosahedronGeometry(r, seg);
     g.translate(at[0], at[1], at[2]);
     this.emit(g, color);
     if (collide && this.physics) {

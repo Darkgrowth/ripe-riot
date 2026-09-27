@@ -48,7 +48,7 @@ test('voxel dressing shapes are batched exposed-face geometry with matching wind
   }
 });
 
-test('pilot preserves seeded dressing placements and converts only orchard instances', () => {
+test('voxel route preserves seeded dressing and converts the shop approach', () => {
   const terrain = new Terrain();
   const originalScene = new THREE.Scene();
   const pilotScene = new THREE.Scene();
@@ -62,6 +62,7 @@ test('pilot preserves seeded dressing placements and converts only orchard insta
   assert.ok(pilotScene.children.length <= originalScene.children.length * 2,
     'the pilot should keep one instance batch per geometry and zone');
   let voxelCount = 0;
+  let shopVoxelCount = 0;
   for (const kind of VOXEL_DRESSING_KINDS) {
     const old = instances(originalScene, kind);
     const next = instances(pilotScene, kind);
@@ -77,13 +78,17 @@ test('pilot preserves seeded dressing placements and converts only orchard insta
       }
       for (const p of positions(mesh)) {
         const [x, , z] = p.split(',').map(Number);
-        const inside = Math.hypot(x + 24, z - 22) <= 30;
-        assert.equal(mesh.name.startsWith('Dressing:voxel:'), inside,
-          `${mesh.name} at ${p}`);
+        if (Math.hypot(x - 45, z - 52) <= 15) {
+          assert.ok(mesh.name.startsWith('Dressing:voxel:'), `${mesh.name} at shop ${p}`);
+          shopVoxelCount++;
+        }
+        if (Math.hypot(x + 24, z - 22) <= 30)
+          assert.ok(mesh.name.startsWith('Dressing:voxel:'), `${mesh.name} at orchard ${p}`);
       }
     }
   }
   assert.ok(voxelCount > 40, 'orchard should have enough converted plants to read as voxel');
+  assert.ok(shopVoxelCount > 10, 'shop should have enough dressing to read as voxel');
   original.dispose();
   pilot.dispose();
 });

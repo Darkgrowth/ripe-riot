@@ -4,11 +4,12 @@ import { VoxelVolume } from './VoxelSurface';
 const CACHE = new Map<string, THREE.BufferGeometry>();
 
 /** Unit-diameter, vertex-coloured fruit for the existing species InstancedMesh. */
-export function voxelFruitGeometry(species: string, resolution: 8 | 20 = 20): THREE.BufferGeometry {
+export function voxelFruitGeometry(species: string, resolution: 8 | 12 | 20 = 20): THREE.BufferGeometry {
   const key = `${species}:${resolution}`;
   const cached = CACHE.get(key);
   if (cached) return cached;
-  if (species !== 'apple' && species !== 'orange' && species !== 'watermelon') {
+  if (species !== 'apple' && species !== 'orange' && species !== 'watermelon'
+    && species !== 'coconut') {
     throw new Error(`no detailed voxel fruit geometry for ${species}`);
   }
   const geometry = build(species, resolution);
@@ -21,9 +22,9 @@ export function disposeVoxelFruitGeometries(): void {
   CACHE.clear();
 }
 
-function build(species: 'apple' | 'orange' | 'watermelon', n: 8 | 20): THREE.BufferGeometry {
-  // Near fruit has 20 modeling cells across. Distant fruit uses 8 after its
-  // screen diameter falls below about 20-25 px; both keep the same unit scale.
+function build(species: 'apple' | 'orange' | 'watermelon' | 'coconut', n: 8 | 12 | 20): THREE.BufferGeometry {
+  // Hero fruit has 20 modeling cells across; smaller coconuts use 12 nearby.
+  // Distant fruit uses 8 after its screen diameter falls below about 20-25 px.
   const cell = 1 / n;
   const center = n / 2;
   const volume = new VoxelVolume();
@@ -40,7 +41,7 @@ function build(species: 'apple' | 'orange' | 'watermelon', n: 8 | 20): THREE.Buf
       inside = radial <= radius && py <= shoulder - 0.075 * well
         && py >= -shoulder + 0.045 * well;
     } else {
-      const ry = species === 'orange' ? 0.47 : 0.41;
+      const ry = species === 'watermelon' ? 0.41 : species === 'coconut' ? 0.44 : 0.47;
       inside = (px / 0.5) ** 2 + (py / ry) ** 2 + (pz / 0.5) ** 2 <= 1;
     }
     if (!inside) continue;
@@ -50,6 +51,8 @@ function build(species: 'apple' | 'orange' | 'watermelon', n: 8 | 20): THREE.Buf
       pigment = px + pz > 0.22 ? 0xe75b3b : py > 0.26 ? 0xb72d2a : 0xcf3930;
     } else if (species === 'orange') {
       pigment = py > 0.27 ? 0xe87b1e : px + pz > 0.15 ? 0xf59b2b : 0xe48622;
+    } else if (species === 'coconut') {
+      pigment = py > 0.23 ? 0x9d774d : px + pz > 0.17 ? 0x84603d : 0x755235;
     } else {
       const theta = Math.atan2(pz, px);
       const stripe = Math.sin(theta * 6 + Math.sin(py * 8) * 0.15);
@@ -67,9 +70,11 @@ function build(species: 'apple' | 'orange' | 'watermelon', n: 8 | 20): THREE.Buf
     volume.box(center, center, n - 4, n - 1, center, center, 0x527e32);
     volume.box(center - 2, center + 2, n - 2, n - 2, center, center, 0x63913d);
     volume.box(center, center, n - 2, n - 2, center - 2, center + 2, 0x63913d);
-  } else {
+  } else if (species === 'watermelon') {
     volume.box(center, center, n - 4, n - 1, center, center, 0x668843);
     volume.box(center - 1, center + 1, n - 2, n - 2, center - 1, center + 1, 0x74964b);
+  } else {
+    volume.box(center, center, n - 4, n - 1, center, center, 0x65482f);
   }
 
   const geometry = volume.geometry({

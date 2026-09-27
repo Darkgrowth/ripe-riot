@@ -5,7 +5,7 @@ import type { VisualMode } from '@/art/voxel/VisualMode';
 import type { Fruit } from './Fruit';
 
 /**
- * One InstancedMesh per species, with a second distant-detail batch for three
+ * One InstancedMesh per species, with a second distant-detail batch for four
  * pilot voxel species. Everything visible — on the tree, in the air, rolling
  * down a hill, in someone's hands — stays instanced and shares species colour.
  *
@@ -47,8 +47,10 @@ class SpeciesBatch {
 
   private make(capacity: number): THREE.InstancedMesh {
     const voxel = this.visualMode === 'voxel'
-      && (this.species === 'apple' || this.species === 'orange' || this.species === 'watermelon');
-    const geo = (voxel ? voxelFruitGeometry(this.species, this.far ? 8 : 20)
+      && (this.species === 'apple' || this.species === 'orange'
+        || this.species === 'watermelon' || this.species === 'coconut');
+    const geo = (voxel ? voxelFruitGeometry(this.species,
+      this.far ? 8 : this.species === 'coconut' ? 12 : 20)
       : fruitGeometry(this.species)).clone();
     const mat = new THREE.MeshStandardMaterial({
       color: 0xffffff, vertexColors: true, roughness: voxel ? 0.78 : 0.55,
@@ -143,7 +145,8 @@ export class FruitRenderer {
 
   private distant(f: Fruit): boolean {
     if (this.visualMode !== 'voxel' || !this.camera || f.id === this.highlightId
-      || (f.species !== 'apple' && f.species !== 'orange' && f.species !== 'watermelon')) return false;
+      || (f.species !== 'apple' && f.species !== 'orange'
+        && f.species !== 'watermelon' && f.species !== 'coconut')) return false;
     // A unit fruit projects to ~800 pixels / metre at 1080p and 68° vertical
     // FOV. At 38 diameters it occupies ~21 px; reverse at 31 to avoid shimmer.
     const wasFar = this.farByFruit.get(f) ?? false;

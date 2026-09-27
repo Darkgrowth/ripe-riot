@@ -10,11 +10,11 @@ type Lobe = {
   color: number;
 };
 
-/** Orchard-only replacement geometry with the exact saved fruit/physics nodes. */
+/** Replacement plant geometry with the exact saved fruit/physics nodes. */
 export function voxelPlantShape(type: PlantType, variant: number, harvestCrown: boolean): PlantShape {
   if (type !== 'appleTree' && type !== 'orangeTree' && type !== 'melonVine'
-    && type !== 'bananaPlant') {
-    throw new Error(`no detailed voxel orchard shape for ${type}`);
+    && type !== 'bananaPlant' && type !== 'palm') {
+    throw new Error(`no detailed voxel plant shape for ${type}`);
   }
   const key = `${type}:${variant}:${harvestCrown}`;
   const cached = CACHE.get(key);
@@ -23,7 +23,8 @@ export function voxelPlantShape(type: PlantType, variant: number, harvestCrown: 
   // plantShape caches its geometry and may still supply live legacy trees.
   // Keep that shared cache intact; only use its authored gameplay metadata.
   const original = plantShape(type, variant, harvestCrown);
-  const geometry = type === 'melonVine' ? buildMelonVine(variant, original)
+  const geometry = type === 'palm' ? buildPalm(variant, original)
+    : type === 'melonVine' ? buildMelonVine(variant, original)
     : type === 'bananaPlant' ? buildBananaPlant(variant, original)
       : buildTree(type, variant, harvestCrown, original);
   const result: PlantShape = {
@@ -34,6 +35,69 @@ export function voxelPlantShape(type: PlantType, variant: number, harvestCrown: 
   };
   CACHE.set(key, result);
   return result;
+}
+
+function buildPalm(variant: number, original: PlantShape): THREE.BufferGeometry {
+  const cell = 0.24;
+  const volume = new VoxelVolume();
+  const topY = Math.round(original.height / cell);
+  // The existing coconut sockets describe the curved trunk's crown centre.
+  // Recovering that centre keeps gameplay attachments in place without
+  // changing the seeded palm shape, collision capsule or fruit IDs.
+  const top = original.attachPoints.reduce((sum, point) => sum.add(point), new THREE.Vector3())
+    .multiplyScalar(1 / original.attachPoints.length);
+  const topX = Math.round(top.x / cell), topZ = Math.round(top.z / cell);
+
+  for (let y = 0; y <= topY; y++) {
+    const t = y / topY;
+    const cx = Math.round(topX * t * t), cz = Math.round(topZ * t * t);
+    const radius = y < 3 ? 2 : 1;
+    for (let x = -radius; x <= radius; x++) for (let z = -radius; z <= radius; z++) {
+      if (x * x + z * z > radius * radius + 0.25) continue;
+      const band = y % 6 === 0;
+      volume.put(cx + x, y, cz + z,
+        band ? 0x816244 : y % 11 < 4 ? 0x9c7851 : 0xa8875c);
+    }
+  }
+
+  // Broad, tapering fronds keep the tropical silhouette, but each blade is a
+  // stepped volume with a darker rib rather than a thin polygonal sheet.
+  for (let i = 0; i < 7; i++) {
+    const angle = i * Math.PI * 2 / 7 + variant * 0.19;
+    const ux = Math.sin(angle), uz = Math.cos(angle);
+    const vx = uz, vz = -ux;
+    const length = Math.round((2.75 + ((i * 3 + variant) % 5) * 0.16) / cell);
+    const droop = 5 + (i + variant) % 3;
+    const green = [0x58a83f, 0x64af47, 0x4d9c3b][(i + variant) % 3];
+    let previous: [number, number, number] = [topX, topY, topZ];
+    for (let s = 1; s <= length; s++) {
+      const t = s / length;
+      const centre: [number, number, number] = [
+        topX + Math.round(ux * s),
+        topY + Math.round(2 * Math.sin(t * Math.PI * 0.85) - droop * t * t),
+        topZ + Math.round(uz * s),
+      ];
+      fillTwig(volume, previous, centre, 0x397d34);
+      const halfWidth = Math.max(0, Math.round(Math.sin(t * Math.PI) * 2.3));
+      for (const side of [-1, 1]) {
+        const edge: [number, number, number] = [
+          centre[0] + Math.round(vx * halfWidth * side),
+          centre[1] - (s > length * 0.63 ? 1 : 0),
+          centre[2] + Math.round(vz * halfWidth * side),
+        ];
+        fillTwig(volume, centre, edge, green);
+      }
+      previous = centre;
+    }
+  }
+
+  const geometry = volume.geometry({
+    cellSize: cell,
+    origin: new THREE.Vector3(-cell / 2, 0, -cell / 2),
+    swayHeight: original.height,
+  });
+  geometry.name = `VoxelTree:palm:${variant}`;
+  return geometry;
 }
 
 function buildBananaPlant(variant: number, original: PlantShape): THREE.BufferGeometry {

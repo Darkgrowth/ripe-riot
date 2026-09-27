@@ -194,9 +194,11 @@ export class PlantSystem {
     // only this pilot clearing receives a separate visual batch.
     const harvestCrown = type === 'appleTree' || type === 'orangeTree';
     const dx = position.x - VOXEL_ORCHARD_X, dz = position.z - VOXEL_ORCHARD_Z;
-    const voxel = this.visualMode === 'voxel'
-      && (harvestCrown || type === 'melonVine' || type === 'bananaPlant')
-      && dx * dx + dz * dz <= VOXEL_ORCHARD_RADIUS_SQ;
+    const voxel = this.visualMode === 'voxel' && (
+      type === 'palm' || type === 'bananaPlant' ||
+      ((harvestCrown || type === 'melonVine')
+        && dx * dx + dz * dz <= VOXEL_ORCHARD_RADIUS_SQ)
+    );
     const shape = voxel ? voxelPlantShape(type, variant, harvestCrown)
       : plantShape(type, variant, harvestCrown);
     // A visual-only omission still consumes the normal id and RNG draws, so

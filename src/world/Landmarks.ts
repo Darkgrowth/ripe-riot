@@ -7,6 +7,8 @@ import { Rng } from '@/core/Rng';
 import { buildAnchorCrags, buildIslandWorksites } from './IslandWorksites';
 import { buildKingMelonGeometry } from './KingMelonGeometry';
 import { buildGroveArch } from './GroveArch';
+import { voxelRockGeometry } from '@/art/voxel/VoxelRock';
+import type { VisualMode } from '@/art/voxel/VisualMode';
 
 const C = (hex: number) => new THREE.Color().setHex(hex, THREE.SRGBColorSpace);
 
@@ -90,12 +92,17 @@ export interface BuiltLandmarks {
  * to, the awful little boat, and the King Melon you cannot possibly harvest yet
  * but will spend the next several hours thinking about.
  */
-export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrain: Terrain): BuiltLandmarks {
+export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrain: Terrain,
+  visualMode: VisualMode = 'baseline'): BuiltLandmarks {
   const b = new PropBuilder(physics);
   const rng = new Rng('props');
   const signs: THREE.Mesh[] = [];
 
   const ground = (x: number, z: number) => terrain.height(x, z);
+  let rockVariant = 0;
+  const boulder = (radius: number, color: THREE.Color, collide: boolean) =>
+    b.sphere(radius, 0, color, collide, [0, 0, 0],
+      visualMode === 'voxel' ? voxelRockGeometry(radius, rockVariant++) : undefined);
   const localGround = (x: number, z: number, originX: number, originY: number, originZ: number, rot: number) =>
     ground(originX + x * Math.cos(rot) + z * Math.sin(rot),
       originZ - x * Math.sin(rot) + z * Math.cos(rot)) - originY;
@@ -992,7 +999,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     const s = rockRng.range(0.4, 1.55);
     b.reset().translate(x, y + s * 0.26, z).rotateY(rockRng.range(0, 6.28))
       .rotateZ(rockRng.range(-0.3, 0.3)).scale(1, rockRng.range(0.5, 0.9), 1);
-    b.sphere(s, 0, rockRng.chance(0.35) ? STONE_DARK : STONE, s > 1.0);
+    boulder(s, rockRng.chance(0.35) ? STONE_DARK : STONE, s > 1.0);
     // A smaller companion, so boulders come in groups the way they do in the
     // reference rather than one at a time on an empty field.
     if (rockRng.chance(0.55)) {
@@ -1002,7 +1009,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
       const y2 = ground(x2, z2);
       b.push().translate(0, y2 + s2 * 0.22, 0).rotateY(rockRng.range(0, 6.28))
         .scale(1, rockRng.range(0.5, 0.85), 1);
-      b.sphere(s2, 0, STONE, false);
+      boulder(s2, STONE, false);
       b.pop();
     }
   }
@@ -1033,7 +1040,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
       b.reset().translate(x, y, z).rotateY(cragRot);
       b.push().translate(0, big * 0.30, 0).rotateZ(cragRng.range(-0.35, 0.35))
         .scale(1, cragRng.range(0.55, 0.95), 1);
-      b.sphere(big, 0, cragRng.chance(0.4) ? STONE_DARK : STONE, true);
+      boulder(big, cragRng.chance(0.4) ? STONE_DARK : STONE, true);
       b.pop();
       const extras = cragRng.int(1, 3);
       for (let k = 0; k < extras; k++) {
@@ -1045,7 +1052,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
         b.push().translate(ax, ground(wx, wz) - y + r2 * 0.24, az)
           .rotateY(cragRng.range(0, 6.28)).rotateZ(cragRng.range(-0.4, 0.4))
           .scale(1, cragRng.range(0.5, 0.9), 1);
-        b.sphere(r2, 0, STONE, false);
+        boulder(r2, STONE, false);
         b.pop();
       }
     }
@@ -1056,7 +1063,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   for (let i = 0; i < 5; i++) {
     const a = (i / 5) * Math.PI * 2;
     b.push().translate(Math.cos(a) * 11, 0.2, Math.sin(a) * 11).rotateY(a);
-    b.sphere(rng.range(1.1, 2.0), 0, STONE, true);
+    boulder(rng.range(1.1, 2.0), STONE, true);
     b.pop();
   }
 
