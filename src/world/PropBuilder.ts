@@ -95,6 +95,12 @@ export class PropBuilder {
     return this;
   }
 
+  /** Decorative geometry whose authored vertex colours must survive the static merge. */
+  meshColored(g: THREE.BufferGeometry): this {
+    this.emit(g, null);
+    return this;
+  }
+
   sphere(r: number, seg: number, color: PropColor, collide = this.solid,
     at: [number, number, number] = [0, 0, 0], visual?: THREE.BufferGeometry): this {
     const g = visual ?? new THREE.IcosahedronGeometry(r, seg);
@@ -142,17 +148,23 @@ export class PropBuilder {
     this.physics.register(owner as never, body, [col]);
   }
 
-  private emit(g: THREE.BufferGeometry, color: PropColor): void {
+  private emit(g: THREE.BufferGeometry, color: PropColor | null): void {
     const flat = g.index ? g.toNonIndexed() : g;
     if (flat !== g) g.dispose();
     flat.applyMatrix4(this.xform);
     const pos = flat.getAttribute('position');
-    const col = new Float32Array(pos.count * 3);
-    for (let i = 0; i < pos.count; i++) {
-      const c = typeof color === 'function' ? color(pos.getY(i)) : color;
-      col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+    if (color === null) {
+      const authored = flat.getAttribute('color');
+      if (!authored || authored.itemSize !== 3 || authored.count !== pos.count)
+        throw new Error('meshColored requires one RGB color per vertex');
+    } else {
+      const col = new Float32Array(pos.count * 3);
+      for (let i = 0; i < pos.count; i++) {
+        const c = typeof color === 'function' ? color(pos.getY(i)) : color;
+        col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+      }
+      flat.setAttribute('color', new THREE.BufferAttribute(col, 3));
     }
-    flat.setAttribute('color', new THREE.BufferAttribute(col, 3));
     // Strip anything the merge would choke on; we only need pos/normal/color.
     for (const k of Object.keys(flat.attributes)) {
       if (k !== 'position' && k !== 'normal' && k !== 'color') flat.deleteAttribute(k);

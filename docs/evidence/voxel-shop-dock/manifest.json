@@ -1,0 +1,202 @@
+{
+  "base": "http://127.0.0.1:5231",
+  "views": [
+    {
+      "name": "dock-arrival",
+      "from": [
+        58,
+        62
+      ],
+      "to": [
+        45,
+        52
+      ]
+    },
+    {
+      "name": "shop-approach",
+      "from": [
+        53,
+        58
+      ],
+      "to": [
+        44,
+        53
+      ]
+    },
+    {
+      "name": "shop-front",
+      "from": [
+        36,
+        60
+      ],
+      "to": [
+        43,
+        54
+      ]
+    },
+    {
+      "name": "buy-counter",
+      "from": [
+        39.5,
+        57
+      ],
+      "to": [
+        43,
+        54.3
+      ]
+    },
+    {
+      "name": "sell-pad",
+      "from": [
+        34,
+        62
+      ],
+      "to": [
+        41,
+        55
+      ]
+    }
+  ],
+  "captures": [
+    {
+      "mode": "baseline",
+      "view": "dock-arrival",
+      "render": {
+        "drawCalls": 262,
+        "triangles": 937604,
+        "geometries": 197,
+        "textures": 17,
+        "programs": 35
+      },
+      "pointerLockCalls": 0,
+      "pointerLocked": false,
+      "errors": []
+    },
+    {
+      "mode": "baseline",
+      "view": "shop-approach",
+      "render": {
+        "drawCalls": 282,
+        "triangles": 938780,
+        "geometries": 197,
+        "textures": 17,
+        "programs": 35
+      },
+      "pointerLockCalls": 0,
+      "pointerLocked": false,
+      "errors": []
+    },
+    {
+      "mode": "baseline",
+      "view": "shop-front",
+      "render": {
+        "drawCalls": 146,
+        "triangles": 927492,
+        "geometries": 197,
+        "textures": 17,
+        "programs": 35
+      },
+      "pointerLockCalls": 0,
+      "pointerLocked": false,
+      "errors": []
+    },
+    {
+      "mode": "baseline",
+      "view": "buy-counter",
+      "render": {
+        "drawCalls": 140,
+        "triangles": 926904,
+        "geometries": 197,
+        "textures": 17,
+        "programs": 35
+      },
+      "pointerLockCalls": 0,
+      "pointerLocked": false,
+      "errors": []
+    },
+    {
+      "mode": "baseline",
+      "view": "sell-pad",
+      "render": {
+        "drawCalls": 146,
+        "triangles": 927492,
+        "geometries": 197,
+        "textures": 17,
+        "programs": 35
+      },
+      "pointerLockCalls": 0,
+      "pointerLocked": false,
+      "errors": []
+    },
+    {
+      "mode": "voxel",
+      "view": "dock-arrival",
+      "render": {
+        "drawCalls": 247,
+        "triangles": 2437542,
+        "geometries": 198,
+        "textures": 18,
+        "programs": 36
+      },
+      "pointerLockCalls": 0,
+      "pointerLocked": false,
+      "errors": []
+    },
+    {
+      "mode": "voxel",
+      "view": "shop-approach",
+      "render": {
+        "drawCalls": 267,
+        "triangles": 2437294,
+        "geometries": 198,
+        "textures": 18,
+        "programs": 36
+      },
+      "pointerLockCalls": 0,
+      "pointerLocked": false,
+      "errors": []
+    },
+    {
+      "mode": "voxel",
+      "view": "shop-front",
+      "render": {
+        "drawCalls": 148,
+        "triangles": 2359814,
+        "geometries": 198,
+        "textures": 18,
+        "programs": 36
+      },
+      "pointerLockCalls": 0,
+      "pointerLocked": false,
+      "errors": []
+    },
+    {
+      "mode": "voxel",
+      "view": "buy-counter",
+      "render": {
+        "drawCalls": 142,
+        "triangles": 2357802,
+        "geometries": 198,
+        "textures": 18,
+        "programs": 36
+      },
+      "pointerLockCalls": 0,
+      "pointerLocked": false,
+      "errors": []
+    },
+    {
+      "mode": "voxel",
+      "view": "sell-pad",
+      "render": {
+        "drawCalls": 148,
+        "triangles": 2359814,
+        "geometries": 198,
+        "textures": 18,
+        "programs": 36
+      },
+      "pointerLockCalls": 0,
+      "pointerLocked": false,
+      "errors": []
+    }
+  ]
+}

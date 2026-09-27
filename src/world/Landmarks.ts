@@ -8,6 +8,8 @@ import { buildAnchorCrags, buildIslandWorksites } from './IslandWorksites';
 import { buildKingMelonGeometry } from './KingMelonGeometry';
 import { buildGroveArch } from './GroveArch';
 import { voxelRockGeometry } from '@/art/voxel/VoxelRock';
+import { voxelFruitGeometry } from '@/art/voxel/VoxelFruit';
+import { voxelBarrelGeometry, voxelSackGeometry } from '@/art/voxel/VoxelShop';
 import type { VisualMode } from '@/art/voxel/VisualMode';
 
 const C = (hex: number) => new THREE.Color().setHex(hex, THREE.SRGBColorSpace);
@@ -103,6 +105,13 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   const boulder = (radius: number, color: THREE.Color, collide: boolean) =>
     b.sphere(radius, 0, color, collide, [0, 0, 0],
       visualMode === 'voxel' ? voxelRockGeometry(radius, rockVariant++) : undefined);
+  const displayFruit = (species: 'apple' | 'orange' | 'coconut', radius: number,
+    at: [number, number, number]) => {
+    const geometry = voxelFruitGeometry(species, 8).clone();
+    geometry.scale(radius * 2, radius * 2, radius * 2);
+    geometry.translate(...at);
+    b.meshColored(geometry);
+  };
   const localGround = (x: number, z: number, originX: number, originY: number, originZ: number, rot: number) =>
     ground(originX + x * Math.cos(rot) + z * Math.sin(rot),
       originZ - x * Math.sin(rot) + z * Math.cos(rot)) - originY;
@@ -250,13 +259,21 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     b.push().translate(x, deckY + 0.08, z).rotateY(rng.range(0, 3.14));
     b.recordProp(`dock-barrel-${x}-${z}`, { kind: 'barrel', radius: r, support: 'dock deck' });
     b.cylinder(r * 0.92, r * 0.92, 0.86, 16, CRATE, true, [0, 0.43, 0]);
-    b.cylinder(r, r, 0.10, 16, METAL_DARK, false, [0, 0.24, 0]);
-    b.cylinder(r, r, 0.10, 16, METAL_DARK, false, [0, 0.64, 0]);
-    b.cylinder(r * 0.86, r * 0.86, 0.05, 16, PLANK_DARK, false, [0, 0.87, 0]);
+    if (visualMode === 'voxel') {
+      const geometry = voxelBarrelGeometry().clone();
+      geometry.scale(r * 2.12, 0.92, r * 2.12);
+      geometry.translate(0, 0.46, 0);
+      b.meshColored(geometry);
+    } else {
+      b.cylinder(r, r, 0.10, 16, METAL_DARK, false, [0, 0.24, 0]);
+      b.cylinder(r, r, 0.10, 16, METAL_DARK, false, [0, 0.64, 0]);
+      b.cylinder(r * 0.86, r * 0.86, 0.05, 16, PLANK_DARK, false, [0, 0.87, 0]);
+    }
     b.pop();
   };
   /** A basket with fruit heaped in it: the sell loop, stated as scenery. */
-  const fruitBasket = (x: number, z: number, fruit: THREE.Color) => {
+  const fruitBasket = (x: number, z: number, species: 'apple' | 'orange') => {
+    const fruit = species === 'apple' ? APPLE : ORANGE;
     b.push().translate(x, deckY + 0.08, z).rotateY(rng.range(0, 3.14));
     b.recordProp(`dock-basket-${x}-${z}`, { kind: 'basket', support: 'dock deck', contents: 'fruit seated on inset floor' });
     for (let i = 0; i < 9; i++) {
@@ -271,9 +288,13 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
       // Preserve RNG draws, but seat the contents on the floor instead of
       // floating above an empty basket.
       const radius = 0.09 + rng.range(0, 0.06) * 0.25;
-      const piece = new THREE.SphereGeometry(radius, 8, 6);
-      piece.translate(Math.cos(a) * r, 0.055 + radius, Math.sin(a) * r);
-      b.mesh(piece, fruit);
+      const at: [number, number, number] = [Math.cos(a) * r, 0.055 + radius, Math.sin(a) * r];
+      if (visualMode === 'voxel') displayFruit(species, radius, at);
+      else {
+        const piece = new THREE.SphereGeometry(radius, 8, 6);
+        piece.translate(...at);
+        b.mesh(piece, fruit);
+      }
     }
     b.pop();
   };
@@ -304,10 +325,10 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   barrel(2.2, 3.1, 0.30);
   barrel(-2.3, 11.4);
   barrel(2.3, 13.2, 0.31);
-  fruitBasket(2.25, 4.1, APPLE);
-  fruitBasket(-2.2, 4.4, ORANGE);
-  fruitBasket(2.3, 12.0, APPLE);
-  fruitBasket(-2.25, 13.6, APPLE);
+  fruitBasket(2.25, 4.1, 'apple');
+  fruitBasket(-2.2, 4.4, 'orange');
+  fruitBasket(2.3, 12.0, 'apple');
+  fruitBasket(-2.25, 13.6, 'apple');
   // A coil of rope and a stack of spare planking: the props that say this is a
   // working jetty rather than a walkway with boxes on it.
   b.push().translate(-2.2, deckY + 0.12, 8.4);
@@ -420,16 +441,40 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   // Plinth and walls.
   b.box(SW + 0.5, PLINTH, SD + 0.5, STONE, true, [0, PLINTH / 2, 0]);
   b.box(SW, EAVE - PLINTH, SD, WALL, true, [0, (EAVE + PLINTH) / 2, 0]);
+  if (visualMode === 'voxel') {
+    // Broad fitted stone courses dress the existing plinth collider without
+    // changing its footprint or blocking the approach to the counter.
+    for (let i = 0; i < 8; i++) {
+      const x = -SW / 2 + (i + 0.5) * SW / 8;
+      b.box(SW / 8 - 0.035, 0.26, 0.08, i % 3 ? STONE : STONE_DARK, false,
+        [x, 0.17, front + 0.23]);
+    }
+    for (let i = 0; i < 6; i++) {
+      const z = -SD / 2 + (i + 0.5) * SD / 6;
+      b.box(0.08, 0.26, SD / 6 - 0.035, i % 3 ? STONE : STONE_DARK, false,
+        [SW / 2 + 0.23, 0.17, z]);
+    }
+  }
   // Wainscot: a darker boarded band round the bottom metre. One tonal break is
   // most of the difference between a shed and a cream box.
   b.box(SW + 0.10, 1.05, SD + 0.10, WALL_SHADE, false, [0, PLINTH + 0.5, 0]);
   b.box(SW + 0.16, 0.10, SD + 0.16, POST, false, [0, PLINTH + 1.02, 0]);
-  for (let i = 0; i < 8; i++) {
-    const x = -SW / 2 + 0.45 + i * ((SW - 0.9) / 7);
+  const wallSeams = visualMode === 'voxel' ? 6 : 8;
+  for (let i = 0; i < wallSeams; i++) {
+    const x = -SW / 2 + 0.45 + i * ((SW - 0.9) / (wallSeams - 1));
     for (const sz of [-1, 1]) {
-      b.box(0.12, EAVE - PLINTH - 1.05, 0.06, WALL_SHADE, false,
+      b.box(visualMode === 'voxel' ? 0.17 : 0.12, EAVE - PLINTH - 1.05, 0.06,
+        visualMode === 'voxel' ? PLANK_LIGHT : WALL_SHADE, false,
         [x, (EAVE + PLINTH + 1.05) / 2, sz * (SD / 2 + 0.03)]);
     }
+  }
+  if (visualMode === 'voxel') {
+    // Frame the dock-facing gable in stout timber; broad cream infill remains
+    // calm behind the windows and wanted board.
+    for (const y of [1.40, 3.04])
+      b.box(0.16, 0.17, SD + 0.08, POST, false, [SW / 2 + 0.06, y, 0]);
+    for (const y of [0.62, 1.02])
+      b.box(0.055, 0.045, SD + 0.10, WALL, false, [SW / 2 + 0.09, y, 0]);
   }
   for (const sx of [-1, 1]) {
     for (const sz of [-1, 1]) {
@@ -445,13 +490,26 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     b.push().translate(0, (EAVE + RIDGE) / 2, (sz * runZ) / 2).rotateX(sz * theta);
     b.box(SW + OVER_X * 2, 0.20, slabLen, sz > 0 ? ROOF : ROOF_DARK, false);
     b.box(SW + OVER_X * 2 - 0.12, 0.07, slabLen - 0.1, ROOF_DARK, false, [0, -0.14, 0]);
-    // Overlapping terracotta courses, kept broad enough to read from the dock.
-    for (let row = 0; row < 7; row++) {
-      const rz = -slabLen / 2 + (row + 0.5) * slabLen / 7;
-      b.box(SW + OVER_X * 2, 0.045, 0.055, ROOF_DARK, false, [0, 0.115, rz]);
-      for (let col = 0; col < 12; col++) {
-        const rx = -(SW + OVER_X * 2) / 2 + 0.35 + col * 0.7 + (row % 2) * 0.16;
-        b.box(0.025, 0.018, slabLen / 7 - 0.06, ROOF_RIDGE, false, [rx, 0.112, rz]);
+    if (visualMode === 'voxel') {
+      // Fewer, deeper tile courses give the roof a stepped edge without a
+      // checkerboard of tiny grooves on a building seen from the dock.
+      for (let row = 0; row < 7; row++) {
+        const rz = -slabLen / 2 + (row + 0.5) * slabLen / 7;
+        for (let col = 0; col < 6; col++) {
+          const rx = -(SW + OVER_X * 2) / 2 + (col + 0.5) * (SW + OVER_X * 2) / 6;
+          b.box((SW + OVER_X * 2) / 6 - 0.035, 0.09, slabLen / 7 - 0.035,
+            row % 3 === 0 ? ROOF_DARK : sz > 0 ? ROOF : ROOF_DARK,
+            false, [rx, 0.15, rz]);
+        }
+      }
+    } else {
+      for (let row = 0; row < 7; row++) {
+        const rz = -slabLen / 2 + (row + 0.5) * slabLen / 7;
+        b.box(SW + OVER_X * 2, 0.045, 0.055, ROOF_DARK, false, [0, 0.115, rz]);
+        for (let col = 0; col < 12; col++) {
+          const rx = -(SW + OVER_X * 2) / 2 + 0.35 + col * 0.7 + (row % 2) * 0.16;
+          b.box(0.025, 0.018, slabLen / 7 - 0.06, ROOF_RIDGE, false, [rx, 0.112, rz]);
+        }
       }
     }
     b.pop();
@@ -490,12 +548,32 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   b.box(4.2, 1.72, 0.10, GLASS, false, [0, 2.18, front + 0.09]);
   b.box(3.9, 1.5, 0.06, C(0x7a5433), false, [0, 2.14, front + 0.12]);
   b.box(3.4, 0.09, 0.30, PLANK, false, [0, 2.62, front + 0.16]);
-  b.box(2.4, 0.36, 0.05, LAMP, false, [0, 2.98, front + 0.13]);
+  b.box(2.4, 0.36, 0.05, visualMode === 'voxel' ? POST : LAMP,
+    false, [0, 2.98, front + 0.13]);
+  if (visualMode === 'voxel') {
+    b.box(3.35, 0.065, 0.07, PLANK_DARK, false, [0, 2.69, front + 0.35]);
+    b.box(3.35, 0.06, 0.06, PLANK_DARK, false, [0, 2.68, front + 0.03]);
+  }
   for (let i = 0; i < 5; i++) {
-    b.sphere(0.14, 1, i % 2 ? APPLE : ORANGE, false, [-1.3 + i * 0.65, 2.80, front + 0.16]);
+    const at: [number, number, number] = [-1.3 + i * 0.65, 2.80, front + 0.16];
+    if (visualMode === 'voxel') displayFruit(i % 2 ? 'apple' : 'orange', 0.14, at);
+    else b.sphere(0.14, 1, i % 2 ? APPLE : ORANGE, false, at);
   }
   for (const sx of [-1, 1]) {
     b.box(0.20, 2.3, 0.20, POST, false, [sx * 2.35, 2.15, front + 0.06]);
+  }
+  if (visualMode === 'voxel') {
+    signs.push(makeSign(b,
+      // Face the teal counter apron. The awning hides signs over the hatch
+      // from normal eye height, while this board stays visible on approach.
+      new THREE.Vector3(0, 0.69, front + 1.92)
+        .applyAxisAngle(new THREE.Vector3(0, 1, 0), shopRot)
+        .add(new THREE.Vector3(shopX, shopY, shopZ)),
+      shopRot, 2.80, 0.38,
+      signTexture(['BUY AT COUNTER'], {
+        w: 600, h: 120, bg: '#4a3929', fg: '#f5dfa6', accent: '#9d7b4c', lineScale: 3,
+      }),
+    ));
   }
 
   // Windows on the gable ends, with shutters and a window box. The +X end is
@@ -513,8 +591,10 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     b.pop();
     b.box(0.34, 0.24, 1.15, PLANK, false, [SW / 2 + 0.18, 1.60, sz * 1.35]);
     for (let i = 0; i < 4; i++) {
-      b.sphere(0.11, 0, i % 2 ? C(0xe2503f) : C(0xf5c33f), false,
-        [SW / 2 + 0.18, 1.78, sz * 1.35 - 0.42 + i * 0.28]);
+      const at: [number, number, number] = [SW / 2 + 0.18, 1.78,
+        sz * 1.35 - 0.42 + i * 0.28];
+      if (visualMode === 'voxel') displayFruit(i % 2 ? 'apple' : 'orange', 0.11, at);
+      else b.sphere(0.11, 0, i % 2 ? C(0xe2503f) : C(0xf5c33f), false, at);
     }
   }
 
@@ -595,9 +675,14 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
       [(-0.375 + slat * 0.25) * sz, sz * 0.46, 0]);
     if (loaded) for (let i = 0; i < 4; i++) {
       const r = sz * 0.17, offset = sz * 0.22;
-      const fruit = new THREE.SphereGeometry(r, 16, 10);
-      fruit.translate(i % 2 ? offset : -offset, sz / 2 + r, i > 1 ? offset : -offset);
-      b.mesh(fruit, i % 2 ? APPLE : ORANGE);
+      const at: [number, number, number] = [i % 2 ? offset : -offset,
+        sz / 2 + r, i > 1 ? offset : -offset];
+      if (visualMode === 'voxel') displayFruit(i % 2 ? 'apple' : 'orange', r, at);
+      else {
+        const fruit = new THREE.SphereGeometry(r, 16, 10);
+        fruit.translate(...at);
+        b.mesh(fruit, i % 2 ? APPLE : ORANGE);
+      }
     }
     b.pop();
   };
@@ -610,9 +695,15 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     const sx = 3.7 + i * 0.05, sz = front - 0.6 - i * 0.62;
     b.push().translate(sx, shopGround(sx, sz), sz).rotateY(i * 0.7);
     b.recordProp(`shop-sack-${i}`, { kind: 'sack', support: 'terrain', radius: 0.42 });
-    const sack = new THREE.SphereGeometry(0.42, 16, 10);
-    sack.scale(1, 0.78, 1); sack.translate(0, 0.42 * 0.78, 0);
-    b.mesh(sack, SACK);
+    if (visualMode === 'voxel') {
+      const sack = voxelSackGeometry().clone();
+      sack.scale(0.90, 0.70, 0.90);
+      b.meshColored(sack);
+    } else {
+      const sack = new THREE.SphereGeometry(0.42, 16, 10);
+      sack.scale(1, 0.78, 1); sack.translate(0, 0.42 * 0.78, 0);
+      b.mesh(sack, SACK);
+    }
     b.cylinder(.075, .15, .15, 10, SACK, false, [0, .69, 0]);
     b.cylinder(.085, .085, .035, 10, ROPE, false, [0, .70, 0]);
     b.pop();
@@ -622,8 +713,15 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     b.push().translate(barrelX, shopGround(barrelX, bz), bz);
     b.recordProp(`shop-barrel-${barrelX}-${bz}`, { kind: 'barrel', support: 'terrain', radius: 0.39 });
     b.cylinder(0.36, 0.36, 0.94, 16, CRATE, true, [0, 0.47, 0]);
-    b.cylinder(0.39, 0.39, 0.10, 16, METAL_DARK, false, [0, 0.26, 0]);
-    b.cylinder(0.39, 0.39, 0.10, 16, METAL_DARK, false, [0, 0.70, 0]);
+    if (visualMode === 'voxel') {
+      const geometry = voxelBarrelGeometry().clone();
+      geometry.scale(0.82, 0.98, 0.82);
+      geometry.translate(0, 0.49, 0);
+      b.meshColored(geometry);
+    } else {
+      b.cylinder(0.39, 0.39, 0.10, 16, METAL_DARK, false, [0, 0.26, 0]);
+      b.cylinder(0.39, 0.39, 0.10, 16, METAL_DARK, false, [0, 0.70, 0]);
+    }
     b.pop();
   }
   // The island board by the counter: the frame is built here, the face is a
@@ -703,14 +801,18 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     new THREE.Vector3(0, 3.92, sellLocal.z + 0.19).applyAxisAngle(new THREE.Vector3(0, 1, 0), shopRot)
       .add(new THREE.Vector3(shopX, shopY, shopZ)),
     shopRot, 4.0, 1.28,
-    signTexture(['SELL HERE  \u2022  BUY THINGS'], { title: "MERV'S SUPPLY", h: 200, w: 640 }),
+    visualMode === 'voxel'
+      ? signTexture(['FRUIT GOES ON PAD'], { title: 'SELL HERE', h: 200, w: 640 })
+      : signTexture(['SELL HERE  \u2022  BUY THINGS'], { title: "MERV'S SUPPLY", h: 200, w: 640 }),
   ));
   // The hanging bracket board, legible from the whole approach.
   signs.push(makeSign(b,
     new THREE.Vector3(SW / 2 + 1.35, 2.62, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), shopRot)
       .add(new THREE.Vector3(shopX, shopY, shopZ)),
     shopRot + Math.PI / 2, 1.6, 1.0,
-    signTexture(['FRESH FRUIT'], { title: 'SHOP', h: 240, w: 380 }),
+    visualMode === 'voxel'
+      ? signTexture(['BUY · SELL'], { title: "MERV'S SUPPLY", h: 240, w: 380 })
+      : signTexture(['FRESH FRUIT'], { title: 'SHOP', h: 240, w: 380 }),
   ));
 
   const shopCounter = new THREE.Vector3(0, 1.4, 3.4)
@@ -725,7 +827,8 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   b.cylinder(0.42, 0.42, 0.14, 12, CANVAS_CREAM, false);
   b.pop();
   b.push().translate(SW / 2 + 0.26, 3.73, 0).scale(0.32, 1, 1);
-  b.sphere(0.30, 1, ORANGE, false);
+  if (visualMode === 'voxel') displayFruit('orange', 0.30, [0, 0, 0]);
+  else b.sphere(0.30, 1, ORANGE, false);
   b.pop();
   b.box(0.06, 0.14, 0.055, POST, false, [SW / 2 + 0.28, 4.04, 0]);
   b.push().translate(SW / 2 + 0.27, 4.02, -0.16).scale(0.15, 0.4, 1);
@@ -738,8 +841,15 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   const apronBase = shopGround(-3.2, 8.4);
   b.push().translate(-3.2, apronBase, 8.4).rotateY(0.5);
   b.cylinder(0.36, 0.36, 0.94, 16, CRATE, true, [0, 0.47, 0]);
-  b.cylinder(0.39, 0.39, 0.10, 16, METAL_DARK, false, [0, 0.26, 0]);
-  b.cylinder(0.39, 0.39, 0.10, 16, METAL_DARK, false, [0, 0.70, 0]);
+  if (visualMode === 'voxel') {
+    const geometry = voxelBarrelGeometry().clone();
+    geometry.scale(0.82, 0.98, 0.82);
+    geometry.translate(0, 0.49, 0);
+    b.meshColored(geometry);
+  } else {
+    b.cylinder(0.39, 0.39, 0.10, 16, METAL_DARK, false, [0, 0.26, 0]);
+    b.cylinder(0.39, 0.39, 0.10, 16, METAL_DARK, false, [0, 0.70, 0]);
+  }
   const apronCrateGround = shopGround(-3.2 + Math.cos(.5) + .3 * Math.sin(.5),
     8.4 - Math.sin(.5) + .3 * Math.cos(.5)) - apronBase;
   b.push().translate(1.0, apronCrateGround + .31, .3);
@@ -814,8 +924,9 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     b.box(0.09, 0.09, 1.25, POST, false, [side * 0.42, 0.59, 1.0]);
   }
   for (let i = 0; i < 6; i++) {
-    b.sphere(0.16, 1, i % 2 ? APPLE : ORANGE, false,
-      [-0.28 + (i % 3) * 0.28, 0.80, -0.5 + i * 0.20]);
+    const at: [number, number, number] = [-0.28 + (i % 3) * 0.28, 0.80, -0.5 + i * 0.20];
+    if (visualMode === 'voxel') displayFruit(i % 2 ? 'apple' : 'orange', 0.16, at);
+    else b.sphere(0.16, 1, i % 2 ? APPLE : ORANGE, false, at);
   }
   b.pop();
 

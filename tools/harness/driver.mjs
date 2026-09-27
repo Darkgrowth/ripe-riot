@@ -124,7 +124,8 @@ async function attachPage(browser, ctx, quiet, islandActivities, drawFrames) {
 
   // `?fresh`: never resume a save. A page that saved on close would otherwise
   // hand its money and tools to the next page in the same browser context.
-  await page.goto(`${URL_BASE}/?fresh=1`, { waitUntil: 'domcontentloaded' });
+  const visualQuery = process.env.RIPE_VOXEL_PILOT === '1' ? '&voxelPilot=1' : '';
+  await page.goto(`${URL_BASE}/?fresh=1${visualQuery}`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(
     () => window.__RIPE_READY === true || window.__RIPE_ERROR,
     null, { timeout: 90_000 },
