@@ -63,6 +63,8 @@ test('voxel route preserves seeded dressing and converts the shop approach', () 
     'the pilot should keep one instance batch per geometry and zone');
   let voxelCount = 0;
   let shopVoxelCount = 0;
+  let hillVoxelCount = 0;
+  let hillTrackVoxelCount = 0;
   for (const kind of VOXEL_DRESSING_KINDS) {
     const old = instances(originalScene, kind);
     const next = instances(pilotScene, kind);
@@ -84,11 +86,22 @@ test('voxel route preserves seeded dressing and converts the shop approach', () 
         }
         if (Math.hypot(x + 24, z - 22) <= 30)
           assert.ok(mesh.name.startsWith('Dressing:voxel:'), `${mesh.name} at orchard ${p}`);
+        if (Math.hypot(x + 36, z + 30) <= 16) {
+          assert.ok(mesh.name.startsWith('Dressing:voxel:'), `${mesh.name} at Hill Farm ${p}`);
+          hillVoxelCount++;
+        }
+        if (Math.hypot(x + 33, z + 18) <= 6) {
+          assert.ok(mesh.name.startsWith('Dressing:voxel:'), `${mesh.name} on hill track ${p}`);
+          hillTrackVoxelCount++;
+        }
       }
     }
   }
   assert.ok(voxelCount > 40, 'orchard should have enough converted plants to read as voxel');
   assert.ok(shopVoxelCount > 10, 'shop should have enough dressing to read as voxel');
+  assert.ok(hillVoxelCount > 10, 'Hill Farm should have enough voxel dressing to read as one area');
+  assert.ok(hillTrackVoxelCount > 0,
+    `the orchard-to-farm shoulder should not switch back to baseline (${hillTrackVoxelCount} details)`);
   original.dispose();
   pilot.dispose();
 });

@@ -157,7 +157,7 @@ test('distant ordinary fruit use one cheaper batch per species and retain instan
   renderer.dispose();
 });
 
-test('voxel pilot changes only melon vines planted in the orchard clearing', async () => {
+test('first-island route converts melon vines in Old Orchard and Hill Farm', async () => {
   await PhysicsWorld.load();
   const physics = new PhysicsWorld();
   physics.init();
@@ -165,13 +165,18 @@ test('voxel pilot changes only melon vines planted in the orchard clearing', asy
   const plants = new PlantSystem(scene, physics, 'voxel');
   const inside = plants.plant(11, 'melonVine', new THREE.Vector3(-24, 3, 22),
     new Rng(11), { variant: 0, scale: 1 });
-  const outside = plants.plant(12, 'melonVine', new THREE.Vector3(3, 3, 22),
+  const hill = plants.plant(12, 'melonVine', new THREE.Vector3(-36, 21, -30),
     new Rng(12), { variant: 0, scale: 1 });
+  const outside = plants.plant(13, 'melonVine', new THREE.Vector3(80, 3, -60),
+    new Rng(13), { variant: 0, scale: 1 });
   assert.match(inside.batchKey, /voxel/);
+  assert.match(hill.batchKey, /voxel/);
   assert.doesNotMatch(outside.batchKey, /voxel/);
   const shape = scene.children.find(child => child.name === `Plants:${inside.batchKey}`)?.geometry;
   assert.match(shape?.name ?? '', /^VoxelTree:melonVine/);
   assert.equal(inside.nodes.length, outside.nodes.length);
+  assert.deepEqual(hill.nodes.map(node => node.local.toArray()),
+    outside.nodes.map(node => node.local.toArray()));
   plants.dispose();
   physics.world.free();
 });
@@ -204,6 +209,17 @@ test('hidden colliderless puff consumes the usual RNG while voxel banana retains
   assert.equal(hidden.body, null);
   assert.equal(hidden.nodes.length, visible.nodes.length);
   assert.equal(hiddenRng.next(), visibleRng.next());
+  const shopPuff = visiblePlants.plant(25, 'puffBush', new THREE.Vector3(21.5, 3, 48),
+    new Rng(25), { variant: 0, scale: 1.1 });
+  const hillPuff = visiblePlants.plant(26, 'puffBush', new THREE.Vector3(-36, 21, -30),
+    new Rng(26), { variant: 0, scale: 1.1 });
+  const remotePuff = visiblePlants.plant(27, 'puffBush', new THREE.Vector3(80, 3, -60),
+    new Rng(27), { variant: 0, scale: 1.1 });
+  assert.match(shopPuff.batchKey, /voxel/, 'visible route bush should share the voxel canopy language');
+  assert.match(hillPuff.batchKey, /voxel/, 'Hill Farm bushes should share that canopy language');
+  assert.doesNotMatch(remotePuff.batchKey, /voxel/);
+  assert.deepEqual(shopPuff.nodes.map(node => node.local.toArray()),
+    remotePuff.nodes.map(node => node.local.toArray()));
   const banana = hiddenPlants.plant(23, 'bananaPlant', new THREE.Vector3(-4, 3, 37.5),
     new Rng(23), { scale: 1.2 });
   assert.match(banana.batchKey, /voxel/);

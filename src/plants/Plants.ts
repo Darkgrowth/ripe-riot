@@ -5,6 +5,7 @@ import type { PhysicsWorld, PhysicsOwner, RBody, RCollider } from '@/physics/Phy
 import { Groups } from '@/physics/Layers';
 import { Rng } from '@/core/Rng';
 import { voxelPlantShape } from '@/art/voxel/VoxelTrees';
+import { voxelFirstRouteWeight } from '@/art/voxel/VoxelClearingTerrain';
 import type { VisualMode } from '@/art/voxel/VisualMode';
 
 export interface PlantNode {
@@ -58,14 +59,8 @@ const _v = new THREE.Vector3();
 const _off = new THREE.Vector3();
 const _wind = new THREE.Vector3(1, 0, 0);
 const _perp = new THREE.Vector3();
-// Melon vines remain an Old Orchard pilot; fruit trees share the voxel kit
-// across the Old Orchard, Hill Farm and Cave Orchard.
-const VOXEL_ORCHARD_X = -24;
-const VOXEL_ORCHARD_Z = 22;
-const VOXEL_ORCHARD_RADIUS_SQ = 26 * 26;
-const VOXEL_SPITTER_X = -31;
-const VOXEL_SPITTER_Z = -8;
-const VOXEL_SPITTER_RADIUS_SQ = 9 * 9;
+// Low plants share the first-route art boundary with dressing and terrain;
+// harvest fruit trees and approach palms remain converted in their habitats.
 const batchKey = (type: PlantType, variant: number, harvestCrown: boolean, voxel: boolean) =>
   `${type}:${variant}${harvestCrown ? ':harvest' : ''}${voxel ? ':voxel' : ''}`;
 
@@ -196,12 +191,10 @@ export class PlantSystem {
     // Original gameplay nodes remain common to both art modes. The same
     // broadleaf kit now follows the fruit harvest beyond the first orchard.
     const harvestCrown = type === 'appleTree' || type === 'orangeTree';
-    const dx = position.x - VOXEL_ORCHARD_X, dz = position.z - VOXEL_ORCHARD_Z;
-    const sx = position.x - VOXEL_SPITTER_X, sz = position.z - VOXEL_SPITTER_Z;
+    const onFirstRoute = voxelFirstRouteWeight(position.x, position.z) > 0.05;
     const voxel = this.visualMode === 'voxel' && (
       type === 'palm' || type === 'bananaPlant' || harvestCrown ||
-      (type === 'boulderBush' && sx * sx + sz * sz <= VOXEL_SPITTER_RADIUS_SQ) ||
-      (type === 'melonVine' && dx * dx + dz * dz <= VOXEL_ORCHARD_RADIUS_SQ)
+      (onFirstRoute && (type === 'boulderBush' || type === 'melonVine' || type === 'puffBush'))
     );
     const shape = voxel ? voxelPlantShape(type, variant, harvestCrown)
       : plantShape(type, variant, harvestCrown);

@@ -13,7 +13,8 @@ type Lobe = {
 /** Replacement plant geometry with the exact saved fruit/physics nodes. */
 export function voxelPlantShape(type: PlantType, variant: number, harvestCrown: boolean): PlantShape {
   if (type !== 'appleTree' && type !== 'orangeTree' && type !== 'melonVine'
-    && type !== 'bananaPlant' && type !== 'palm' && type !== 'boulderBush') {
+    && type !== 'bananaPlant' && type !== 'palm' && type !== 'boulderBush'
+    && type !== 'puffBush') {
     throw new Error(`no detailed voxel plant shape for ${type}`);
   }
   const key = `${type}:${variant}:${harvestCrown}`;
@@ -24,6 +25,7 @@ export function voxelPlantShape(type: PlantType, variant: number, harvestCrown: 
   // Keep that shared cache intact; only use its authored gameplay metadata.
   const original = plantShape(type, variant, harvestCrown);
   const geometry = type === 'boulderBush' ? buildBoulderNest(variant, original)
+    : type === 'puffBush' ? buildPuffBush(variant, original)
     : type === 'palm' ? buildPalm(variant, original)
     : type === 'melonVine' ? buildMelonVine(variant, original)
     : type === 'bananaPlant' ? buildBananaPlant(variant, original)
@@ -36,6 +38,40 @@ export function voxelPlantShape(type: PlantType, variant: number, harvestCrown: 
   };
   CACHE.set(key, result);
   return result;
+}
+
+/** A low, connected leaf mass under the saved Puffmelon fruit sockets. */
+function buildPuffBush(variant: number, original: PlantShape): THREE.BufferGeometry {
+  const cell = 0.15;
+  const volume = new VoxelVolume();
+  volume.box(-1, 1, 0, 3, -1, 1, 0x407839);
+  const bias = (((variant % 3) + 3) % 3 - 1) * 0.10;
+  const lobes: Lobe[] = [
+    { x: -0.37 + bias, y: 0.66, z: -0.16, rx: 0.70, ry: 0.51, rz: 0.68, color: 0x4c913f },
+    { x: 0.37 + bias, y: 0.72, z: 0.11, rx: 0.72, ry: 0.53, rz: 0.67, color: 0x5aa148 },
+    { x: bias, y: 0.84, z: 0.33, rx: 0.63, ry: 0.49, rz: 0.62, color: 0x67a74c },
+  ];
+  for (let x = -9; x <= 9; x++) for (let y = 0; y <= 10; y++) for (let z = -9; z <= 9; z++) {
+    const wx = x * cell, wy = (y + 0.5) * cell, wz = z * cell;
+    let best = Infinity, selected = 0;
+    for (let i = 0; i < lobes.length; i++) {
+      const lobe = lobes[i];
+      const d = ((wx - lobe.x) / lobe.rx) ** 4 + ((wy - lobe.y) / lobe.ry) ** 4
+        + ((wz - lobe.z) / lobe.rz) ** 4;
+      if (d < best) { best = d; selected = i; }
+    }
+    const edge = 0.035 * Math.sin(wx * 3.2 + wz * 1.7 + variant);
+    if (best > 1 + edge) continue;
+    // The visual recess exposes existing fruit; their gameplay coordinates do
+    // not move, and the rest of the crown remains a single occupied surface.
+    if (original.attachPoints.some(pt => Math.hypot(wx - pt.x, wy - pt.y, wz - pt.z) < 0.19)) continue;
+    volume.put(x, y, z, lobes[selected].color);
+  }
+  const geometry = volume.geometry({ cellSize: cell,
+    origin: new THREE.Vector3(-cell / 2, 0, -cell / 2),
+    swayHeight: original.height });
+  geometry.name = `VoxelTree:puffBush:${variant}`;
+  return geometry;
 }
 
 /** Low woody support and broad stepped leaves under the saved plum sockets. */
@@ -73,7 +109,7 @@ function buildBoulderNest(variant: number, original: PlantShape): THREE.BufferGe
 }
 
 function buildPalm(variant: number, original: PlantShape): THREE.BufferGeometry {
-  const cell = 0.24;
+  const cell = 0.22;
   const volume = new VoxelVolume();
   const topY = Math.round(original.height / cell);
   // The existing coconut sockets describe the curved trunk's crown centre.
@@ -83,44 +119,72 @@ function buildPalm(variant: number, original: PlantShape): THREE.BufferGeometry 
     .multiplyScalar(1 / original.attachPoints.length);
   const topX = Math.round(top.x / cell), topZ = Math.round(top.z / cell);
 
+  let previousTrunk: [number, number, number] = [0, 0, 0];
   for (let y = 0; y <= topY; y++) {
     const t = y / topY;
-    const cx = Math.round(topX * t * t), cz = Math.round(topZ * t * t);
-    const radius = y < 3 ? 2 : 1;
-    for (let x = -radius; x <= radius; x++) for (let z = -radius; z <= radius; z++) {
-      if (x * x + z * z > radius * radius + 0.25) continue;
-      const band = y % 6 === 0;
-      volume.put(cx + x, y, cz + z,
-        band ? 0x816244 : y % 11 < 4 ? 0x9c7851 : 0xa8875c);
+    // Ease into the saved crown position, so the trunk follows one deliberate
+    // curve rather than alternating between straight columns and sharp bends.
+    const bend = t * t * (3 - 2 * t);
+    const cx = Math.round(topX * bend), cz = Math.round(topZ * bend);
+    const centre: [number, number, number] = [cx, y, cz];
+    fillTwig(volume, previousTrunk, centre, 0x987653);
+    const extent = y < 2 ? 2 : 1;
+    for (let x = -extent; x <= extent; x++) for (let z = -extent; z <= extent; z++) {
+      // Full three-cell shaft reads as one continuous taper when its centre
+      // advances by a grid cell; the previous cross-shaped shaft exposed
+      // four deep notches at every bend.
+      if (x * x + z * z > (y < 2 ? 4.25 : 2.25)) continue;
+      // Small muted patches provide bark texture without full-width rings.
+      const bark = Math.abs(x * 3 + z * 5 + Math.floor(y / 8) + variant * 2) % 9 < 3
+        ? 0x997754 : 0xa2805c;
+      volume.put(cx + x, y, cz + z, bark);
     }
+    previousTrunk = centre;
   }
 
-  // Broad, tapering fronds keep the tropical silhouette, but each blade is a
-  // stepped volume with a darker rib rather than a thin polygonal sheet.
-  for (let i = 0; i < 7; i++) {
-    const angle = i * Math.PI * 2 / 7 + variant * 0.19;
+  // Five or six continuous leaf fans leave open sky between broad blades
+  // instead of merging into a flat umbrella. Keep the inner cells bare so
+  // coconuts can read below the fronds. All habits share sockets and sway.
+  const habit = ((variant % 3) + 3) % 3;
+  const count = habit === 1 ? 6 : 5;
+  for (let i = 0; i < count; i++) {
+    const angle = i * Math.PI * 2 / count + variant * 0.17 + (i % 2 ? 0.07 : -0.04);
     const ux = Math.sin(angle), uz = Math.cos(angle);
     const vx = uz, vz = -ux;
-    const length = Math.round((2.75 + ((i * 3 + variant) % 5) * 0.16) / cell);
-    const droop = 5 + (i + variant) % 3;
-    const green = [0x58a83f, 0x64af47, 0x4d9c3b][(i + variant) % 3];
+    const wind = habit === 1 ? ux * 0.23 : 0;
+    const length = Math.round((2.9 + ((i * 2 + variant) % 3) * 0.14 + wind) / cell);
+    const droop = habit === 2 ? 3.4 + (i % 2) * 0.8
+      : habit === 1 ? 2.8 + (i % 2) * 0.6 : 2.5 + (i % 2);
+    const green = [0x60a345, 0x6bad4c, 0x57983f][(i + variant) % 3];
+    const shade = [0x4c8a3d, 0x528d3e, 0x478139][(i + variant) % 3];
     let previous: [number, number, number] = [topX, topY, topZ];
     for (let s = 1; s <= length; s++) {
       const t = s / length;
       const centre: [number, number, number] = [
         topX + Math.round(ux * s),
-        topY + Math.round(2 * Math.sin(t * Math.PI * 0.85) - droop * t * t),
+        topY + Math.round(1.5 * Math.sin(t * Math.PI * 0.9) - droop * t * t),
         topZ + Math.round(uz * s),
       ];
-      fillTwig(volume, previous, centre, 0x397d34);
-      const halfWidth = Math.max(0, Math.round(Math.sin(t * Math.PI) * 2.3));
-      for (const side of [-1, 1]) {
-        const edge: [number, number, number] = [
-          centre[0] + Math.round(vx * halfWidth * side),
-          centre[1] - (s > length * 0.63 ? 1 : 0),
-          centre[2] + Math.round(vz * halfWidth * side),
-        ];
-        fillTwig(volume, centre, edge, green);
+      fillTwig(volume, previous, centre, shade);
+      if (s > 3) {
+        const halfWidth = Math.max(0, Math.round(Math.sin(t * Math.PI) * 2.35));
+        for (const side of [-1, 1]) {
+          const edge: [number, number, number] = [
+            centre[0] + Math.round(vx * halfWidth * side), centre[1],
+            centre[2] + Math.round(vz * halfWidth * side),
+          ];
+          fillTwig(volume, centre, edge, green);
+          // One deep interior row gives each fan an intentional soft block
+          // silhouette. Leave the outer rim thin and tapered.
+          if (t > 0.20 && t < 0.72 && halfWidth > 1) {
+            const inner: [number, number, number] = [
+              centre[0] + Math.round(vx * (halfWidth - 1) * side), centre[1] - 1,
+              centre[2] + Math.round(vz * (halfWidth - 1) * side),
+            ];
+            fillTwig(volume, [centre[0], centre[1] - 1, centre[2]], inner, shade);
+            volume.put(centre[0], centre[1] - 1, centre[2], shade);
+          }
+        }
       }
       previous = centre;
     }

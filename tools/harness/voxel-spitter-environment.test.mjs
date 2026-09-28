@@ -63,9 +63,12 @@ test('nearby Boulder Plum nest gets voxel art with identical sockets and collide
     nearRng, { variant: 0, scale: 1 });
   const baselineNear = baselinePlants.plant(1, 'boulderBush',
     new THREE.Vector3(-35, 10, -11.5), baselineRng, { variant: 0, scale: 1 });
-  const far = plants.plant(2, 'boulderBush', new THREE.Vector3(-50, 10, -30),
+  const hill = plants.plant(2, 'boulderBush', new THREE.Vector3(-36, 21, -30),
     new Rng(2), { variant: 0, scale: 1 });
+  const far = plants.plant(3, 'boulderBush', new THREE.Vector3(80, 10, -60),
+    new Rng(3), { variant: 0, scale: 1 });
   assert.match(near.batchKey, /voxel/);
+  assert.match(hill.batchKey, /voxel/);
   assert.doesNotMatch(far.batchKey, /voxel/);
   assert.doesNotMatch(baselineNear.batchKey, /voxel/);
   assert.equal(near.nodes.length, far.nodes.length);

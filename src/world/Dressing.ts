@@ -4,6 +4,7 @@ import { Palette } from '@/render/Palette';
 import { fbm2, clamp, smoothstep, TAU } from '@/core/MathUtils';
 import { Rng } from '@/core/Rng';
 import { voxelDressingGeometry, type VoxelDressingKind } from '@/art/voxel/VoxelDressing';
+import { voxelFirstRouteWeight } from '@/art/voxel/VoxelClearingTerrain';
 import type { VisualMode } from '@/art/voxel/VisualMode';
 import type { Terrain } from './Terrain';
 import { orchardProofWeight } from './VisualProof';
@@ -139,18 +140,7 @@ export class Dressing {
     for (const k of kinds) {
       const mine = places.filter((p) => p.kind === k.name);
       this.counts[k.name] = mine.length;
-      const onVoxelRoute = (p: Placement) => {
-        if (Math.hypot(p.x + 24, p.z - 22) <= 30) return true;
-        // Continue the visual language around the Spitter without changing
-        // the seeded scatter or the walkable hill-path clearance.
-        if (Math.hypot(p.x + 31, p.z + 8) <= 11) return true;
-        // The dock, shop, and orchard form the first playable route. A broad
-        // corridor converts its foliage together instead of leaving a ring of
-        // faceted bushes at the clearing edge.
-        const t = THREE.MathUtils.clamp(((p.x + 24) * 82 + (p.z - 22) * 40)
-          / (82 * 82 + 40 * 40), 0, 1);
-        return Math.hypot(p.x - (-24 + 82 * t), p.z - (22 + 40 * t)) <= 18;
-      };
+      const onVoxelRoute = (p: Placement) => voxelFirstRouteWeight(p.x, p.z) > 0.05;
       const voxel = this.visualMode === 'voxel' ? mine.filter(onVoxelRoute) : [];
       const baseline = voxel.length ? mine.filter((p) => !onVoxelRoute(p)) : mine;
       if (baseline.length) addInstances(k, baseline, false);

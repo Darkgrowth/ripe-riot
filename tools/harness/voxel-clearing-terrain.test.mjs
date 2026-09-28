@@ -38,6 +38,9 @@ test('voxel orchard tint uses the existing ground mesh and preserves collision g
   const beforeColors = colors.array.slice();
   const routeIndex = nearestVertex(position, -24, 22);
   const gateIndex = nearestVertex(position, -1, 34);
+  const shopIndex = nearestVertex(position, 45, 52);
+  const hillIndex = nearestVertex(position, -36, -30);
+  const hillTrackIndex = nearestVertex(position, -33, -18);
   const outsideIndex = nearestVertex(position, 90, 90);
   assert.equal(typeof clearing.paintVoxelClearingTerrain, 'function',
     'voxel presentation must paint the one authoritative terrain mesh');
@@ -57,6 +60,12 @@ test('voxel orchard tint uses the existing ground mesh and preserves collision g
   assert.notDeepEqual(Array.from(colors.array.slice(gateIndex * 3, gateIndex * 3 + 3)),
     Array.from(beforeColors.slice(gateIndex * 3, gateIndex * 3 + 3)),
     'the recorded gate approach receives the same ground treatment');
+  for (const [name, index] of [['shop', shopIndex], ['Hill Farm', hillIndex],
+    ['hill track', hillTrackIndex]]) {
+    assert.notDeepEqual(Array.from(colors.array.slice(index * 3, index * 3 + 3)),
+      Array.from(beforeColors.slice(index * 3, index * 3 + 3)),
+      `${name} receives matching terrain palette without a second ground surface`);
+  }
   assert.deepEqual(Array.from(colors.array.slice(outsideIndex * 3, outsideIndex * 3 + 3)),
     Array.from(beforeColors.slice(outsideIndex * 3, outsideIndex * 3 + 3)),
     'terrain outside the clearing retains its original palette');

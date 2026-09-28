@@ -199,3 +199,19 @@ test('approach banana fronds remain one connected swaying plant with the old col
       next.geometry.getAttribute('swayWeight').count);
   }
 });
+
+test('voxel puff bushes retain the saved fruit sockets in a compact single crown', () => {
+  for (const variant of [0, 1, 2]) {
+    const old = plantShape('puffBush', variant, false);
+    const next = voxelPlantShape('puffBush', variant, false);
+    assert.equal(next.height, old.height);
+    assert.deepEqual(next.collider, old.collider);
+    assert.deepEqual(next.attachPoints.map(point => point.toArray()),
+      old.attachPoints.map(point => point.toArray()));
+    assert.equal(next.geometry.userData.voxelConnectedComponents, 1);
+    assert.ok(next.geometry.userData.voxelCount < 1200);
+    assert.ok(next.geometry.getAttribute('position').count / 3 < 4000);
+    assert.equal(next.geometry.getAttribute('swayWeight').count,
+      next.geometry.getAttribute('position').count);
+  }
+});
