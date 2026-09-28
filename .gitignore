@@ -4,3 +4,5 @@ capture/
 .vite/
 *.local
 graphify-out/
+docs/evidence/sunpatch-finish-tree-before.json
+docs/evidence/sunpatch-finish-tree-after.json

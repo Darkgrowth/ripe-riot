@@ -1,0 +1,74 @@
+{
+  "viewport": [
+    3440,
+    1440
+  ],
+  "deviceScaleFactor": 1,
+  "method": "Uncapped headless rAF; gl.finish synchronizes GPU completion on each sampled frame.",
+  "samples": [
+    {
+      "name": "dock",
+      "gpu": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "drawingBuffer": [
+        3440,
+        1440
+      ],
+      "visualMode": "voxel",
+      "frames": 240,
+      "meanFrameMs": 1.87,
+      "medianFrameMs": 1.7,
+      "p95FrameMs": 2.6,
+      "maxFrameMs": 3.8,
+      "render": {
+        "drawCalls": 167,
+        "triangles": 3256302,
+        "geometries": 134,
+        "textures": 19,
+        "programs": 33
+      }
+    },
+    {
+      "name": "orchard",
+      "gpu": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "drawingBuffer": [
+        3440,
+        1440
+      ],
+      "visualMode": "voxel",
+      "frames": 240,
+      "meanFrameMs": 1.98,
+      "medianFrameMs": 1.7,
+      "p95FrameMs": 3.1,
+      "maxFrameMs": 7.2,
+      "render": {
+        "drawCalls": 186,
+        "triangles": 3343566,
+        "geometries": 149,
+        "textures": 19,
+        "programs": 33
+      }
+    },
+    {
+      "name": "ravine",
+      "gpu": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "drawingBuffer": [
+        3440,
+        1440
+      ],
+      "visualMode": "voxel",
+      "frames": 240,
+      "meanFrameMs": 1.82,
+      "medianFrameMs": 1.6,
+      "p95FrameMs": 2.7,
+      "maxFrameMs": 7.4,
+      "render": {
+        "drawCalls": 117,
+        "triangles": 3337322,
+        "geometries": 150,
+        "textures": 19,
+        "programs": 33
+      }
+    }
+  ],
+  "errors": []
+}

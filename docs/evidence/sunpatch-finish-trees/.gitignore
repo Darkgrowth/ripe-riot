@@ -1,0 +1,6 @@
+/candidate-1/
+/candidate-2/
+/candidate-3/
+/before/*
+!/before/orchard-game-distance.png
+!/before/palm-game-distance.png

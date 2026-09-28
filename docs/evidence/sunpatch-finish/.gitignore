@@ -1,0 +1,6 @@
+/candidate/
+/grip-check/
+/before/*
+!/before/01-orchard.png
+!/before/02-palms.png
+!/before/08-mallet-ready.png

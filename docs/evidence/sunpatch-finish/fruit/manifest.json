@@ -1,0 +1,45 @@
+{
+  "note": "Authoring fixture, near meshes. Row 1: apple, orange, watermelon, coconut, banana. Row 2: puffmelon, vinebomb, boulderplum, gluefruit, spikefruit.",
+  "labels": [
+    {
+      "species": "apple",
+      "triangles": 3704
+    },
+    {
+      "species": "orange",
+      "triangles": 3608
+    },
+    {
+      "species": "watermelon",
+      "triangles": 3344
+    },
+    {
+      "species": "coconut",
+      "triangles": 3544
+    },
+    {
+      "species": "banana",
+      "triangles": 1548
+    },
+    {
+      "species": "puffmelon",
+      "triangles": 3536
+    },
+    {
+      "species": "vinebomb",
+      "triangles": 3168
+    },
+    {
+      "species": "boulderplum",
+      "triangles": 3552
+    },
+    {
+      "species": "gluefruit",
+      "triangles": 3356
+    },
+    {
+      "species": "spikefruit",
+      "triangles": 2436
+    }
+  ]
+}
