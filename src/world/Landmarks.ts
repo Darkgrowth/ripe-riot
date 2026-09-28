@@ -10,6 +10,8 @@ import { buildGroveArch } from './GroveArch';
 import { voxelRockGeometry } from '@/art/voxel/VoxelRock';
 import { voxelFruitGeometry } from '@/art/voxel/VoxelFruit';
 import { voxelBarrelGeometry, voxelSackGeometry } from '@/art/voxel/VoxelShop';
+import { VoxelVolume } from '@/art/voxel/VoxelSurface';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { VisualMode } from '@/art/voxel/VisualMode';
 
 const C = (hex: number) => new THREE.Color().setHex(hex, THREE.SRGBColorSpace);
@@ -115,9 +117,12 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   const localGround = (x: number, z: number, originX: number, originY: number, originZ: number, rot: number) =>
     ground(originX + x * Math.cos(rot) + z * Math.sin(rot),
       originZ - x * Math.sin(rot) + z * Math.cos(rot)) - originY;
-  const timberBetween = (a: THREE.Vector3, end: THREE.Vector3, width: number, depth: number, tint: THREE.Color) => {
+  const timberBetween = (a: THREE.Vector3, end: THREE.Vector3, width: number, depth: number,
+    tint: THREE.Color, soften = false) => {
     const delta = end.clone().sub(a);
-    const g = new THREE.BoxGeometry(width, delta.length(), depth);
+    const g = soften
+      ? new RoundedBoxGeometry(width, delta.length(), depth, 1, Math.min(width, depth) * 0.26)
+      : new THREE.BoxGeometry(width, delta.length(), depth);
     g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), delta.normalize()));
     g.translate(...a.clone().add(end).multiplyScalar(0.5).toArray() as [number, number, number]);
     b.mesh(g, tint);
@@ -200,6 +205,10 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
       b.cylinder(0.22, 0.26, h, 8,
         (y: number) => (y < waterline ? POST_WET : POST), true,
         [px, deckY - h / 2 + 0.1, z]);
+      if (visualMode === 'voxel')
+        b.roundedBox(0.54, h, 0.54, 0.085,
+          (y: number) => y < waterline ? POST_WET : POST, false,
+          [px, deckY - h / 2 + 0.1, z]);
       b.pop();
     }
   }
@@ -230,6 +239,10 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
       const px = side * (deckW / 2 - 0.28);
       b.cylinder(0.15, 0.17, 1.02, 8, POST, false, [px, deckY + 0.58, z]);
       b.cylinder(0.20, 0.20, 0.12, 8, PLANK_DARK, false, [px, deckY + 1.13, z]);
+      if (visualMode === 'voxel') {
+        b.roundedBox(0.35, 1.02, 0.35, 0.055, POST, false, [px, deckY + 0.58, z]);
+        b.roundedBox(0.42, 0.15, 0.42, 0.045, PLANK_DARK, false, [px, deckY + 1.13, z]);
+      }
     }
   }
   for (let i = 0; i < BOLLARD_Z.length - 1; i++) {
@@ -250,7 +263,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
       b.push().translate(x + rng.range(-0.08, 0.08), y + sz / 2, z + rng.range(-0.08, 0.08))
         .rotateY(rot + rng.range(-0.25, 0.25));
       b.recordProp(`dock-crate-${x}-${z}-${i}`, { kind: 'crate', size: sz, support: i ? 'crate below' : 'dock deck' });
-      slattedCrate(b, sz, i === 0);
+      slattedCrate(b, sz, i === 0, visualMode === 'voxel');
       b.pop();
       y += sz;
     }
@@ -352,38 +365,63 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   // ---- THE TERRIBLE LITTLE BOAT -------------------------------------------
   b.push();
   b.translate(-4.4, deckY - 0.55, 16).rotateY(0.22);
-  const hullPts: THREE.Vector2[] = [];
-  for (let i = 0; i <= 8; i++) {
-    const t = i / 8;
-    hullPts.push(new THREE.Vector2(0.05 + Math.sin(t * Math.PI * 0.92) * 1.05, t * 1.15));
+  if (visualMode === 'voxel') b.meshColored(voxelRowboatHullGeometry());
+  else {
+    const hullPts: THREE.Vector2[] = [];
+    for (let i = 0; i <= 8; i++) {
+      const t = i / 8;
+      hullPts.push(new THREE.Vector2(0.05 + Math.sin(t * Math.PI * 0.92) * 1.05, t * 1.15));
+    }
+    const hull = new THREE.LatheGeometry(hullPts, 10);
+    hull.scale(1, 1, 2.5);
+    b.mesh(hull, (y) => (y < 0.55 ? HULL_DARK : HULL));
   }
-  const hull = new THREE.LatheGeometry(hullPts, 10);
-  hull.scale(1, 1, 2.5);
-  b.mesh(hull, (y) => (y < 0.55 ? HULL_DARK : HULL));
-  b.box(2.0, 0.12, 0.7, PLANK, false, [0, 1.05, -0.6]);   // thwart
-  b.box(2.0, 0.12, 0.7, PLANK, false, [0, 1.05, 1.1]);
+  for (const z of [-0.6, 1.1]) {
+    if (visualMode === 'voxel') b.roundedBox(2.0, 0.15, 0.72, 0.045, PLANK,
+      false, [0, 1.05, z]);
+    else b.box(2.0, 0.12, 0.7, PLANK, false, [0, 1.05, z]);
+  }
   b.cylinder(0.09, 0.09, 1.9, 5, POST, false, [0.55, 1.35, 0.3]);  // a single sad oar
-  b.box(0.62, 0.55, 0.5, METAL_DARK, false, [0, 1.15, -2.5]);      // outboard motor
+  if (visualMode === 'voxel') {
+    b.roundedBox(0.66, 0.58, 0.54, 0.075, METAL_DARK, false, [0, 1.15, -2.5]);
+    b.roundedBox(0.50, 0.12, 0.37, 0.035, METAL, false, [0, 1.48, -2.5]);
+  } else b.box(0.62, 0.55, 0.5, METAL_DARK, false, [0, 1.15, -2.5]);
   b.cylinder(0.06, 0.06, 0.5, 5, METAL, false, [0, 1.0, -2.9]);
   b.pop();
   // The pennant, hidden until Sunpatch is done: a mast in the bow with a
   // red flag on it. It is the boat saying "we are going somewhere".
   const boatFlag = new THREE.Group();
   boatFlag.name = 'BoatFlag';
+  boatFlag.userData.visualStyle = visualMode === 'voxel' ? 'stepped-pennant' : 'baseline';
   {
     const mast = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.035, 0.045, 2.6, 6),
+      visualMode === 'voxel'
+        ? new RoundedBoxGeometry(0.10, 2.6, 0.10, 1, 0.025)
+        : new THREE.CylinderGeometry(0.035, 0.045, 2.6, 6),
       new THREE.MeshStandardMaterial({ color: POST, roughness: 0.9, flatShading: true }));
     mast.position.set(0, 1.3, 0);
     mast.castShadow = true;
-    const flagGeo = new THREE.PlaneGeometry(0.9, 0.42);
-    flagGeo.translate(0.45, 0, 0);
+    let flagGeo: THREE.BufferGeometry;
+    if (visualMode === 'voxel') {
+      const outline = new THREE.Shape();
+      outline.moveTo(0, 0.22); outline.lineTo(0.30, 0.22);
+      outline.lineTo(0.30, 0.14); outline.lineTo(0.82, 0.14);
+      outline.lineTo(0.82, -0.11); outline.lineTo(0.56, -0.11);
+      outline.lineTo(0.56, -0.21); outline.lineTo(0, -0.21);
+      outline.closePath();
+      flagGeo = new THREE.ShapeGeometry(outline);
+    } else {
+      flagGeo = new THREE.PlaneGeometry(0.9, 0.42);
+      flagGeo.translate(0.45, 0, 0);
+    }
     const flag = new THREE.Mesh(flagGeo, new THREE.MeshStandardMaterial({
       color: CANVAS_RED, roughness: 0.95, side: THREE.DoubleSide,
     }));
     flag.position.set(0.03, 2.3, 0);
     flag.rotation.y = 0.9;
-    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 5),
+    const tip = new THREE.Mesh(visualMode === 'voxel'
+      ? new RoundedBoxGeometry(0.14, 0.14, 0.14, 1, 0.035)
+      : new THREE.SphereGeometry(0.07, 6, 5),
       new THREE.MeshStandardMaterial({ color: LAMP, roughness: 0.7 }));
     tip.position.set(0, 2.62, 0);
     boatFlag.add(mast, flag, tip);
@@ -404,6 +442,8 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   b.push();
   b.translate(signLocal.x, deckY, signLocal.z).rotateY(-0.55);
   b.cylinder(0.09, 0.11, 1.85, 6, POST, true, [0, 0.925, 0]);
+  if (visualMode === 'voxel') b.roundedBox(0.23, 1.85, 0.23, 0.04, POST,
+    false, [0, 0.925, 0]);
   b.pop();
   signs.push(makeSign(b,
     dock.toWorld(signLocal.x, signLocal.z, deckY + 1.45).add(
@@ -424,7 +464,9 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   const shopRot = -0.9;
   const shopGround = (x: number, z: number) => localGround(x, z, shopX, shopY, shopZ, shopRot);
   b.reset().translate(shopX, shopY, shopZ).rotateY(shopRot);
-  b.recordProp('merv-shop', { kind: 'workstation', front: [0, 1.4, 3.4], origin: [shopX, shopY, shopZ], rotationY: shopRot });
+  b.recordProp('merv-shop', { kind: 'workstation', front: [0, 1.4, 3.4],
+    origin: [shopX, shopY, shopZ], rotationY: shopRot,
+    style: visualMode === 'voxel' ? 'framed-facade' : 'baseline' });
 
   const SW = 6.8, SD = 5.2;            // body footprint
   const PLINTH = 0.34;
@@ -475,6 +517,16 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
       b.box(0.16, 0.17, SD + 0.08, POST, false, [SW / 2 + 0.06, y, 0]);
     for (const y of [0.62, 1.02])
       b.box(0.055, 0.045, SD + 0.10, WALL, false, [SW / 2 + 0.09, y, 0]);
+    // Large side panels flank the hatch; dock-facing corner bands leave the
+    // gable windows and wanted poster clear.
+    for (const side of [-1, 1]) {
+      b.roundedBox(0.80, 1.80, 0.12, 0.065, POST, false,
+        [side * 2.93, 2.23, front + 0.10]);
+      b.roundedBox(0.62, 1.61, 0.10, 0.055, WALL_SHADE, false,
+        [side * 2.93, 2.23, front + 0.20]);
+      b.roundedBox(0.22, 2.55, 0.30, 0.05, POST, false,
+        [SW / 2 + 0.12, 1.86, side * 2.38]);
+    }
   }
   for (const sx of [-1, 1]) {
     for (const sz of [-1, 1]) {
@@ -600,7 +652,8 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
 
   // Counter and awning, out in front of the hatch.
   b.push().translate(0, 0, front + 0.55);
-  b.box(5.0, 0.22, 1.5, PLANK, true, [0, 1.15, 0.5]);
+  if (visualMode === 'voxel') b.roundedBox(5.0, 0.22, 1.5, 0.065, PLANK, true, [0, 1.15, 0.5]);
+  else b.box(5.0, 0.22, 1.5, PLANK, true, [0, 1.15, 0.5]);
   b.box(5.0, 1.05, 0.22, PLANK_DARK, true, [0, 0.52, 1.15]);
   for (let i = 0; i < 6; i++) {
     b.box(0.10, 1.0, 0.10, POST, false, [-2.2 + i * 0.88, 0.55, 1.22]);
@@ -622,13 +675,20 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   b.box(0.018, 0.105, 0.018, METAL_DARK, false, [-1.6, 1.53, 0.751]);
   b.pop();
   b.push().translate(0, 3.07, front + 1.15).rotateX(0.46);
-  for (let i = 0; i < 9; i++) {
+  if (visualMode === 'voxel') {
+    for (let i = 0; i < 5; i++)
+      b.roundedBox(1.08, 0.13, 2.13, 0.055, i % 2 ? CANVAS_RED : CANVAS_CREAM,
+        false, [-2.16 + i * 1.08, 0, 0]);
+    for (const x of [-2.48, 0, 2.48])
+      b.roundedBox(0.16, 0.18, 2.24, 0.04, POST, false, [x, -0.14, 0]);
+  } else for (let i = 0; i < 9; i++)
     b.box(0.62, 0.08, 2.1, i % 2 ? CANVAS_RED : CANVAS_CREAM, false, [-2.48 + i * 0.62, 0, 0]);
-  }
   b.pop();
-  // Scalloped valance hanging off the awning's front edge.
-  for (let i = 0; i < 9; i++) {
-    b.box(0.58, 0.30, 0.07, i % 2 ? CANVAS_RED : CANVAS_CREAM, false,
+  // Deep broad hem keeps the textile legible from the sell pad.
+  for (let i = 0; i < (visualMode === 'voxel' ? 5 : 9); i++) {
+    if (visualMode === 'voxel') b.roundedBox(1.04, 0.34, 0.12, 0.055,
+      i % 2 ? CANVAS_RED : CANVAS_CREAM, false, [-2.16 + i * 1.08, 2.47, front + 2.06]);
+    else b.box(0.58, 0.30, 0.07, i % 2 ? CANVAS_RED : CANVAS_CREAM, false,
       [-2.48 + i * 0.62, 2.47, front + 2.06]);
   }
   b.cylinder(0.08, 0.08, 2.65, 6, POST, false, [-2.6, 1.325, front + 2.1]);
@@ -660,19 +720,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   const shopCrate = (x: number, z: number, y: number, sz: number, rot: number, loaded = false) => {
     b.push().translate(x, y + sz / 2, z).rotateY(rot);
     b.recordProp(`shop-crate-${x}-${z}-${y}`, { kind: 'crate', size: sz, loaded, supportTop: y + sz });
-    b.collider(sz, sz, sz);
-    b.box(sz, sz * 0.08, sz, PLANK_DARK, false, [0, -sz * 0.46, 0]);
-    for (const sx of [-1, 1]) for (const sz2 of [-1, 1])
-      b.box(sz * 0.09, sz, sz * 0.09, PLANK_DARK, false, [sx * sz * 0.455, 0, sz2 * sz * 0.455]);
-    for (let row = 0; row < 4; row++) for (const side of [-1, 1]) {
-      const sy = -sz * 0.38 + row * sz * 0.25;
-      b.box(sz, sz * 0.15, sz * 0.06, CRATE, false, [0, sy, side * sz * 0.47]);
-      b.box(sz * 0.06, sz * 0.15, sz, CRATE, false, [side * sz * 0.47, sy, 0]);
-    }
-    // A slatted lid carries the decorative produce; its top is exactly the
-    // same local support plane used by the contents and closed collider.
-    for (let slat = 0; slat < 4; slat++) b.box(sz * 0.23, sz * 0.08, sz, CRATE, false,
-      [(-0.375 + slat * 0.25) * sz, sz * 0.46, 0]);
+    slattedCrate(b, sz, true, visualMode === 'voxel');
     if (loaded) for (let i = 0; i < 4; i++) {
       const r = sz * 0.17, offset = sz * 0.22;
       const at: [number, number, number] = [i % 2 ? offset : -offset,
@@ -775,7 +823,13 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   }
   b.cylinder(0.10, 0.11, 3.1, 6, METAL_DARK, true, [-2.0, 1.55, 0]);
   b.cylinder(0.10, 0.11, 3.1, 6, METAL_DARK, true, [2.0, 1.55, 0]);
-  b.box(4.6, 0.18, 0.18, METAL, false, [0, 3.08, 0]);
+  if (visualMode === 'voxel') {
+    for (const x of [-2, 2]) {
+      b.roundedBox(0.34, 0.28, 0.34, 0.045, METAL, false, [x, 0.20, 0]);
+      b.roundedBox(0.30, 0.19, 0.30, 0.045, METAL, false, [x, 3.08, 0]);
+    }
+    b.roundedBox(4.6, 0.22, 0.22, 0.045, METAL, false, [0, 3.08, 0]);
+  } else b.box(4.6, 0.18, 0.18, METAL, false, [0, 3.08, 0]);
   b.box(0.20, 0.22, 0.20, METAL_DARK, false, [-1.6, 2.98, 0]);
   b.box(0.20, 0.22, 0.20, METAL_DARK, false, [1.6, 2.98, 0]);
   // Small, dark-faced and up on the crossbar. At 1.05 m across and lamp-white
@@ -869,7 +923,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     8.4 - Math.sin(.5) + .3 * Math.cos(.5)) - apronBase;
   b.push().translate(1.0, apronCrateGround + .31, .3);
   b.recordProp('shop-apron-crate', { kind: 'crate', size: .62, support: 'terrain' });
-  slattedCrate(b, .62, true); b.pop();
+  slattedCrate(b, .62, true, visualMode === 'voxel'); b.pop();
   b.pop();
   // A fingerpost where the route forks for the orchard: signposting the loop
   // in the world instead of on the HUD. The arms carry words now.
@@ -923,7 +977,8 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   const cartGround = (x: number, z: number) => localGround(x, z, cartWorld.x, shopY, cartWorld.z, shopRot + 1.2);
   b.recordProp('shop-hand-cart', { kind: 'cart', supports: [-1, 1].flatMap(side => [
     [side * 0.62, cartGround(side * 0.62, -0.25), -0.25], [side * 0.42, cartGround(side * 0.42, 0.6), 0.6]]) });
-  b.box(1.1, 0.14, 1.6, PLANK, false, [0, 0.62, 0]);
+  if (visualMode === 'voxel') b.roundedBox(1.1, 0.14, 1.6, 0.04, PLANK, false, [0, 0.62, 0]);
+  else b.box(1.1, 0.14, 1.6, PLANK, false, [0, 0.62, 0]);
   b.box(1.1, 0.40, 0.10, PLANK_DARK, false, [0, 0.82, -0.76]);
   b.box(0.10, 0.40, 1.6, PLANK_DARK, false, [-0.55, 0.82, 0]);
   b.box(0.10, 0.40, 1.6, PLANK_DARK, false, [0.55, 0.82, 0]);
@@ -998,6 +1053,17 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   }
   b.box(11.1, 0.22, 0.28, PLANK_DARK, false, [0, 4.0, 0]);
   b.box(3.9, 0.96, 0.16, POST, false, [0, 3.75, 0.06]);
+  if (visualMode === 'voxel') {
+    // Broad, visible joints keep the entry reading as built timber without
+    // adding anything inside the clear path opening.
+    for (const side of [-1, 1]) {
+      b.push().translate(side * 4.85, 3.58, 0.03).rotateZ(-side * 0.58);
+      b.roundedBox(0.22, 0.92, 0.22, 0.04, PLANK_LIGHT, false);
+      b.pop();
+      b.roundedBox(0.46, 0.16, 0.42, 0.04, POST, false, [side * 5.3, 4.22, 0]);
+    }
+    b.roundedBox(11.0, 0.13, 0.36, 0.045, PLANK_LIGHT, false, [0, 4.14, 0]);
+  }
   const entrySignPos = new THREE.Vector3(0, 3.75, 0.155)
     .applyAxisAngle(new THREE.Vector3(0, 1, 0), entryRot)
     .add(new THREE.Vector3(entryX, entryY, entryZ));
@@ -1035,39 +1101,54 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
         new THREE.Vector3(side * 0.27, supportGround(side * 0.27, end * 0.64) - 0.025, end * 0.64)));
       const topY = Math.max(...feet.map(p => p.y)) + 3.02;
       for (const foot of feet) timberBetween(foot,
-        new THREE.Vector3(foot.x, topY, 0), 0.095, 0.095, PLANK);
+        new THREE.Vector3(foot.x, topY, 0), visualMode === 'voxel' ? 0.15 : 0.095,
+        visualMode === 'voxel' ? 0.15 : 0.095, PLANK, visualMode === 'voxel');
       for (let i = 1; i <= 7; i++) {
         const t = i / 8;
         const left = feet[1].clone().lerp(new THREE.Vector3(-0.27, topY, 0), t);
         const right = feet[3].clone().lerp(new THREE.Vector3(0.27, topY, 0), t);
-        timberBetween(left, right, 0.075, 0.12, PLANK_DARK);
+        timberBetween(left, right, visualMode === 'voxel' ? 0.11 : 0.075,
+          visualMode === 'voxel' ? 0.16 : 0.12, PLANK_DARK, visualMode === 'voxel');
       }
       b.box(0.73, 0.10, 0.24, PLANK_DARK, false, [0, topY, 0]);
       for (const side of [-1, 1]) b.box(0.045, 0.07, 0.70, METAL_DARK, false, [side * 0.27, topY * 0.48, 0]);
       timberBetween(feet[0].clone().lerp(new THREE.Vector3(-0.27, topY, 0), 0.3),
-        feet[2].clone().lerp(new THREE.Vector3(0.27, topY, 0), 0.65), 0.07, 0.07, PLANK_DARK);
+        feet[2].clone().lerp(new THREE.Vector3(0.27, topY, 0), 0.65), 0.07, 0.07, PLANK_DARK,
+        visualMode === 'voxel');
       b.recordProp(`orchard-ladder-${x}-${z}`, { kind: 'ladder', supports: feet.map(p => p.toArray()),
-        peak: [0, topY, 0], supportType: 'A-frame with spreader bars' });
+        peak: [0, topY, 0], supportType: 'A-frame with spreader bars',
+        style: visualMode === 'voxel' ? 'softened-timber' : 'baseline' });
     } else if (what === 'crates') {
       const crate = (cx: number, cz: number, width: number, height: number, base: number, loaded: boolean) => {
         b.push().translate(cx, base, cz);
         // Closed collision stays within the visible slats and corner uprights.
         b.collider(width, height, width, [0, height / 2, 0]);
-        b.box(width, 0.045, width, PLANK_DARK, false, [0, 0.0225, 0]);
+        const board = (w: number, h: number, d: number, tint: THREE.Color,
+          at: [number, number, number]) => {
+          if (visualMode === 'voxel')
+            b.roundedBox(w, h, d, Math.min(w, h, d) * 0.28, tint, false, at);
+          else b.box(w, h, d, tint, false, at);
+        };
+        board(width, 0.045, width, PLANK_DARK, [0, 0.0225, 0]);
         for (const sx of [-1, 1]) for (const sz of [-1, 1])
-          b.box(0.065, height, 0.065, PLANK_DARK, false, [sx * (width / 2 - 0.0325), height / 2, sz * (width / 2 - 0.0325)]);
+          board(0.065, height, 0.065, PLANK_DARK,
+            [sx * (width / 2 - 0.0325), height / 2, sz * (width / 2 - 0.0325)]);
         for (let slat = 0; slat < 3; slat++) {
           const sy = 0.08 + slat * (height - 0.15) / 2;
           for (const side of [-1, 1]) {
-            b.box(width, 0.10, 0.04, CRATE, false, [0, sy, side * (width / 2 - 0.02)]);
-            b.box(0.04, 0.10, width, CRATE, false, [side * (width / 2 - 0.02), sy, 0]);
+            board(width, 0.10, 0.04, CRATE, [0, sy, side * (width / 2 - 0.02)]);
+            board(0.04, 0.10, width, CRATE, [side * (width / 2 - 0.02), sy, 0]);
           }
         }
         const fruitCenters: number[][] = [];
         if (loaded) for (let i = 0; i < 4; i++) {
           const r = 0.125, center = [i % 2 ? 0.13 : -0.13, 0.045 + r, i > 1 ? 0.13 : -0.13];
-          const fruit = new THREE.SphereGeometry(r, 16, 10);
-          fruit.translate(...center as [number, number, number]); b.mesh(fruit, i % 2 ? APPLE : ORANGE);
+          if (visualMode === 'voxel') displayFruit(i % 2 ? 'apple' : 'orange', r,
+            center as [number, number, number]);
+          else {
+            const fruit = new THREE.SphereGeometry(r, 16, 10);
+            fruit.translate(...center as [number, number, number]); b.mesh(fruit, i % 2 ? APPLE : ORANGE);
+          }
           fruitCenters.push(center);
         }
         b.recordProp(`orchard-crate-${x}-${z}-${cx}-${base}`, { kind: 'crate', width, height,
@@ -1080,7 +1161,8 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
       crate(0, 0, 0.58, 0.30, baseA + 0.58, true);
     } else {
       // A barrow: two rails, a tray and a wheel.
-      b.box(0.90, 0.12, 1.30, PLANK, false, [0, 0.52, 0]);
+      if (visualMode === 'voxel') b.roundedBox(0.90, 0.12, 1.30, 0.04, PLANK, false, [0, 0.52, 0]);
+      else b.box(0.90, 0.12, 1.30, PLANK, false, [0, 0.52, 0]);
       b.box(0.90, 0.34, 0.10, PLANK_DARK, false, [0, 0.70, -0.62]);
       b.box(0.10, 0.34, 1.30, PLANK_DARK, false, [-0.44, 0.70, 0]);
       b.box(0.10, 0.34, 1.30, PLANK_DARK, false, [0.44, 0.70, 0]);
@@ -1098,8 +1180,9 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
       b.recordProp(`orchard-barrow-${x}-${z}`, { kind: 'barrow', supports: [
         [0, supportGround(0, -0.72), -0.72], ...[-0.34, 0.34].map(sx => [sx, supportGround(sx, 0.5), 0.5])] });
       for (let i = 0; i < 5; i++) {
-        b.sphere(0.15, 1, i % 2 ? APPLE : ORANGE, false,
-          [-0.2 + (i % 3) * 0.2, 0.68, -0.3 + i * 0.16]);
+        const at: [number, number, number] = [-0.2 + (i % 3) * 0.2, 0.68, -0.3 + i * 0.16];
+        if (visualMode === 'voxel') displayFruit(i % 2 ? 'apple' : 'orange', 0.15, at);
+        else b.sphere(0.15, 1, i % 2 ? APPLE : ORANGE, false, at);
       }
     }
   };
@@ -1329,7 +1412,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     b.pop();
   }
 
-  buildIslandWorksites(b, terrain, signs);
+  buildIslandWorksites(b, terrain, signs, visualMode);
   buildGroveArch(b, physics, terrain, signs);
   const merged = b.finish()!;
   const mat = new THREE.MeshStandardMaterial({
@@ -1580,16 +1663,43 @@ function buildWaterfall(x: number, z: number, baseY: number, drop: number, terra
 
 
 /** Slatted shipping crate, centered on the current prop transform. */
-function slattedCrate(b: PropBuilder, size: number, solid: boolean): void {
+function slattedCrate(b: PropBuilder, size: number, solid: boolean, voxel = false): void {
   if (solid) b.collider(size, size, size);
-  b.box(size, size * .08, size, PLANK_DARK, false, [0, -size * .46, 0]);
+  const plank = (w: number, h: number, d: number, color: THREE.Color,
+    at: [number, number, number]) => {
+    if (voxel) b.roundedBox(w, h, d, Math.min(h, w, d) * 0.28, color, false, at);
+    else b.box(w, h, d, color, false, at);
+  };
+  plank(size, size * .08, size, PLANK_DARK, [0, -size * .46, 0]);
   for (const x of [-1, 1]) for (const z of [-1, 1])
-    b.box(size * .09, size, size * .09, PLANK_DARK, false, [x * size * .455, 0, z * size * .455]);
+    plank(size * .09, size, size * .09, PLANK_DARK, [x * size * .455, 0, z * size * .455]);
   for (let row = 0; row < 4; row++) for (const side of [-1, 1]) {
     const y = (-.38 + row * .25) * size;
-    b.box(size, size * .15, size * .06, CRATE, false, [0, y, side * size * .47]);
-    b.box(size * .06, size * .15, size, CRATE, false, [side * size * .47, y, 0]);
+    plank(size, size * .15, size * .06, CRATE, [0, y, side * size * .47]);
+    plank(size * .06, size * .15, size, CRATE, [side * size * .47, y, 0]);
   }
-  for (let i = 0; i < 4; i++) b.box(size * .23, size * .08, size, CRATE, false,
+  for (let i = 0; i < 4; i++) plank(size * .23, size * .08, size, CRATE,
     [(-.375 + i * .25) * size, size * .46, 0]);
+}
+
+/** The little ferry's broad stepped hull. A continuous two-cell floor joins
+ * the hollow gunwale, so the seats and motor still sit in the old footprint. */
+export function voxelRowboatHullGeometry(): THREE.BufferGeometry {
+  const volume = new VoxelVolume();
+  const cell = 0.25;
+  for (let y = 0; y < 5; y++) {
+    const outerX = [0.58, 0.76, 0.91, 1.04, 1.16][y];
+    const outerZ = [1.60, 1.91, 2.16, 2.38, 2.56][y];
+    for (let x = -5; x <= 5; x++) for (let z = -10; z <= 10; z++) {
+      const px = x * cell, pz = z * cell;
+      if ((px / outerX) ** 2 + (pz / outerZ) ** 2 > 1) continue;
+      const innerX = outerX - 0.31, innerZ = outerZ - 0.36;
+      if (y >= 2 && (px / innerX) ** 2 + (pz / innerZ) ** 2 < 1) continue;
+      volume.put(x, y, z, y < 2 ? 0x315b79 : y === 4 ? 0x638faf : 0x41779e);
+    }
+  }
+  const geometry = volume.geometry({ cellSize: cell,
+    origin: new THREE.Vector3(-cell / 2, 0, -cell / 2) });
+  geometry.name = 'VoxelRowboatHull';
+  return geometry;
 }

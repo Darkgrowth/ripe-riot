@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import RAPIER from '@dimforge/rapier3d-compat';
 import type { PhysicsWorld } from '@/physics/PhysicsWorld';
 import { Groups } from '@/physics/Layers';
@@ -73,6 +74,24 @@ export class PropBuilder {
     return this;
   }
 
+  /** One broad bevel for hero carpentry and canvas. Physics remains the same
+   * simple cuboid as box(), while the merged surface has a softer silhouette. */
+  roundedBox(w: number, h: number, d: number, radius: number, color: PropColor,
+    collide = false, at: [number, number, number] = [0, 0, 0]): this {
+    const g = new RoundedBoxGeometry(w, h, d, 1, radius);
+    g.translate(at[0], at[1], at[2]);
+    this.emit(g, color);
+    if (collide && this.physics) {
+      _pos.set(at[0], at[1], at[2]).applyMatrix4(this.xform);
+      this.xform.decompose(_dc, _dq, _ds);
+      const body = this.physics.createFixed(_pos, _dq);
+      const desc = RAPIER.ColliderDesc.cuboid(
+        (w * _ds.x) / 2, (h * _ds.y) / 2, (d * _ds.z) / 2).setFriction(0.85);
+      this.physics.attach(body, desc, Groups.prop);
+    }
+    return this;
+  }
+
   cylinder(rTop: number, rBot: number, h: number, seg: number, color: PropColor,
     collide = this.solid, at: [number, number, number] = [0, 0, 0]): this {
     const g = new THREE.CylinderGeometry(rTop, rBot, h, seg);
@@ -86,6 +105,20 @@ export class PropBuilder {
       const desc = RAPIER.ColliderDesc.cylinder((h * _ds.y) / 2, r).setFriction(0.85);
       this.physics.attach(body, desc, Groups.prop);
     }
+    return this;
+  }
+
+  /** Keep a barrel or drum's exact cylinder physics beneath an opaque voxel
+   * shell without drawing a coincident smooth cap through that shell. */
+  cylinderCollider(radius: number, h: number,
+    at: [number, number, number] = [0, 0, 0]): this {
+    if (!this.physics) return this;
+    _pos.set(at[0], at[1], at[2]).applyMatrix4(this.xform);
+    this.xform.decompose(_dc, _dq, _ds);
+    const body = this.physics.createFixed(_pos, _dq);
+    const desc = RAPIER.ColliderDesc.cylinder((h * _ds.y) / 2,
+      radius * Math.max(_ds.x, _ds.z)).setFriction(0.85);
+    this.physics.attach(body, desc, Groups.prop);
     return this;
   }
 
