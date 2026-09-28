@@ -95,7 +95,8 @@ export class AudioManager implements System {
       g.bus.on('money:changed', p => { if (p.delta > 0 && p.reason === 'sale') this.play('sale'); }),
       g.bus.on('tool:fired', p => { if (p.toolId === 'aircannon') this.play('recoil', { volume: .25 }); }),
       g.bus.on('tool:meleeResult', p => {
-        const cue = {
+        const cue = p.outcome === 'hit' && p.defeated
+          ? ['malletDefeat', .50] as [string, number] : {
           whoosh: ['malletWhoosh', .20],
           blocked: ['malletBlocked', .29],
           protected: ['malletProtected', .28],
@@ -525,6 +526,14 @@ const VOICES: Record<string, Voice> = {
       type: 'sine', gain: .34 });
     return burst(c, o, t, { dur: .11, type: 'lowpass', from: 1550,
       to: 310, gain: .24 });
+  },
+  malletDefeat: (c, o, t, p) => {
+    tone(c, o, t, { freq: 175 * p.pitch, to: 52, dur: .25,
+      type: 'triangle', gain: .38 });
+    burst(c, o, t, { dur: .13, type: 'lowpass', from: 1900,
+      to: 360, gain: .30 });
+    return tone(c, o, t + .10, { freq: 310 * p.pitch, to: 180,
+      dur: .19, type: 'sine', gain: .14 }) + .10;
   },
   netPlace: (c, o, t, p) => burst(c, o, t, {
     dur: 0.2, type: 'lowpass', from: 1400 * p.pitch, to: 300, gain: 0.28 }),

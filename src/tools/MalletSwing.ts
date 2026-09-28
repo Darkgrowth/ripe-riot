@@ -4,7 +4,6 @@ export const MALLET_TIMING = {
   contactAt: 0.18,
   activeEnd: 0.27,
   total: 0.44,
-  buffer: 0.10,
 } as const;
 
 export type MalletPhase = 'ready' | 'windup' | 'active' | 'recover';
@@ -26,12 +25,10 @@ export class MalletSwing {
     return 'recover';
   }
 
-  /** Starts immediately, or buffers exactly one press near recovery's end. */
+  /** Starts immediately, or remembers one press after the contact beat. */
   press(): number | null {
     if (!this.running) return this.begin();
-    if (this.state === 'recover'
-      && MALLET_TIMING.total - this.elapsed <= MALLET_TIMING.buffer)
-      this.queued = true;
+    if (this.elapsed >= MALLET_TIMING.contactAt) this.queued = true;
     return null;
   }
 

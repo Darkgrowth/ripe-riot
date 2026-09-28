@@ -3,6 +3,7 @@ import type { Game, System } from '@/core/Game';
 import type { Sunpatch } from '@/world/Sunpatch';
 import type { FruitSystem } from '@/fruit/FruitSystem';
 import { clamp } from '@/core/MathUtils';
+import type { GameEventMap } from '@/core/GameEvents';
 
 /**
  * Impact feedback: the visible half of "physics feel".
@@ -89,6 +90,7 @@ export class ImpactFX implements System {
     g.bus.on('fruit:impact', (p) => this.onImpact(p.fruitId, p.species, p.speed, p.point, p.onPlayer));
     g.bus.on('fruit:destroyed', (p) => this.onBurst(p.fruitId, p.species));
     g.bus.on('fruit:detached', (p) => this.onDetach(p.fruitId, p.cause));
+    g.bus.on('tool:meleeResult', (p) => this.onMeleeContact(p));
     g.bus.on('plant:shaken', (p) => this.onShake(p.position, p.height, p.strength));
     g.bus.on('player:ragdoll', () => this.dustRing(g.player.position, 14, 0.55));
     g.bus.on('vinebomb:launch', (p) => this.onVinebomb(p.fruitId, p.speed));
@@ -109,6 +111,22 @@ export class ImpactFX implements System {
   }
 
   // ---- emitters -----------------------------------------------------------
+  private onMeleeContact(result: GameEventMap['tool:meleeResult']): void {
+    if (!result.point || result.outcome === 'whoosh') return;
+    const palette = result.outcome === 'blocked' ? c(0xb9a989)
+      : result.outcome === 'protected' ? c(0xffdf9d)
+        : result.defeated ? c(0xffbb68) : c(0xb6dc76);
+    const count = result.defeated ? 11 : result.outcome === 'hit' ? 7 : 4;
+    this.emit(count, result.point, (q) => {
+      mixInto(q, palette, DUST, result.outcome === 'blocked' ? 0.3 : 0.08);
+      scatter(q, result.defeated ? 2.3 : 1.4,
+        result.defeated ? 5.0 : 3.0, 0.75);
+      q.size = rand(0.055, result.defeated ? 0.15 : 0.11);
+      q.life = q.maxLife = rand(0.18, result.defeated ? 0.42 : 0.29);
+      q.gravity = 7; q.drag = 3.2; q.bounce = 0;
+    });
+  }
+
   private onImpact(fruitId: number, species: string, dv: number, point: THREE.Vector3, onPlayer: boolean): void {
     if (dv < 3.5) return;
     const f = this.fruitSys.get(fruitId);

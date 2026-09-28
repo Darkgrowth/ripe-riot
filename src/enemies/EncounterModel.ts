@@ -85,6 +85,9 @@ const RECOVER = { mimic: 1.3, snapjaw: 1.6, spitter: 1.5 };
 const HEALTH = { mimic: 3, snapjaw: 2, spitter: 2 };
 const PROJECTILE_GRAVITY = 7.5;
 const MIMIC_RADIUS = 0.85;
+// Keep the full 1.25 m visual shell visible after its lunge. The mallet still
+// reaches its surface from here, so the counterattack window remains fair.
+const MIMIC_RECOVER_DISTANCE = 2.45;
 const MIMIC_STAGGER = 0.48;
 
 /** A world collision query shared by charge, knockback and bite checks. */
@@ -190,8 +193,8 @@ export class EncounterModel {
             const distance = Math.hypot(ax, az);
             const ux = distance > 1e-5 ? ax / distance : -Math.sin(state.heading);
             const uz = distance > 1e-5 ? az / distance : -Math.cos(state.heading);
-            const next: Point3 = [target.position[0] + ux * 1.7,
-              state.position[1], target.position[2] + uz * 1.7];
+            const next: Point3 = [target.position[0] + ux * MIMIC_RECOVER_DISTANCE,
+              state.position[1], target.position[2] + uz * MIMIC_RECOVER_DISTANCE];
             if (this.groundHeight) next[1] = this.groundHeight(next[0], next[2]);
             if (!this.mimicBlocked?.(state.position, next, 0.1)) state.position = next;
             state.phase = 'recover';

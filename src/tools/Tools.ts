@@ -81,11 +81,14 @@ export class HandPicker extends Tool {
         } else if (this.game.has('encounters')) {
           const result = this.game.get<{
             resolveMelee(origin: THREE.Vector3, direction: THREE.Vector3, actorId: string):
-              { outcome: 'whoosh' | 'blocked' | 'protected' | 'hit'; target?: 'mimic' | 'snapjaw' | 'spitter'; contact?: { point: [number, number, number] } };
+              { outcome: 'whoosh' | 'blocked' | 'protected' | 'hit';
+                target?: 'mimic' | 'snapjaw' | 'spitter';
+                contact?: { point: [number, number, number] }; hit?: { defeated: boolean } };
           }>('encounters').resolveMelee(origin, direction, 'solo');
           this.game.bus.emit('tool:meleeResult', { swingId: this.swing.currentId,
             outcome: result.outcome, target: result.target,
-            point: result.contact ? new THREE.Vector3(...result.contact.point) : undefined });
+            point: result.contact ? new THREE.Vector3(...result.contact.point) : undefined,
+            defeated: result.hit?.defeated });
         }
       }
     }
@@ -109,7 +112,8 @@ export class HandPicker extends Tool {
   }
 
   private beginSwing(): void {
-    this.game.bus.emit('tool:swing', { toolId: this.def.id, duration: MALLET_TIMING.total });
+    this.game.bus.emit('tool:swing', { toolId: this.def.id,
+      duration: MALLET_TIMING.total, swingId: this.swing.currentId });
   }
 }
 

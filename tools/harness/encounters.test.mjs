@@ -30,8 +30,8 @@ test('mimic impact stops before its body passes through the player camera', () =
   assert.equal(hit, true);
   assert.equal(model.get('mimic').phase, 'recover', 'bite commits then visibly recovers');
   assert.ok(Math.hypot(model.get('mimic').position[0],
-    model.get('mimic').position[2] - 5) >= 1.65,
-  'the rooted shell stays outside the player camera');
+    model.get('mimic').position[2] - 5) >= 2.35,
+  'the full visible shell stays readable outside the player camera');
 });
 
 test('mimic stops at a solid orchard rail and cannot hit through it', () => {

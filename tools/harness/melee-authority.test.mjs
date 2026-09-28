@@ -96,3 +96,45 @@ test('host ledger refuses a swing when a packet falsely claims empty hands', () 
   assert.equal(f.hits, 0);
   assert.equal(f.net.meleeStats.lastReason, 'inactive');
 });
+
+test('one host swing can connect when a moving target enters the active window', () => {
+  const f = fixture();
+  let inRange = false;
+  f.net.encounters.resolveMelee = () => inRange
+    ? { outcome: 'hit', target: 'mimic' } : { outcome: 'whoosh' };
+  f.net.tryMelee(new THREE.Vector3(0, 1.7, 0), new THREE.Vector3(0, 0, 1), 1);
+  assert.equal(f.events.length, 0, 'first empty sample remains open');
+  inRange = true;
+  f.net.advanceMelee(1 / 60);
+  assert.equal(f.events.length, 1);
+  assert.equal(f.events[0].payload.outcome, 'hit');
+  f.net.advanceMelee(1);
+  assert.equal(f.events.length, 1, 'same swing cannot resolve twice');
+});
+
+test('an empty active window ends with exactly one whoosh', () => {
+  const f = fixture();
+  f.net.encounters.resolveMelee = () => ({ outcome: 'whoosh' });
+  f.net.tryMelee(new THREE.Vector3(0, 1.7, 0), new THREE.Vector3(0, 0, 1), 1);
+  assert.equal(f.events.length, 0);
+  for (let i = 0; i < 8; i++) f.net.advanceMelee(1 / 60);
+  assert.equal(f.events.length, 1);
+  assert.equal(f.events[0].payload.outcome, 'whoosh');
+});
+
+test('a defeating strike preserves the host result flag through the client', () => {
+  const f = fixture();
+  f.net.onResult({ kind: 'melee', rid: 12, swingId: 2, ok: true,
+    outcome: 'hit', target: 'mimic', defeated: true });
+  assert.equal(f.events[0].payload.defeated, true);
+});
+
+test('switching tools cancels an unresolved contact without late feedback', () => {
+  const f = fixture();
+  f.net.encounters.resolveMelee = () => ({ outcome: 'whoosh' });
+  f.net.tryMelee(new THREE.Vector3(0, 1.7, 0), new THREE.Vector3(0, 0, 1), 1);
+  f.net.tools.activeId = 'basket';
+  f.net.advanceMelee(1 / 60);
+  assert.equal(f.events.length, 0);
+  assert.equal(f.net.pendingMelee.size, 0);
+});

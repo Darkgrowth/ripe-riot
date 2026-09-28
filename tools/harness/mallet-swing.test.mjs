@@ -25,13 +25,14 @@ test('an empty swing reaches recovery and then becomes ready without a target', 
   assert.equal(swing.resolved, false);
 });
 
-test('one late press buffers exactly one following swing; rapid early presses do not', () => {
+test('one recovery press buffers a follow-up; rapid presses before contact do not', () => {
   const swing = new MalletSwing();
   assert.equal(swing.press(), 1);
   assert.equal(swing.press(), null);
   swing.step(0.31);
   assert.equal(swing.state, 'recover');
-  assert.equal(swing.press(), null, 'outside the near-end buffer');
+  assert.equal(swing.press(), null, 'recovery press queues rather than restarting early');
+  assert.equal(swing.queued, true);
   swing.step(0.04);
   assert.equal(swing.press(), null, 'buffered press does not start early');
   assert.equal(swing.queued, true);

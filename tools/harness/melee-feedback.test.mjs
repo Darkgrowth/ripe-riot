@@ -40,6 +40,9 @@ test('melee results play distinct, restrained sounds through the audio event lis
     }
     assert.ok(played[0].opts.volume < played[3].opts.volume,
       'contact is more audible than empty air');
+    onResult({ swingId: 2, outcome: 'hit', target: 'mimic', defeated: true });
+    assert.notEqual(played.at(-1).name, played[3].name,
+      'defeat is distinct from an ordinary damaging hit');
   } finally {
     globalThis.window = oldWindow;
     globalThis.document = oldDocument;

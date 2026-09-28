@@ -26,6 +26,7 @@ import type { Progression } from '@/systems/Progression';
 import { MeleeIntentGuard, validMeleeOrigin } from './MeleeIntentGuard';
 import { probeMeleeSweep } from '@/enemies/MeleeSweep';
 import { QueryMask } from '@/physics/Layers';
+import { MALLET_TIMING } from '@/tools/MalletSwing';
 
 /** What a client is allowed to ask the host to do. */
 export type IntentKind =
@@ -111,6 +112,20 @@ interface Pending {
   cid?: number;
   at: number;
 }
+
+interface PendingMelee {
+  from: PeerId;
+  swingId: number;
+  origin: THREE.Vector3;
+  direction: THREE.Vector3;
+  remaining: number;
+  /** Null for the local host; a remote peer receives one final result packet. */
+  rid: number | null;
+}
+
+type MeleeResolution = { outcome: 'whoosh' | 'blocked' | 'protected' | 'hit';
+  target?: 'mimic' | 'snapjaw' | 'spitter' | 'kingVine'; point?: THREE.Vector3;
+  defeated?: boolean };
 
 interface RemoteState {
   id: PeerId;
@@ -252,6 +267,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   private remotes = new Map<PeerId, RemoteState>();
   private reviveClaims = new Map<PeerId, PeerId>();
   private readonly meleeGuard = new MeleeIntentGuard();
+  private readonly pendingMelee = new Map<PeerId, PendingMelee>();
   private snapshotTimer = 0;
   private playerTimer = 0;
   private off: Array<() => void> = [];
@@ -468,6 +484,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
 
   disconnect(): void {
     this.meleeGuard.clear();
+    this.pendingMelee.clear();
     // Say goodbye explicitly. Waiting for the liveness timeout leaves a ghost
     // standing in the orchard for four seconds, which reads as a bug.
     if (this.connected) this.transport?.send({ t: 'bye' });
@@ -571,6 +588,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     this.kingVine?.setAuthority(this.isHost);
     if (wasHost === this.isHost) return;
     this.meleeGuard.clear();
+    this.pendingMelee.clear();
     // The ledger belongs to whoever is host.
     this.authority.reset();
     if (this.isHost) { this.promote(); return; }
@@ -702,6 +720,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
    */
   private dropPeer(id: PeerId, name: string): void {
     this.meleeGuard.clearPeer(id);
+    this.pendingMelee.delete(id);
     const r = this.remotes.get(id);
     if (r) {
       // Where they were standing, kept past the avatar. If we are promoted a
@@ -1053,17 +1072,70 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       return;
     }
     this.meleeStats.accepted++;
-    const result = this.resolveMelee(origin, direction, from);
-    this.g.bus.emit('tool:meleeResult', { swingId, ...result });
+    this.beginMelee(from, swingId, origin, direction, null);
+  }
+
+  private beginMelee(from: PeerId, swingId: number, origin: THREE.Vector3,
+    direction: THREE.Vector3, rid: number | null): void {
+    const pending: PendingMelee = { from, swingId, origin: origin.clone(),
+      direction: direction.clone(), rid,
+      remaining: MALLET_TIMING.activeEnd - MALLET_TIMING.contactAt };
+    this.pendingMelee.set(from, pending);
+    this.sampleMelee(pending);
+  }
+
+  /** Keep the strike alive until the visible active arc ends or it connects. */
+  private advanceMelee(dt: number): void {
+    if (!(dt > 0)) return;
+    for (const pending of [...this.pendingMelee.values()]) {
+      if (!this.meleeActorActive(pending.from)) {
+        this.pendingMelee.delete(pending.from);
+        continue;
+      }
+      pending.remaining -= dt;
+      this.sampleMelee(pending);
+    }
+  }
+
+  private meleeActorActive(from: PeerId): boolean {
+    if (from === (this.me || 'solo')) return this.g.player.state === 'active'
+      && this.g.input.enabled && this.tools?.activeId === 'hand'
+      && !this.interaction.carried;
+    const remote = this.remotes.get(from);
+    return !!remote && remote.state === 'active' && !remote.busy
+      && remote.toolId === 'hand' && !remote.carrying
+      && this.authority.holdingFor(from).carried < 0;
+  }
+
+  private sampleMelee(pending: PendingMelee): void {
+    if (this.pendingMelee.get(pending.from) !== pending) return;
+    const result = this.resolveMelee(pending.origin, pending.direction, pending.from);
+    if (result.outcome !== 'whoosh' || pending.remaining <= 0)
+      this.finishMelee(pending, result);
+  }
+
+  private finishMelee(pending: PendingMelee, result: MeleeResolution): void {
+    if (this.pendingMelee.get(pending.from) !== pending) return;
+    this.pendingMelee.delete(pending.from);
+    if (pending.rid === null) {
+      this.g.bus.emit('tool:meleeResult', { swingId: pending.swingId, ...result });
+    } else {
+      this.transport?.send({ t: 'result', rid: pending.rid, kind: 'melee', ok: true,
+        swingId: pending.swingId, outcome: result.outcome, target: result.target,
+        defeated: result.defeated,
+        point: result.point ? [result.point.x, result.point.y, result.point.z] : undefined },
+      pending.from);
+    }
+    if (result.outcome === 'hit' && this.connected && this.isHost) this.sendSnapshot();
   }
 
   private resolveMelee(origin: THREE.Vector3, direction: THREE.Vector3,
-    from: PeerId): { outcome: 'whoosh' | 'blocked' | 'protected' | 'hit';
-      target?: 'mimic' | 'snapjaw' | 'spitter' | 'kingVine'; point?: THREE.Vector3 } {
+    from: PeerId): MeleeResolution {
     const encounter = this.encounters?.resolveMelee(origin, direction, from);
     if (encounter && encounter.outcome !== 'whoosh') return {
       outcome: encounter.outcome, target: encounter.target,
       point: encounter.contact ? new THREE.Vector3(...encounter.contact.point) : undefined,
+      ...(encounter.hit?.defeated ? { defeated: true } : {}),
     };
     if (!this.kingVine) return { outcome: 'whoosh' };
     const boss = this.kingVine.snapshot();
@@ -1084,7 +1156,8 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     const bossDirection = new THREE.Vector3(boss.center[0], boss.center[1] + 1.7,
       boss.center[2]).sub(origin).normalize();
     const hit = this.kingVine.tryHit(origin, bossDirection, 'melee', from);
-    return { outcome: hit ? 'hit' : 'protected', target: 'kingVine', point };
+    return { outcome: hit ? 'hit' : 'protected', target: 'kingVine', point,
+      ...(hit?.subdued ? { defeated: true } : {}) };
   }
 
   nearbyDowned(range = 3.5): { id: PeerId; name: string } | null {
@@ -1491,13 +1564,10 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
           this.meleeStats.rejected++;
           this.meleeStats.lastReason = accepted.reason;
         }
-        const result = accepted.ok
-          ? this.resolveMelee(new THREE.Vector3(...origin), new THREE.Vector3(...direction), from)
-          : { outcome: 'whoosh' as const };
-        this.transport?.send({ t: 'result', rid, kind: 'melee', ok: accepted.ok,
-          swingId: req.swingId, outcome: result.outcome, target: result.target,
-          point: result.point ? [result.point.x, result.point.y, result.point.z] : undefined }, from);
-        if (accepted.ok) this.sendSnapshot();
+        if (accepted.ok) this.beginMelee(from, req.swingId,
+          new THREE.Vector3(...origin), new THREE.Vector3(...direction), rid);
+        else this.transport?.send({ t: 'result', rid, kind: 'melee', ok: false,
+          swingId: req.swingId, outcome: 'whoosh' }, from);
         return;
       }
       case 'revive':
@@ -1552,7 +1622,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       this.g.bus.emit('tool:meleeResult', { swingId: Number(m.swingId),
         outcome: m.outcome === 'blocked' || m.outcome === 'protected' || m.outcome === 'hit'
           ? m.outcome : 'whoosh',
-        target, point });
+        target, point, defeated: m.defeated === true });
       return;
     }
 
@@ -1948,7 +2018,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
 
   // ---- loop ---------------------------------------------------------------
   fixedStep(dt: number): void {
-    if (!this.connected) return;
+    if (!this.connected) { this.advanceMelee(dt); return; }
     if (this.isHost) {
       for (const [target, rescuer] of [...this.reviveClaims])
         this.applyReviveClaim(rescuer, target, true);
@@ -1966,6 +2036,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       this.encounters?.setTargets(targets);
       this.kingVine?.setTargets(targets);
     }
+    if (this.isHost) this.advanceMelee(dt);
     this.expirePending();
     this.playerTimer += dt;
     if (this.playerTimer >= 1 / PLAYER_HZ) {
