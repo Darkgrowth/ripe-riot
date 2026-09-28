@@ -92,6 +92,11 @@ export function makePlayerRig(overrides: Partial<RigColors> = {}): PlayerRig {
   const standingPivot = Number.isFinite(soleY) ? -soleY + .012 : STAND_HEIGHT * .58;
   const bones = new Map(body.skeleton.bones.map((bone) => [bone.name, bone]));
   const rest = new Map(body.skeleton.bones.map((bone) => [bone.name, bone.quaternion.clone()]));
+  const pelvis = bones.get('Pelvis')!;
+  const pelvisRestX = pelvis.position.x;
+  let lastYaw: number | null = null;
+  let lastTime: number | null = null;
+  let turnLag = 0;
   const get = (name: string): THREE.Bone => {
     const bone = bones.get(name);
     if (!bone) throw new Error(`worker skeleton missing ${name}`);
@@ -99,6 +104,7 @@ export function makePlayerRig(overrides: Partial<RigColors> = {}): PlayerRig {
   };
   const reset = () => {
     for (const bone of body.skeleton.bones) bone.quaternion.copy(rest.get(bone.name)!);
+    pelvis.position.x = pelvisRestX;
   };
   const aim = (name: string, childName: string, worldDirection: THREE.Vector3) => {
     if (worldDirection.lengthSq() < 1e-8) return;
@@ -122,26 +128,49 @@ export function makePlayerRig(overrides: Partial<RigColors> = {}): PlayerRig {
     setVisible(v) { root.visible = v; },
     poseActive(input) {
       reset();
+      const dt = lastTime === null ? 0 : input.time - lastTime;
+      if (lastYaw !== null && dt > 0 && dt < .2 && !input.down) {
+        const deltaYaw = Math.atan2(Math.sin(input.yaw - lastYaw),
+          Math.cos(input.yaw - lastYaw));
+        turnLag = THREE.MathUtils.clamp(turnLag - deltaYaw * .28, -.18, .18)
+          * Math.exp(-6 * dt);
+      } else turnLag = 0;
+      lastYaw = input.yaw;
+      lastTime = input.time;
       root.position.set(input.position.x,
         input.position.y + standingPivot + (input.height - STAND_HEIGHT) * .58,
         input.position.z);
       root.rotation.set(0, input.yaw, 0);
       if (input.down) { root.position.y -= .36; root.rotateX(1.1); }
       const swing = input.moving && !input.down ? Math.sin(input.time * 8) : 0;
+      const weight = input.down ? 0 : input.moving ? swing * .2
+        : Math.sin(input.time * 1.3);
+      pelvis.position.x += weight * .012;
+      get('Spine').rotateZ(-weight * .055);
+      get('Chest').rotateZ(weight * .025);
+      get('Chest').rotateY(turnLag * .55);
+      get('Neck').rotateY(turnLag * .45);
       for (const side of ['L', 'R'] as const) {
         const sign = side === 'L' ? 1 : -1;
         const arm = get(`UpperArm_${side}`), forearm = get(`Forearm_${side}`);
         const thigh = get(`Thigh_${side}`), shin = get(`Shin_${side}`);
+        const foot = get(`Foot_${side}`);
+        const stepLift = Math.max(0, sign * swing);
+        arm.rotateZ(-sign * (input.carrying ? .05 : .14));
         arm.rotateX(input.carrying ? -.50 : sign * swing * .46);
-        forearm.rotateX(input.carrying ? -.65 : -.10 - Math.abs(swing) * .36);
+        forearm.rotateX(input.carrying ? -.65 : -.28 - Math.abs(swing) * .22);
         thigh.rotateX(sign * swing * .53);
-        shin.rotateX(.10 + Math.max(0, -sign * swing) * .68);
+        shin.rotateX(.10 + Math.max(0, -sign * swing) * .68 + stepLift * .35);
+        foot.rotateX(-stepLift * .48);
         if (input.busy) forearm.rotateX(-.12);
       }
       root.updateMatrixWorld(true);
     },
     posePhysics(parts) {
       reset();
+      lastYaw = null;
+      lastTime = null;
+      turnLag = 0;
       root.position.copy(parts.torso.position);
       root.quaternion.copy(parts.torso.quaternion);
       root.updateMatrixWorld(true);
