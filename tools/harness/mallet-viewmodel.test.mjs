@@ -33,22 +33,87 @@ test('mallet has separate tool and bracing hands, with palms visible in the read
   const halfWidth = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.aspect * VIEW_DEPTH;
   vm.root.position.x = VIEW_LATERAL * halfWidth;
   vm.root.updateMatrixWorld(true);
-  const rightPalm = right.localToWorld(new THREE.Vector3(.19, .03, -.22)).project(camera);
-  const leftPalm = left.localToWorld(new THREE.Vector3(.11, -.02, -.24)).project(camera);
-  for (const palm of [rightPalm, leftPalm]) {
-    assert.ok(palm.y > -.9 && palm.y < -.1, `palm clipped or too high: ${palm.y}`);
-    assert.ok(palm.x > -.2 && palm.x < .95, `palm outside lower-right grip area: ${palm.x}`);
+  const rightAnchor = right.localToWorld(new THREE.Vector3(.19, .115, -.22)).project(camera);
+  const leftAnchor = left.localToWorld(new THREE.Vector3(.07, .17, -.24)).project(camera);
+  for (const anchor of [rightAnchor, leftAnchor]) {
+    assert.ok(anchor.y > -.95 && anchor.y < -.1, `glove clipped or too high: ${anchor.y}`);
+    assert.ok(anchor.x > -.2 && anchor.x < .95, `glove outside lower-right grip area: ${anchor.x}`);
   }
-  const shaft = tool.localToWorld(new THREE.Vector3(.16, -.02, -.24));
-  const rightGrip = right.localToWorld(new THREE.Vector3(.19, .03, -.22));
-  const leftGrip = left.localToWorld(new THREE.Vector3(.11, -.02, -.24));
-  assert.ok(shaft.distanceTo(rightGrip) < .06, 'lead glove must meet the shaft');
-  assert.ok(shaft.distanceTo(leftGrip) < .06, 'support glove must meet the shaft');
+  const shaft = tool.localToWorld(new THREE.Vector3(.16, .14, -.24));
+  const nearestGripVertex = (mesh) => {
+    const positions = mesh.geometry.getAttribute('position');
+    let nearest = Infinity;
+    for (let i = 0; i < positions.count; i++) {
+      const point = mesh.localToWorld(new THREE.Vector3(
+        positions.getX(i), positions.getY(i), positions.getZ(i)));
+      if (Math.abs(point.y - shaft.y) > .12) continue;
+      nearest = Math.min(nearest, Math.hypot(point.x - shaft.x, point.z - shaft.z));
+    }
+    return nearest;
+  };
+  assert.ok(nearestGripVertex(right) < .04, 'lead glove must meet the shaft');
+  assert.ok(nearestGripVertex(left) < .04, 'support glove must meet the shaft');
   const disposed = new Set();
   for (const mesh of [tool, right, left])
     mesh.geometry.addEventListener('dispose', () => disposed.add(mesh.name));
   vm.dispose(); material.dispose();
   assert.equal(disposed.size, 3, 'all three geometries must be released on swap/dispose');
+});
+
+test('the two mallet grips read as separate hands at gameplay aspect ratios', async () => {
+  await loadWorkerHands(url);
+  const material = new THREE.MeshStandardMaterial({ vertexColors: true });
+  for (const aspect of [4 / 3, 16 / 9, 3420 / 1266]) {
+    const camera = new THREE.PerspectiveCamera(52, aspect, .01, 6);
+    const halfWidth = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * aspect * VIEW_DEPTH;
+    const vm = buildViewModel('hand', material, 'voxel');
+    vm.setFit(Math.min(1, aspect / (16 / 9)));
+    vm.root.position.x = VIEW_LATERAL * halfWidth;
+    vm.root.updateMatrixWorld(true);
+    const projectCentre = (name) => new THREE.Box3()
+      .setFromObject(vm.root.getObjectByName(name))
+      .getCenter(new THREE.Vector3()).project(camera);
+    const lead = projectCentre('vm:hand:rightGrip');
+    const support = projectCentre('vm:hand:leftGrip');
+    assert.ok(support.y - lead.y > .10,
+      `support glove must sit distinctly above the lead grip at ${aspect}: ${support.y - lead.y}`);
+    assert.ok(Math.hypot(support.x - lead.x, support.y - lead.y) > .23,
+      `glove silhouettes must not merge side-to-side at ${aspect}`);
+    assert.ok(lead.y > -1.05 && support.y < -.20,
+      'both gloves should remain legible below the aim point');
+    const cuffCentre = (name, anchorZ) => {
+      const mesh = vm.root.getObjectByName(name);
+      const positions = mesh.geometry.getAttribute('position');
+      const centre = new THREE.Vector3();
+      let count = 0;
+      for (let i = 0; i < positions.count; i++) {
+        if (positions.getZ(i) < anchorZ + .08) continue;
+        centre.add(mesh.localToWorld(new THREE.Vector3(
+          positions.getX(i), positions.getY(i), positions.getZ(i))));
+        count++;
+      }
+      assert.ok(count > 0, 'the glove needs a connected cuff');
+      return centre.divideScalar(count).project(camera);
+    };
+    const leadCuff = cuffCentre('vm:hand:rightGrip', -.22);
+    const supportCuff = cuffCentre('vm:hand:leftGrip', -.24);
+    assert.ok(leadCuff.x - supportCuff.x > .22,
+      `the forearms should fan apart beneath the shared shaft at ${aspect}: ${leadCuff.x - supportCuff.x}`);
+    for (const name of ['vm:hand:rightGrip', 'vm:hand:leftGrip']) {
+      const mesh = vm.root.getObjectByName(name);
+      const positions = mesh.geometry.getAttribute('position');
+      let inFrame = 0;
+      for (let i = 0; i < positions.count; i++) {
+        const projected = mesh.localToWorld(new THREE.Vector3(
+          positions.getX(i), positions.getY(i), positions.getZ(i))).project(camera);
+        if (Math.abs(projected.x) <= 1 && Math.abs(projected.y) <= 1) inFrame++;
+      }
+      assert.ok(inFrame / positions.count > .65,
+        `${name} must be mostly visible, got ${(inFrame / positions.count).toFixed(2)} at ${aspect}`);
+    }
+    vm.dispose();
+  }
+  material.dispose();
 });
 
 test('mallet head crosses the aim area at the shared 0.18-second contact beat at three aspect ratios', async () => {

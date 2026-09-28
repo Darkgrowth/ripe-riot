@@ -318,11 +318,23 @@ export const VIEW_LATERAL = 0.37;
  * Widen that silhouette slightly around its own wrist, without altering the
  * approved source asset or turning the near-camera sleeve into a slab. */
 function malletGrip(side: 'L' | 'R', x: number, y: number, z: number, roll: number,
-  material: THREE.Material): THREE.Mesh {
-  const at = new THREE.Vector3(x, y, z);
-  const geo = toolHand(side, at, roll);
-  geo.translate(-x, -y, -z);
-  geo.scale(1.10, 1.04, 1.04);
+  material: THREE.Material, voxel: boolean): THREE.Mesh {
+  const geo = toolHand(side, new THREE.Vector3(), roll);
+  if (voxel) {
+    const positions = geo.getAttribute('position') as THREE.BufferAttribute;
+    // Keep the authored palm on the shaft. Fan only the rear cuff toward its
+    // own side of the screen so the two arms have separate silhouettes.
+    const outward = side === 'L' ? -1 : 1;
+    for (let i = 0; i < positions.count; i++) {
+      const rear = THREE.MathUtils.clamp((positions.getZ(i) - .015) / .16, 0, 1);
+      positions.setX(i, positions.getX(i) + outward * .09 * rear);
+    }
+    positions.needsUpdate = true;
+    geo.scale(1.04, .92, .82);
+    geo.computeVertexNormals();
+  } else {
+    geo.scale(1.10, 1.04, 1.04);
+  }
   geo.translate(x, y, z);
   geo.computeBoundingSphere();
   const mesh = new THREE.Mesh(geo, material);
@@ -339,10 +351,12 @@ function buildMalletViewModel(material: THREE.Material, visualMode: VisualMode):
     box(0.16, 0.075, 0.09, STEEL_DARK, [0.16, 0.25, -0.24]),
     box(0.12, 0.015, 0.095, STEEL, [0.16, 0.294, -0.24]),
   ], material, 'hand');
-  // Both palms now meet the shaft. The lead glove sits above the support
-  // glove, while their connected cuffs run down toward the lower frame.
-  const right = malletGrip('R', .19, .03, -.22, -.30, material);
-  const left = malletGrip('L', .11, -.02, -.24, .25, material);
+  // In voxel mode the grip heights and cuff fan keep both hands distinct at
+  // the gameplay camera. The baseline hand pose retains its authored fit.
+  const voxel = visualMode === 'voxel';
+  const right = malletGrip('R', .19, voxel ? .115 : .03, -.22, -.30, material, voxel);
+  const left = malletGrip('L', voxel ? .07 : .11, voxel ? .17 : -.02, -.24,
+    .25, material, voxel);
   const root = new THREE.Group();
   root.name = 'ViewModel:hand';
   root.add(tool, right, left);
