@@ -86,6 +86,8 @@ test('voxel orchard trees preserve every harvest point and trunk collider', () =
     next.attachPoints.forEach((pt, i) => assert.ok(pt.distanceTo(old.attachPoints[i]) < 1e-8));
     assert.equal(next.geometry.userData.voxelConnectedComponents, 1, `${type} ${variant}`);
     const pos = next.geometry.getAttribute('position');
+    assert.ok(pos.count / 3 <= 11000,
+      `${type} ${variant} must stay within the earlier apple-tree triangle envelope`);
     const sway = next.geometry.getAttribute('swayWeight');
     assert.equal(pos.count, sway.count);
     assert.ok(next.geometry.boundingBox.min.y >= -0.01);
@@ -137,6 +139,35 @@ test('orchard crown variants have distinct spreading, upright and windswept silh
     assert.ok(Math.abs(windswept.skew) > 0.35,
       `${type}: windswept crown should favor one side`);
   }
+});
+
+test('fruit-tree archetypes read as a pruned shelf, open boughs and a wind-shaped crown', () => {
+  const profile = (variant) => {
+    const shape = voxelPlantShape('appleTree', variant, true);
+    const positions = shape.geometry.getAttribute('position');
+    const colors = shape.geometry.getAttribute('color');
+    const leaf = [], middle = [], upper = [];
+    for (let i = 0; i < positions.count; i++) {
+      if (colors.getY(i) < colors.getX(i) * 1.2) continue;
+      const point = { x: positions.getX(i), y: positions.getY(i) };
+      leaf.push(point);
+      if (point.y >= 3.2 && point.y < 4.3) middle.push(point);
+      if (point.y >= 4.3) upper.push(point);
+    }
+    const width = points => Math.max(...points.map(p => p.x)) - Math.min(...points.map(p => p.x));
+    return {
+      upperToMiddleWidth: width(upper) / width(middle),
+      lowFraction: leaf.filter(p => p.y < shape.collider.offset * 2 + 0.15).length / leaf.length,
+      canopyBias: leaf.reduce((sum, p) => sum + p.x, 0) / leaf.length,
+    };
+  };
+  const broad = profile(0), open = profile(1), wind = profile(2);
+  assert.ok(broad.upperToMiddleWidth > 0.72,
+    'pruned crown needs a broad upper shelf rather than a round top');
+  assert.ok(open.lowFraction < 0.25,
+    'open tree needs visible forked boughs below its leaf crowns');
+  assert.ok(wind.canopyBias > 0.55,
+    'wind-shaped tree needs most foliage on its sheltered side');
 });
 
 test('voxel melon vine retains its single saved fruit node and ground-level sway geometry', () => {

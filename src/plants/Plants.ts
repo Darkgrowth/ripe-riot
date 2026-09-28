@@ -58,8 +58,8 @@ const _v = new THREE.Vector3();
 const _off = new THREE.Vector3();
 const _wind = new THREE.Vector3(1, 0, 0);
 const _perp = new THREE.Vector3();
-// Matches Sunpatch's authored Old Orchard landmark. Hill and cave farm plants
-// retain their original batches except for the one hill-path plum nest.
+// Melon vines remain an Old Orchard pilot; fruit trees share the voxel kit
+// across the Old Orchard, Hill Farm and Cave Orchard.
 const VOXEL_ORCHARD_X = -24;
 const VOXEL_ORCHARD_Z = 22;
 const VOXEL_ORCHARD_RADIUS_SQ = 26 * 26;
@@ -193,16 +193,15 @@ export class PlantSystem {
   plant(id: number, type: PlantType, position: THREE.Vector3, rng: Rng,
     opts: { scale?: number; rotationY?: number; variant?: number; hiddenCosmetic?: boolean } = {}): Plant {
     const variant = opts.variant ?? rng.int(0, SHAPE_VARIANTS - 1);
-    // Original gameplay nodes remain common to both art modes; only selected
-    // plants around the orchard and Spitter use separate visual batches.
+    // Original gameplay nodes remain common to both art modes. The same
+    // broadleaf kit now follows the fruit harvest beyond the first orchard.
     const harvestCrown = type === 'appleTree' || type === 'orangeTree';
     const dx = position.x - VOXEL_ORCHARD_X, dz = position.z - VOXEL_ORCHARD_Z;
     const sx = position.x - VOXEL_SPITTER_X, sz = position.z - VOXEL_SPITTER_Z;
     const voxel = this.visualMode === 'voxel' && (
-      type === 'palm' || type === 'bananaPlant' ||
+      type === 'palm' || type === 'bananaPlant' || harvestCrown ||
       (type === 'boulderBush' && sx * sx + sz * sz <= VOXEL_SPITTER_RADIUS_SQ) ||
-      ((harvestCrown || type === 'melonVine')
-        && dx * dx + dz * dz <= VOXEL_ORCHARD_RADIUS_SQ)
+      (type === 'melonVine' && dx * dx + dz * dz <= VOXEL_ORCHARD_RADIUS_SQ)
     );
     const shape = voxel ? voxelPlantShape(type, variant, harvestCrown)
       : plantShape(type, variant, harvestCrown);

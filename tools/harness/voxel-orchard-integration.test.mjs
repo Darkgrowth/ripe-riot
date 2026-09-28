@@ -12,7 +12,7 @@ const { FruitRenderer } = await vite.ssrLoadModule('/src/fruit/FruitRenderer.ts'
 const { voxelFruitGeometry } = await vite.ssrLoadModule('/src/art/voxel/VoxelFruit.ts');
 const { skipVoxelPilotDecor } = await vite.ssrLoadModule('/src/fruit/FruitSystem.ts');
 
-test('voxel pilot batches orchard trees separately while outer island keeps baseline', async () => {
+test('voxel pilot uses the same fruit-tree kit in orchard, hill farm and cave orchard', async () => {
   await PhysicsWorld.load();
   const physics = new PhysicsWorld();
   physics.init();
@@ -20,16 +20,19 @@ test('voxel pilot batches orchard trees separately while outer island keeps base
   const plants = new PlantSystem(scene, physics, 'voxel');
   const inside = plants.plant(1, 'appleTree', new THREE.Vector3(-24, 3, 22),
     new Rng(1), { variant: 0, scale: 1 });
-  const outside = plants.plant(2, 'appleTree', new THREE.Vector3(3, 3, 22),
+  const hill = plants.plant(2, 'appleTree', new THREE.Vector3(-15, 9, -35),
     new Rng(2), { variant: 0, scale: 1 });
-  assert.notEqual(inside.batchKey, outside.batchKey);
+  const cave = plants.plant(3, 'orangeTree', new THREE.Vector3(62, 3, -8),
+    new Rng(3), { variant: 1, scale: 1 });
+  assert.equal(inside.batchKey, hill.batchKey, 'same species and variant reuse one instanced batch');
   assert.match(inside.batchKey, /voxel/);
-  assert.doesNotMatch(outside.batchKey, /voxel/);
+  assert.match(cave.batchKey, /voxel/);
   const voxelBatch = scene.children.find(child => child.name === `Plants:${inside.batchKey}`);
-  const oldBatch = scene.children.find(child => child.name === `Plants:${outside.batchKey}`);
+  const caveBatch = scene.children.find(child => child.name === `Plants:${cave.batchKey}`);
   assert.match(voxelBatch?.geometry.name ?? '', /^VoxelTree:appleTree/);
-  assert.doesNotMatch(oldBatch?.geometry.name ?? '', /^VoxelTree:/);
-  assert.equal(inside.nodes.length, outside.nodes.length);
+  assert.match(caveBatch?.geometry.name ?? '', /^VoxelTree:orangeTree/);
+  assert.equal(inside.nodes.length, hill.nodes.length);
+  assert.equal(inside.colliders.length, hill.colliders.length);
   plants.dispose();
   physics.world.free();
 });
@@ -46,6 +49,33 @@ test('baseline mode keeps the orchard tree on its existing geometry path', async
   const batch = scene.children.find(child => child.name === `Plants:${tree.batchKey}`);
   assert.doesNotMatch(batch?.geometry.name ?? '', /^VoxelTree:/);
   plants.dispose();
+  physics.world.free();
+});
+
+test('hill and cave fruit trees retain seeded gameplay nodes and RNG across art modes', async () => {
+  await PhysicsWorld.load();
+  const physics = new PhysicsWorld();
+  physics.init();
+  const voxel = new PlantSystem(new THREE.Scene(), physics, 'voxel');
+  const baseline = new PlantSystem(new THREE.Scene(), physics, 'baseline');
+  for (const [id, type, x, z] of [
+    [51, 'appleTree', -15, -35],
+    [52, 'orangeTree', 62, -8],
+  ]) {
+    const visualRng = new Rng(id), gameplayRng = new Rng(id);
+    const position = new THREE.Vector3(x, 4, z);
+    const next = voxel.plant(id, type, position, visualRng);
+    const old = baseline.plant(id, type, position, gameplayRng);
+    assert.equal(next.variant, old.variant);
+    assert.equal(next.scale, old.scale);
+    assert.equal(next.rotationY, old.rotationY);
+    assert.deepEqual(next.nodes.map(node => node.local.toArray()),
+      old.nodes.map(node => node.local.toArray()));
+    assert.equal(next.colliders.length, old.colliders.length);
+    assert.equal(visualRng.next(), gameplayRng.next());
+  }
+  voxel.dispose();
+  baseline.dispose();
   physics.world.free();
 });
 

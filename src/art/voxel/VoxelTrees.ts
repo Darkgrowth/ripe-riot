@@ -228,15 +228,7 @@ function buildTree(type: 'appleTree' | 'orangeTree', variant: number,
   const lean = (variant - 1) * (apple ? 0.045 : 0.05);
   const spread = apple ? 1.30 : 1.05;
   const crownR = apple ? 1.45 : 1.30;
-  const habits = [
-    { spreadX: 1.17, spreadZ: 1.08, lobeX: 1.07, topWidth: 0.94,
-      topHeight: 0.94, topLift: 0.42, ringHeight: 0.91, biasX: 0 },
-    { spreadX: 0.77, spreadZ: 0.86, lobeX: 0.86, topWidth: 0.76,
-      topHeight: 1.15, topLift: 0.52, ringHeight: 1.05, biasX: 0 },
-    { spreadX: 1.02, spreadZ: 0.95, lobeX: 0.94, topWidth: 0.84,
-      topHeight: 1.00, topLift: 0.46, ringHeight: 0.98, biasX: 0.38 },
-  ] as const;
-  const habit = habits[((variant % habits.length) + habits.length) % habits.length];
+  const habit = ((variant % 3) + 3) % 3;
   const palette = apple
     ? [0x4c8e43, 0x59a04a, 0x69a851, 0x478544]
     : [0x408a39, 0x519b41, 0x67a747, 0x3a7f3c];
@@ -257,67 +249,63 @@ function buildTree(type: 'appleTree' | 'orangeTree', variant: number,
     }
   }
 
-  const lobes: Lobe[] = [{
-    x: -Math.sin(lean) * trunkH + habit.biasX * 0.6,
-    y: trunkH + crownR * habit.topLift, z: 0,
-    rx: crownR * habit.topWidth, ry: crownR * habit.topHeight,
-    rz: crownR * (habit.topWidth + 0.03),
-    color: palette[0],
-  }];
-  const ring = apple ? 5 : 4;
-  for (let i = 0; i < ring; i++) {
-    const angle = i * Math.PI * 2 / ring + variant * 0.32 + (apple ? 0.12 : -0.16);
-    const range = spread * (0.91 + 0.08 * Math.sin(i * 2.4 + variant));
-    const lift = [0.22, -0.16, 0.10, -0.10, 0.17][i % 5];
-    lobes.push({
-      x: Math.sin(angle) * range * habit.spreadX + habit.biasX,
-      y: trunkH + lift + (variant === 1 ? 0.16 : 0),
-      z: Math.cos(angle) * range * habit.spreadZ,
-      rx: crownR * (0.69 + 0.05 * (i % 2)) * habit.lobeX,
-      ry: crownR * (0.62 + 0.07 * ((i + variant) % 3)) * habit.ringHeight,
-      rz: crownR * (0.69 + 0.04 * ((i + 1) % 2)) * habit.spreadZ,
-      color: palette[1 + i % 3],
-    });
-  }
-  const skirt = variant === 1 ? (apple ? 2 : 1) : (apple ? 3 : 2);
-  for (let i = 0; i < skirt; i++) {
-    const angle = (i + 0.5) * Math.PI * 2 / skirt + variant * 0.3;
-    lobes.push({
-      x: Math.sin(angle) * spread * 1.15 * habit.spreadX + habit.biasX,
-      y: trunkH - crownR * (0.28 + (i % 2) * 0.10),
-      z: Math.cos(angle) * spread * 1.15 * habit.spreadZ,
-      rx: crownR * 0.56 * habit.lobeX, ry: crownR * 0.48,
-      rz: crownR * 0.54 * habit.spreadZ,
-      color: palette[(i + 2) % palette.length],
-    });
-  }
+  // Broad trees are pruned into a low sheltering shelf; open trees expose
+  // three rising forks; wind-shaped trees carry their crown downwind. Each
+  // uses a few large leaf masses rather than a ring of interchangeable balls.
+  const lobes: Lobe[] = habit === 0 ? [
+    { x: 0, y: trunkH + crownR * 0.65, z: 0,
+      rx: crownR * 0.92, ry: crownR * 0.48, rz: crownR * 0.85, color: palette[0] },
+    { x: -spread * 0.96, y: trunkH + crownR * 0.61, z: -spread * 0.15,
+      rx: crownR * 0.78, ry: crownR * 0.38, rz: crownR * 0.70, color: palette[1] },
+    { x: spread * 0.96, y: trunkH + crownR * 0.63, z: spread * 0.12,
+      rx: crownR * 0.78, ry: crownR * 0.38, rz: crownR * 0.70, color: palette[2] },
+    { x: 0, y: trunkH + crownR * 0.45, z: spread * 0.70,
+      rx: crownR * 0.68, ry: crownR * 0.34, rz: crownR * 0.63, color: palette[3] },
+  ] : habit === 1 ? [
+    { x: 0, y: trunkH + crownR * 1.02, z: 0,
+      rx: crownR * 0.68, ry: crownR * 0.40, rz: crownR * 0.66, color: palette[0] },
+    { x: -spread * 0.88, y: trunkH + crownR * 0.74, z: -spread * 0.28,
+      rx: crownR * 0.58, ry: crownR * 0.39, rz: crownR * 0.57, color: palette[1] },
+    { x: spread * 0.90, y: trunkH + crownR * 0.80, z: spread * 0.34,
+      rx: crownR * 0.58, ry: crownR * 0.38, rz: crownR * 0.57, color: palette[2] },
+  ] : [
+    { x: spread * 0.54, y: trunkH + crownR * 0.69, z: 0,
+      rx: crownR * 0.76, ry: crownR * 0.56, rz: crownR * 0.72, color: palette[0] },
+    { x: spread * 1.40, y: trunkH + crownR * 0.45, z: spread * 0.18,
+      rx: crownR * 0.69, ry: crownR * 0.43, rz: crownR * 0.67, color: palette[1] },
+    { x: spread * 1.12, y: trunkH + crownR * 0.96, z: -spread * 0.32,
+      rx: crownR * 0.59, ry: crownR * 0.39, rz: crownR * 0.59, color: palette[2] },
+  ];
 
-  // Four thick fork lines meet the trunk and disappear into overlapping crown
-  // masses. They are cells in the same volume, not detached cylinder meshes.
-  for (let i = 1; i <= ring; i++) {
+  // Tapered boughs remain visible through the open lower crown, but reach
+  // into each mass so the whole voxel surface is face-connected to the trunk.
+  for (let i = 0; i < lobes.length; i++) {
     const end = lobes[i];
     fillBranch(volume,
-      new THREE.Vector3(0, trunkH * (0.75 + (i % 2) * 0.07), 0),
-      new THREE.Vector3(end.x * 0.75, end.y - end.ry * 0.25, end.z * 0.75),
+      new THREE.Vector3(0, trunkH * (0.68 + i * 0.045), 0),
+      new THREE.Vector3(end.x, end.y - end.ry * 0.32, end.z),
       cell, 0x775034);
   }
 
-  const extent = Math.ceil((spread + crownR + 0.30) / cell);
-  for (let x = -extent; x <= extent; x++) for (let z = -extent; z <= extent; z++) {
-    for (let y = Math.floor((trunkH - crownR) / cell); y <= Math.ceil((original.height + 0.10) / cell); y++) {
+  const minX = Math.floor(Math.min(...lobes.map(l => l.x - l.rx)) / cell) - 2;
+  const maxX = Math.ceil(Math.max(...lobes.map(l => l.x + l.rx)) / cell) + 2;
+  const minZ = Math.floor(Math.min(...lobes.map(l => l.z - l.rz)) / cell) - 2;
+  const maxZ = Math.ceil(Math.max(...lobes.map(l => l.z + l.rz)) / cell) + 2;
+  for (let x = minX; x <= maxX; x++) for (let z = minZ; z <= maxZ; z++) {
+    for (let y = Math.floor((trunkH - crownR * 0.25) / cell); y <= Math.ceil((original.height + 0.10) / cell); y++) {
       const wx = x * cell, wy = (y + 0.5) * cell, wz = z * cell;
       let best = Infinity;
       let lobeIndex = -1;
       for (let i = 0; i < lobes.length; i++) {
         const l = lobes[i];
-        const prune = harvestCrown && i > 0 ? 0.94 : 1;
-        const d = ((wx - l.x) / (l.rx * prune)) ** 2
-          + ((wy - l.y) / (l.ry * prune)) ** 2
-          + ((wz - l.z) / (l.rz * prune)) ** 2;
+        const prune = harvestCrown && i > 0 ? 0.96 : 1;
+        const d = Math.abs((wx - l.x) / (l.rx * prune)) ** 4
+          + Math.abs((wy - l.y) / (l.ry * prune)) ** 4
+          + Math.abs((wz - l.z) / (l.rz * prune)) ** 4;
         if (d < best) { best = d; lobeIndex = i; }
       }
-      const edge = 0.065 * Math.sin(wx * 3.1 + variant) * Math.cos(wz * 2.8 - wy * 1.3)
-        + 0.025 * Math.sin(wy * 5.1 + wx * 2.2);
+      const edge = 0.08 * Math.sin(wx * 3.1 + variant) * Math.cos(wz * 2.8 - wy * 1.3)
+        + 0.035 * Math.sin(wy * 5.1 + wx * 2.2);
       if (best > 1 + edge) continue;
       // Keep saved fruit positions visible against small recesses in the leaf
       // surface, without moving the gameplay node or opening broad holes.
@@ -334,7 +322,7 @@ function buildTree(type: 'appleTree' | 'orangeTree', variant: number,
     const tip: [number, number, number] = [
       Math.round(pt.x / cell), Math.floor((pt.y + 0.16) / cell), Math.round(pt.z / cell),
     ];
-    const root = volume.nearest(tip[0], tip[1], tip[2], 12);
+    const root = volume.nearest(tip[0], tip[1], tip[2], 16);
     if (!root) throw new Error(`voxel ${type} fruit spur has no crown root`);
     fillTwig(volume, root, tip);
   }
@@ -371,8 +359,9 @@ function fillBranch(volume: VoxelVolume, from: THREE.Vector3, to: THREE.Vector3,
   for (let i = 0; i <= steps; i++) {
     const p = from.clone().lerp(to, i / steps);
     const cx = Math.round(p.x / cell), cy = Math.floor(p.y / cell), cz = Math.round(p.z / cell);
-    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) {
-      if (dx * dx + dy * dy + dz * dz > 2) continue;
+    const radiusSq = (1.8 - 0.75 * i / steps) ** 2;
+    for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) for (let dz = -2; dz <= 2; dz++) {
+      if (dx * dx + dy * dy + dz * dz > radiusSq) continue;
       volume.put(cx + dx, cy + dy, cz + dz, pigment);
     }
   }
