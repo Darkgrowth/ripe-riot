@@ -9,7 +9,7 @@ const { Rng } = await vite.ssrLoadModule('/src/core/Rng.ts');
 const { PhysicsWorld } = await vite.ssrLoadModule('/src/physics/PhysicsWorld.ts');
 const { PlantSystem } = await vite.ssrLoadModule('/src/plants/Plants.ts');
 
-test('voxel mode gives route palms a stepped crown without moving coconuts or trunk collision', async () => {
+test('voxel mode gives route palms a curved trunk and broad crown without moving coconuts or collision', async () => {
   await PhysicsWorld.load();
   const physics = new PhysicsWorld();
   physics.init();

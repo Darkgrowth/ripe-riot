@@ -314,30 +314,51 @@ export const VIEW_DEPTH = 0.5;
  *  half-width at VIEW_DEPTH. */
 export const VIEW_LATERAL = 0.37;
 
-/** The grip GLB already contains the glove and cuff as one connected mesh.
- * Widen that silhouette slightly around its own wrist, without altering the
- * approved source asset or turning the near-camera sleeve into a slab. */
+/** The grip GLB contains a short, capped sleeve. Extend only its fabric from
+ * beneath the leather cuff toward the player's elbow, so the cap leaves the
+ * lower camera frame while the authored palm stays wrapped around the shaft. */
 function malletGrip(side: 'L' | 'R', x: number, y: number, z: number, roll: number,
   material: THREE.Material, voxel: boolean): THREE.Mesh {
   const geo = toolHand(side, new THREE.Vector3(), roll);
+  let grip = geo;
   if (voxel) {
     const positions = geo.getAttribute('position') as THREE.BufferAttribute;
-    // Keep the authored palm on the shaft. Fan only the rear cuff toward its
-    // own side of the screen so the two arms have separate silhouettes.
+    const colors = geo.getAttribute('color') as THREE.BufferAttribute;
     const outward = side === 'L' ? -1 : 1;
     for (let i = 0; i < positions.count; i++) {
-      const rear = THREE.MathUtils.clamp((positions.getZ(i) - .015) / .16, 0, 1);
-      positions.setX(i, positions.getX(i) + outward * .09 * rear);
+      let x = positions.getX(i), y = positions.getY(i), z = positions.getZ(i);
+      // The ochre vertex color belongs to the sleeve alone. Its opening is at
+      // the low-Y end of the source GLB; the darker cuff and fingers stay put.
+      if (colors.getX(i) > .5) {
+        const towardElbow = THREE.MathUtils.clamp((-y - .048) / .12, 0, 1);
+        y -= .27 * towardElbow;
+        x += outward * .13 * towardElbow;
+      }
+      const rear = THREE.MathUtils.clamp((z - .015) / .16, 0, 1);
+      positions.setXYZ(i, x + outward * .09 * rear, y, z);
     }
     positions.needsUpdate = true;
-    geo.scale(1.04, .92, .82);
+    geo.scale(.88, .92, .82);
     geo.computeVertexNormals();
+    // Three short leather fingers bridge each palm onto the camera side of
+    // the same wooden shaft. They remain part of that hand's moving mesh.
+    const fingerParts: THREE.BufferGeometry[] = [geo];
+    const shaftX = .16 - x;
+    const shaftZ = -.24 - z;
+    for (const offset of [-.018, 0, .018])
+      fingerParts.push(padded(.039, .014, .078, .004, GLOVE,
+        [shaftX + (side === 'L' ? -.012 : .012), offset, shaftZ + .037]));
+    const merged = mergeGeometries(fingerParts, false);
+    if (!merged) throw new Error(`mallet grip merge failed: ${side}`);
+    merged.computeVertexNormals();
+    for (const part of fingerParts) part.dispose();
+    grip = merged;
   } else {
     geo.scale(1.10, 1.04, 1.04);
   }
-  geo.translate(x, y, z);
-  geo.computeBoundingSphere();
-  const mesh = new THREE.Mesh(geo, material);
+  grip.translate(x, y, z);
+  grip.computeBoundingSphere();
+  const mesh = new THREE.Mesh(grip, material);
   mesh.name = `vm:hand:${side === 'R' ? 'rightGrip' : 'leftGrip'}`;
   return mesh;
 }
@@ -354,8 +375,8 @@ function buildMalletViewModel(material: THREE.Material, visualMode: VisualMode):
   // In voxel mode the grip heights and cuff fan keep both hands distinct at
   // the gameplay camera. The baseline hand pose retains its authored fit.
   const voxel = visualMode === 'voxel';
-  const right = malletGrip('R', .19, voxel ? .115 : .03, -.22, -.30, material, voxel);
-  const left = malletGrip('L', voxel ? .07 : .11, voxel ? .17 : -.02, -.24,
+  const right = malletGrip('R', .19, voxel ? .065 : .03, -.22, -.30, material, voxel);
+  const left = malletGrip('L', voxel ? .07 : .11, voxel ? .185 : -.02, -.24,
     .25, material, voxel);
   const root = new THREE.Group();
   root.name = 'ViewModel:hand';

@@ -1,6 +1,6 @@
 """Render exported mallet triangles at the actual 52-degree game camera.
 
-blender -b -P tools/harness/mallet-offline-render.py -- input.json output.png
+blender -b -P tools/harness/mallet-offline-render.py -- input.json output.png [width height]
 The input comes from mallet-offline-preview.mjs; no browser or cursor capture.
 """
 import bpy
@@ -8,7 +8,8 @@ import json
 import math
 import sys
 
-source, target = sys.argv[sys.argv.index('--') + 1:]
+args = sys.argv[sys.argv.index('--') + 1:]
+source, target = args[:2]
 with open(source, encoding='utf-8') as stream:
     parts = json.load(stream)
 
@@ -43,8 +44,8 @@ camera_data.clip_end = 6
 
 scene = bpy.context.scene
 scene.render.engine = 'BLENDER_WORKBENCH'
-scene.render.resolution_x = 1280
-scene.render.resolution_y = 720
+scene.render.resolution_x = int(args[2]) if len(args) > 2 else 1280
+scene.render.resolution_y = int(args[3]) if len(args) > 3 else 720
 scene.render.resolution_percentage = 100
 scene.display.shading.color_type = 'VERTEX'
 scene.display.shading.light = 'STUDIO'

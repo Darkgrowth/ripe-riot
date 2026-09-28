@@ -53,25 +53,28 @@ test('palm variants have distinct sheltered and cascading crown silhouettes', ()
     'cascading palm should have a lower but still compact frond edge');
 });
 
-test('palm trunk has a coherent mid-height cross-section without missing corners', () => {
+test('palm trunk tapers through the swept mid-height cross-section', () => {
   const shape = voxelPlantShape('palm', 0, false);
   const position = shape.geometry.getAttribute('position');
   const color = shape.geometry.getAttribute('color');
-  const sampleY = Math.round(shape.height * 0.52 / 0.22) * 0.22;
-  const bark = [];
-  for (let i = 0; i < position.count; i++) {
-    if (Math.abs(position.getY(i) - sampleY) > 0.005) continue;
-    if (color.getX(i) <= color.getY(i) * 1.12) continue;
-    bark.push({ x: position.getX(i), z: position.getZ(i) });
-  }
-  assert.ok(bark.length > 8);
-  const xs = bark.map(p => p.x), zs = bark.map(p => p.z);
-  const minX = Math.min(...xs), maxX = Math.max(...xs);
-  const minZ = Math.min(...zs), maxZ = Math.max(...zs);
-  for (const [x, z] of [[minX, minZ], [minX, maxZ], [maxX, minZ], [maxX, maxZ]]) {
-    assert.ok(bark.some(p => Math.abs(p.x - x) < 0.005 && Math.abs(p.z - z) < 0.005),
-      `missing trunk corner at ${x.toFixed(2)},${z.toFixed(2)}`);
-  }
+  const extentAt = fraction => {
+    const shaftHeight = Math.round(shape.height / 0.22) * 0.22;
+    const sampleY = shaftHeight * Math.round(fraction * 22) / 22;
+    const bark = [];
+    for (let i = 0; i < position.count; i++) {
+      if (Math.abs(position.getY(i) - sampleY) > 0.005) continue;
+      if (color.getX(i) <= color.getY(i) * 1.12) continue;
+      bark.push({ x: position.getX(i), z: position.getZ(i) });
+    }
+    assert.ok(bark.length > 8, `missing bark at ${fraction} of trunk height`);
+    const xs = bark.map(p => p.x), zs = bark.map(p => p.z);
+    return { x: Math.max(...xs) - Math.min(...xs), z: Math.max(...zs) - Math.min(...zs) };
+  };
+  const base = extentAt(0.16), upper = extentAt(0.76);
+  assert.ok(base.x >= upper.x && base.z >= upper.z,
+    'the swept shaft must narrow toward the crown');
+  assert.ok(upper.x >= 0.44 && upper.z >= 0.44,
+    'the upper trunk still needs a solid cross-section');
 });
 
 test('palm frond fans leave readable gaps around the middle canopy', () => {

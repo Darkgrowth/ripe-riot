@@ -97,7 +97,9 @@ test('voxel route preserves seeded dressing and converts the shop approach', () 
       }
     }
   }
-  assert.ok(voxelCount > 40, 'orchard should have enough converted plants to read as voxel');
+  assert.equal(voxelCount, pilot.total, 'the whole playable island uses the same dressing kit');
+  assert.equal(pilotScene.children.length, originalScene.children.length,
+    'complete families need one instance batch per kind rather than split route batches');
   assert.ok(shopVoxelCount > 10, 'shop should have enough dressing to read as voxel');
   assert.ok(hillVoxelCount > 10, 'Hill Farm should have enough voxel dressing to read as one area');
   assert.ok(hillTrackVoxelCount > 0,

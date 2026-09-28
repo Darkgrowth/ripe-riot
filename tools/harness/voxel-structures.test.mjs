@@ -30,6 +30,7 @@ test('voxel ferry hull is one hollow, seat-sized silhouette', () => {
 
 function build(mode) {
   const colliders = [];
+  const surfaces = [];
   const physics = {
     createFixed(position, rotation) { return { position: position.toArray(), rotation: rotation.toArray() }; },
     attach(body, desc) {
@@ -40,17 +41,19 @@ function build(mode) {
         radius: shape.radius ?? null, halfHeight: shape.halfHeight ?? null });
       return {};
     },
-    createTrimesh() {}, register() {},
+    createTrimesh(vertices, indices) { surfaces.push([Array.from(vertices), Array.from(indices)]); }, register() {},
   };
   const scene = new THREE.Scene();
   const built = buildLandmarks(scene, physics, new Terrain(), mode);
-  return { built, scene, colliders };
+  return { built, scene, colliders, surfaces };
 }
 
 test('voxel route carpentry keeps playable landmark and collider positions', () => {
   const baseline = build('baseline'), voxel = build('voxel');
   assert.deepEqual(voxel.colliders, baseline.colliders,
     'visual bevels and cloth may not move the player or prop collision');
+  assert.deepEqual(voxel.surfaces, baseline.surfaces,
+    'mixed art-mode peers must share identical climbable and rope-pinning surfaces');
   for (const field of ['sellPad', 'shopCounter', 'kingMelonPos'])
     assert.deepEqual(voxel.built[field].toArray(), baseline.built[field].toArray(), field);
   assert.equal(voxel.built.dock.deckTop, baseline.built.dock.deckTop);

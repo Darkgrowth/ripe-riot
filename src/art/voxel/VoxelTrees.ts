@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { plantShape, type PlantShape, type PlantType } from '@/plants/PlantGeometry';
 import { VoxelVolume } from './VoxelSurface';
 
@@ -14,7 +15,7 @@ type Lobe = {
 export function voxelPlantShape(type: PlantType, variant: number, harvestCrown: boolean): PlantShape {
   if (type !== 'appleTree' && type !== 'orangeTree' && type !== 'melonVine'
     && type !== 'bananaPlant' && type !== 'palm' && type !== 'boulderBush'
-    && type !== 'puffBush') {
+    && type !== 'puffBush' && type !== 'gumTree' && type !== 'spikeShrub') {
     throw new Error(`no detailed voxel plant shape for ${type}`);
   }
   const key = `${type}:${variant}:${harvestCrown}`;
@@ -26,6 +27,7 @@ export function voxelPlantShape(type: PlantType, variant: number, harvestCrown: 
   const original = plantShape(type, variant, harvestCrown);
   const geometry = type === 'boulderBush' ? buildBoulderNest(variant, original)
     : type === 'puffBush' ? buildPuffBush(variant, original)
+    : type === 'gumTree' || type === 'spikeShrub' ? buildIslandShrub(type, variant, original)
     : type === 'palm' ? buildPalm(variant, original)
     : type === 'melonVine' ? buildMelonVine(variant, original)
     : type === 'bananaPlant' ? buildBananaPlant(variant, original)
@@ -38,6 +40,77 @@ export function voxelPlantShape(type: PlantType, variant: number, harvestCrown: 
   };
   CACHE.set(key, result);
   return result;
+}
+
+/** Olive gum on a short stem and low teal spike shrub use the saved nodes. */
+function buildIslandShrub(type: 'gumTree' | 'spikeShrub', variant: number,
+  original: PlantShape): THREE.BufferGeometry {
+  const gum = type === 'gumTree';
+  const cell = 0.14;
+  const volume = new VoxelVolume();
+  const lean = (variant - 1) * 0.08;
+  if (gum) {
+    // A narrow woody stem is the only collision-bearing part of this plant.
+    for (let y = 0; y <= 8; y++) {
+      const cx = Math.round(lean * y);
+      volume.box(cx - 1, cx + 1, y, y, -1, 1,
+        y % 3 === 0 ? 0x715336 : 0x62492f);
+    }
+  } else {
+    volume.box(-2, 2, 0, 3, -2, 2, 0x1d4f42);
+  }
+  const palette = gum
+    ? [0x707b2f, 0x89943b, 0xa3aa49, 0x627329]
+    : [0x24594c, 0x317262, 0x3e806c, 0x1c5046];
+  const lobes: Lobe[] = gum ? [
+    { x: 0, y: 1.25, z: 0, rx: 0.87, ry: 0.57, rz: 0.84, color: palette[0] },
+    { x: -0.61, y: 1.09, z: -0.21, rx: 0.66, ry: 0.46, rz: 0.68, color: palette[1] },
+    { x: 0.63, y: 1.17, z: 0.15, rx: 0.68, ry: 0.44, rz: 0.65, color: palette[2] },
+    { x: 0.08, y: 1.36, z: 0.58, rx: 0.60, ry: 0.40, rz: 0.58, color: palette[3] },
+  ] : [
+    { x: 0, y: 0.78, z: 0, rx: 0.96, ry: 0.63, rz: 0.94, color: palette[0] },
+    { x: -0.56, y: 0.75, z: -0.16, rx: 0.70, ry: 0.49, rz: 0.67, color: palette[1] },
+    { x: 0.51, y: 0.91, z: 0.13, rx: 0.71, ry: 0.53, rz: 0.68, color: palette[2] },
+    { x: 0.03, y: 0.70, z: 0.63, rx: 0.61, ry: 0.48, rz: 0.57, color: palette[3] },
+  ];
+  for (const lobe of lobes) lobe.x += lean;
+  for (let x = -11; x <= 11; x++) for (let y = 0; y <= 15; y++) {
+    for (let z = -11; z <= 11; z++) {
+      const wx = x * cell, wy = (y + 0.5) * cell, wz = z * cell;
+      let best = Infinity, selected = 0;
+      for (let i = 0; i < lobes.length; i++) {
+        const l = lobes[i];
+        const d = Math.abs((wx - l.x) / l.rx) ** 3
+          + Math.abs((wy - l.y) / l.ry) ** 3
+          + Math.abs((wz - l.z) / l.rz) ** 3;
+        if (d < best) { best = d; selected = i; }
+      }
+      if (best > 1 + 0.065 * Math.sin(wx * 4 + wz * 3 + variant)) continue;
+      if (original.attachPoints.some(pt =>
+        Math.hypot(wx - pt.x, wy - pt.y, wz - pt.z) < 0.19)) continue;
+      volume.put(x, y, z, lobes[selected].color);
+    }
+  }
+  if (!gum) {
+    // A few outward rising leaf tips distinguish the hazard without creating
+    // gameplay collision or a forest of slender spikes.
+    for (let i = 0; i < 6; i++) {
+      const angle = i * Math.PI / 3 + variant * 0.15;
+      const root: [number, number, number] = [
+        Math.round(Math.sin(angle) * 5), 6, Math.round(Math.cos(angle) * 5),
+      ];
+      const tip: [number, number, number] = [
+        Math.round(Math.sin(angle) * 9), 11 + i % 2,
+        Math.round(Math.cos(angle) * 9),
+      ];
+      fillTwig(volume, root, tip, palette[i % palette.length]);
+    }
+  }
+  const geometry = volume.geometry({ cellSize: cell,
+    origin: new THREE.Vector3(-cell / 2, 0, -cell / 2),
+    swayHeight: original.height });
+  geometry.name = `VoxelTree:${type}:${variant}`;
+  return geometry;
 }
 
 /** A low, connected leaf mass under the saved Puffmelon fruit sockets. */
@@ -119,40 +192,24 @@ function buildPalm(variant: number, original: PlantShape): THREE.BufferGeometry 
     .multiplyScalar(1 / original.attachPoints.length);
   const topX = Math.round(top.x / cell), topZ = Math.round(top.z / cell);
 
-  let previousTrunk: [number, number, number] = [0, 0, 0];
-  for (let y = 0; y <= topY; y++) {
-    const t = y / topY;
-    // Ease into the saved crown position, so the trunk follows one deliberate
-    // curve rather than alternating between straight columns and sharp bends.
-    const bend = t * t * (3 - 2 * t);
-    const cx = Math.round(topX * bend), cz = Math.round(topZ * bend);
-    const centre: [number, number, number] = [cx, y, cz];
-    fillTwig(volume, previousTrunk, centre, 0x987653);
-    const extent = y < 2 ? 2 : 1;
-    for (let x = -extent; x <= extent; x++) for (let z = -extent; z <= extent; z++) {
-      // Full three-cell shaft reads as one continuous taper when its centre
-      // advances by a grid cell; the previous cross-shaped shaft exposed
-      // four deep notches at every bend.
-      if (x * x + z * z > (y < 2 ? 4.25 : 2.25)) continue;
-      // Small muted patches provide bark texture without full-width rings.
-      const bark = Math.abs(x * 3 + z * 5 + Math.floor(y / 8) + variant * 2) % 9 < 3
-        ? 0x997754 : 0xa2805c;
-      volume.put(cx + x, y, cz + z, bark);
-    }
-    previousTrunk = centre;
-  }
+  // The bark shaft is a faceted swept taper. Full-cell horizontal shifts on
+  // a tall leaning palm produce obvious stacked joints at gameplay eye level;
+  // a few broad planar faces preserve the softened block style while keeping
+  // the outer silhouette continuously curved.
+  const shaft = buildPalmShaft(topX * cell, topZ * cell, topY * cell, variant);
+  volume.box(topX - 1, topX + 1, topY - 1, topY, topZ - 1, topZ + 1, 0x987653);
 
   // Five or six continuous leaf fans leave open sky between broad blades
   // instead of merging into a flat umbrella. Keep the inner cells bare so
   // coconuts can read below the fronds. All habits share sockets and sway.
   const habit = ((variant % 3) + 3) % 3;
-  const count = habit === 1 ? 6 : 5;
+  const count = habit === 2 ? 4 : 5;
   for (let i = 0; i < count; i++) {
     const angle = i * Math.PI * 2 / count + variant * 0.17 + (i % 2 ? 0.07 : -0.04);
     const ux = Math.sin(angle), uz = Math.cos(angle);
     const vx = uz, vz = -ux;
     const wind = habit === 1 ? ux * 0.23 : 0;
-    const length = Math.round((2.9 + ((i * 2 + variant) % 3) * 0.14 + wind) / cell);
+    const length = Math.round((3.0 + ((i * 2 + variant) % 3) * 0.13 + wind) / cell);
     const droop = habit === 2 ? 3.4 + (i % 2) * 0.8
       : habit === 1 ? 2.8 + (i % 2) * 0.6 : 2.5 + (i % 2);
     const green = [0x60a345, 0x6bad4c, 0x57983f][(i + variant) % 3];
@@ -166,8 +223,11 @@ function buildPalm(variant: number, original: PlantShape): THREE.BufferGeometry 
         topZ + Math.round(uz * s),
       ];
       fillTwig(volume, previous, centre, shade);
-      if (s > 3) {
-        const halfWidth = Math.max(0, Math.round(Math.sin(t * Math.PI) * 2.35));
+      if (s > 2) {
+        // Broad blades occupy both sides of the curved midrib. Their tips
+        // taper early enough to leave clear sky between neighboring fronds.
+        const halfWidth = Math.max(0, Math.round(Math.sin(t * Math.PI) ** 0.8
+          * (habit === 2 ? 2.70 : 2.95)));
         for (const side of [-1, 1]) {
           const edge: [number, number, number] = [
             centre[0] + Math.round(vx * halfWidth * side), centre[1],
@@ -176,7 +236,7 @@ function buildPalm(variant: number, original: PlantShape): THREE.BufferGeometry 
           fillTwig(volume, centre, edge, green);
           // One deep interior row gives each fan an intentional soft block
           // silhouette. Leave the outer rim thin and tapered.
-          if (t > 0.20 && t < 0.72 && halfWidth > 1) {
+          if (t > 0.18 && t < 0.76 && halfWidth > 1) {
             const inner: [number, number, number] = [
               centre[0] + Math.round(vx * (halfWidth - 1) * side), centre[1] - 1,
               centre[2] + Math.round(vz * (halfWidth - 1) * side),
@@ -190,12 +250,59 @@ function buildPalm(variant: number, original: PlantShape): THREE.BufferGeometry 
     }
   }
 
-  const geometry = volume.geometry({
+  const canopy = volume.geometry({
     cellSize: cell,
     origin: new THREE.Vector3(-cell / 2, 0, -cell / 2),
     swayHeight: original.height,
   });
+  const geometry = mergeGeometries([shaft, canopy], false);
+  if (!geometry) throw new Error('palm shaft and crown merge failed');
+  geometry.userData.voxelConnectedComponents = canopy.userData.voxelConnectedComponents;
+  geometry.userData.voxelCount = canopy.userData.voxelCount;
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  shaft.dispose();
+  canopy.dispose();
   geometry.name = `VoxelTree:palm:${variant}`;
+  return geometry;
+}
+
+function buildPalmShaft(topX: number, topZ: number, height: number,
+  variant: number): THREE.BufferGeometry {
+  const positions: number[] = [], normals: number[] = [];
+  const colors: number[] = [], sway: number[] = [];
+  const rings = 22, sides = 10;
+  const bark = [0x987653, 0xa2805c, 0x92704e].map(hex =>
+    new THREE.Color().setHex(hex, THREE.SRGBColorSpace));
+  const point = (ring: number, side: number): [number, number, number] => {
+    const t = ring / rings;
+    const bend = t * t * (3 - 2 * t);
+    const angle = side * Math.PI * 2 / sides;
+    const radius = 0.44 - t * 0.15 + (ring === 0 ? 0.04 : 0);
+    return [topX * bend + Math.cos(angle) * radius, height * t,
+      topZ * bend + Math.sin(angle) * radius];
+  };
+  const add = (point: [number, number, number], normal: [number, number, number],
+    pigment: THREE.Color) => {
+    positions.push(...point);
+    normals.push(...normal);
+    colors.push(pigment.r, pigment.g, pigment.b);
+    sway.push(Math.pow(point[1] / height, 1.6));
+  };
+  for (let ring = 0; ring < rings; ring++) for (let side = 0; side < sides; side++) {
+    const next = (side + 1) % sides;
+    const angle = (side + 0.5) * Math.PI * 2 / sides;
+    const normal: [number, number, number] = [Math.cos(angle), 0.05, Math.sin(angle)];
+    const pigment = bark[(side + variant) % bark.length];
+    const a = point(ring, side), b = point(ring + 1, side);
+    const c = point(ring + 1, next), d = point(ring, next);
+    for (const vertex of [a, b, c, a, c, d]) add(vertex, normal, pigment);
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.setAttribute('swayWeight', new THREE.Float32BufferAttribute(sway, 1));
   return geometry;
 }
 
@@ -313,9 +420,9 @@ function buildTree(type: 'appleTree' | 'orangeTree', variant: number,
     }
   }
 
-  // Broad trees are pruned into a low sheltering shelf; open trees expose
-  // three rising forks; wind-shaped trees carry their crown downwind. Each
-  // uses a few large leaf masses rather than a ring of interchangeable balls.
+  // The upper lobes establish distinct habits. Lower asymmetric shoulders
+  // occupy the outer halves of three boughs, leaving the central trunk and
+  // most fruit exposed while keeping the limbs from reading as coat racks.
   const lobes: Lobe[] = habit === 0 ? [
     { x: 0, y: trunkH + crownR * 0.65, z: 0,
       rx: crownR * 0.92, ry: crownR * 0.48, rz: crownR * 0.85, color: palette[0] },
@@ -325,6 +432,12 @@ function buildTree(type: 'appleTree' | 'orangeTree', variant: number,
       rx: crownR * 0.78, ry: crownR * 0.38, rz: crownR * 0.70, color: palette[2] },
     { x: 0, y: trunkH + crownR * 0.45, z: spread * 0.70,
       rx: crownR * 0.68, ry: crownR * 0.34, rz: crownR * 0.63, color: palette[3] },
+    { x: -spread * 0.88, y: trunkH - 0.43, z: -spread * 0.18,
+      rx: crownR * 0.66, ry: crownR * 0.55, rz: crownR * 0.56, color: palette[1] },
+    { x: spread * 0.92, y: trunkH - 0.24, z: spread * 0.20,
+      rx: crownR * 0.69, ry: crownR * 0.52, rz: crownR * 0.61, color: palette[2] },
+    { x: -spread * 0.10, y: trunkH - 0.38, z: spread * 0.83,
+      rx: crownR * 0.55, ry: crownR * 0.48, rz: crownR * 0.60, color: palette[3] },
   ] : habit === 1 ? [
     { x: 0, y: trunkH + crownR * 1.02, z: 0,
       rx: crownR * 0.68, ry: crownR * 0.40, rz: crownR * 0.66, color: palette[0] },
@@ -332,6 +445,12 @@ function buildTree(type: 'appleTree' | 'orangeTree', variant: number,
       rx: crownR * 0.58, ry: crownR * 0.39, rz: crownR * 0.57, color: palette[1] },
     { x: spread * 0.90, y: trunkH + crownR * 0.80, z: spread * 0.34,
       rx: crownR * 0.58, ry: crownR * 0.38, rz: crownR * 0.57, color: palette[2] },
+    { x: -spread * 0.78, y: trunkH - 0.34, z: -spread * 0.22,
+      rx: crownR * 0.66, ry: crownR * 0.57, rz: crownR * 0.59, color: palette[1] },
+    { x: spread * 0.91, y: trunkH - 0.26, z: spread * 0.31,
+      rx: crownR * 0.63, ry: crownR * 0.55, rz: crownR * 0.58, color: palette[2] },
+    { x: -spread * 0.06, y: trunkH - 0.20, z: spread * 0.78,
+      rx: crownR * 0.57, ry: crownR * 0.47, rz: crownR * 0.61, color: palette[3] },
   ] : [
     { x: spread * 0.54, y: trunkH + crownR * 0.69, z: 0,
       rx: crownR * 0.76, ry: crownR * 0.56, rz: crownR * 0.72, color: palette[0] },
@@ -339,11 +458,33 @@ function buildTree(type: 'appleTree' | 'orangeTree', variant: number,
       rx: crownR * 0.69, ry: crownR * 0.43, rz: crownR * 0.67, color: palette[1] },
     { x: spread * 1.12, y: trunkH + crownR * 0.96, z: -spread * 0.32,
       rx: crownR * 0.59, ry: crownR * 0.39, rz: crownR * 0.59, color: palette[2] },
+    { x: spread * 0.62, y: trunkH - 0.42, z: spread * 0.12,
+      rx: crownR * 0.74, ry: crownR * 0.54, rz: crownR * 0.65, color: palette[1] },
+    { x: spread * 1.39, y: trunkH - 0.31, z: spread * 0.20,
+      rx: crownR * 0.62, ry: crownR * 0.50, rz: crownR * 0.56, color: palette[2] },
+    { x: spread * 0.96, y: trunkH - 0.17, z: -spread * 0.62,
+      rx: crownR * 0.54, ry: crownR * 0.46, rz: crownR * 0.55, color: palette[3] },
   ];
+
+  // A short leaf collar sits behind the low fruit of each main bough. These
+  // small, overlapping pads make the fruit feel grown from the crown without
+  // wrapping it in foliage or changing its saved attachment coordinates.
+  for (let i = 0; i < original.attachPoints.length; i++) {
+    const pt = original.attachPoints[i];
+    if (pt.y >= trunkH - 0.05) continue;
+    const axis = Math.max(0.25, Math.hypot(pt.x, pt.z));
+    lobes.push({
+      x: pt.x - pt.x / axis * 0.24,
+      y: pt.y + 0.35 + (i % 3) * 0.045,
+      z: pt.z - pt.z / axis * 0.24,
+      rx: 0.33 + (i % 2) * 0.05, ry: 0.29, rz: 0.34 + (i % 3) * 0.03,
+      color: palette[(i + 1) % palette.length],
+    });
+  }
 
   // Tapered boughs remain visible through the open lower crown, but reach
   // into each mass so the whole voxel surface is face-connected to the trunk.
-  for (let i = 0; i < lobes.length; i++) {
+  for (let i = 0; i < 3; i++) {
     const end = lobes[i];
     fillBranch(volume,
       new THREE.Vector3(0, trunkH * (0.68 + i * 0.045), 0),
@@ -363,12 +504,12 @@ function buildTree(type: 'appleTree' | 'orangeTree', variant: number,
       for (let i = 0; i < lobes.length; i++) {
         const l = lobes[i];
         const prune = harvestCrown && i > 0 ? 0.96 : 1;
-        const d = Math.abs((wx - l.x) / (l.rx * prune)) ** 4
-          + Math.abs((wy - l.y) / (l.ry * prune)) ** 4
-          + Math.abs((wz - l.z) / (l.rz * prune)) ** 4;
+        const d = Math.abs((wx - l.x) / (l.rx * prune)) ** 3
+          + Math.abs((wy - l.y) / (l.ry * prune)) ** 3
+          + Math.abs((wz - l.z) / (l.rz * prune)) ** 3;
         if (d < best) { best = d; lobeIndex = i; }
       }
-      const edge = 0.08 * Math.sin(wx * 3.1 + variant) * Math.cos(wz * 2.8 - wy * 1.3)
+      const edge = 0.10 * Math.sin(wx * 3.1 + variant) * Math.cos(wz * 2.8 - wy * 1.3)
         + 0.035 * Math.sin(wy * 5.1 + wx * 2.2);
       if (best > 1 + edge) continue;
       // Keep saved fruit positions visible against small recesses in the leaf
@@ -377,6 +518,14 @@ function buildTree(type: 'appleTree' | 'orangeTree', variant: number,
         Math.hypot(wx - pt.x, wy - pt.y, wz - pt.z) < 0.22)) continue;
       volume.put(x, y, z, lobes[lobeIndex].color);
     }
+  }
+
+  // The smallest outer pads can sit one cell clear of a shoulder. Join them
+  // through the foliage, so the batched mesh remains one swaying surface.
+  for (const pad of lobes.slice(habit === 0 ? 7 : 6)) {
+    fillTwig(volume,
+      [Math.round(pad.x / cell), Math.floor(pad.y / cell), Math.round(pad.z / cell)],
+      [0, Math.floor(trunkH / cell), 0], pad.color);
   }
 
   // A narrow, grid-connected spur reaches the top of every saved fruit node.

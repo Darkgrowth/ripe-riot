@@ -20,18 +20,25 @@ export function buildAnchorCrags(b: PropBuilder, physics: PhysicsWorld,
   anchors.forEach((anchor, n) => {
     const ground = terrain.height(anchor.x, anchor.z);
     const height = anchor.y - ground + 0.6;
-    const sides = 14;
+    const sides = 8;
+    // Broad chamfered columns use the same occupied region and vine endpoint,
+    // with one continuous mesh shared by rendering and physical rope contact.
+    // This surface is identical for every peer, including baseline art mode.
+    const profile = [[1, .58], [.58, 1], [-.58, 1], [-1, .58],
+      [-1, -.58], [-.58, -1], [.58, -1], [1, -.58]];
     const rings = [0, 0.12, 0.36, 0.39, 0.66, 0.69, 0.91, 1];
     const radii = [4.1, 3.7, 3.05, 2.55, 2.1, 1.7, 1.3, 0.85];
     const vertices: number[] = [], indices: number[] = [];
     rings.forEach((t, r) => {
       for (let i = 0; i < sides; i++) {
-        const angle = i / sides * Math.PI * 2 + n * 0.63;
-        const radius = radii[r] * (1 + Math.sin(i * 2.4 + n) * 0.13);
-        const x = anchor.x + Math.cos(angle) * radius + Math.sin(t * Math.PI) * 0.6;
-        const z = anchor.z + Math.sin(angle) * radius;
+        const radius = radii[r] * .91;
+        const turn = n * .63, p = profile[i % 8];
+        const dx = p[0] * Math.cos(turn) - p[1] * Math.sin(turn);
+        const dz = p[0] * Math.sin(turn) + p[1] * Math.cos(turn);
+        const x = anchor.x + dx * radius + Math.sin(t * Math.PI) * 0.6;
+        const z = anchor.z + dz * radius;
         const y = r === 0 ? terrain.height(x, z) - 0.35
-          : ground + t * height + Math.sin(i * 1.8 + n) * Math.sin(t * Math.PI) * 0.38;
+          : ground + t * height;
         vertices.push(x, y, z);
         if (r < rings.length - 1) {
           const a = r * sides + i, next = r * sides + (i + 1) % sides;
@@ -40,7 +47,7 @@ export function buildAnchorCrags(b: PropBuilder, physics: PhysicsWorld,
       }
     });
     const cap = vertices.length / 3;
-    vertices.push(anchor.x, anchor.y + 0.85, anchor.z);
+    vertices.push(anchor.x, ground + height, anchor.z);
     for (let i = 0; i < sides; i++) indices.push(cap,
       (rings.length - 1) * sides + (i + 1) % sides, (rings.length - 1) * sides + i);
     const positions = new Float32Array(vertices), faces = new Uint32Array(indices);
@@ -48,8 +55,10 @@ export function buildAnchorCrags(b: PropBuilder, physics: PhysicsWorld,
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setIndex(new THREE.BufferAttribute(faces, 1));
-    geometry.computeVertexNormals();
-    b.reset().mesh(geometry, y => {
+    const surface = geometry.toNonIndexed();
+    geometry.dispose();
+    surface.computeVertexNormals();
+    b.reset().mesh(surface, y => {
       const t = (y - ground) / height;
       // Broad strata follow the existing ledges, retaining the exact surface
       // used by ropes. Quiet value changes read as geology from the approach.
@@ -310,7 +319,7 @@ export function buildIslandWorksites(b: PropBuilder, terrain: Terrain,
   // RAVINE APPROACH: low staging supplies off the extraction corridor.
   const rx = -5, rz = -40, ry = terrain.height(rx, rz);
   for (const x of [-1.55, 1.55]) post(rx + x, rz, ry + 2.35);
-  sign(rx, ry + 1.85, rz, 3.1, 1.05, 'THE KING MELON', ['TETHER. CUT. HAUL.', 'BRING ROPE. BRING FRIENDS.']);
+  sign(rx, ry + 1.85, rz, 3.1, 1.05, 'THE KING MELON', ['FIGHT. CUT. HAUL.', 'ROPES STEADY THE DROP.']);
   const sy = terrain.height(rx - 2.6, rz + 0.6);
   barrel(rx - 2.6, sy, rz + 0.6);
   coil(rx - 2.6, sy + 1.07, rz + 0.6, 0.38);

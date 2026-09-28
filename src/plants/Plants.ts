@@ -5,7 +5,6 @@ import type { PhysicsWorld, PhysicsOwner, RBody, RCollider } from '@/physics/Phy
 import { Groups } from '@/physics/Layers';
 import { Rng } from '@/core/Rng';
 import { voxelPlantShape } from '@/art/voxel/VoxelTrees';
-import { voxelFirstRouteWeight } from '@/art/voxel/VoxelClearingTerrain';
 import type { VisualMode } from '@/art/voxel/VisualMode';
 
 export interface PlantNode {
@@ -191,11 +190,9 @@ export class PlantSystem {
     // Original gameplay nodes remain common to both art modes. The same
     // broadleaf kit now follows the fruit harvest beyond the first orchard.
     const harvestCrown = type === 'appleTree' || type === 'orangeTree';
-    const onFirstRoute = voxelFirstRouteWeight(position.x, position.z) > 0.05;
-    const voxel = this.visualMode === 'voxel' && (
-      type === 'palm' || type === 'bananaPlant' || harvestCrown ||
-      (onFirstRoute && (type === 'boulderBush' || type === 'melonVine' || type === 'puffBush'))
-    );
+    // Flexible hanging vines retain their thin continuous strand; all woody
+    // and leafy families use the same kit everywhere on playable Sunpatch.
+    const voxel = this.visualMode === 'voxel' && type !== 'vinebombVine';
     const shape = voxel ? voxelPlantShape(type, variant, harvestCrown)
       : plantShape(type, variant, harvestCrown);
     // A visual-only omission still consumes the normal id and RNG draws, so

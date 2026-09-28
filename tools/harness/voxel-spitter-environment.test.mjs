@@ -39,7 +39,7 @@ test('Spitter hill dressing uses voxel batches while retaining seeded clearances
   voxel.dispose();
 });
 
-test('nearby Boulder Plum nest gets voxel art with identical sockets and collider', async () => {
+test('all Boulder Plum nests get voxel art with identical sockets and collider', async () => {
   const oldShape = plantShape('boulderBush', 0, false);
   const newShape = voxelPlantShape('boulderBush', 0, false);
   assert.deepEqual(newShape.attachPoints.map(p => p.toArray()),
@@ -69,7 +69,7 @@ test('nearby Boulder Plum nest gets voxel art with identical sockets and collide
     new Rng(3), { variant: 0, scale: 1 });
   assert.match(near.batchKey, /voxel/);
   assert.match(hill.batchKey, /voxel/);
-  assert.doesNotMatch(far.batchKey, /voxel/);
+  assert.match(far.batchKey, /voxel/);
   assert.doesNotMatch(baselineNear.batchKey, /voxel/);
   assert.equal(near.nodes.length, far.nodes.length);
   assert.deepEqual(near.nodes.map(node => node.local.toArray()),

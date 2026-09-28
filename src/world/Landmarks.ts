@@ -797,12 +797,12 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
 
   // The bounty poster, on the gable the walk from the dock faces. The first
   // ten minutes should already know what the giant melon over the ravine is
-  // for, what it pays, and the one word that opens it.
+  // for, what it pays, and that ropes can help without gating the harvest.
   signs.push(makeSign(b,
     new THREE.Vector3(SW / 2 + 0.18, 1.72, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), shopRot)
       .add(new THREE.Vector3(shopX, shopY, shopZ)),
     shopRot + Math.PI / 2, 1.22, 1.3,
-    signTexture(['THE KING MELON', '2,600 KG. FOUR VINES.', '$9,500 REWARD', 'BRING ROPE.'],
+    signTexture(['THE KING MELON', '2,600 KG. FOUR VINES.', '$9,500 REWARD', 'ROPES OPTIONAL.'],
       { title: 'WANTED', w: 400, h: 440, bg: '#efe0bd', fg: '#3a2109', accent: '#8a2a1e' }),
   ));
 
@@ -968,7 +968,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
       signTexture(lines, { title, w: 512, h: 300, lineScale: 1.25 })));
   };
   fingerboard(-28.8, 0.7, -24, 22, ['BOULDER PLUMS AHEAD', 'ROPE · BLAST · CATCH'], 'HILL FARM ↑');
-  fingerboard(-24.7, -38.3, -36, -30, ['THE KING MELON', 'rope gun required'], 'THE RAVINE ↑');
+  fingerboard(-24.7, -38.3, -36, -30, ['THE KING MELON', 'fight · cut · haul'], 'THE RAVINE ↑');
   // A hand cart parked on the apron.
   b.reset().translate(shopX, shopY, shopZ).rotateY(shopRot);
   b.push().translate(-5.4, 0, 6.2).rotateY(1.2);
@@ -1390,7 +1390,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
           1.9 + t * 1.4 + (i % 2) * 0.5)
         .rotateY(side * (0.4 + t))
         .scale(1, 0.82 + t * 0.3, 1);
-      b.sphere(r, 0, i > 1 ? STONE_WET : STONE_DARK, true);
+      boulder(r, i > 1 ? STONE_WET : STONE_DARK, true);
       b.pop();
     }
   }
@@ -1408,7 +1408,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
     [4.4, 3.4, 1.1], [-4.8, 6.0, 0.9]] as Array<[number, number, number]>) {
     b.push().translate(ox, poolLevel + r * 0.28, oz)
       .rotateY(rng.range(0, 6.28)).scale(1, 0.66, 1);
-    b.sphere(r, 0, STONE_WET, true);
+    boulder(r, STONE_WET, true);
     b.pop();
   }
 

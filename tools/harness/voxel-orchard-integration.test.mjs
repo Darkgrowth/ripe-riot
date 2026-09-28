@@ -171,7 +171,7 @@ test('first-island route converts melon vines in Old Orchard and Hill Farm', asy
     new Rng(13), { variant: 0, scale: 1 });
   assert.match(inside.batchKey, /voxel/);
   assert.match(hill.batchKey, /voxel/);
-  assert.doesNotMatch(outside.batchKey, /voxel/);
+  assert.match(outside.batchKey, /voxel/);
   const shape = scene.children.find(child => child.name === `Plants:${inside.batchKey}`)?.geometry;
   assert.match(shape?.name ?? '', /^VoxelTree:melonVine/);
   assert.equal(inside.nodes.length, outside.nodes.length);
@@ -217,7 +217,7 @@ test('hidden colliderless puff consumes the usual RNG while voxel banana retains
     new Rng(27), { variant: 0, scale: 1.1 });
   assert.match(shopPuff.batchKey, /voxel/, 'visible route bush should share the voxel canopy language');
   assert.match(hillPuff.batchKey, /voxel/, 'Hill Farm bushes should share that canopy language');
-  assert.doesNotMatch(remotePuff.batchKey, /voxel/);
+  assert.match(remotePuff.batchKey, /voxel/, 'back-country bushes share the complete Sunpatch kit');
   assert.deepEqual(shopPuff.nodes.map(node => node.local.toArray()),
     remotePuff.nodes.map(node => node.local.toArray()));
   const banana = hiddenPlants.plant(23, 'bananaPlant', new THREE.Vector3(-4, 3, 37.5),

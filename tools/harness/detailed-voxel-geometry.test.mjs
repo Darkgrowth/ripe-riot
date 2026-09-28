@@ -132,7 +132,9 @@ test('orchard crown variants have distinct spreading, upright and windswept silh
     const spreading = leafProfile(type, 0);
     const upright = leafProfile(type, 1);
     const windswept = leafProfile(type, 2);
-    assert.ok(spreading.width > upright.width * 1.15,
+    // Fuller lower shoulders keep both habits broad enough to support fruit.
+    // The spreading habit still needs a measurable wider X silhouette.
+    assert.ok(spreading.width > upright.width + 0.25,
       `${type}: spreading crown should be visibly wider than upright`);
     assert.ok(upright.crownHeight > spreading.crownHeight + 0.15,
       `${type}: upright crown should visibly rise above spreading`);
@@ -141,7 +143,7 @@ test('orchard crown variants have distinct spreading, upright and windswept silh
   }
 });
 
-test('fruit-tree archetypes read as a pruned shelf, open boughs and a wind-shaped crown', () => {
+test('fruit-tree archetypes read as a pruned shelf, leafy boughs and a wind-shaped crown', () => {
   const profile = (variant) => {
     const shape = voxelPlantShape('appleTree', variant, true);
     const positions = shape.geometry.getAttribute('position');
@@ -164,8 +166,10 @@ test('fruit-tree archetypes read as a pruned shelf, open boughs and a wind-shape
   const broad = profile(0), open = profile(1), wind = profile(2);
   assert.ok(broad.upperToMiddleWidth > 0.72,
     'pruned crown needs a broad upper shelf rather than a round top');
-  assert.ok(open.lowFraction < 0.25,
-    'open tree needs visible forked boughs below its leaf crowns');
+  assert.ok(open.lowFraction > 0.25 && open.lowFraction < 0.50,
+    'open tree needs foliage around its boughs while leaving its trunk readable');
+  assert.ok(open.lowFraction < wind.lowFraction - 0.08,
+    'open tree should keep more space beneath its crown than the windswept habit');
   assert.ok(wind.canopyBias > 0.55,
     'wind-shaped tree needs most foliage on its sheltered side');
 });

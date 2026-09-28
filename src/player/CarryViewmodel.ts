@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { fruitGeometry } from '@/fruit/FruitGeometry';
-import { voxelFruitGeometry } from '@/art/voxel/VoxelFruit';
+import { hasVoxelFruit, voxelFruitGeometry } from '@/art/voxel/VoxelFruit';
 import type { VisualMode } from '@/art/voxel/VisualMode';
 import { damp } from '@/core/MathUtils';
 import { gripHand } from '@/render/WorkerHands';
@@ -98,8 +98,7 @@ export class CarryViewmodel {
   }
 
   private geometryFor(species: string): THREE.BufferGeometry {
-    if (this.visualMode === 'voxel'
-      && (species === 'apple' || species === 'orange' || species === 'watermelon'))
+    if (this.visualMode === 'voxel' && hasVoxelFruit(species))
       return voxelFruitGeometry(species);
     return fruitGeometry(species);
   }

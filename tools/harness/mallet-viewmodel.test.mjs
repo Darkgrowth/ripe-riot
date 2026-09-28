@@ -33,8 +33,8 @@ test('mallet has separate tool and bracing hands, with palms visible in the read
   const halfWidth = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.aspect * VIEW_DEPTH;
   vm.root.position.x = VIEW_LATERAL * halfWidth;
   vm.root.updateMatrixWorld(true);
-  const rightAnchor = right.localToWorld(new THREE.Vector3(.19, .115, -.22)).project(camera);
-  const leftAnchor = left.localToWorld(new THREE.Vector3(.07, .17, -.24)).project(camera);
+  const rightAnchor = right.localToWorld(new THREE.Vector3(.19, .065, -.22)).project(camera);
+  const leftAnchor = left.localToWorld(new THREE.Vector3(.07, .185, -.24)).project(camera);
   for (const anchor of [rightAnchor, leftAnchor]) {
     assert.ok(anchor.y > -.95 && anchor.y < -.1, `glove clipped or too high: ${anchor.y}`);
     assert.ok(anchor.x > -.2 && anchor.x < .95, `glove outside lower-right grip area: ${anchor.x}`);
@@ -51,8 +51,8 @@ test('mallet has separate tool and bracing hands, with palms visible in the read
     }
     return nearest;
   };
-  assert.ok(nearestGripVertex(right) < .04, 'lead glove must meet the shaft');
-  assert.ok(nearestGripVertex(left) < .04, 'support glove must meet the shaft');
+  assert.ok(nearestGripVertex(right) < .015, `lead glove must meet the shaft: ${nearestGripVertex(right)}`);
+  assert.ok(nearestGripVertex(left) < .015, `support glove must meet the shaft: ${nearestGripVertex(left)}`);
   const disposed = new Set();
   for (const mesh of [tool, right, left])
     mesh.geometry.addEventListener('dispose', () => disposed.add(mesh.name));
@@ -60,10 +60,37 @@ test('mallet has separate tool and bracing hands, with palms visible in the read
   assert.equal(disposed.size, 3, 'all three geometries must be released on swap/dispose');
 });
 
+test('mallet lead and support palms grip distinct shaft heights', async () => {
+  await loadWorkerHands(url);
+  const material = new THREE.MeshStandardMaterial({ vertexColors: true });
+  const vm = buildViewModel('hand', material, 'voxel');
+  vm.root.updateMatrixWorld(true);
+  const brownCentre = (name) => {
+    const mesh = vm.root.getObjectByName(name);
+    const positions = mesh.geometry.getAttribute('position');
+    const colors = mesh.geometry.getAttribute('color');
+    const centre = new THREE.Vector3();
+    let count = 0;
+    for (let i = 0; i < positions.count; i++) {
+      if (colors.getX(i) >= .5 || colors.getX(i) <= .1) continue;
+      centre.add(mesh.localToWorld(new THREE.Vector3(
+        positions.getX(i), positions.getY(i), positions.getZ(i))));
+      count++;
+    }
+    assert.ok(count > 0);
+    return centre.divideScalar(count);
+  };
+  const lead = brownCentre('vm:hand:rightGrip');
+  const support = brownCentre('vm:hand:leftGrip');
+  assert.ok(support.y - lead.y > .065,
+    `support palm should brace above the lead palm on the shaft: ${support.y - lead.y}`);
+  vm.dispose(); material.dispose();
+});
+
 test('the two mallet grips read as separate hands at gameplay aspect ratios', async () => {
   await loadWorkerHands(url);
   const material = new THREE.MeshStandardMaterial({ vertexColors: true });
-  for (const aspect of [4 / 3, 16 / 9, 3420 / 1266]) {
+  for (const aspect of [4 / 3, 16 / 9, 3440 / 1440, 32 / 9]) {
     const camera = new THREE.PerspectiveCamera(52, aspect, .01, 6);
     const halfWidth = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * aspect * VIEW_DEPTH;
     const vm = buildViewModel('hand', material, 'voxel');
@@ -80,7 +107,7 @@ test('the two mallet grips read as separate hands at gameplay aspect ratios', as
     assert.ok(Math.hypot(support.x - lead.x, support.y - lead.y) > .23,
       `glove silhouettes must not merge side-to-side at ${aspect}`);
     assert.ok(lead.y > -1.05 && support.y < -.20,
-      'both gloves should remain legible below the aim point');
+      `both gloves should remain legible below the aim point at ${aspect}: lead ${lead.y}, support ${support.y}`);
     const cuffCentre = (name, anchorZ) => {
       const mesh = vm.root.getObjectByName(name);
       const positions = mesh.geometry.getAttribute('position');
@@ -116,10 +143,81 @@ test('the two mallet grips read as separate hands at gameplay aspect ratios', as
   material.dispose();
 });
 
-test('mallet head crosses the aim area at the shared 0.18-second contact beat at three aspect ratios', async () => {
+test('mallet sleeves leave the lower frame without showing their terminal caps through the swing', async () => {
   await loadWorkerHands(url);
   const material = new THREE.MeshStandardMaterial({ vertexColors: true });
-  for (const aspect of [4 / 3, 16 / 9, 3420 / 1266]) {
+  for (const aspect of [16 / 9, 3440 / 1440, 32 / 9]) {
+    const camera = new THREE.PerspectiveCamera(52, aspect, .01, 6);
+    const halfWidth = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * aspect * VIEW_DEPTH;
+    const baseX = VIEW_LATERAL * halfWidth;
+    const vm = buildViewModel('hand', material, 'voxel');
+    for (const time of [0, MALLET_TIMING.windup, MALLET_TIMING.contactAt,
+      MALLET_TIMING.activeEnd, MALLET_TIMING.total]) {
+      const pose = sampleMalletViewPose(time, MALLET_TIMING.total, baseX);
+      vm.setMalletPose(pose);
+      vm.root.position.set(baseX + pose.rootX, pose.rootY, 0);
+      vm.root.rotation.y = pose.rootYaw;
+      vm.root.updateMatrixWorld(true);
+      for (const side of ['leftGrip', 'rightGrip']) {
+        const mesh = vm.root.getObjectByName(`vm:hand:${side}`);
+        const positions = mesh.geometry.getAttribute('position');
+        const colors = mesh.geometry.getAttribute('color');
+        let lowest = Infinity;
+        for (let i = 0; i < positions.count; i++)
+          if (colors.getX(i) > .5) lowest = Math.min(lowest, positions.getY(i));
+        const projected = [];
+        for (let i = 0; i < positions.count; i++) {
+          if (colors.getX(i) < .5 || positions.getY(i) > lowest + .012) continue;
+          projected.push(mesh.localToWorld(new THREE.Vector3(
+            positions.getX(i), positions.getY(i), positions.getZ(i))).project(camera));
+        }
+        assert.ok(projected.length > 0, `${side} must have a sleeve terminal`);
+        const highestTerminal = Math.max(...projected.map(point => point.y));
+        assert.ok(highestTerminal < -1.02,
+          `${side} exposes its sleeve end at ${aspect.toFixed(2)} and ${time.toFixed(2)}s: ${highestTerminal.toFixed(2)}`);
+      }
+    }
+    vm.dispose();
+  }
+  material.dispose();
+});
+
+test('each mallet forearm runs diagonally from its wrist toward its own screen edge', async () => {
+  await loadWorkerHands(url);
+  const material = new THREE.MeshStandardMaterial({ vertexColors: true });
+  const vm = buildViewModel('hand', material, 'voxel');
+  for (const [side, outward] of [['leftGrip', -1], ['rightGrip', 1]]) {
+    const mesh = vm.root.getObjectByName(`vm:hand:${side}`);
+    const positions = mesh.geometry.getAttribute('position');
+    const colors = mesh.geometry.getAttribute('color');
+    let low = Infinity, high = -Infinity;
+    for (let i = 0; i < positions.count; i++) {
+      if (colors.getX(i) < .5) continue;
+      low = Math.min(low, positions.getY(i));
+      high = Math.max(high, positions.getY(i));
+    }
+    const meanX = (bottom) => {
+      let sum = 0, count = 0;
+      for (let i = 0; i < positions.count; i++) {
+        if (colors.getX(i) < .5) continue;
+        if (bottom ? positions.getY(i) > low + .035 : positions.getY(i) < high - .035)
+          continue;
+        sum += positions.getX(i); count++;
+      }
+      assert.ok(count > 0);
+      return sum / count;
+    };
+    const diagonal = (meanX(true) - meanX(false)) * outward;
+    assert.ok(diagonal > .13,
+      `${side} should lean outward from wrist to elbow, got ${diagonal.toFixed(3)} m`);
+  }
+  vm.dispose(); material.dispose();
+});
+
+test('mallet head crosses the aim area at the shared 0.18-second contact beat across screen shapes', async () => {
+  await loadWorkerHands(url);
+  const material = new THREE.MeshStandardMaterial({ vertexColors: true });
+  for (const aspect of [4 / 3, 16 / 9, 3440 / 1440, 32 / 9]) {
     const camera = new THREE.PerspectiveCamera(52, aspect, .01, 6);
     const halfWidth = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * aspect * VIEW_DEPTH;
     const baseX = VIEW_LATERAL * halfWidth;

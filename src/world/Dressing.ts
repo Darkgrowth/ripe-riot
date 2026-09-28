@@ -4,7 +4,6 @@ import { Palette } from '@/render/Palette';
 import { fbm2, clamp, smoothstep, TAU } from '@/core/MathUtils';
 import { Rng } from '@/core/Rng';
 import { voxelDressingGeometry, type VoxelDressingKind } from '@/art/voxel/VoxelDressing';
-import { voxelFirstRouteWeight } from '@/art/voxel/VoxelClearingTerrain';
 import type { VisualMode } from '@/art/voxel/VisualMode';
 import type { Terrain } from './Terrain';
 import { orchardProofWeight } from './VisualProof';
@@ -140,9 +139,8 @@ export class Dressing {
     for (const k of kinds) {
       const mine = places.filter((p) => p.kind === k.name);
       this.counts[k.name] = mine.length;
-      const onVoxelRoute = (p: Placement) => voxelFirstRouteWeight(p.x, p.z) > 0.05;
-      const voxel = this.visualMode === 'voxel' ? mine.filter(onVoxelRoute) : [];
-      const baseline = voxel.length ? mine.filter((p) => !onVoxelRoute(p)) : mine;
+      const voxel = this.visualMode === 'voxel' ? mine : [];
+      const baseline = this.visualMode === 'voxel' ? [] : mine;
       if (baseline.length) addInstances(k, baseline, false);
       else k.geometry.dispose();
       if (voxel.length) {
