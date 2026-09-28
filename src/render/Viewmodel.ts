@@ -4,6 +4,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import { toolHand } from './WorkerHands.ts';
 import { voxelAirCannonGeometry, voxelMalletGeometry } from '../art/voxel/VoxelTools.ts';
 import type { VisualMode } from '../art/voxel/VisualMode.ts';
+import type { MalletViewPose } from '../player/MalletViewPose.ts';
 
 const C = (hex: number) => new THREE.Color().setHex(hex, THREE.SRGBColorSpace);
 
@@ -45,6 +46,8 @@ export interface ViewModel {
   setFit(fit: number): void;
   /** Cosmetic blast-strength dial; reads existing tool state only. */
   setCharge?(charge: number): void;
+  /** Independent mallet, lead glove and support glove pose. Cosmetic only. */
+  setMalletPose?(pose: MalletViewPose): void;
   dispose(): void;
 }
 
@@ -270,14 +273,6 @@ const BUILDERS: Record<string, Builder> = {
 };
 
 const VOXEL_BUILDERS: Partial<Record<string, Builder>> = {
-  hand: () => ({
-    parts: [
-      toolHand('L', new THREE.Vector3(-0.17, -0.08, -0.26), 0.25),
-      toolHand('R', new THREE.Vector3(0.16, -0.11, -0.22), -0.3),
-      voxelMalletGeometry(),
-    ],
-    hold: new THREE.Vector3(0.0, -0.04, -0.40),
-  }),
   aircannon: () => ({
     parts: [
       toolHand('R', new THREE.Vector3(0.085, -0.195, -0.09), 0.12),
@@ -319,8 +314,76 @@ export const VIEW_DEPTH = 0.5;
  *  half-width at VIEW_DEPTH. */
 export const VIEW_LATERAL = 0.37;
 
+/** The grip GLB already contains the glove and cuff as one connected mesh.
+ * Widen that silhouette slightly around its own wrist, without altering the
+ * approved source asset or turning the near-camera sleeve into a slab. */
+function malletGrip(side: 'L' | 'R', x: number, y: number, z: number, roll: number,
+  material: THREE.Material): THREE.Mesh {
+  const at = new THREE.Vector3(x, y, z);
+  const geo = toolHand(side, at, roll);
+  geo.translate(-x, -y, -z);
+  geo.scale(1.10, 1.04, 1.04);
+  geo.translate(x, y, z);
+  geo.computeBoundingSphere();
+  const mesh = new THREE.Mesh(geo, material);
+  mesh.name = `vm:hand:${side === 'R' ? 'rightGrip' : 'leftGrip'}`;
+  return mesh;
+}
+
+/** The mallet needs three moving pieces: the striking head and two hands.
+ * Keeping the tool rigid with both gloves caused the old detached left stump
+ * and prevented the head from crossing the camera-centred melee sweep. */
+function buildMalletViewModel(material: THREE.Material, visualMode: VisualMode): ViewModel {
+  const tool = assemble(visualMode === 'voxel' ? [voxelMalletGeometry()] : [
+    cyl(0.018, 0.022, 0.34, 8, WOOD_DARK, [0.16, 0.08, -0.24], [0, 0, -0.18]),
+    box(0.16, 0.075, 0.09, STEEL_DARK, [0.16, 0.25, -0.24]),
+    box(0.12, 0.015, 0.095, STEEL, [0.16, 0.294, -0.24]),
+  ], material, 'hand');
+  // Both palms now meet the shaft. The lead glove sits above the support
+  // glove, while their connected cuffs run down toward the lower frame.
+  const right = malletGrip('R', .19, .03, -.22, -.30, material);
+  const left = malletGrip('L', .11, -.02, -.24, .25, material);
+  const root = new THREE.Group();
+  root.name = 'ViewModel:hand';
+  root.add(tool, right, left);
+  const gripPivot = new THREE.Vector3(.16, -.02, -.24);
+  const turned = new THREE.Vector3();
+  let fit = 1;
+  let pose: MalletViewPose = { rootX: 0, rootY: 0, rootYaw: 0,
+    toolRoll: 0, toolPitch: 0, leftLag: 0, contact: 0, impact: 0 };
+  const place = (mesh: THREE.Mesh, roll: number, pitch: number,
+    lagX = 0, lagY = 0, lagZ = 0) => {
+    mesh.rotation.set(pitch, 0, roll);
+    turned.copy(gripPivot).applyEuler(mesh.rotation);
+    const scale = VIEW_SCALE * fit;
+    mesh.position.set(
+      VIEW_OFFSET.x + (gripPivot.x - turned.x + lagX) * scale,
+      VIEW_OFFSET.y + (gripPivot.y - turned.y + lagY) * scale,
+      VIEW_OFFSET.z + (gripPivot.z - turned.z + lagZ) * scale,
+    );
+    mesh.scale.setScalar(scale);
+  };
+  const apply = () => {
+    const recoil = pose.impact;
+    place(tool, pose.toolRoll, pose.toolPitch, 0, 0, recoil * .012);
+    place(right, pose.toolRoll * .92, pose.toolPitch * .9, 0, -recoil * .004,
+      recoil * .012);
+    place(left, pose.toolRoll * .58, pose.toolPitch * .65,
+      pose.leftLag, -recoil * .008, recoil * .008);
+  };
+  apply();
+  return {
+    root,
+    holdPoint: new THREE.Vector3(0, -.04, -.40).multiplyScalar(VIEW_SCALE).add(VIEW_OFFSET),
+    setFit(next) { fit = next; apply(); },
+    setMalletPose(next) { pose = next; apply(); },
+    dispose() { tool.geometry.dispose(); right.geometry.dispose(); left.geometry.dispose(); },
+  };
+}
+
 export function buildViewModel(toolId: string, material: THREE.Material,
   visualMode: VisualMode = 'baseline'): ViewModel {
+  if (toolId === 'hand') return buildMalletViewModel(material, visualMode);
   const builder = (visualMode === 'voxel' ? VOXEL_BUILDERS[toolId] : undefined)
     ?? BUILDERS[toolId] ?? BUILDERS.hand;
   const { parts, hold } = builder();

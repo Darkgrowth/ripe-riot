@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { Game, System } from '@/core/Game';
+import type { GameEventMap } from '@/core/GameEvents';
 import type { ToolInventory } from '@/tools/ToolInventory';
 import type { Carried, InteractionSystem } from '@/interaction/InteractionSystem';
 import { buildViewModel, VIEW_DEPTH, VIEW_LATERAL, type ViewModel } from '@/render/Viewmodel';
@@ -9,6 +10,7 @@ import { VIEWMODEL_FOV_SCALE } from '@/render/Renderer';
 import { damp, clamp } from '@/core/MathUtils';
 import { disposeWorkerHands, workerHandsSource } from '@/render/WorkerHands';
 import type { VisualMode } from '@/art/voxel/VisualMode';
+import { MalletVisualTimeline, sampleMalletViewPose } from './MalletViewPose';
 
 /** Framing is authored at 16:9; anything narrower gets a smaller tool. */
 const REFERENCE_ASPECT = 16 / 9;
@@ -50,6 +52,7 @@ export class ViewmodelSystem implements System {
   private swingX = 0;
   private swingY = 0;
   private swingYaw = 0;
+  private readonly mallet = new MalletVisualTimeline();
   visible = true;
 
   /**
@@ -78,14 +81,17 @@ export class ViewmodelSystem implements System {
     g.renderer.viewScene.add(this.carry.root);
 
     g.bus.on('tool:fired', (p) => this.punch(clamp(p.power ?? 1, 0.15, 2.2)));
-    g.bus.on('tool:swing', (p) => { this.swingLeft = this.swingTotal = Math.max(0.05, p.duration); });
-    g.bus.on('tool:meleeResult', (p) => {
-      // The mallet is already crossing the frame. Add only a small contact
-      // impulse here; the swing event owns the main motion.
-      if (p.outcome === 'hit') this.punch(0.22);
-      else if (p.outcome === 'protected') this.punch(0.15);
-      else if (p.outcome === 'blocked') this.punch(0.10);
+    g.bus.on('tool:swing', (p) => {
+      if (p.toolId === 'hand') {
+        this.mallet.start(p.duration, p.swingId ?? -1);
+        this.swingLeft = 0;
+        this.swingX = this.swingY = this.swingYaw = 0;
+      } else {
+        this.mallet.cancel();
+        this.swingLeft = this.swingTotal = Math.max(0.05, p.duration);
+      }
     });
+    g.bus.on('tool:meleeResult', (p) => this.applyMeleeResult(p));
     // The hands are a tool too. Pulling fruit off a branch and dropping it in
     // the basket should register in the arms, not only in the toast.
     g.bus.on('fruit:detached', (p) => { if (p.cause === 'hand') this.punch(0.45); });
@@ -94,7 +100,11 @@ export class ViewmodelSystem implements System {
     // used to move nothing on screen at all. Heavier is a bigger heave.
     g.bus.on('fruit:grabbed', (p) => this.punch(clamp(0.3 + p.mass * 0.05, 0.3, 1.1)));
     g.bus.on('player:hit', (p) => this.punch(clamp(p.momentum / 90, 0.25, 0.9)));
-    g.bus.on('tool:equipped', () => { this.stow = 1; });
+    g.bus.on('tool:equipped', () => {
+      this.stow = 1;
+      this.mallet.cancel();
+      this.swingLeft = 0;
+    });
 
     g.debug?.addProbe('viewmodel', () => ({
       tool: this.currentId,
@@ -117,6 +127,30 @@ export class ViewmodelSystem implements System {
   /** A recoil impulse; tools call it through the `tool:fired` event. */
   punch(strength: number): void {
     this.kickVel += 5.5 * strength;
+  }
+
+  private applyMeleeResult(p: GameEventMap['tool:meleeResult']): void {
+    // Co-op confirmation may arrive after another swing starts or after the
+    // mallet was stowed. Neither should jerk the currently visible tool.
+    if (this.tools.activeId !== 'hand' || !this.mallet.impact(p.swingId, p.outcome)) return;
+    if (p.outcome === 'hit') this.punch(0.22);
+    else if (p.outcome === 'protected') this.punch(0.15);
+    else if (p.outcome === 'blocked') this.punch(0.10);
+  }
+
+  private malletEligible(): boolean {
+    const input = this.g.input;
+    return this.tools.activeId === 'hand' && !this.interaction.carried
+      && this.g.player.state === 'active' && input.enabled
+      && (input.pointerLocked || !!input.synthetic);
+  }
+
+  /** ToolInventory runs immediately before this system on every fixed tick.
+   * Both the mallet resolver and this display age consume the same dt, including
+   * all catch-up steps when one rendered frame is capped at .1 seconds. */
+  fixedStep(dt: number): void {
+    if (!this.malletEligible()) this.mallet.cancel();
+    else this.mallet.step(dt);
   }
 
   private modelFor(id: string): ViewModel {
@@ -143,6 +177,7 @@ export class ViewmodelSystem implements System {
     const carried = this.interaction.carried;
     const onScreen = this.visible && player.state === 'active' && this.g.playerCamera.enabled;
     const shouldShow = onScreen && !carried;
+    if (!shouldShow || !this.malletEligible()) this.mallet.cancel();
 
     // Swap tools through a quick stow-and-draw rather than popping.
     if (wantId !== this.currentId) {
@@ -226,17 +261,26 @@ export class ViewmodelSystem implements System {
     // which runs after this, so using it would lag a frame behind a resize.
     const vmFov = r.camera.fov * VIEWMODEL_FOV_SCALE;
     const halfWidth = Math.tan(THREE.MathUtils.degToRad(vmFov) * 0.5) * r.camera.aspect * VIEW_DEPTH;
-    this.current.setFit(clamp(r.camera.aspect / REFERENCE_ASPECT, 0.5, 1));
+    const fit = clamp(r.camera.aspect / REFERENCE_ASPECT, 0.5, 1);
+    this.current.setFit(fit);
+    const malletPose = wantId === 'hand' && shouldShow
+      ? sampleMalletViewPose(this.mallet.presentationElapsed, this.mallet.duration,
+        VIEW_LATERAL * halfWidth, this.mallet.impactStrength, fit)
+      : null;
+    if (malletPose) this.current.setMalletPose?.(malletPose);
+    const aimSway = 1 - (malletPose?.contact ?? 0) * .8;
 
     const root = this.current.root;
     root.position.set(
-      VIEW_LATERAL * halfWidth + this.sway.x + this.bob.x + this.swingX,
-      this.sway.y + this.bob.y + this.swingY - this.stow * 0.55 - player.landDip * 0.25,
+      VIEW_LATERAL * halfWidth + this.sway.x * aimSway + this.bob.x + this.swingX
+        + (malletPose?.rootX ?? 0),
+      this.sway.y + this.bob.y + this.swingY + (malletPose?.rootY ?? 0)
+        - this.stow * 0.55 - player.landDip * 0.25,
       this.bob.z + this.kick * 0.09 + charge * 0.06,
     );
     root.rotation.set(
       -this.sway.y * 2.2 + this.kick * 0.35 + charge * 0.22 - this.swingY * 3.2,
-      -this.sway.x * 2.4 + this.swingYaw,
+      -this.sway.x * 2.4 * aimSway + this.swingYaw + (malletPose?.rootYaw ?? 0),
       this.sway.x * 1.6 - this.stow * 0.5 - this.swingYaw * 0.25,
     );
     // Ownership decides visibility immediately; the real-time stow animation

@@ -52,6 +52,8 @@ export class CarryViewmodel {
    */
   private cur = { d: 0.55, x: 0, y: -0.2, r: 0.08 };
   private settled = false;
+  /** The support hand closes around a new two-hand load instead of popping in. */
+  private supportGrip = 0;
 
   constructor(handMaterial: THREE.Material,
     private readonly visualMode: VisualMode = 'baseline') {
@@ -169,29 +171,36 @@ export class CarryViewmodel {
     // class is in frame: hands do not grow with the fruit, which is exactly how
     // a player reads that the fruit is big.
     const handScale = 0.62 * (d / 0.40) * 0.58;
+    const two = f.hands === 2;
+    this.supportGrip = damp(this.supportGrip, two ? 1 : 0, 14, dt);
+    const load = Math.min(1, Math.max(0, (f.heft - 1) / .9));
     for (let i = 0; i < 2; i++) {
       const side = i === 0 ? 1 : -1;
       const h = this.hands[i];
-      h.visible = f.hands === 2 || side === -1;   // one hand: the right one
+      h.visible = side === -1 || this.supportGrip > .015;
       if (!h.visible) continue;
-      h.scale.setScalar(handScale);
+      h.scale.setScalar(handScale * (side === 1 ? this.supportGrip : 1));
       // The broad palm sits at the near-lower surface, with curled fingertips
       // climbing into contact. In the one-hand pose the right hand supports the
       // lower-right side, with its thumb visible opposing the fingers; placing
       // it directly underneath hid the glove and made the fruit sit on a post.
-      const two = f.hands === 2;
       h.position.set(
-        x - side * pr * (two ? 0.66 : 0.48),
-        y - pr * (two ? 0.50 : 0.64),
+        x - side * pr * (two ? 0.66 - load * .04 : 0.48),
+        y - pr * (two ? 0.50 - load * .06 : 0.64)
+          - (side === 1 ? (1 - this.supportGrip) * .045 : 0),
         -c.d + pr * (two ? 0.72 : 0.79),
       ).add(sway);
       h.quaternion.copy(HAND_Q[i]);
+      // More of a heavy fruit's weight is caught at its side. A slight wrist
+      // turn makes the cupped pads face inward without changing fruit framing.
+      h.rotateX(-load * .07);
+      h.rotateY(side * load * .06);
     }
   }
 
   /** Forget the smoothed placement, so the next pickup snaps into frame
    *  rather than sliding in from wherever the last one was. */
-  reset(): void { this.settled = false; }
+  reset(): void { this.settled = false; this.supportGrip = 0; }
 
   dispose(): void {
     this.material.dispose();
