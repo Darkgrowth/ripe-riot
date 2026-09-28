@@ -13,8 +13,12 @@ export async function run(g, t) {
   await g.standAt(x, z - 2.2);
   await g.faceTo(x, y + 1.15, z);
   await g.call('tool.select', 'hand');
+  // The debug fire action only supplies the click. Keep neutral synthetic
+  // input active until contact, as a player would keep pointer lock active.
+  await g.input({});
   await g.call('tool.fire');
   await g.wait(0.22); // contact arrives during the visible mallet arc
+  await g.clearInput();
   const struck = await g.call('encounters.info');
   t.lt(struck.threats.mimic.health, mimic.health,
     'the starting picking tool can directly defend against a Mimic Melon');

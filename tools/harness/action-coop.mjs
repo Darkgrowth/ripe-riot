@@ -77,8 +77,12 @@ try {
   await faceTo(client, mx, my + 1.15, mz);
   await client.call('tool.select', 'hand');
   await sleep(950);
+  // Debug fire supplies the click; neutral synthetic input keeps the normal
+  // swing lifecycle active until its contact frame without pointer lock.
+  await client.input({});
   await client.call('tool.fire');
   await sleep(450);
+  await client.clearInput();
   const mimicHost = await host.call('encounters.info');
   const mimicClient = await client.call('encounters.info');
   check(mimicHost.threats.mimic.health < 3

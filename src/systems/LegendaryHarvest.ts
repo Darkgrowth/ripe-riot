@@ -118,9 +118,8 @@ export interface LegendaryNet {
  * controlled drop and a payout bonus; zero ropes leaves a short ground haul.
  *
  * A TETHER IS A ROPE, NOT A METHOD CALL. The first version kept its own list
- * that only a debug action ever appended to, so the rope gun — the tool the
- * whole encounter is gated on — could rope the melon four times and the cut
- * gate still said "restrain it first". Tethers are now read off the rope
+ * that only a debug action ever appended to, so a player could rope the melon
+ * four times and the cut gate still said "restrain it first". Tethers now come from the rope
  * system every step: any rope on the melon that is not a vine and is not in
  * somebody's hands counts. Fire at the melon, pin the near end to rock, and
  * that is a tether; a rope you are still holding is a leash, and it says so.
@@ -937,13 +936,42 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     }
   }
 
-  serialize(): { phase: string; completedAt: number } {
-    return { phase: this.phase, completedAt: this.completedAt };
+  serialize(): { phase: string; completedAt: number; payout?: number;
+    position?: [number, number, number]; rotation?: [number, number, number, number] } {
+    const saved: ReturnType<LegendaryHarvest['serialize']> = {
+      phase: this.phase, completedAt: this.completedAt,
+    };
+    if (this.phase === 'complete' && this.body) {
+      const p = this.body.translation(), q = this.body.rotation();
+      saved.position = [p.x, p.y, p.z];
+      saved.rotation = [q.x, q.y, q.z, q.w];
+      saved.payout = this.lastPayout;
+    }
+    return saved;
   }
-  deserialize(d: { phase?: string; completedAt?: number }): void {
+  deserialize(d: { phase?: string; completedAt?: number; payout?: number;
+    position?: [number, number, number]; rotation?: [number, number, number, number] }): void {
     if (d.phase === 'complete') {
       this.phase = 'complete';
       this.completedAt = d.completedAt ?? 0;
+      this.lastPayout = Number.isFinite(d.payout) && d.payout! > 0 ? d.payout! : PAYOUT;
+      // A fresh build hangs the melon from four vines. A completed save must
+      // restore the extracted world state, including saves from before the
+      // final transform was recorded.
+      this.cutVines += this.vines.length;
+      for (const vine of this.vines) this.ropes.remove(vine.id, 'cut');
+      this.vines.length = 0;
+      this.vineIdx.length = 0;
+      const p = Array.isArray(d.position) && d.position.length === 3
+        && d.position.every(Number.isFinite) ? d.position
+        : [this.extractionPad.x, this.extractionPad.y + MELON_RADIUS + 0.2, this.extractionPad.z];
+      const q = Array.isArray(d.rotation) && d.rotation.length === 4
+        && d.rotation.every(Number.isFinite) ? d.rotation : [0, 0, 0, 1];
+      this.body?.setTranslation({ x: p[0], y: p[1], z: p[2] }, false);
+      this.body?.setRotation({ x: q[0], y: q[1], z: q[2], w: q[3] }, false);
+      this.mesh.position.set(p[0], p[1], p[2]);
+      this.mesh.quaternion.set(q[0], q[1], q[2], q[3]);
+      if (this.padMesh) (this.padMesh.material as THREE.MeshStandardMaterial).color.set(0x66dd88);
     }
   }
 

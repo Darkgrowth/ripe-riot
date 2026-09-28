@@ -240,11 +240,19 @@ export async function run(g, t) {
   // …and it is progress, so it survives a save.
   await g.call('save.write', 'legendary-test');
   await g.call('progress.reset');
+  await g.call('legendary.reset');
   t.ok(!(await g.state()).progress.nextIsland, 'a reset locks it again');
   t.ok(!(await g.page.evaluate(() => window.__GAME.get('world').built.boatFlag.visible)),
     'and takes the flag down');
   await g.call('save.read', 'legendary-test');
   t.ok((await g.state()).progress.nextIsland, 'and a save round-trip restores the unlock');
+  const restored = (await g.state()).legendary;
+  t.eq(restored.phase, 'complete', 'a save round-trip restores the completed harvest');
+  t.eq(restored.vines, 0, 'completed harvest does not regrow holding vines');
+  t.eq(restored.paid, done.legendary.paid, 'completed payout stays visible without paying again');
+  t.lt(Math.hypot(restored.pos[0] - done.legendary.pos[0],
+    restored.pos[2] - done.legendary.pos[2]), 0.1,
+  'the extracted melon stays at the pad after loading');
   await g.call('save.clear', 'legendary-test');
   await g.call('progress.reset');
 

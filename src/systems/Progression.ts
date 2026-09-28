@@ -143,8 +143,17 @@ export class Progression implements System {
     if (!this.threatsCleared.has('mimic')) return 'Follow the orchard path. Investigate the moving fruit.';
     if (!this.threatsCleared.has('snapjaw')) return 'Take the hill path. Free the harvest from Snapjaw.';
     if (!this.threatsCleared.has('spitter')) return 'Climb toward the ridge. Silence the Spitter Plant.';
-    if (this.g.has('kingVine') && this.g.get<{ subdued: boolean }>('kingVine').subdued)
+    if (this.g.has('kingVine') && this.g.get<{ subdued: boolean }>('kingVine').subdued) {
+      if (this.g.has('legendary')) {
+        const harvest = this.g.get<Pick<LegendaryHarvest, 'phase' | 'vines'>>('legendary');
+        if (harvest.phase === 'drop') return 'Follow the King Melon down the ravine.';
+        if (harvest.phase === 'recover') return 'Push the King Melon onto the marked extraction pad.';
+        if (harvest.phase === 'failed') return 'The King Melon is lost. It will regrow soon.';
+        if (harvest.phase === 'tether' || harvest.phase === 'detach')
+          return `Cut the ${harvest.vines.length} holding vines. Ropes can steady the drop.`;
+      }
       return 'Cut the King Melon free. Bring it to the marked pad.';
+    }
     return 'Confront King Vine at King Melon.';
   }
 

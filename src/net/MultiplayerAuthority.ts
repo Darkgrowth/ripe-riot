@@ -1730,7 +1730,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       cx: held ? +held.position.x.toFixed(2) : 0,
       cy: held ? +held.position.y.toFixed(2) : 0,
       cz: held ? +held.position.z.toFixed(2) : 0,
-      // Owning a rope gun opens the legendary; the host cannot see our slots.
+      // Keep the host's optional-rope inventory view current across migration.
       rg: this.tools?.owned.has('ropegun') ? 1 : 0,
       // What the shed has sold us. Purchases are per-player and the host is
       // the one that enforces them, so a NEW host that inherited a ledger
