@@ -79,6 +79,13 @@ export class ViewmodelSystem implements System {
 
     g.bus.on('tool:fired', (p) => this.punch(clamp(p.power ?? 1, 0.15, 2.2)));
     g.bus.on('tool:swing', (p) => { this.swingLeft = this.swingTotal = Math.max(0.05, p.duration); });
+    g.bus.on('tool:meleeResult', (p) => {
+      // The mallet is already crossing the frame. Add only a small contact
+      // impulse here; the swing event owns the main motion.
+      if (p.outcome === 'hit') this.punch(0.22);
+      else if (p.outcome === 'protected') this.punch(0.15);
+      else if (p.outcome === 'blocked') this.punch(0.10);
+    });
     // The hands are a tool too. Pulling fruit off a branch and dropping it in
     // the basket should register in the arms, not only in the toast.
     g.bus.on('fruit:detached', (p) => { if (p.cause === 'hand') this.punch(0.45); });

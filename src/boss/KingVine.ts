@@ -53,6 +53,9 @@ const RECOVER_TIME = 1.8;
 const SWEEP_RANGE = 11;
 const SEED_SPEED = 10;
 const RETURN_SPEED = 18;
+// A 2.9 m mallet swing can touch the surface of the 1.7 m stem with its
+// 0.22 m head. The old centre-ray gate must include that reachable edge.
+const MELEE_CORE_REACH = 2.9 + 1.7 + 0.22;
 const PHASES: KingVinePhase[] = ['idle', 'telegraph', 'sweep', 'seed', 'recover', 'subdued'];
 const point = (p: VinePoint): VinePoint => [p[0], p[1], p[2]];
 
@@ -172,7 +175,7 @@ export class KingVine implements System {
     if (this.subdued || (strike !== 'melee' && strike !== 'air')) return false;
     const from = readPoint(origin), dir = readPoint(direction);
     if (!from || !dir || Math.hypot(...dir) < 1e-4) return false;
-    const reach = strike === 'air' ? 38 : 4.5;
+    const reach = strike === 'air' ? 38 : MELEE_CORE_REACH;
     if (strike === 'air' && this.phase === 'seed' && this.projectile && !this.projectile.returned
       && raySphere(from, dir, this.projectile.position, 1.1, reach)) return true;
     return this.phase === 'recover'
@@ -188,7 +191,7 @@ export class KingVine implements System {
     if (!from || !dir) return null;
     const length = Math.hypot(...dir);
     if (length < 1e-4) return null;
-    const maxReach = strike === 'air' ? 38 : 4.5;
+    const maxReach = strike === 'air' ? 38 : MELEE_CORE_REACH;
     if (strike === 'air' && this.phase === 'seed' && this.projectile && !this.projectile.returned
       && raySphere(from, dir, this.projectile.position, 1.1, maxReach)) {
       const p = this.projectile;

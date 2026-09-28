@@ -23,6 +23,9 @@ import type { EncounterNetState } from '@/enemies/EncounterModel';
 import type { PlayerVitals } from '@/player/PlayerVitals';
 import type { KingVine, KingVineNetState, KingVineStrike } from '@/boss/KingVine';
 import type { Progression } from '@/systems/Progression';
+import { MeleeIntentGuard, validMeleeOrigin } from './MeleeIntentGuard';
+import { probeMeleeSweep } from '@/enemies/MeleeSweep';
+import { QueryMask } from '@/physics/Layers';
 
 /** What a client is allowed to ask the host to do. */
 export type IntentKind =
@@ -30,7 +33,7 @@ export type IntentKind =
   | 'shove' | 'shake' | 'blast' | 'spawn'
   | 'buy'
   | 'lcut'
-  | 'encounter' | 'revive' | 'vineHit'
+  | 'encounter' | 'revive' | 'vineHit' | 'melee'
   | 'rope'
   | 'resync';
 
@@ -89,6 +92,7 @@ export interface Intent {
   targetPeerId?: PeerId;
   holding?: boolean;
   vineHit?: { origin: [number, number, number]; direction: [number, number, number]; strike: KingVineStrike };
+  melee?: { swingId: number; origin: [number, number, number]; direction: [number, number, number] };
 }
 
 /** What a client is waiting to hear back about, and how to undo it. */
@@ -119,6 +123,7 @@ interface RemoteState {
   busy: boolean;
   hasNet: boolean;
   carrying: string | null;
+  toolId: string | null;
   name: string;
   suit: number;
   rig: PlayerRig;
@@ -246,6 +251,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
 
   private remotes = new Map<PeerId, RemoteState>();
   private reviveClaims = new Map<PeerId, PeerId>();
+  private readonly meleeGuard = new MeleeIntentGuard();
   private snapshotTimer = 0;
   private playerTimer = 0;
   private off: Array<() => void> = [];
@@ -287,6 +293,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
    *  and a denial that is a bug look identical from the client's side. */
   lastDeny = '';
   stats = { sent: 0, received: 0, intents: 0, denied: 0, snapshotBytes: 0, manifests: 0 };
+  meleeStats = { accepted: 0, rejected: 0, lastReason: '' };
 
   init(g: Game): void {
     this.g = g;
@@ -343,6 +350,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       remotes: this.remotes.size,
       pending: this.pending.size,
       lastDeny: this.lastDeny,
+      melee: { ...this.meleeStats },
       owned: this.isHost ? this.authority.entries().length : this.mirrorOwner.size,
       nodeSeq: this.fruitSys.nodeSeq,
       ropes: this.ropeSummary(),
@@ -459,6 +467,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   }
 
   disconnect(): void {
+    this.meleeGuard.clear();
     // Say goodbye explicitly. Waiting for the liveness timeout leaves a ghost
     // standing in the orchard for four seconds, which reads as a bug.
     if (this.connected) this.transport?.send({ t: 'bye' });
@@ -561,6 +570,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     this.isHost = this.hostId === this.me;
     this.kingVine?.setAuthority(this.isHost);
     if (wasHost === this.isHost) return;
+    this.meleeGuard.clear();
     // The ledger belongs to whoever is host.
     this.authority.reset();
     if (this.isHost) { this.promote(); return; }
@@ -691,6 +701,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
    * never falls, never sells, and still counts against the island.
    */
   private dropPeer(id: PeerId, name: string): void {
+    this.meleeGuard.clearPeer(id);
     const r = this.remotes.get(id);
     if (r) {
       // Where they were standing, kept past the avatar. If we are promoted a
@@ -1018,6 +1029,62 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   requestEncounter(encounter: EncounterIntent): void {
     if (!this.connected || this.isHost) return;
     this.send({ kind: 'encounter', encounter });
+  }
+
+  /** One strike identity reaches the host at the mallet's contact frame. */
+  tryMelee(origin: THREE.Vector3, direction: THREE.Vector3, swingId: number): void {
+    const from = this.me || 'solo';
+    if (!this.authoritative) {
+      this.send({ kind: 'melee', melee: { swingId,
+        origin: [origin.x, origin.y, origin.z],
+        direction: [direction.x, direction.y, direction.z] } });
+      return;
+    }
+    const active = this.g.player.state === 'active' && this.g.input.enabled
+      && this.tools?.activeId === 'hand' && !this.interaction.carried
+      && !this.shop?.open && !(this.g.has?.('book') && this.g.get<{ open: boolean }>('book').open)
+      && validMeleeOrigin([origin.x, origin.y, origin.z],
+        [this.g.player.position.x, this.g.player.position.y, this.g.player.position.z],
+        this.g.player.eyePosition.y - this.g.player.position.y);
+    const gate = this.meleeGuard.accept(from, swingId, this.g.clock.elapsed, active);
+    if (!gate.ok) {
+      this.meleeStats.rejected++;
+      this.meleeStats.lastReason = gate.reason;
+      return;
+    }
+    this.meleeStats.accepted++;
+    const result = this.resolveMelee(origin, direction, from);
+    this.g.bus.emit('tool:meleeResult', { swingId, ...result });
+  }
+
+  private resolveMelee(origin: THREE.Vector3, direction: THREE.Vector3,
+    from: PeerId): { outcome: 'whoosh' | 'blocked' | 'protected' | 'hit';
+      target?: 'mimic' | 'snapjaw' | 'spitter' | 'kingVine'; point?: THREE.Vector3 } {
+    const encounter = this.encounters?.resolveMelee(origin, direction, from);
+    if (encounter && encounter.outcome !== 'whoosh') return {
+      outcome: encounter.outcome, target: encounter.target,
+      point: encounter.contact ? new THREE.Vector3(...encounter.contact.point) : undefined,
+    };
+    if (!this.kingVine) return { outcome: 'whoosh' };
+    const boss = this.kingVine.snapshot();
+    if (boss.phase !== 'recover') return { outcome: 'whoosh' };
+    const contact = probeMeleeSweep([origin.x, origin.y, origin.z],
+      [direction.x, direction.y, direction.z], [{ id: 'kingVine',
+        center: [boss.center[0], boss.center[1] + 1.7, boss.center[2]], radius: 1.7 }]);
+    if (!contact) return { outcome: 'whoosh' };
+    const point = new THREE.Vector3(...contact.point);
+    const wall = contact.distance > 0.12 && this.g.physics.raycast(origin,
+      new THREE.Vector3(...contact.direction), contact.distance,
+      QueryMask.solid, this.g.player.body);
+    if (wall && wall.distance < contact.distance - 0.08)
+      return { outcome: 'blocked', target: 'kingVine', point };
+    // The guardian's existing ray query has no mallet-head radius. Aim that
+    // authoritative query through the centre after the bounded sweep confirms
+    // surface contact, so an edge clip does not become a silent false miss.
+    const bossDirection = new THREE.Vector3(boss.center[0], boss.center[1] + 1.7,
+      boss.center[2]).sub(origin).normalize();
+    const hit = this.kingVine.tryHit(origin, bossDirection, 'melee', from);
+    return { outcome: hit ? 'hit' : 'protected', target: 'kingVine', point };
   }
 
   nearbyDowned(range = 3.5): { id: PeerId; name: string } | null {
@@ -1377,6 +1444,9 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
         const req = intent.encounter;
         if (!req || !this.encounters) break;
         if (req.kind === 'hit') {
+          // The legacy hit route remains for the Air Cannon only. Mallet
+          // damage must carry a host-checked swing identity.
+          if (req.strike === 'melee') break;
           const o = req.origin, d = req.direction;
           if (!o?.every(Number.isFinite) || !d?.every(Number.isFinite)) break;
           if (!near(o[0], o[1], o[2], 4.5)) break;
@@ -1395,10 +1465,40 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       }
       case 'vineHit': {
         const hit = intent.vineHit;
+        if (hit?.strike === 'melee') break;
         if (!hit || !hit.origin?.every(Number.isFinite) || !hit.direction?.every(Number.isFinite)
           || !near(hit.origin[0], hit.origin[1], hit.origin[2], 4.5)) break;
         this.kingVine?.tryHit(hit.origin, hit.direction, hit.strike, from);
         break;
+      }
+      case 'melee': {
+        const req = intent.melee;
+        const remote = this.remotes.get(from);
+        if (!req || !remote) break;
+        const origin = req.origin;
+        const direction = req.direction;
+        const valid = validMeleeOrigin(origin,
+          [remote.targetPos.x, remote.targetPos.y, remote.targetPos.z], remote.height - 0.19)
+          && Array.isArray(direction) && direction.length === 3
+          && direction.every(Number.isFinite)
+          && Math.hypot(...direction) > 0.8 && Math.hypot(...direction) < 1.2;
+        const active = valid && remote.hasPlayerPacket && remote.state === 'active'
+          && !remote.busy && !remote.carrying && remote.toolId === 'hand'
+          && this.authority.holdingFor(from).carried < 0;
+        const accepted = this.meleeGuard.accept(from, req.swingId, this.g.clock.elapsed, active);
+        if (accepted.ok) this.meleeStats.accepted++;
+        else {
+          this.meleeStats.rejected++;
+          this.meleeStats.lastReason = accepted.reason;
+        }
+        const result = accepted.ok
+          ? this.resolveMelee(new THREE.Vector3(...origin), new THREE.Vector3(...direction), from)
+          : { outcome: 'whoosh' as const };
+        this.transport?.send({ t: 'result', rid, kind: 'melee', ok: accepted.ok,
+          swingId: req.swingId, outcome: result.outcome, target: result.target,
+          point: result.point ? [result.point.x, result.point.y, result.point.z] : undefined }, from);
+        if (accepted.ok) this.sendSnapshot();
+        return;
       }
       case 'revive':
         this.applyReviveClaim(from, String(intent.targetPeerId ?? ''), intent.holding === true);
@@ -1443,6 +1543,18 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     const kind = m.kind as IntentKind;
     const ok = m.ok === true;
     const why = DENY_TEXT[m.reason as Deny] ?? String(m.reason ?? 'refused');
+
+    if (kind === 'melee') {
+      const point = Array.isArray(m.point) && m.point.length === 3
+        && m.point.every(Number.isFinite) ? new THREE.Vector3(...m.point) : undefined;
+      const target = m.target === 'mimic' || m.target === 'snapjaw'
+        || m.target === 'spitter' || m.target === 'kingVine' ? m.target : undefined;
+      this.g.bus.emit('tool:meleeResult', { swingId: Number(m.swingId),
+        outcome: m.outcome === 'blocked' || m.outcome === 'protected' || m.outcome === 'hit'
+          ? m.outcome : 'whoosh',
+        target, point });
+      return;
+    }
 
     if (kind === 'sell') {
       const asked = p?.ids ?? [];
@@ -1539,6 +1651,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       s: p.state,
       ...(ragdollPose ? { rp: ragdollPose } : {}),
       busy: !!this.shop?.open || this.g.get<{ open: boolean }>('book').open,
+      tool: this.tools?.activeId ?? null,
       nt: this.tools?.owned.has('net') ? 1 : 0,
       c: held?.species ?? null,
       // The host needs the id, not just the species: it is what lets a carried
@@ -1578,6 +1691,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     r.state = String(m.s ?? 'active');
     r.ragdollPose = r.state === 'ragdoll' ? parseRagdollPose(m.rp) : null;
     r.busy = m.busy === true;
+    r.toolId = typeof m.tool === 'string' ? m.tool : null;
     r.hasNet = Number(m.nt ?? 0) === 1;
     r.carrying = (m.c as string | null) ?? null;
     r.lastSeen = performance.now();
@@ -1817,7 +1931,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       id, name, suit,
       pos: new THREE.Vector3(), targetPos: new THREE.Vector3(),
       yaw: 0, targetYaw: 0, height: 1.82, state: 'active', carrying: null,
-      busy: false, hasNet: false,
+      busy: false, hasNet: false, toolId: null,
       rig, lastSeen: performance.now(), lastMoveAt: -Infinity, hasPlayerPacket: false,
       ragdollPose: null,
     };

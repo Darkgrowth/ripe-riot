@@ -94,6 +94,15 @@ export class AudioManager implements System {
       g.bus.on('player:ragdoll', () => this.play('thud', { volume: .8 })),
       g.bus.on('money:changed', p => { if (p.delta > 0 && p.reason === 'sale') this.play('sale'); }),
       g.bus.on('tool:fired', p => { if (p.toolId === 'aircannon') this.play('recoil', { volume: .25 }); }),
+      g.bus.on('tool:meleeResult', p => {
+        const cue = {
+          whoosh: ['malletWhoosh', .20],
+          blocked: ['malletBlocked', .29],
+          protected: ['malletProtected', .28],
+          hit: ['malletHit', .42],
+        }[p.outcome] as [string, number];
+        this.play(cue[0], { volume: cue[1] });
+      }),
       g.bus.on('legendary:phase', p => { this.legendaryPhase = p.phase; }),
       g.bus.on('legendary:complete', () => { this.legendaryPhase = 'complete'; this.play('legendaryPayoff', { volume: .65 }); }),
     );
@@ -496,6 +505,27 @@ const VOICES: Record<string, Voice> = {
   // A net through the air. Lower and longer for a miss (pitch < 1).
   netSwing: (c, o, t, p) => burst(c, o, t, {
     dur: 0.22 / Math.max(0.6, p.pitch), type: 'bandpass', from: 320 * p.pitch, to: 1700 * p.pitch, q: 1.4, gain: 0.16, attack: 0.05 }),
+  malletWhoosh: (c, o, t, p) => burst(c, o, t, {
+    dur: .16, type: 'bandpass', from: 300 * p.pitch, to: 1400 * p.pitch,
+    q: 1.1, gain: .12, attack: .025 }),
+  malletBlocked: (c, o, t, p) => {
+    tone(c, o, t, { freq: 230 * p.pitch, to: 115, dur: .11,
+      type: 'triangle', gain: .22 });
+    return burst(c, o, t, { dur: .075, type: 'lowpass', from: 950,
+      to: 280, gain: .17 });
+  },
+  malletProtected: (c, o, t, p) => {
+    tone(c, o, t, { freq: 720 * p.pitch, to: 1040 * p.pitch, dur: .10,
+      type: 'triangle', gain: .18 });
+    return tone(c, o, t + .045, { freq: 1380 * p.pitch, to: 990 * p.pitch,
+      dur: .12, type: 'sine', gain: .10 }) + .045;
+  },
+  malletHit: (c, o, t, p) => {
+    tone(c, o, t, { freq: 155 * p.pitch, to: 65, dur: .17,
+      type: 'sine', gain: .34 });
+    return burst(c, o, t, { dur: .11, type: 'lowpass', from: 1550,
+      to: 310, gain: .24 });
+  },
   netPlace: (c, o, t, p) => burst(c, o, t, {
     dur: 0.2, type: 'lowpass', from: 1400 * p.pitch, to: 300, gain: 0.28 }),
   ladderPlace: (c, o, t, p) => {

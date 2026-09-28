@@ -14,13 +14,14 @@ export async function run(g, t) {
   await g.faceTo(x, y + 1.15, z);
   await g.call('tool.select', 'hand');
   await g.call('tool.fire');
+  await g.wait(0.22); // contact arrives during the visible mallet arc
   const struck = await g.call('encounters.info');
   t.lt(struck.threats.mimic.health, mimic.health,
     'the starting picking tool can directly defend against a Mimic Melon');
 
   await g.call('tool.give', 'aircannon');
   await g.call('tool.select', 'aircannon');
-  await g.wait(0.45); // the first hit's enemy strike cooldown is part of combat timing
+  await g.wait(0.45); // let the mallet recovery and Mimic reaction settle
   await g.call('tool.fire');
   const blasted = await g.call('encounters.info');
   t.lt(blasted.threats.mimic.health, struck.threats.mimic.health,

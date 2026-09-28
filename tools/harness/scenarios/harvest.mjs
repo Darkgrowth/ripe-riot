@@ -125,13 +125,7 @@ export async function run(g, t) {
   t.note(`auto-delivery paid $${delivered}`);
   await g.call('fruit.despawnAllFree');
 
-  // --- the same pick, on the left mouse button.
-  //
-  // This is the first button every player presses and with empty hands it used
-  // to do nothing at all; picking is on E and on right-click. It has to work
-  // through the real latched-edge input path, and — the part that is easy to
-  // get wrong — releasing the click that picked something must not
-  // immediately throw it, because the same button is also the throw.
+  // LMB is the mallet with empty hands. E owns interaction and picking.
   await g.call('drop');
   const lmbTree = await g.call('plant.nearest', -24, 8, 22, 'appleTree', true);
   const lmbApple = lmbTree && await g.call('fruit.nearest',
@@ -148,14 +142,16 @@ export async function run(g, t) {
     await g.input({ primary: true });
     await g.wait(0.35);
     const held = (await g.state()).interaction.carrying;
-    t.ok(held && held.id === lmbApple.id, 'left-click picks with empty hands');
+    t.ok(!held, 'left-click swings without picking ordinary fruit');
     await g.input({ primary: false, primaryReleased: true });
     await g.wait(1 / 60);
     await g.clearInput();
     await g.wait(0.3);
-    const still = (await g.state()).interaction.carrying;
-    t.ok(still && still.id === lmbApple.id,
-      'and releasing that same click does not throw it straight back');
+    await g.input({ interact: true, interactPressed: true });
+    await g.wait(1 / 60);
+    await g.clearInput();
+    const picked = (await g.state()).interaction.carrying;
+    t.ok(picked && picked.id === lmbApple.id, 'E picks the fruit after a mallet swing');
   }
   await g.call('drop');
   await g.call('fruit.despawnAllFree');

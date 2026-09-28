@@ -1,3 +1,5 @@
+import { probeMeleeSweep, type MeleeContact, type MeleeSurface } from './MeleeSweep.ts';
+
 /** Host-owned encounter rules. Coordinates are world-space metres. */
 export type Point3 = [number, number, number];
 export type EncounterKind = 'mimic' | 'snapjaw' | 'spitter';
@@ -41,6 +43,13 @@ export interface EncounterHit {
   attackerId?: string;
   releasedVictimId?: string;
   deflectedProjectileId?: number;
+}
+
+export interface EncounterMeleeResult {
+  outcome: 'whoosh' | 'blocked' | 'protected' | 'hit';
+  target?: EncounterKind;
+  contact?: MeleeContact;
+  hit?: EncounterHit;
 }
 
 export interface EncounterDamage {
@@ -263,6 +272,32 @@ export class EncounterModel {
       || (strike === 'air' && this.rayProjectile(origin, direction, length) !== null);
   }
 
+  resolveMelee(origin: Point3, direction: Point3, attackerId: string,
+    blocked: (contact: MeleeContact) => boolean): EncounterMeleeResult {
+    const surfaces: MeleeSurface[] = [];
+    for (const state of this.encounters.values()) {
+      if (state.phase === 'defeated') continue;
+      const [x, y, z] = state.position;
+      if (state.kind === 'mimic')
+        surfaces.push({ id: state.kind, center: [x, y + 1.25, z], radius: 1.25 });
+      else if (state.kind === 'snapjaw')
+        surfaces.push({ id: state.kind, center: [x, y + 1.45, z], radius: 1.35 });
+      else {
+        surfaces.push({ id: state.kind, center: [x, y + 2.1, z], radius: 0.92 });
+        surfaces.push({ id: state.kind, center: [x, y + 0.85, z], radius: 0.52 });
+      }
+    }
+    const contact = probeMeleeSweep(origin, direction, surfaces);
+    if (!contact) return { outcome: 'whoosh' };
+    const state = this.encounters.get(contact.id as EncounterKind)!;
+    if (blocked(contact)) return { outcome: 'blocked', target: state.kind, contact };
+    if (state.kind === 'snapjaw' && state.phase !== 'recover')
+      return { outcome: 'protected', target: state.kind, contact };
+    const hit = this.applyHit(state, 'melee', attackerId, origin, false);
+    return hit ? { outcome: 'hit', target: state.kind, contact, hit }
+      : { outcome: 'protected', target: state.kind, contact };
+  }
+
   /** Resolve a world-space swing or airborne strike against the first enemy on the ray. */
   tryHit(origin: Point3, direction: Point3, strike: EncounterStrike, attackerId?: string): EncounterHit | null {
     if (!origin.every(Number.isFinite) || !direction.every(Number.isFinite)) return null;
@@ -277,10 +312,16 @@ export class EncounterModel {
         deflectedProjectileId: projectile.state.id };
     }
     if (!candidate) return null;
-    const state = candidate.state;
+    return this.applyHit(candidate.state, strike, attackerId, origin, true);
+  }
+
+  private applyHit(state: InternalState, strike: EncounterStrike, attackerId: string | undefined,
+    origin: Point3, throttle: boolean): EncounterHit | null {
     const strikeKey = `${state.kind}:${attackerId ?? ''}`;
-    if (this.elapsed - (this.lastStrikeAt.get(strikeKey) ?? -Infinity) < 0.42) return null;
-    this.lastStrikeAt.set(strikeKey, this.elapsed);
+    if (throttle) {
+      if (this.elapsed - (this.lastStrikeAt.get(strikeKey) ?? -Infinity) < 0.42) return null;
+      this.lastStrikeAt.set(strikeKey, this.elapsed);
+    }
     const damage = strike === 'air' ? 2 : 1;
     state.health = Math.max(0, state.health - damage);
     let releasedVictimId: string | undefined;

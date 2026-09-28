@@ -6,6 +6,7 @@ import { HAND_OFFSET, type RopeSystem, type Rope, type RopeEnd } from '@/systems
 import { QueryMask, Groups } from '@/physics/Layers';
 import { Palette } from '@/render/Palette';
 import { clamp } from '@/core/MathUtils';
+import { MalletSwing, MALLET_TIMING } from './MalletSwing';
 
 const _v = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
@@ -21,75 +22,77 @@ const _q = new THREE.Quaternion();
 export class HandPicker extends Tool {
   readonly def: ToolDef = {
     id: 'hand', label: 'Picking Mallet', icon: '✋',
-    description: 'Pick ordinary fruit, or strike a threatening harvest up close.',
+    description: 'LMB swing · E pick fruit · LMB throw carried fruit.',
     tagline: 'The first answer when the orchard bites back.',
     cost: 0, tier: 0, starter: true,
   };
 
-  /** True while the click that just picked something is still held down, so
-   *  releasing it cannot immediately throw what it picked. */
-  private pickedOnPress = false;
-  private struckOnPress = false;
+  private readonly swing = new MalletSwing();
+  private throwArmed = false;
+
+  override onUnequip(): void {
+    super.onUnequip();
+    this.swing.cancel();
+    this.throwArmed = false;
+    this.ctx.interaction.throwCharge = 0;
+  }
 
   override onPrimary(down: boolean): void {
     const inter = this.ctx.interaction;
     if (down) {
       this.charge = 0;
-      this.struckOnPress = false;
-      if (!inter.carried && this.cooldown <= 0 && this.game.has('encounters')) {
-        const p = this.player;
-        const origin = p.eyePosition.clone();
-        const direction = this.aim(_dir).clone();
-        const actorId = this.game.has('net')
-          ? this.game.get<{ connected: boolean; me: string }>('net').me || 'solo' : 'solo';
-        const threats = this.game.get<{
-          canStrike(origin: THREE.Vector3, direction: THREE.Vector3, strike: 'melee'): boolean;
-          tryHit(origin: THREE.Vector3, direction: THREE.Vector3, strike: 'melee', actorId: string): unknown;
-        }>('encounters');
-        const aimedThreat = threats.canStrike(origin, direction, 'melee');
-        const hit = aimedThreat && threats.tryHit(origin, direction, 'melee', actorId);
-        const aimedVine = this.game.has('kingVine') && this.game.get<{
-          canStrike(origin: THREE.Vector3, direction: THREE.Vector3, strike: 'melee'): boolean;
-        }>('kingVine').canStrike(origin, direction, 'melee');
-        if (aimedVine) this.game.get<{
-          tryVineHit(origin: THREE.Vector3, direction: THREE.Vector3, strike: 'melee'): boolean;
-        }>('net').tryVineHit(origin, direction, 'melee');
-        if (hit || aimedThreat || aimedVine) {
-          this.cooldown = 0.38;
-          this.struckOnPress = true;
-          this.game.bus.emit('tool:swing', { toolId: this.def.id, duration: 0.32 });
-          this.game.bus.emit('audio:sfx', { name: 'thud', volume: 0.7, pitch: 1.15 });
-          return;
-        }
+      this.throwArmed = !!inter.carried;
+      if (!this.throwArmed) {
+        const id = this.swing.press();
+        if (id !== null) this.beginSwing();
       }
-      // Left-click with empty hands used to do nothing at all, which is a
-      // strange thing for the first button of a first-person game to do:
-      // every player tries it on the first apple they see. It picks.
-      this.pickedOnPress = !inter.carried && inter.tryInteract();
       return;
     }
-    if (this.struckOnPress) { this.struckOnPress = false; return; }
-    if (this.pickedOnPress) { this.pickedOnPress = false; this.charge = 0; return; }
-    if (inter.carried) {
+    if (this.throwArmed && inter.carried) {
       inter.throwHeld(0.35 + this.charge * 0.65);
       this.charge = 0;
     }
+    this.throwArmed = false;
   }
 
   override onSecondary(down: boolean): void {
     if (!down) return;
     const inter = this.ctx.interaction;
     if (inter.carried) inter.stowHeld();
-    else inter.tryInteract();
   }
 
   override step(dt: number, held: { primary: boolean }): void {
     super.step(dt, held as never);
-    if (held.primary && this.ctx.interaction.carried && !this.pickedOnPress) {
+    const input = this.game.input;
+    if (this.player.state !== 'active' || !input.enabled
+      || (!input.pointerLocked && !input.synthetic) || this.ctx.interaction.carried) {
+      this.swing.cancel();
+    } else {
+      const tick = this.swing.step(dt);
+      if (tick.startedId !== null) this.beginSwing();
+      if (tick.sample) {
+        this.swing.markContact();
+        const origin = this.player.eyePosition.clone();
+        const direction = this.aim(_dir).clone();
+        if (this.game.has('net')) {
+          this.game.get<{
+            tryMelee(origin: THREE.Vector3, direction: THREE.Vector3, swingId: number): void;
+          }>('net').tryMelee(origin, direction, this.swing.currentId);
+        } else if (this.game.has('encounters')) {
+          const result = this.game.get<{
+            resolveMelee(origin: THREE.Vector3, direction: THREE.Vector3, actorId: string):
+              { outcome: 'whoosh' | 'blocked' | 'protected' | 'hit'; target?: 'mimic' | 'snapjaw' | 'spitter'; contact?: { point: [number, number, number] } };
+          }>('encounters').resolveMelee(origin, direction, 'solo');
+          this.game.bus.emit('tool:meleeResult', { swingId: this.swing.currentId,
+            outcome: result.outcome, target: result.target,
+            point: result.contact ? new THREE.Vector3(...result.contact.point) : undefined });
+        }
+      }
+    }
+    if (held.primary && this.ctx.interaction.carried && this.throwArmed) {
       this.charge = Math.min(1, this.charge + dt * 1.9);
     } else if (!held.primary) {
       this.charge = 0;
-      this.pickedOnPress = false;
     }
     // Share the wind-up so the held fruit pulls back on screen.
     this.ctx.interaction.throwCharge = this.charge;
@@ -97,6 +100,16 @@ export class HandPicker extends Tool {
 
   override status(): string {
     return this.charge > 0.05 ? `${Math.round(this.charge * 100)}%` : '';
+  }
+
+  override debugState(): Record<string, unknown> {
+    return { ...super.debugState(), swing: this.swing.state,
+      swingId: this.swing.currentId, queued: this.swing.queued,
+      throwArmed: this.throwArmed };
+  }
+
+  private beginSwing(): void {
+    this.game.bus.emit('tool:swing', { toolId: this.def.id, duration: MALLET_TIMING.total });
   }
 }
 

@@ -58,6 +58,10 @@ export interface GameEventMap {
   'tool:fired': { toolId: string; power?: number };
   /** A tool swept through an arc: the viewmodel follows it for `duration` seconds. */
   'tool:swing': { toolId: string; duration: number };
+  /** The local mallet swing resolved at its contact beat. This is presentation
+   *  feedback; encounter health and multiplayer authority remain elsewhere. */
+  'tool:meleeResult': { swingId: number; outcome: 'whoosh' | 'blocked' | 'protected' | 'hit';
+    target?: 'mimic' | 'snapjaw' | 'spitter' | 'kingVine'; point?: THREE.Vector3 };
   /** A tool put energy into a POINT IN THE WORLD. Separate from tool:fired,
    *  which is about the hands: this is what the blast looked like. */
   'tool:blast': { toolId: string; point: THREE.Vector3; power: number; radius: number };

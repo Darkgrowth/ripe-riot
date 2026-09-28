@@ -96,6 +96,42 @@ test('snapjaw cannot be damaged outside recovery and defeat reports only once', 
   assert.equal(model.tryHit([0, 1.2, -2], [0, 0, 1], 'air', 'peer-1'), null);
 });
 
+test('mallet contact on a closed jaw explains protection and an open mouth takes a hit', () => {
+  const model = modelAt('snapjaw');
+  const origin = [0, 1.7, -2.1], direction = [0, 0, 1];
+  const closed = model.resolveMelee(origin, direction, 'fighter', () => false);
+  assert.equal(closed.outcome, 'protected');
+  assert.equal(model.get('snapjaw').health, 2);
+  model.offerBait([2, 0, 0]);
+  model.step(0.8);
+  model.step(0.4);
+  const open = model.resolveMelee(origin, direction, 'fighter', () => false);
+  assert.equal(open.outcome, 'hit');
+  assert.equal(open.hit.damage, 1);
+  assert.equal(model.get('snapjaw').health, 1);
+});
+
+test('a solid obstruction stops melee before health or reward changes', () => {
+  const model = modelAt('mimic');
+  const seen = [];
+  const result = model.resolveMelee([0, 1.7, -2.2], [0, 0, 1], 'fighter',
+    contact => { seen.push(contact); return true; });
+  assert.equal(result.outcome, 'blocked');
+  assert.equal(model.get('mimic').health, 3);
+  assert.equal(seen.length, 1);
+  assert.ok(seen[0].distance < 2.9);
+});
+
+test('melee reaches a nearby surface but respects its bounded reach', () => {
+  const near = modelAt('mimic');
+  assert.equal(near.resolveMelee([0, 1.7, -2.2], [0, 0, 1], 'fighter', () => false).outcome,
+    'hit');
+  const far = modelAt('mimic');
+  assert.equal(far.resolveMelee([0, 1.7, -4.8], [0, 0, 1], 'fighter', () => false).outcome,
+    'whoosh');
+  assert.equal(far.get('mimic').health, 3);
+});
+
 test('one held melee swing cannot drain the mimic in successive fixed steps', () => {
   const model = modelAt('mimic');
   assert.equal(model.tryHit([0, 1.2, -2], [0, 0, 1], 'melee', 'fighter')?.damage, 1);

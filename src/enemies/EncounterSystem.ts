@@ -2,10 +2,10 @@ import * as THREE from 'three';
 import type { Game, System } from '@/core/Game';
 import type { Sunpatch } from '@/world/Sunpatch';
 import { EncounterModel, type EncounterHit, type EncounterKind,
-  type EncounterNetState, type EncounterStrike, type EncounterTarget,
+  type EncounterMeleeResult, type EncounterNetState, type EncounterStrike, type EncounterTarget,
   type Point3 } from './EncounterModel';
 import { EncounterProjectileVisual, EncounterVisual } from './EncounterVisuals';
-import { Layer, groups } from '@/physics/Layers';
+import { Layer, QueryMask, groups } from '@/physics/Layers';
 
 export type EncounterIntent =
   | { kind: 'hit'; origin: Point3; direction: Point3; strike: EncounterStrike; actorId: string }
@@ -143,6 +143,23 @@ export class EncounterSystem implements System {
     return this.model.canStrike(point(origin), point(direction), strike);
   }
 
+  resolveMelee(origin: THREE.Vector3, direction: THREE.Vector3,
+    attackerId = 'solo'): EncounterMeleeResult {
+    if (!this.authoritative) return { outcome: 'whoosh' };
+    const actor = this.currentTargets.find(target => target.id === attackerId);
+    if (!actor || origin.distanceTo(new THREE.Vector3(...actor.position)) > 2.8)
+      return { outcome: 'whoosh' };
+    const result = this.model.resolveMelee(point(origin), point(direction), attackerId, contact => {
+      if (contact.distance < 0.12) return false;
+      const ray = new THREE.Vector3(...contact.direction);
+      const obstruction = this.g.physics.raycast(origin, ray, contact.distance,
+        QueryMask.solid, this.g.player.body);
+      return !!obstruction && obstruction.distance < contact.distance - 0.08;
+    });
+    if (result.hit) this.publishHit(result.hit, attackerId);
+    return result;
+  }
+
   tryHit(origin: THREE.Vector3, direction: THREE.Vector3, strike: EncounterStrike,
     attackerId = 'solo'): EncounterHit | null {
     if (!this.authoritative) {
@@ -155,6 +172,11 @@ export class EncounterSystem implements System {
     if (!actor || Math.hypot(origin.x - actor.position[0], origin.y - actor.position[1],
       origin.z - actor.position[2]) > 4.5) return null;
     const result = this.model.tryHit(point(origin), point(direction), strike, attackerId);
+    if (result) this.publishHit(result, attackerId);
+    return result;
+  }
+
+  private publishHit(result: EncounterHit, attackerId: string): void {
     if (result?.releasedVictimId !== undefined) this.release(result.releasedVictimId, 'defeat');
     if (result?.defeated) {
       const state = this.model.get(result.kind);
@@ -162,7 +184,6 @@ export class EncounterSystem implements System {
       this.onDefeated?.(result.kind, position.clone(), attackerId);
       this.emit('encounter:defeated', { kind: result.kind, position, actorId: attackerId });
     }
-    return result;
   }
 
   offerBait(position: THREE.Vector3, actorId = 'solo'): boolean {
