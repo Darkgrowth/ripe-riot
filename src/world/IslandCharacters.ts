@@ -6,6 +6,7 @@ import type { Fruit } from '@/fruit/Fruit';
 import type { FruitSystem } from '@/fruit/FruitSystem';
 import type { RopeSystem } from '@/systems/RopeSystem';
 import type { Sunpatch } from './Sunpatch';
+import { voxelGullBodyGeometry, voxelGullFaceGeometry, voxelGullWingGeometry } from '../art/voxel/VoxelGull';
 
 type Point = [number, number, number];
 type GullPhase = 'perched' | 'approach' | 'return' | 'scared';
@@ -545,6 +546,10 @@ export class IslandCharacters implements System {
   }
 
   private buildGull(): void {
+    if (typeof window !== 'undefined'
+      && (window as unknown as { __RIPE_VISUAL_MODE?: string }).__RIPE_VISUAL_MODE === 'voxel') {
+      this.buildVoxelGull(); return;
+    }
     this.gull.name = 'SunpatchGull';
     this.gull.add(mesh([
       ellipsoid([0, 0.23, 0], [0.20, 0.23, 0.35], 0xf0eee0),
@@ -577,6 +582,26 @@ export class IslandCharacters implements System {
       g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
       const wm = new THREE.Mesh(g, this.material); wm.scale.x = s; wm.castShadow = true;
       wing.add(wm); this.gull.add(wing); this.wings.push(wing);
+    }
+  }
+
+  private buildVoxelGull(): void {
+    this.gull.name = 'SunpatchGull';
+    const body = new THREE.Mesh(voxelGullBodyGeometry(), this.material);
+    body.name = 'GullVoxelBody'; body.castShadow = true; body.receiveShadow = true;
+    this.gull.add(body);
+
+    this.gullHead.position.set(0, 0.40, 0.19);
+    const face = new THREE.Mesh(voxelGullFaceGeometry(), this.material);
+    face.name = 'GullVoxelFace'; face.castShadow = true; face.receiveShadow = true;
+    this.gullHead.add(face); this.gull.add(this.gullHead);
+
+    for (const s of [-1, 1]) {
+      const wing = new THREE.Group(); wing.position.set(s * 0.15, 0.32, -0.02);
+      const feathers = new THREE.Mesh(voxelGullWingGeometry(), this.material);
+      feathers.name = 'GullVoxelWing'; feathers.scale.x = s;
+      feathers.castShadow = true; feathers.receiveShadow = true;
+      wing.add(feathers); this.gull.add(wing); this.wings.push(wing);
     }
   }
 
