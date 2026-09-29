@@ -1,0 +1,21 @@
+PASS both players enter cooperative failure mode
+PASS only the targeted client receives host-approved damage
+PASS client sees the nearby downed host
+PASS client hold revives the host over the network
+PASS host sees the nearby downed client
+PASS host hold revives the client over the network
+PASS client melee reaches host authority and returns in encounter snapshots
+PASS client objective advances from the host encounter milestone
+PASS client Air Cannon damages host-owned King Vine through a validated intent (health 6 -> 4, phase recover)
+PASS harvest warning replicates before release
+PASS released crop ledger reaches the client
+PASS removed prize is consumed on the client without replenishment
+PASS a remote settlement away from the dock is refused
+PASS a nearby remote settlement completes on host and client
+PASS settlement presents the paid result without duplicating money
+PASS host result counters reach the guest before settlement
+PASS host migration preserves consumed prizes and the pending dock return
+PASS promotion before settlement freezes the original host expedition statistics ({"payout":9500,"money":0,"lifetimeEarned":10437,"fruitSold":17,"discovered":0,"bestSale":320,"playtime":0,"settledAt":24.23333333333324})
+PASS promoted settlement and duplicate interaction do not award money again
+PASS both clients run without browser errors
+20/20 checks passed

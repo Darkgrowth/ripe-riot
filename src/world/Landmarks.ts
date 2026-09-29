@@ -13,6 +13,8 @@ import { voxelBarrelGeometry, voxelSackGeometry } from '@/art/voxel/VoxelShop';
 import { VoxelVolume } from '@/art/voxel/VoxelSurface';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { VisualMode } from '@/art/voxel/VisualMode';
+import { KING_MELON_ANCHOR_FEET } from './LegendaryLayout';
+import { buildMelonReceiver } from './MelonReceiver';
 
 const C = (hex: number) => new THREE.Color().setHex(hex, THREE.SRGBColorSpace);
 
@@ -83,11 +85,12 @@ export interface BuiltLandmarks {
   kingMelonPos: THREE.Vector3;
   /** Vine anchor points on the ravine rim, all above the melon. */
   kingMelonAnchors: THREE.Vector3[];
-  /** The board by the counter that lists the islands, and its two faces. */
+  /** The mission board by the counter, with its three expedition stages. */
   islandBoard: THREE.Mesh;
   islandBoardLocked: THREE.CanvasTexture;
   islandBoardOpen: THREE.CanvasTexture;
-  /** The pennant that goes up on the boat when the next island opens. */
+  islandBoardSettled: THREE.CanvasTexture;
+  /** The pennant that goes up when the first expedition is settled. */
   boatFlag: THREE.Group;
 }
 
@@ -783,10 +786,12 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   b.box(1.25, 0.95, 0.05, CHALK, false, [0, 1.15, 0.0]);
   b.pop();
   const boardStyle = { w: 512, h: 384, bg: '#2f3a35', fg: '#f0e6c8', accent: '#556058', lineScale: 1.25 };
-  const islandBoardLocked = signTexture(['SUNPATCH  ✓', 'GALE GROVE  — LOCKED', 'bring me the King Melon'],
-    { title: 'ISLANDS', ...boardStyle });
-  const islandBoardOpen = signTexture(['SUNPATCH  ✓', 'GALE GROVE  ✓ OPEN', 'boat leaves when it floats'],
-    { title: 'ISLANDS', ...boardStyle });
+  const islandBoardLocked = signTexture(['KING MELON  $9,500', 'HARVEST THE GIANT', 'DELIVER TO MARKED PAD'],
+    { title: 'SUNPATCH JOB', ...boardStyle });
+  const islandBoardOpen = signTexture(['KING MELON SECURED', 'RETURN TO THE BOAT', 'SETTLE MERV’S BOOKS'],
+    { title: 'SUNPATCH JOB', ...boardStyle });
+  const islandBoardSettled = signTexture(['EXPEDITION COMPLETE', 'KING MELON HOME', 'SUNPATCH STILL OPEN'],
+    { title: 'SUNPATCH JOB', ...boardStyle });
   const boardPos = new THREE.Vector3(3.3, 0, front + 2.3)
     .add(new THREE.Vector3(0, 1.15, 0.14).applyAxisAngle(new THREE.Vector3(0, 1, 0), -0.55))
     .applyAxisAngle(new THREE.Vector3(0, 1, 0), shopRot)
@@ -969,6 +974,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   };
   fingerboard(-28.8, 0.7, -24, 22, ['BOULDER PLUMS AHEAD', 'ROPE · BLAST · CATCH'], 'HILL FARM ↑');
   fingerboard(-24.7, -38.3, -36, -30, ['THE KING MELON', 'fight · cut · haul'], 'THE RAVINE ↑');
+  fingerboard(-38.2, -37, -36, -30, ['HIGH GROUND ACCESS', 'PUSH THE MELON DOWNHILL'], 'RIDGE RECOVERY ↑');
   // A hand cart parked on the apron.
   b.reset().translate(shopX, shopY, shopZ).rotateY(shopRot);
   b.push().translate(-5.4, 0, 6.2).rotateY(1.2);
@@ -1306,24 +1312,11 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   // them. Doing it the other way round put every anchor beneath the fruit,
   // which meant four enormous vines that could not hold up anything at all.
   const kmX = 8, kmZ = -62;
-  // Anchors are SEARCHED for rather than assumed: each quadrant is sampled for
-  // its highest ground within reach, because hand-picked rim coordinates landed
-  // on low ground and produced four enormous vines running downward from the
-  // fruit, which of course could not hold it up at all.
-  const kingMelonAnchors: THREE.Vector3[] = [];
-  for (let q = 0; q < 4; q++) {
-    let best: THREE.Vector3 | null = null;
-    for (let s2 = 0; s2 < 9; s2++) {
-      const a = (q / 4) * Math.PI * 2 + Math.PI / 4 + (s2 - 4) * 0.12;
-      for (const r of [20, 24, 28, 32]) {
-        const ax = kmX + Math.cos(a) * r;
-        const az = kmZ + Math.sin(a) * r;
-        const ay = ground(ax, az);
-        if (!best || ay > best.y) best = new THREE.Vector3(ax, ay, az);
-      }
-    }
-    if (best) kingMelonAnchors.push(best.setY(best.y + 4.5));
-  }
+  // Preserve the original quadrant search's approved result. Re-running that
+  // search after a walking-path grade silently relocates the suspension rig.
+  const kingMelonAnchors = KING_MELON_ANCHOR_FEET.map(
+    ([x, y, z]) => new THREE.Vector3(x, y + 4.5, z),
+  );
   const lowestAnchor = Math.min(...kingMelonAnchors.map((a) => a.y));
   const ravineFloor = ground(kmX, kmZ);
   // Hang it well below every anchor and well above the floor, so the vines
@@ -1340,6 +1333,8 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   // whiskers disappearing into an empty sky, and the whole thing stops looking
   // like it is attached to the island at all.
   buildAnchorCrags(b, physics, terrain, kingMelonAnchors);
+  buildMelonReceiver(b, terrain);
+  fingerboard(22.5, -43, 12, -48, ['LET IT REST IN THE GOLD', 'THEN RETURN TO THE DOCK'], 'MERV\'S CATCH RACK');
 
   // The vines themselves belong to LegendaryHarvestSystem: they are real rope
   // constraints that can be cut, not decoration, so they are not baked in here.
@@ -1434,7 +1429,7 @@ export function buildLandmarks(scene: THREE.Scene, physics: PhysicsWorld, terrai
   return {
     mesh, waterfall, signs, dock, sellPad, sellRadius: 3.2, shopCounter,
     kingMelon, kingMelonPos, kingMelonAnchors,
-    islandBoard, islandBoardLocked, islandBoardOpen, boatFlag,
+    islandBoard, islandBoardLocked, islandBoardOpen, islandBoardSettled, boatFlag,
   };
 }
 

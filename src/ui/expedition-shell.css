@@ -1,0 +1,53 @@
+.expedition-shell {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  pointer-events: auto;
+  overflow: auto;
+  background: linear-gradient(110deg, rgba(8, 29, 35, .88), rgba(16, 42, 43, .70));
+}
+.expedition-shell[hidden], .expedition-controls[hidden] { display: none; }
+.expedition-card {
+  width: min(670px, 100%);
+  padding: clamp(26px, 4vh, 54px);
+  color: #fff8e7;
+  background: rgba(21, 49, 46, .97);
+  border: 2px solid #b1b684;
+  border-radius: 16px;
+  box-shadow: 0 22px 90px rgba(0, 0, 0, .5);
+}
+.expedition-kicker { margin: 0 0 8px; color: #f2ce70; letter-spacing: .18em; font-size: 12px; font-weight: 800; }
+.expedition-card h1 { margin: 0 0 14px; color: #ffce65; font-size: clamp(34px, 4.2vh, 56px); line-height: 1.05; letter-spacing: .035em; }
+.expedition-card > p:not(.expedition-kicker):not(.expedition-status) { max-width: 55ch; margin: 0 0 24px; font-size: clamp(15px, 1.5vh, 18px); line-height: 1.5; }
+.expedition-actions { display: grid; gap: 10px; }
+.expedition-actions button, .expedition-secondary button {
+  cursor: pointer; border: 1px solid #c9c89d; border-radius: 9px;
+  padding: 13px 16px; color: #173530; background: #f5d47d;
+  font: 800 16px/1.2 var(--ui-font);
+  text-align: left;
+}
+.expedition-actions button:hover, .expedition-actions button:focus-visible,
+.expedition-secondary button:hover, .expedition-secondary button:focus-visible {
+  outline: 2px solid #fff5d2; outline-offset: 2px; background: #ffe5a1;
+}
+.expedition-actions button + button { background: transparent; color: #f3e8c9; }
+.expedition-actions button + button:hover, .expedition-actions button + button:focus-visible { background: #355b50; }
+.expedition-secondary { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.expedition-secondary button { padding: 8px 12px; color: #eee8d4; background: #2a5149; font-size: 13px; }
+.expedition-controls { margin-top: 16px; padding: 14px; background: #14342e; border-radius: 8px; font-size: 13px; line-height: 1.5; }
+.expedition-controls p { margin: 3px 0 8px; }
+.expedition-status { margin: 17px 0 10px; color: #c5dbc6; font-size: 12px; line-height: 1.45; }
+.expedition-build { color: #a7baa9; font-size: 11px; letter-spacing: .08em; }
+.expedition-results { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 18px 0 24px; }
+.expedition-results > div { padding: 11px; background: #1d4039; border-radius: 7px; }
+.expedition-results span { display: block; color: #c7d3c3; font-size: 12px; }
+.expedition-results strong { display: block; margin-top: 4px; color: #f6d586; font-size: 22px; }
+.expedition-menu-open .audio-settings { z-index: 60; }
+@media (max-width: 620px) {
+  .expedition-shell { padding: 12px; align-items: start; }
+  .expedition-card { padding: 24px; }
+  .expedition-results { grid-template-columns: 1fr; }
+}

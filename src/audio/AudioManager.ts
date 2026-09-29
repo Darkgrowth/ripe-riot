@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import type { Game, System } from '@/core/Game';
 import { MusicDirector, type MusicMood } from './MusicDirector';
+import type { EncounterNetState } from '@/enemies/EncounterModel';
+import type { KingVineNetState } from '@/boss/KingVine';
 
 export type AudioChannel = 'master' | 'music' | 'sfx' | 'ambience';
 export interface AudioSettings { master: number; music: number; sfx: number; ambience: number; muted: boolean; }
@@ -288,6 +290,17 @@ export class AudioManager implements System {
     let mood: MusicMood = this.g.player.speed > 5 ? 'busy' : 'calm';
     if (event?.phase === 'warning') mood = 'busy';
     if (event?.phase === 'active') mood = event.kind === 'coconuts' || event.remaining < 12 ? 'trouble' : 'busy';
+    const player = this.g.player.position;
+    const world = this.g.has('world')
+      ? this.g.get<{ spawnPoint: THREE.Vector3; shopCounter: THREE.Vector3 }>('world') : null;
+    const safeDock = !!world && [world.spawnPoint, world.shopCounter].some((at, i) =>
+      Math.hypot(player.x - at.x, player.z - at.z) < (i === 0 ? 14 : 8)
+      && Math.abs(player.y - at.y) < 3.5);
+    const encounters = this.g.has('encounters')
+      ? this.g.get<{ snapshot(): EncounterNetState }>('encounters').snapshot() : null;
+    const boss = this.g.has('kingVine')
+      ? this.g.get<Pick<KingVineNetState, 'center' | 'phase' | 'health'>>('kingVine') : null;
+    if (nearbyEncounterDanger([player.x, player.y, player.z], encounters, boss, safeDock)) mood = 'trouble';
     // Save restoration can set the phase before audio subscribes to events.
     // Read the live system when available; isolated fixtures can use the bus.
     if (this.g.has('legendary')) this.legendaryPhase = this.g.get<{ phase: string }>('legendary').phase;
@@ -584,3 +597,21 @@ const _v = new THREE.Vector3();
 const _right = new THREE.Vector3();
 
 export const SOUND_NAMES = Object.keys(VOICES);
+
+/** Music follows a nearby committed fight, never just a dormant site's location.
+ * The existing MusicDirector owns bar-aligned fades and prevents rapid restarts. */
+export function nearbyEncounterDanger(position: readonly number[],
+  snapshot: Pick<EncounterNetState, 'encounters' | 'projectiles'> | null,
+  boss: Pick<KingVineNetState, 'center' | 'phase' | 'health'> | null,
+  safeDock = false): boolean {
+  if (safeDock) return false;
+  const near = (at: readonly number[], radius: number, height = 7) =>
+    Math.hypot(position[0] - at[0], position[2] - at[2]) <= radius
+      && Math.abs(position[1] - at[1]) <= height;
+  if (snapshot?.encounters.some(s => s.health > 0 && !s.dormant && !s.returning
+    && ['warn', 'attack', 'stagger', 'recover'].includes(s.phase)
+    && near(s.position, s.kind === 'spitter' ? 22 : s.kind === 'snapjaw' ? 10 : 15))) return true;
+  if (snapshot?.projectiles.some(p => !p.reflectedBy && p.timeLeft > 0 && near(p.position, 10))) return true;
+  return !!boss && boss.health > 0 && ['telegraph', 'sweep', 'seed', 'recover'].includes(boss.phase)
+    && near(boss.center, 30, 12);
+}

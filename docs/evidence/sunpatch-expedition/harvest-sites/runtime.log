@@ -1,0 +1,11 @@
+PASS Mimic stays dormant beside ordinary orchard traversal 
+PASS normal E targets authored melon {"carrying":null,"carryClass":"small","lastRefusal":null,"basket":0,"basketMass":0,"basketValue":0,"target":{"id":683,"species":"watermelon"},"targetKind":"fruit","prompt":"<b>E</b> Inspect the overloaded crop — $163","nearSellPad":false,"carriedId":-1,"basketIds":[],"pendingSells":0,"stuckHands":0,"pricks":0}
+PASS first real E warns 
+PASS first E leaves every prize attached 
+PASS second real E releases harvest and wakes Mimic 
+PASS prize is a real carried fruit {"carrying":{"id":683,"species":"watermelon","heavy":true,"mass":22,"cls":"large","diameter":0.8},"carryClass":"large","lastRefusal":null,"basket":0,"basketMass":0,"basketValue":0,"target":{"id":684,"species":"watermelon"},"targetKind":"fruit","prompt":"<b>E</b> Pick Watermelon — $163","nearSellPad":false,"carriedId":683,"basketIds":[],"pendingSells":0,"stuckHands":0,"pricks":0}
+PASS released site survives save restore without another activation 
+PASS restored prize can be retrieved 
+PASS real sale consumes the authored prize ledger 
+PASS repeated restore cannot mint sold prize or pay another reward {"money":163,"fruit":"absent"}
+PASS no runtime exceptions []

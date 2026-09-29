@@ -4,6 +4,21 @@ import { KingVine } from '../../src/boss/KingVine.ts';
 
 const target = { id: 'player-1', position: [0, 0, 7] };
 
+test('solo guardian waits for an active player whose recovery grace has ended', () => {
+  const boss = new KingVine({ center: [0, 0, 0] });
+  const player = { state: 'downed', position: { x: 0, y: 0, z: 7 } };
+  const vitals = { downed: true, recoveryGraceRemaining: 0 };
+  boss.g = { player, has: name => name === 'vitals', get: () => vitals };
+  boss.fixedStep(.1);
+  assert.equal(boss.phase, 'idle', 'a downed player is not a new attack target');
+  player.state = 'active'; vitals.downed = false; vitals.recoveryGraceRemaining = 2;
+  boss.fixedStep(.1);
+  assert.equal(boss.phase, 'idle', 'recovery gives time to move clear');
+  vitals.recoveryGraceRemaining = 0;
+  boss.fixedStep(.1);
+  assert.equal(boss.phase, 'telegraph', 'normal danger resumes after grace');
+});
+
 test('vine sweep warns before hitting a target, and hits that target once', () => {
   const hits = [];
   const boss = new KingVine({ center: [0, 0, 0], onDamagePlayer: (...args) => hits.push(args) });
@@ -78,4 +93,23 @@ test('client applies newer snapshots but does not run attacks or accept local hi
   assert.equal(client.applySnapshot(state), true);
   assert.equal(client.phase, 'telegraph');
   assert.equal(client.applySnapshot(state), false);
+});
+
+test('a saved subdued King Vine restores silently and stays down until explicit reset', () => {
+  let paid = 0;
+  const boss = new KingVine({ center: [0, 0, 0], onSubdued: () => paid++ });
+  boss.restoreSubdued();
+  boss.restoreSubdued();
+  assert.equal(boss.subdued, true);
+  assert.equal(boss.health, 0);
+  assert.equal(boss.snapshot().projectile, null);
+  assert.equal(paid, 0);
+  boss.fixedStep(10);
+  assert.equal(boss.subdued, true);
+  boss.reset();
+  assert.equal(boss.subdued, false);
+
+  const client = new KingVine({ center: [0, 0, 0], authoritative: false });
+  client.restoreSubdued();
+  assert.equal(client.subdued, false);
 });

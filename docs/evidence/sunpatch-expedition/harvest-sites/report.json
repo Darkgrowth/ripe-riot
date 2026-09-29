@@ -1,0 +1,2058 @@
+{
+  "url": "http://127.0.0.1:5245",
+  "fixture": "Teleport and aim establish site views; E is real keyboard input. Save/restore and cover cases are explicitly isolated fixtures.",
+  "checks": [
+    {
+      "ok": true,
+      "label": "Mimic stays dormant beside ordinary orchard traversal",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "label": "normal E targets authored melon",
+      "detail": {
+        "carrying": null,
+        "carryClass": "small",
+        "lastRefusal": null,
+        "basket": 0,
+        "basketMass": 0,
+        "basketValue": 0,
+        "target": {
+          "id": 683,
+          "species": "watermelon"
+        },
+        "targetKind": "fruit",
+        "prompt": "<b>E</b> Inspect the overloaded crop — $163",
+        "nearSellPad": false,
+        "carriedId": -1,
+        "basketIds": [],
+        "pendingSells": 0,
+        "stuckHands": 0,
+        "pricks": 0
+      }
+    },
+    {
+      "ok": true,
+      "label": "first real E warns",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "label": "first E leaves every prize attached",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "label": "second real E releases harvest and wakes Mimic",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "label": "prize is a real carried fruit",
+      "detail": {
+        "carrying": {
+          "id": 683,
+          "species": "watermelon",
+          "heavy": true,
+          "mass": 22,
+          "cls": "large",
+          "diameter": 0.8
+        },
+        "carryClass": "large",
+        "lastRefusal": null,
+        "basket": 0,
+        "basketMass": 0,
+        "basketValue": 0,
+        "target": {
+          "id": 684,
+          "species": "watermelon"
+        },
+        "targetKind": "fruit",
+        "prompt": "<b>E</b> Pick Watermelon — $163",
+        "nearSellPad": false,
+        "carriedId": 683,
+        "basketIds": [],
+        "pendingSells": 0,
+        "stuckHands": 0,
+        "pricks": 0
+      }
+    },
+    {
+      "ok": true,
+      "label": "released site survives save restore without another activation",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "label": "restored prize can be retrieved",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "label": "real sale consumes the authored prize ledger",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "label": "repeated restore cannot mint sold prize or pay another reward",
+      "detail": {
+        "money": 163,
+        "fruit": "absent"
+      }
+    },
+    {
+      "ok": true,
+      "label": "no runtime exceptions",
+      "detail": []
+    }
+  ],
+  "errors": [],
+  "sites": [
+    {
+      "id": "orchard-mimic",
+      "kind": "mimic",
+      "plantId": 682,
+      "fruitIds": [
+        683,
+        684,
+        685
+      ],
+      "position": [
+        -23,
+        7.5,
+        25
+      ],
+      "phase": "quiet",
+      "released": [],
+      "consumed": []
+    },
+    {
+      "id": "snapjaw-cache",
+      "kind": "snapjaw",
+      "plantId": 686,
+      "fruitIds": [
+        687,
+        688
+      ],
+      "position": [
+        -26.8,
+        7.5,
+        9.1
+      ],
+      "phase": "active",
+      "released": [],
+      "consumed": []
+    },
+    {
+      "id": "spitter-slope",
+      "kind": "spitter",
+      "plantId": 680,
+      "fruitIds": [
+        681
+      ],
+      "position": [
+        -35,
+        20.719462067194964,
+        -11.5
+      ],
+      "phase": "active",
+      "released": [],
+      "consumed": []
+    }
+  ],
+  "before": {
+    "ready": true,
+    "tick": 135,
+    "elapsed": 2.25,
+    "fps": 78.8,
+    "player": {
+      "pos": [
+        -23,
+        7.52,
+        27.6
+      ],
+      "vel": [
+        0,
+        0,
+        0
+      ],
+      "yaw": 0.1012,
+      "pitch": -0.4745,
+      "grounded": true,
+      "speed": 0,
+      "state": "active",
+      "height": 1.82
+    },
+    "physics": {
+      "bodies": 708,
+      "active": 1
+    },
+    "render": {
+      "drawCalls": 148,
+      "triangles": 3358682,
+      "geometries": 145,
+      "textures": 23,
+      "programs": 35
+    },
+    "profile": {
+      "physics": 0,
+      "fixed": 0,
+      "frame": 4.5,
+      "render": 2.5,
+      "total": 7
+    },
+    "economy": {
+      "money": 0,
+      "lifetime": 0,
+      "sold": 0,
+      "tier": 0,
+      "points": 0,
+      "best": 0
+    },
+    "fruit": {
+      "attached": 530,
+      "free": 0,
+      "carried": 0,
+      "stowed": 0,
+      "total": 530,
+      "plants": 157,
+      "drawn": 530,
+      "species": 10,
+      "drawBatches": 13,
+      "regrowQueued": 0,
+      "byState": {
+        "apple:attached": 195,
+        "orange:attached": 78,
+        "watermelon:attached": 13,
+        "puffmelon:attached": 36,
+        "boulderplum:attached": 9,
+        "coconut:attached": 120,
+        "banana:attached": 26,
+        "spikefruit:attached": 24,
+        "gluefruit:attached": 22,
+        "vinebomb:attached": 7
+      }
+    },
+    "ragdoll": {
+      "active": false,
+      "timer": 0,
+      "knockdowns": 0,
+      "lastSource": "",
+      "lastSpeed": 0,
+      "parts": 0
+    },
+    "safeRecovery": {
+      "checkpoint": [
+        -23.00000173068765,
+        7.62,
+        27.599997435988463
+      ],
+      "holding": 0
+    },
+    "vitals": {
+      "health": 100,
+      "maxHealth": 100,
+      "downed": false,
+      "wiped": false,
+      "reviveProgress": 0,
+      "soloRecoveryRemaining": 0,
+      "bleedoutRemaining": 0,
+      "source": "",
+      "authoritative": true,
+      "recoveryGraceRemaining": 0
+    },
+    "encounters": {
+      "authoritative": true,
+      "sites": [
+        {
+          "id": "orchard-mimic",
+          "kind": "mimic",
+          "plantId": 682,
+          "fruitIds": [
+            683,
+            684,
+            685
+          ],
+          "position": [
+            -23,
+            7.5,
+            25
+          ],
+          "phase": "quiet",
+          "released": [],
+          "consumed": []
+        },
+        {
+          "id": "snapjaw-cache",
+          "kind": "snapjaw",
+          "plantId": 686,
+          "fruitIds": [
+            687,
+            688
+          ],
+          "position": [
+            -26.8,
+            7.5,
+            9.1
+          ],
+          "phase": "active",
+          "released": [],
+          "consumed": []
+        },
+        {
+          "id": "spitter-slope",
+          "kind": "spitter",
+          "plantId": 680,
+          "fruitIds": [
+            681
+          ],
+          "position": [
+            -35,
+            20.719462067194964,
+            -11.5
+          ],
+          "phase": "active",
+          "released": [],
+          "consumed": []
+        }
+      ],
+      "bait": {
+        "pending": 0,
+        "accepted": 0
+      },
+      "revision": 135,
+      "projectiles": [],
+      "threats": {
+        "mimic": {
+          "phase": "idle",
+          "health": 3,
+          "timeLeft": 0,
+          "pos": [
+            -23,
+            7.5,
+            22
+          ],
+          "heading": 0,
+          "dormant": true,
+          "returning": false,
+          "baited": false,
+          "capturedVictimId": null,
+          "captureTimeLeft": 0
+        },
+        "snapjaw": {
+          "phase": "idle",
+          "health": 2,
+          "timeLeft": 0,
+          "pos": [
+            -28,
+            7.5,
+            11
+          ],
+          "heading": 0,
+          "dormant": false,
+          "returning": false,
+          "baited": false,
+          "capturedVictimId": null,
+          "captureTimeLeft": 0
+        },
+        "spitter": {
+          "phase": "idle",
+          "health": 2,
+          "timeLeft": 0,
+          "pos": [
+            -31,
+            16.302,
+            -8
+          ],
+          "heading": 0,
+          "dormant": false,
+          "returning": false,
+          "baited": false,
+          "capturedVictimId": null,
+          "captureTimeLeft": 0
+        }
+      }
+    },
+    "kingVine": {
+      "health": 6,
+      "maxHealth": 6,
+      "phase": "idle",
+      "attack": "sweep",
+      "timeLeft": 0,
+      "targetCount": 1,
+      "projectile": null,
+      "subdued": false,
+      "authoritative": true,
+      "generation": 0
+    },
+    "interaction": {
+      "carrying": null,
+      "carryClass": "small",
+      "lastRefusal": null,
+      "basket": 0,
+      "basketMass": 0,
+      "basketValue": 0,
+      "target": {
+        "id": 683,
+        "species": "watermelon"
+      },
+      "targetKind": "fruit",
+      "prompt": "<b>E</b> Inspect the overloaded crop — $163",
+      "nearSellPad": false,
+      "carriedId": -1,
+      "basketIds": [],
+      "pendingSells": 0,
+      "stuckHands": 0,
+      "pricks": 0
+    },
+    "ropes": {
+      "count": 4,
+      "shared": 0,
+      "mirrors": 0,
+      "taut": 0,
+      "list": [
+        {
+          "id": 689,
+          "len": 33.3,
+          "dist": 33.3,
+          "tension": 0,
+          "a": -1,
+          "b": -200,
+          "ak": "world",
+          "bk": "legendary",
+          "held": false,
+          "owner": null,
+          "cid": null,
+          "mirror": false,
+          "acked": null
+        },
+        {
+          "id": 690,
+          "len": 33.3,
+          "dist": 33.3,
+          "tension": 0,
+          "a": -1,
+          "b": -200,
+          "ak": "world",
+          "bk": "legendary",
+          "held": false,
+          "owner": null,
+          "cid": null,
+          "mirror": false,
+          "acked": null
+        },
+        {
+          "id": 691,
+          "len": 22.01,
+          "dist": 22.01,
+          "tension": 0,
+          "a": -1,
+          "b": -200,
+          "ak": "world",
+          "bk": "legendary",
+          "held": false,
+          "owner": null,
+          "cid": null,
+          "mirror": false,
+          "acked": null
+        },
+        {
+          "id": 692,
+          "len": 29.47,
+          "dist": 29.47,
+          "tension": 0,
+          "a": -1,
+          "b": -200,
+          "ak": "world",
+          "bk": "legendary",
+          "held": false,
+          "owner": null,
+          "cid": null,
+          "mirror": false,
+          "acked": null
+        }
+      ]
+    },
+    "scoring": {
+      "tracked": 0,
+      "totalAwarded": 0,
+      "best": 1,
+      "seen": []
+    },
+    "fx": {
+      "alive": 0,
+      "spawned": 0,
+      "enabled": true
+    },
+    "tools": {
+      "slots": [
+        "hand",
+        null,
+        null,
+        "basket"
+      ],
+      "active": "hand",
+      "owned": [
+        "hand",
+        "basket",
+        "ladder"
+      ],
+      "status": "",
+      "cooldown": 0
+    },
+    "viewmodel": {
+      "tool": "hand",
+      "handsSource": "glb",
+      "stow": 0,
+      "kick": 0,
+      "visible": true,
+      "cached": 1,
+      "toolShown": true,
+      "carryShown": false,
+      "carryClass": "small",
+      "carryHeightPct": 0
+    },
+    "shop": {
+      "open": false,
+      "near": false,
+      "purchased": [],
+      "offers": 8,
+      "pendingBuy": null
+    },
+    "book": {
+      "discovered": 0,
+      "species": 10,
+      "harvested": 0,
+      "variants": 0,
+      "open": false
+    },
+    "legendary": {
+      "phase": "prepare",
+      "vines": 4,
+      "cut": 0,
+      "tethers": 0,
+      "dropTetherCount": 0,
+      "required": 2,
+      "held": 0,
+      "authoritative": true,
+      "gen": 0,
+      "remoteGen": -1,
+      "paid": 0,
+      "pos": [
+        8,
+        38.9,
+        -62
+      ],
+      "speed": 0,
+      "mass": 2600,
+      "fixed": true,
+      "inPad": false,
+      "distanceToPad": 6,
+      "highTethers": 0,
+      "firstSight": -1
+    },
+    "progress": {
+      "islands": [
+        "sunpatch"
+      ],
+      "nextIsland": false,
+      "shown": [],
+      "milestones": {},
+      "objective": "Follow the orchard path. Investigate the moving fruit.",
+      "threatsCleared": []
+    },
+    "director": {
+      "event": {
+        "id": 0,
+        "kind": null,
+        "phase": "idle",
+        "remaining": 0,
+        "targets": [],
+        "plants": [],
+        "released": 0,
+        "at": [
+          0,
+          0,
+          0
+        ],
+        "progress": 0,
+        "goal": 0,
+        "reward": 0,
+        "species": [],
+        "counted": [],
+        "paid": false,
+        "result": ""
+      },
+      "sequence": 0,
+      "cooldown": 0,
+      "last": null,
+      "firstPick": false,
+      "firstSale": false,
+      "introDone": false,
+      "introDelay": 12,
+      "orders": 0,
+      "authoritative": true,
+      "automatic": false
+    },
+    "audio": {
+      "running": "running",
+      "played": 0,
+      "last": "",
+      "enabled": true,
+      "settings": {
+        "master": 0.7,
+        "music": 0.35,
+        "sfx": 0.9,
+        "ambience": 0.5,
+        "muted": false
+      },
+      "activeVoices": 0,
+      "ambienceSources": 4,
+      "music": {
+        "ready": false,
+        "mood": "calm",
+        "sources": 0,
+        "epoch": 0,
+        "transitionAt": 0,
+        "error": ""
+      },
+      "masterGain": 0.699999988079071
+    },
+    "characters": {
+      "enabled": false,
+      "phase": "perched",
+      "elapsed": 0,
+      "duration": 1,
+      "cooldown": 45,
+      "grace": 12,
+      "target": -1,
+      "pecked": false,
+      "cycle": 0,
+      "from": [
+        -12.5,
+        8.83,
+        32.8
+      ],
+      "to": [
+        -12.5,
+        8.83,
+        32.8
+      ],
+      "pecks": 0,
+      "aborted": 0,
+      "scares": 0,
+      "lastFruit": -1,
+      "lastDeltaSpeed": 0,
+      "gull": [
+        -12.5,
+        8.83,
+        32.8
+      ],
+      "merv": [
+        43.02273267410838,
+        2.8211767578124998,
+        54.398856794800686
+      ],
+      "caption": {
+        "text": "",
+        "remaining": 0
+      },
+      "talkCooldown": 0,
+      "spoken": [],
+      "duck": 0
+    },
+    "characters.info": {
+      "enabled": false,
+      "phase": "perched",
+      "elapsed": 0,
+      "duration": 1,
+      "cooldown": 45,
+      "grace": 12,
+      "target": -1,
+      "pecked": false,
+      "cycle": 0,
+      "from": [
+        -12.5,
+        8.83,
+        32.8
+      ],
+      "to": [
+        -12.5,
+        8.83,
+        32.8
+      ],
+      "pecks": 0,
+      "aborted": 0,
+      "scares": 0,
+      "lastFruit": -1,
+      "lastDeltaSpeed": 0,
+      "gull": [
+        -12.5,
+        8.83,
+        32.8
+      ],
+      "merv": [
+        43.02273267410838,
+        2.8211767578124998,
+        54.398856794800686
+      ],
+      "caption": {
+        "text": "",
+        "remaining": 0
+      },
+      "talkCooldown": 0,
+      "spoken": [],
+      "duck": 0
+    },
+    "net": {
+      "connected": false,
+      "kind": "none",
+      "id": "",
+      "isHost": true,
+      "hostId": "",
+      "peers": 0,
+      "remotes": 0,
+      "pending": 0,
+      "lastDeny": "",
+      "melee": {
+        "accepted": 0,
+        "rejected": 0,
+        "lastReason": ""
+      },
+      "owned": 0,
+      "nodeSeq": 0,
+      "ropes": [],
+      "sent": 0,
+      "received": 0,
+      "intents": 0,
+      "denied": 0,
+      "snapshotBytes": 0,
+      "manifests": 0,
+      "claims": 0,
+      "denials": 0,
+      "sales": 0,
+      "spilled": 0,
+      "buys": 0
+    },
+    "save": {
+      "slot": "auto",
+      "playtime": 0,
+      "lastSaved": 0,
+      "has": false,
+      "enabled": false,
+      "resumed": false
+    }
+  },
+  "warning": {
+    "ready": true,
+    "tick": 173,
+    "elapsed": 2.883,
+    "fps": 70.7,
+    "player": {
+      "pos": [
+        -23,
+        7.52,
+        27.6
+      ],
+      "vel": [
+        0,
+        0,
+        0
+      ],
+      "yaw": 0.1012,
+      "pitch": -0.4745,
+      "grounded": true,
+      "speed": 0,
+      "state": "active",
+      "height": 1.82
+    },
+    "physics": {
+      "bodies": 708,
+      "active": 1
+    },
+    "render": {
+      "drawCalls": 148,
+      "triangles": 3358682,
+      "geometries": 145,
+      "textures": 23,
+      "programs": 35
+    },
+    "profile": {
+      "physics": 2.2,
+      "fixed": 2.8,
+      "frame": 1.7,
+      "render": 7,
+      "total": 13.8
+    },
+    "economy": {
+      "money": 0,
+      "lifetime": 0,
+      "sold": 0,
+      "tier": 0,
+      "points": 0,
+      "best": 0
+    },
+    "fruit": {
+      "attached": 530,
+      "free": 0,
+      "carried": 0,
+      "stowed": 0,
+      "total": 530,
+      "plants": 157,
+      "drawn": 530,
+      "species": 10,
+      "drawBatches": 13,
+      "regrowQueued": 0,
+      "byState": {
+        "apple:attached": 195,
+        "orange:attached": 78,
+        "watermelon:attached": 13,
+        "puffmelon:attached": 36,
+        "boulderplum:attached": 9,
+        "coconut:attached": 120,
+        "banana:attached": 26,
+        "spikefruit:attached": 24,
+        "gluefruit:attached": 22,
+        "vinebomb:attached": 7
+      }
+    },
+    "ragdoll": {
+      "active": false,
+      "timer": 0,
+      "knockdowns": 0,
+      "lastSource": "",
+      "lastSpeed": 0,
+      "parts": 0
+    },
+    "safeRecovery": {
+      "checkpoint": [
+        -23.0000059438158,
+        7.62,
+        27.599991799054898
+      ],
+      "holding": 0
+    },
+    "vitals": {
+      "health": 100,
+      "maxHealth": 100,
+      "downed": false,
+      "wiped": false,
+      "reviveProgress": 0,
+      "soloRecoveryRemaining": 0,
+      "bleedoutRemaining": 0,
+      "source": "",
+      "authoritative": true,
+      "recoveryGraceRemaining": 0
+    },
+    "encounters": {
+      "authoritative": true,
+      "sites": [
+        {
+          "id": "orchard-mimic",
+          "kind": "mimic",
+          "plantId": 682,
+          "fruitIds": [
+            683,
+            684,
+            685
+          ],
+          "position": [
+            -23,
+            7.5,
+            25
+          ],
+          "phase": "warning",
+          "released": [],
+          "consumed": []
+        },
+        {
+          "id": "snapjaw-cache",
+          "kind": "snapjaw",
+          "plantId": 686,
+          "fruitIds": [
+            687,
+            688
+          ],
+          "position": [
+            -26.8,
+            7.5,
+            9.1
+          ],
+          "phase": "active",
+          "released": [],
+          "consumed": []
+        },
+        {
+          "id": "spitter-slope",
+          "kind": "spitter",
+          "plantId": 680,
+          "fruitIds": [
+            681
+          ],
+          "position": [
+            -35,
+            20.719462067194964,
+            -11.5
+          ],
+          "phase": "active",
+          "released": [],
+          "consumed": []
+        }
+      ],
+      "bait": {
+        "pending": 0,
+        "accepted": 0
+      },
+      "revision": 173,
+      "projectiles": [],
+      "threats": {
+        "mimic": {
+          "phase": "idle",
+          "health": 3,
+          "timeLeft": 0,
+          "pos": [
+            -23,
+            7.5,
+            22
+          ],
+          "heading": 0,
+          "dormant": true,
+          "returning": false,
+          "baited": false,
+          "capturedVictimId": null,
+          "captureTimeLeft": 0
+        },
+        "snapjaw": {
+          "phase": "idle",
+          "health": 2,
+          "timeLeft": 0,
+          "pos": [
+            -28,
+            7.5,
+            11
+          ],
+          "heading": 0,
+          "dormant": false,
+          "returning": false,
+          "baited": false,
+          "capturedVictimId": null,
+          "captureTimeLeft": 0
+        },
+        "spitter": {
+          "phase": "idle",
+          "health": 2,
+          "timeLeft": 0,
+          "pos": [
+            -31,
+            16.302,
+            -8
+          ],
+          "heading": 0,
+          "dormant": false,
+          "returning": false,
+          "baited": false,
+          "capturedVictimId": null,
+          "captureTimeLeft": 0
+        }
+      }
+    },
+    "kingVine": {
+      "health": 6,
+      "maxHealth": 6,
+      "phase": "idle",
+      "attack": "sweep",
+      "timeLeft": 0,
+      "targetCount": 1,
+      "projectile": null,
+      "subdued": false,
+      "authoritative": true,
+      "generation": 0
+    },
+    "interaction": {
+      "carrying": null,
+      "carryClass": "small",
+      "lastRefusal": null,
+      "basket": 0,
+      "basketMass": 0,
+      "basketValue": 0,
+      "target": {
+        "id": 683,
+        "species": "watermelon"
+      },
+      "targetKind": "fruit",
+      "prompt": "<b>E</b> Harvest it anyway — something is stirring — $163",
+      "nearSellPad": false,
+      "carriedId": -1,
+      "basketIds": [],
+      "pendingSells": 0,
+      "stuckHands": 0,
+      "pricks": 0
+    },
+    "ropes": {
+      "count": 4,
+      "shared": 0,
+      "mirrors": 0,
+      "taut": 0,
+      "list": [
+        {
+          "id": 689,
+          "len": 33.3,
+          "dist": 33.3,
+          "tension": 0,
+          "a": -1,
+          "b": -200,
+          "ak": "world",
+          "bk": "legendary",
+          "held": false,
+          "owner": null,
+          "cid": null,
+          "mirror": false,
+          "acked": null
+        },
+        {
+          "id": 690,
+          "len": 33.3,
+          "dist": 33.3,
+          "tension": 0,
+          "a": -1,
+          "b": -200,
+          "ak": "world",
+          "bk": "legendary",
+          "held": false,
+          "owner": null,
+          "cid": null,
+          "mirror": false,
+          "acked": null
+        },
+        {
+          "id": 691,
+          "len": 22.01,
+          "dist": 22.01,
+          "tension": 0,
+          "a": -1,
+          "b": -200,
+          "ak": "world",
+          "bk": "legendary",
+          "held": false,
+          "owner": null,
+          "cid": null,
+          "mirror": false,
+          "acked": null
+        },
+        {
+          "id": 692,
+          "len": 29.47,
+          "dist": 29.47,
+          "tension": 0,
+          "a": -1,
+          "b": -200,
+          "ak": "world",
+          "bk": "legendary",
+          "held": false,
+          "owner": null,
+          "cid": null,
+          "mirror": false,
+          "acked": null
+        }
+      ]
+    },
+    "scoring": {
+      "tracked": 0,
+      "totalAwarded": 0,
+      "best": 1,
+      "seen": []
+    },
+    "fx": {
+      "alive": 0,
+      "spawned": 0,
+      "enabled": true
+    },
+    "tools": {
+      "slots": [
+        "hand",
+        null,
+        null,
+        "basket"
+      ],
+      "active": "hand",
+      "owned": [
+        "hand",
+        "basket",
+        "ladder"
+      ],
+      "status": "",
+      "cooldown": 0
+    },
+    "viewmodel": {
+      "tool": "hand",
+      "handsSource": "glb",
+      "stow": 0,
+      "kick": 0,
+      "visible": true,
+      "cached": 1,
+      "toolShown": true,
+      "carryShown": false,
+      "carryClass": "small",
+      "carryHeightPct": 0
+    },
+    "shop": {
+      "open": false,
+      "near": false,
+      "purchased": [],
+      "offers": 8,
+      "pendingBuy": null
+    },
+    "book": {
+      "discovered": 0,
+      "species": 10,
+      "harvested": 0,
+      "variants": 0,
+      "open": false
+    },
+    "legendary": {
+      "phase": "prepare",
+      "vines": 4,
+      "cut": 0,
+      "tethers": 0,
+      "dropTetherCount": 0,
+      "required": 2,
+      "held": 0,
+      "authoritative": true,
+      "gen": 0,
+      "remoteGen": -1,
+      "paid": 0,
+      "pos": [
+        8,
+        38.9,
+        -62
+      ],
+      "speed": 0,
+      "mass": 2600,
+      "fixed": true,
+      "inPad": false,
+      "distanceToPad": 6,
+      "highTethers": 0,
+      "firstSight": -1
+    },
+    "progress": {
+      "islands": [
+        "sunpatch"
+      ],
+      "nextIsland": false,
+      "shown": [],
+      "milestones": {},
+      "objective": "Follow the orchard path. Investigate the moving fruit.",
+      "threatsCleared": []
+    },
+    "director": {
+      "event": {
+        "id": 0,
+        "kind": null,
+        "phase": "idle",
+        "remaining": 0,
+        "targets": [],
+        "plants": [],
+        "released": 0,
+        "at": [
+          0,
+          0,
+          0
+        ],
+        "progress": 0,
+        "goal": 0,
+        "reward": 0,
+        "species": [],
+        "counted": [],
+        "paid": false,
+        "result": ""
+      },
+      "sequence": 0,
+      "cooldown": 0,
+      "last": null,
+      "firstPick": false,
+      "firstSale": false,
+      "introDone": false,
+      "introDelay": 12,
+      "orders": 0,
+      "authoritative": true,
+      "automatic": false
+    },
+    "audio": {
+      "running": "running",
+      "played": 1,
+      "last": "rustle",
+      "enabled": true,
+      "settings": {
+        "master": 0.7,
+        "music": 0.35,
+        "sfx": 0.9,
+        "ambience": 0.5,
+        "muted": false
+      },
+      "activeVoices": 1,
+      "ambienceSources": 4,
+      "music": {
+        "ready": false,
+        "mood": "calm",
+        "sources": 0,
+        "epoch": 0,
+        "transitionAt": 0,
+        "error": ""
+      },
+      "masterGain": 0.699999988079071
+    },
+    "characters": {
+      "enabled": false,
+      "phase": "perched",
+      "elapsed": 0,
+      "duration": 1,
+      "cooldown": 45,
+      "grace": 12,
+      "target": -1,
+      "pecked": false,
+      "cycle": 0,
+      "from": [
+        -12.5,
+        8.83,
+        32.8
+      ],
+      "to": [
+        -12.5,
+        8.83,
+        32.8
+      ],
+      "pecks": 0,
+      "aborted": 0,
+      "scares": 0,
+      "lastFruit": -1,
+      "lastDeltaSpeed": 0,
+      "gull": [
+        -12.5,
+        8.83,
+        32.8
+      ],
+      "merv": [
+        43.02273267410838,
+        2.8211767578124998,
+        54.398856794800686
+      ],
+      "caption": {
+        "text": "",
+        "remaining": 0
+      },
+      "talkCooldown": 0,
+      "spoken": [],
+      "duck": 0
+    },
+    "characters.info": {
+      "enabled": false,
+      "phase": "perched",
+      "elapsed": 0,
+      "duration": 1,
+      "cooldown": 45,
+      "grace": 12,
+      "target": -1,
+      "pecked": false,
+      "cycle": 0,
+      "from": [
+        -12.5,
+        8.83,
+        32.8
+      ],
+      "to": [
+        -12.5,
+        8.83,
+        32.8
+      ],
+      "pecks": 0,
+      "aborted": 0,
+      "scares": 0,
+      "lastFruit": -1,
+      "lastDeltaSpeed": 0,
+      "gull": [
+        -12.5,
+        8.83,
+        32.8
+      ],
+      "merv": [
+        43.02273267410838,
+        2.8211767578124998,
+        54.398856794800686
+      ],
+      "caption": {
+        "text": "",
+        "remaining": 0
+      },
+      "talkCooldown": 0,
+      "spoken": [],
+      "duck": 0
+    },
+    "net": {
+      "connected": false,
+      "kind": "none",
+      "id": "",
+      "isHost": true,
+      "hostId": "",
+      "peers": 0,
+      "remotes": 0,
+      "pending": 0,
+      "lastDeny": "",
+      "melee": {
+        "accepted": 0,
+        "rejected": 0,
+        "lastReason": ""
+      },
+      "owned": 0,
+      "nodeSeq": 0,
+      "ropes": [],
+      "sent": 0,
+      "received": 0,
+      "intents": 0,
+      "denied": 0,
+      "snapshotBytes": 0,
+      "manifests": 0,
+      "claims": 0,
+      "denials": 0,
+      "sales": 0,
+      "spilled": 0,
+      "buys": 0
+    },
+    "save": {
+      "slot": "auto",
+      "playtime": 0,
+      "lastSaved": 0,
+      "has": false,
+      "enabled": false,
+      "resumed": false
+    }
+  },
+  "active": {
+    "ready": true,
+    "tick": 244,
+    "elapsed": 4.067,
+    "fps": 93.7,
+    "player": {
+      "pos": [
+        -23,
+        7.52,
+        27.6
+      ],
+      "vel": [
+        0,
+        0,
+        0
+      ],
+      "yaw": 0.1012,
+      "pitch": -0.4745,
+      "grounded": true,
+      "speed": 0,
+      "state": "active",
+      "height": 1.82
+    },
+    "physics": {
+      "bodies": 707,
+      "active": 1
+    },
+    "render": {
+      "drawCalls": 191,
+      "triangles": 3380890,
+      "geometries": 169,
+      "textures": 23,
+      "programs": 35
+    },
+    "profile": {
+      "physics": 1.3,
+      "fixed": 0.9,
+      "frame": 5,
+      "render": 6.3,
+      "total": 13.5
+    },
+    "economy": {
+      "money": 0,
+      "lifetime": 0,
+      "sold": 0,
+      "tier": 0,
+      "points": 34,
+      "best": 0
+    },
+    "fruit": {
+      "attached": 529,
+      "free": 0,
+      "carried": 1,
+      "stowed": 0,
+      "total": 530,
+      "plants": 157,
+      "drawn": 529,
+      "species": 10,
+      "drawBatches": 13,
+      "regrowQueued": 0,
+      "byState": {
+        "apple:attached": 195,
+        "orange:attached": 78,
+        "watermelon:attached": 12,
+        "puffmelon:attached": 36,
+        "boulderplum:attached": 9,
+        "coconut:attached": 120,
+        "banana:attached": 26,
+        "spikefruit:attached": 24,
+        "gluefruit:attached": 22,
+        "vinebomb:attached": 7,
+        "watermelon:carried": 1
+      }
+    },
+    "ragdoll": {
+      "active": false,
+      "timer": 0,
+      "knockdowns": 0,
+      "lastSource": "",
+      "lastSpeed": 0,
+      "parts": 0
+    },
+    "safeRecovery": {
+      "checkpoint": [
+        -23.000005934960193,
+        7.62,
+        27.599992790821553
+      ],
+      "holding": 0
+    },
+    "vitals": {
+      "health": 100,
+      "maxHealth": 100,
+      "downed": false,
+      "wiped": false,
+      "reviveProgress": 0,
+      "soloRecoveryRemaining": 0,
+      "bleedoutRemaining": 0,
+      "source": "",
+      "authoritative": true,
+      "recoveryGraceRemaining": 0
+    },
+    "encounters": {
+      "authoritative": true,
+      "sites": [
+        {
+          "id": "orchard-mimic",
+          "kind": "mimic",
+          "plantId": 682,
+          "fruitIds": [
+            683,
+            684,
+            685
+          ],
+          "position": [
+            -23,
+            7.5,
+            25
+          ],
+          "phase": "active",
+          "released": [
+            683
+          ],
+          "consumed": []
+        },
+        {
+          "id": "snapjaw-cache",
+          "kind": "snapjaw",
+          "plantId": 686,
+          "fruitIds": [
+            687,
+            688
+          ],
+          "position": [
+            -26.8,
+            7.5,
+            9.1
+          ],
+          "phase": "active",
+          "released": [],
+          "consumed": []
+        },
+        {
+          "id": "spitter-slope",
+          "kind": "spitter",
+          "plantId": 680,
+          "fruitIds": [
+            681
+          ],
+          "position": [
+            -35,
+            20.719462067194964,
+            -11.5
+          ],
+          "phase": "active",
+          "released": [],
+          "consumed": []
+        }
+      ],
+      "bait": {
+        "pending": 0,
+        "accepted": 0
+      },
+      "revision": 245,
+      "projectiles": [],
+      "threats": {
+        "mimic": {
+          "phase": "warn",
+          "health": 3,
+          "timeLeft": 0.633,
+          "pos": [
+            -23,
+            7.5,
+            22
+          ],
+          "heading": 0,
+          "dormant": false,
+          "returning": false,
+          "baited": false,
+          "capturedVictimId": null,
+          "captureTimeLeft": 0
+        },
+        "snapjaw": {
+          "phase": "idle",
+          "health": 2,
+          "timeLeft": 0,
+          "pos": [
+            -28,
+            7.5,
+            11
+          ],
+          "heading": 0,
+          "dormant": false,
+          "returning": false,
+          "baited": false,
+          "capturedVictimId": null,
+          "captureTimeLeft": 0
+        },
+        "spitter": {
+          "phase": "idle",
+          "health": 2,
+          "timeLeft": 0,
+          "pos": [
+            -31,
+            16.302,
+            -8
+          ],
+          "heading": 0,
+          "dormant": false,
+          "returning": false,
+          "baited": false,
+          "capturedVictimId": null,
+          "captureTimeLeft": 0
+        }
+      }
+    },
+    "kingVine": {
+      "health": 6,
+      "maxHealth": 6,
+      "phase": "idle",
+      "attack": "sweep",
+      "timeLeft": 0,
+      "targetCount": 1,
+      "projectile": null,
+      "subdued": false,
+      "authoritative": true,
+      "generation": 0
+    },
+    "interaction": {
+      "carrying": {
+        "id": 683,
+        "species": "watermelon",
+        "heavy": true,
+        "mass": 22,
+        "cls": "large",
+        "diameter": 0.8
+      },
+      "carryClass": "large",
+      "lastRefusal": null,
+      "basket": 0,
+      "basketMass": 0,
+      "basketValue": 0,
+      "target": {
+        "id": 684,
+        "species": "watermelon"
+      },
+      "targetKind": "fruit",
+      "prompt": "<b>E</b> Pick Watermelon — $163",
+      "nearSellPad": false,
+      "carriedId": 683,
+      "basketIds": [],
+      "pendingSells": 0,
+      "stuckHands": 0,
+      "pricks": 0
+    },
+    "ropes": {
+      "count": 4,
+      "shared": 0,
+      "mirrors": 0,
+      "taut": 0,
+      "list": [
+        {
+          "id": 689,
+          "len": 33.3,
+          "dist": 33.3,
+          "tension": 0,
+          "a": -1,
+          "b": -200,
+          "ak": "world",
+          "bk": "legendary",
+          "held": false,
+          "owner": null,
+          "cid": null,
+          "mirror": false,
+          "acked": null
+        },
+        {
+          "id": 690,
+          "len": 33.3,
+          "dist": 33.3,
+          "tension": 0,
+          "a": -1,
+          "b": -200,
+          "ak": "world",
+          "bk": "legendary",
+          "held": false,
+          "owner": null,
+          "cid": null,
+          "mirror": false,
+          "acked": null
+        },
+        {
+          "id": 691,
+          "len": 22.01,
+          "dist": 22.01,
+          "tension": 0,
+          "a": -1,
+          "b": -200,
+          "ak": "world",
+          "bk": "legendary",
+          "held": false,
+          "owner": null,
+          "cid": null,
+          "mirror": false,
+          "acked": null
+        },
+        {
+          "id": 692,
+          "len": 29.47,
+          "dist": 29.47,
+          "tension": 0,
+          "a": -1,
+          "b": -200,
+          "ak": "world",
+          "bk": "legendary",
+          "held": false,
+          "owner": null,
+          "cid": null,
+          "mirror": false,
+          "acked": null
+        }
+      ]
+    },
+    "scoring": {
+      "tracked": 0,
+      "totalAwarded": 0,
+      "best": 1,
+      "seen": []
+    },
+    "fx": {
+      "alive": 6,
+      "spawned": 6,
+      "enabled": true
+    },
+    "tools": {
+      "slots": [
+        "hand",
+        null,
+        null,
+        "basket"
+      ],
+      "active": "hand",
+      "owned": [
+        "hand",
+        "basket",
+        "ladder"
+      ],
+      "status": "",
+      "cooldown": 0
+    },
+    "viewmodel": {
+      "tool": "hand",
+      "handsSource": "glb",
+      "stow": 1,
+      "kick": 0.368,
+      "visible": true,
+      "cached": 1,
+      "toolShown": false,
+      "carryShown": true,
+      "carryClass": "large",
+      "carryHeightPct": 29.7
+    },
+    "shop": {
+      "open": false,
+      "near": false,
+      "purchased": [],
+      "offers": 8,
+      "pendingBuy": null
+    },
+    "book": {
+      "discovered": 1,
+      "species": 10,
+      "harvested": 0,
+      "variants": 0,
+      "open": false
+    },
+    "legendary": {
+      "phase": "prepare",
+      "vines": 4,
+      "cut": 0,
+      "tethers": 0,
+      "dropTetherCount": 0,
+      "required": 2,
+      "held": 0,
+      "authoritative": true,
+      "gen": 0,
+      "remoteGen": -1,
+      "paid": 0,
+      "pos": [
+        8,
+        38.9,
+        -62
+      ],
+      "speed": 0,
+      "mass": 2600,
+      "fixed": true,
+      "inPad": false,
+      "distanceToPad": 6,
+      "highTethers": 0,
+      "firstSight": -1
+    },
+    "progress": {
+      "islands": [
+        "sunpatch"
+      ],
+      "nextIsland": false,
+      "shown": [],
+      "milestones": {
+        "found:watermelon": 3.9
+      },
+      "objective": "Follow the orchard path. Investigate the moving fruit.",
+      "threatsCleared": []
+    },
+    "director": {
+      "event": {
+        "id": 0,
+        "kind": null,
+        "phase": "idle",
+        "remaining": 0,
+        "targets": [],
+        "plants": [],
+        "released": 0,
+        "at": [
+          0,
+          0,
+          0
+        ],
+        "progress": 0,
+        "goal": 0,
+        "reward": 0,
+        "species": [],
+        "counted": [],
+        "paid": false,
+        "result": ""
+      },
+      "sequence": 0,
+      "cooldown": 0,
+      "last": null,
+      "firstPick": true,
+      "firstSale": false,
+      "introDone": false,
+      "introDelay": 12,
+      "orders": 0,
+      "authoritative": true,
+      "automatic": false
+    },
+    "audio": {
+      "running": "running",
+      "played": 4,
+      "last": "pick",
+      "enabled": true,
+      "settings": {
+        "master": 0.7,
+        "music": 0.35,
+        "sfx": 0.9,
+        "ambience": 0.5,
+        "muted": false
+      },
+      "activeVoices": 3,
+      "ambienceSources": 4,
+      "music": {
+        "ready": true,
+        "mood": "calm",
+        "sources": 3,
+        "epoch": 1.9413333333333331,
+        "transitionAt": 0,
+        "error": ""
+      },
+      "masterGain": 0.699999988079071
+    },
+    "characters": {
+      "enabled": false,
+      "phase": "perched",
+      "elapsed": 0,
+      "duration": 1,
+      "cooldown": 45,
+      "grace": 12,
+      "target": -1,
+      "pecked": false,
+      "cycle": 0,
+      "from": [
+        -12.5,
+        8.83,
+        32.8
+      ],
+      "to": [
+        -12.5,
+        8.83,
+        32.8
+      ],
+      "pecks": 0,
+      "aborted": 0,
+      "scares": 0,
+      "lastFruit": -1,
+      "lastDeltaSpeed": 0,
+      "gull": [
+        -12.5,
+        8.83,
+        32.8
+      ],
+      "merv": [
+        43.02273267410838,
+        2.8211767578124998,
+        54.398856794800686
+      ],
+      "caption": {
+        "text": "",
+        "remaining": 0
+      },
+      "talkCooldown": 0,
+      "spoken": [],
+      "duck": 0
+    },
+    "characters.info": {
+      "enabled": false,
+      "phase": "perched",
+      "elapsed": 0,
+      "duration": 1,
+      "cooldown": 45,
+      "grace": 12,
+      "target": -1,
+      "pecked": false,
+      "cycle": 0,
+      "from": [
+        -12.5,
+        8.83,
+        32.8
+      ],
+      "to": [
+        -12.5,
+        8.83,
+        32.8
+      ],
+      "pecks": 0,
+      "aborted": 0,
+      "scares": 0,
+      "lastFruit": -1,
+      "lastDeltaSpeed": 0,
+      "gull": [
+        -12.5,
+        8.83,
+        32.8
+      ],
+      "merv": [
+        43.02273267410838,
+        2.8211767578124998,
+        54.398856794800686
+      ],
+      "caption": {
+        "text": "",
+        "remaining": 0
+      },
+      "talkCooldown": 0,
+      "spoken": [],
+      "duck": 0
+    },
+    "net": {
+      "connected": false,
+      "kind": "none",
+      "id": "",
+      "isHost": true,
+      "hostId": "",
+      "peers": 0,
+      "remotes": 0,
+      "pending": 0,
+      "lastDeny": "",
+      "melee": {
+        "accepted": 0,
+        "rejected": 0,
+        "lastReason": ""
+      },
+      "owned": 0,
+      "nodeSeq": 1,
+      "ropes": [],
+      "sent": 0,
+      "received": 0,
+      "intents": 0,
+      "denied": 0,
+      "snapshotBytes": 0,
+      "manifests": 0,
+      "claims": 0,
+      "denials": 0,
+      "sales": 0,
+      "spilled": 0,
+      "buys": 0
+    },
+    "save": {
+      "slot": "auto",
+      "playtime": 0,
+      "lastSaved": 0,
+      "has": false,
+      "enabled": false,
+      "resumed": false
+    }
+  },
+  "saved": {
+    "sites": [
+      {
+        "id": "orchard-mimic",
+        "kind": "mimic",
+        "plantId": 682,
+        "fruitIds": [
+          683,
+          684,
+          685
+        ],
+        "position": [
+          -23,
+          7.5,
+          25
+        ],
+        "phase": "active",
+        "released": [
+          683
+        ],
+        "consumed": []
+      },
+      {
+        "id": "snapjaw-cache",
+        "kind": "snapjaw",
+        "plantId": 686,
+        "fruitIds": [
+          687,
+          688
+        ],
+        "position": [
+          -26.8,
+          7.5,
+          9.1
+        ],
+        "phase": "active",
+        "released": [],
+        "consumed": []
+      },
+      {
+        "id": "spitter-slope",
+        "kind": "spitter",
+        "plantId": 680,
+        "fruitIds": [
+          681
+        ],
+        "position": [
+          -35,
+          20.719462067194964,
+          -11.5
+        ],
+        "phase": "active",
+        "released": [],
+        "consumed": []
+      }
+    ],
+    "cleared": [],
+    "prizes": [
+      {
+        "id": 683,
+        "position": [
+          34.935550689697266,
+          2.983496904373169,
+          53.996768951416016
+        ],
+        "damage": 0
+      }
+    ]
+  },
+  "sale": {
+    "money": 163,
+    "saved": {
+      "sites": [
+        {
+          "id": "orchard-mimic",
+          "kind": "mimic",
+          "plantId": 682,
+          "fruitIds": [
+            683,
+            684,
+            685
+          ],
+          "position": [
+            -23,
+            7.5,
+            25
+          ],
+          "phase": "active",
+          "released": [
+            683
+          ],
+          "consumed": [
+            683
+          ]
+        },
+        {
+          "id": "snapjaw-cache",
+          "kind": "snapjaw",
+          "plantId": 686,
+          "fruitIds": [
+            687,
+            688
+          ],
+          "position": [
+            -26.8,
+            7.5,
+            9.1
+          ],
+          "phase": "active",
+          "released": [],
+          "consumed": []
+        },
+        {
+          "id": "spitter-slope",
+          "kind": "spitter",
+          "plantId": 680,
+          "fruitIds": [
+            681
+          ],
+          "position": [
+            -35,
+            20.719462067194964,
+            -11.5
+          ],
+          "phase": "active",
+          "released": [],
+          "consumed": []
+        }
+      ],
+      "cleared": [],
+      "prizes": []
+    },
+    "state": "absent"
+  }
+}

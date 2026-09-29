@@ -107,7 +107,9 @@ function enrich(g) {
       const h = await g.terrainHeight(-24, 22);
       await g.tp(-24, h + 1.2, 22);
       await g.look(0, 0);
-      await g.wait(0.5);
+      // Checkpoint recovery now includes a two-second escape window. These
+      // independent scenarios start after recovery, not inside that window.
+      await g.wait(2.1);
       await g.call('ragdoll.recover').catch(() => {});
       await g.call('fruit.despawnAllFree').catch(() => {});
       await g.wait(0.2);

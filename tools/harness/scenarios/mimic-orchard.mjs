@@ -1,6 +1,7 @@
 export const name = 'mimic-orchard';
 
 export async function run(g, t) {
+  await g.page.evaluate(() => window.__GAME.get('encounters').model.activate('mimic'));
   const start = (await g.call('encounters.info')).threats.mimic;
   t.between(start.pos[0], -26, -21, 'Mimic waits in the open center orchard lane');
   t.between(start.pos[2], 20, 24, 'the center lane leaves lateral dodge room');

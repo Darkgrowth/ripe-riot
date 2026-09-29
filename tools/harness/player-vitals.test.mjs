@@ -54,6 +54,7 @@ test('a second solo down evacuates and forfeits unsecured haul', () => {
   vitals.damage(100, 'mimic');
   vitals.fixedStep(2);
   assert.equal(vitals.soloRecoveries, 1);
+  vitals.fixedStep(2); // the field-recovery grace has expired before the next fight
   vitals.damage(100, 'king vine');
   vitals.fixedStep(2);
   assert.equal(vitals.wiped, true);
@@ -141,4 +142,29 @@ test('client ignores local damage but accepts explicit host attack and newer sna
   assert.equal(game.player.state, 'downed');
   vitals.applyNetState({ ...state, health: 100, downed: false });
   assert.equal(vitals.downed, true);
+});
+
+test('revival gives two seconds to move clear before another damaging hit', () => {
+  const { vitals } = fixture();
+  vitals.damage(100, 'snapjaw');
+  vitals.fixedStep(3);
+  assert.equal(vitals.recoveryGraceRemaining, 2);
+  assert.equal(vitals.damage(38, 'snapjaw'), false);
+  vitals.fixedStep(1.9);
+  assert.equal(vitals.damage(38, 'snapjaw'), false);
+  vitals.fixedStep(.11);
+  assert.equal(vitals.damage(38, 'snapjaw'), true);
+  assert.equal(vitals.health, 12);
+});
+
+test('checkpoint recovery is protected and mirrored recovery cannot replay an ignored old attack', () => {
+  const { vitals: host } = fixture();
+  host.restoreAtCheckpoint();
+  assert.equal(host.damage(100, 'old seed'), false);
+  const { vitals: client } = fixture({ authoritative: false });
+  client.applyNetState(host.serializeNetState());
+  assert.equal(client.applyHostAttack(30, 'old seed', 'seed-1'), false);
+  client.fixedStep(2.1);
+  assert.equal(client.applyHostAttack(30, 'old seed', 'seed-1'), false);
+  assert.equal(client.applyHostAttack(30, 'new seed', 'seed-2'), true);
 });

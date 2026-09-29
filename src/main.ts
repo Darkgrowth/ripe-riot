@@ -5,8 +5,11 @@ import { FruitSystem } from '@/fruit/FruitSystem';
 import { Economy } from '@/systems/Economy';
 import { InteractionSystem } from '@/interaction/InteractionSystem';
 import { UIManager } from '@/ui/UIManager';
+import { ExpeditionShell } from '@/ui/ExpeditionShell';
+import { BUILD_ID } from '@/build';
 import { PlayerRagdoll } from '@/player/PlayerRagdoll';
 import { PlayerVitals } from '@/player/PlayerVitals';
+import { DockRecovery } from '@/player/DockRecovery';
 import { EncounterSystem } from '@/enemies/EncounterSystem';
 import { KingVine } from '@/boss/KingVine';
 import { ViewmodelSystem } from '@/player/ViewmodelSystem';
@@ -94,9 +97,11 @@ async function main(): Promise<void> {
   game.add(new Economy());
   game.add(new FruitSystem(visualMode));
   game.add(new PlayerRagdoll());
+  let evacuatedCargo = 0;
   game.add(new PlayerVitals({
     onLoseUnsecured: () => {
       const hands = game.get<InteractionSystem>('interaction');
+      evacuatedCargo = hands.basket.items.length + (hands.carried ? 1 : 0);
       hands.dropHeld(true);
       hands.tipOutBasket();
     },
@@ -109,14 +114,17 @@ async function main(): Promise<void> {
       }
       const net = game.get<MultiplayerAuthority>('net');
       if (!net.connected) {
-        game.get<KingVine>('kingVine').reset();
+        const kingVine = game.get<KingVine>('kingVine');
         const legendary = game.get<LegendaryHarvest>('legendary');
-        if (legendary.phase !== 'complete') legendary.reset();
+        if (!kingVine.subdued) kingVine.reset();
+        if (legendary.phase === 'failed') legendary.reset();
       }
       world.spawnPlayer(game.player);
       game.get<PlayerVitals>('vitals').restoreAtCheckpoint();
       game.bus.emit('ui:toast', {
-        text: 'Evacuated to the dock', sub: 'Unsecured fruit was left behind.', kind: 'bad', ms: 4200,
+        text: 'Evacuated to the dock',
+        sub: `${evacuatedCargo ? `${evacuatedCargo} unsecured fruit left behind. ` : 'No cargo lost. '}Banked money and equipment kept. Health restored; your cleared fights stay cleared.`,
+        kind: 'bad', ms: 6500,
       });
     },
   }));
@@ -135,6 +143,7 @@ async function main(): Promise<void> {
     }),
   }));
   game.add(new InteractionSystem());
+  if (!comparison) game.add(new DockRecovery());
   game.add(new RopeSystem(visualMode));
   game.add(new HarvestScoring());
   game.add(new ImpactFX());
@@ -152,6 +161,7 @@ async function main(): Promise<void> {
   // or clear the player's auto slot by booting, resetting, or unloading.
   if (!comparison) game.add(new SaveSystem());
   game.add(new UIManager(comparison));
+  if (!comparison) game.add(new ExpeditionShell(BUILD_ID));
   game.add(new IslandEventView());
 
   progress(52, 'planting');
@@ -163,10 +173,11 @@ async function main(): Promise<void> {
     else net.damagePeer(victimId, amount, kind);
   };
   encounters.onDefeated = (kind, at) => {
+    if (game.get<Progression>('progress').threatsCleared.has(kind)) return;
     // Fighting always pays something. The physical fruit is a second reward
     // for a crew that secures it, never the only way to afford another try.
     game.get<Economy>('economy').add(kind === 'mimic' ? 80 : kind === 'snapjaw' ? 140 : 110, `defeat:${kind}`);
-    game.get<FruitSystem>('fruit').spawnFree(
+    if (!encounters.hasAuthoredPrize(kind)) game.get<FruitSystem>('fruit').spawnFree(
       kind === 'mimic' ? 'watermelon' : kind === 'snapjaw' ? 'gluefruit' : 'puffmelon',
       at.clone().add(new THREE.Vector3(0, 2.4, 0)));
     game.bus.emit('ui:toast', {

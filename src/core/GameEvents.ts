@@ -17,6 +17,8 @@ export interface GameEventMap {
   'encounter:capture': { kind: 'snapjaw'; victimId: string };
   /** Host-confirmed physical bait. Clients may present this but never score it. */
   'encounter:baited': { kind: 'snapjaw'; fruitId: number; actorId: string; position: THREE.Vector3 };
+  'harvest:site': { siteId: string; phase: 'warning' | 'active' | 'cleared'; position: THREE.Vector3 };
+  'expedition:settled': Record<string, never>;
   'encounter:release': { kind: 'snapjaw'; victimId: string;
     reason: 'escape' | 'rescue' | 'timeout' | 'defeat' };
 

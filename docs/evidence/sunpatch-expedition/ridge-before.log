@@ -1,0 +1,34 @@
+✔ route grading preserves the suspended melon floor, drop and landing basin (1.2982ms)
+✖ a slow-cut ridge landing has a broad walking approach from the existing farm (16.1335ms)
+✔ the painted orchard-to-farm approach stays below the player climb limit across walking width (1.2915ms)
+✔ both lower ravine walkouts still connect to safe ground after grading the rim road (2.9768ms)
+✔ the marked hill-to-ravine path is walkable in both directions (2.5343ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 4
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 193.8356
+
+✖ failing tests:
+
+test at tools\harness\expedition-route.test.mjs:16:1
+✖ a slow-cut ridge landing has a broad walking approach from the existing farm (16.1335ms)
+  AssertionError [ERR_ASSERTION]: ridge haul approach exceeds safe walking slope: {"degrees":69.58755177526487,"x":-25.770405845398162,"z":-69.32040584539817}
+      at TestContext.<anonymous> (file:///C:/Users/benma/.codex/worktrees/sunpatch-finish/RIPE%20RIOT/tools/harness/expedition-route.test.mjs:30:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

@@ -1,0 +1,37 @@
+✖ solo guardian waits for an active player whose recovery grace has ended (3.3681ms)
+✔ vine sweep warns before hitting a target, and hits that target once (0.8053ms)
+✔ direct stem hits work during recovery without ropes and subdue exactly once (0.4144ms)
+✔ an air strike can return the seed projectile to hurt the stem (0.308ms)
+✔ client applies newer snapshots but does not run attacks or accept local hits (0.2738ms)
+✔ a saved subdued King Vine restores silently and stays down until explicit reset (0.2086ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 5
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 183.7072
+
+✖ failing tests:
+
+test at tools\harness\king-vine.test.mjs:7:1
+✖ solo guardian waits for an active player whose recovery grace has ended (3.3681ms)
+  AssertionError [ERR_ASSERTION]: a downed player is not a new attack target
+  + actual - expected
+  
+  + 'telegraph'
+  - 'idle'
+  
+      at TestContext.<anonymous> (file:///C:/Users/benma/.codex/worktrees/sunpatch-finish/RIPE%20RIOT/tools/harness/king-vine.test.mjs:13:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'telegraph',
+    expected: 'idle',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

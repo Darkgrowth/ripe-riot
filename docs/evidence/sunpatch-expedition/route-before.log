@@ -1,0 +1,28 @@
+✖ the painted orchard-to-farm approach stays below the player climb limit across walking width (5.6863ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 159.2009
+
+✖ failing tests:
+
+test at tools\harness\expedition-route.test.mjs:6:1
+✖ the painted orchard-to-farm approach stays below the player climb limit across walking width (5.6863ms)
+  AssertionError [ERR_ASSERTION]: 53-degree controller needs margin on mesh; worst {"degrees":60.95215721831643,"x":-32.03,"z":-6.400000000000001}
+      at TestContext.<anonymous> (file:///C:/Users/benma/.codex/worktrees/sunpatch-finish/RIPE%20RIOT/tools/harness/expedition-route.test.mjs:16:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

@@ -9,6 +9,7 @@ export type EncounterStrike = 'melee' | 'air';
 export interface EncounterTarget {
   id: string;
   position: Point3;
+  protected?: boolean;
 }
 
 export interface EncounterState {
@@ -21,6 +22,8 @@ export interface EncounterState {
   baited: boolean;
   capturedVictimId: string | null;
   captureTimeLeft: number;
+  dormant?: boolean;
+  returning?: boolean;
 }
 
 export interface EncounterNetState {
@@ -30,6 +33,7 @@ export interface EncounterNetState {
 }
 
 export interface EncounterProjectile {
+  reflectedBy?: string;
   id: number;
   position: Point3;
   velocity: Point3;
@@ -72,10 +76,13 @@ export interface EncounterRelease {
   reason: 'timeout';
 }
 
-export type EncounterEvent = EncounterDamage | EncounterCapture | EncounterRelease;
+export type EncounterEvent = EncounterDamage | EncounterCapture | EncounterRelease
+  | { type: 'reflected-hit'; hit: EncounterHit };
 
 interface InternalState extends EncounterState {
   aim: Point3;
+  home: Point3;
+  leashRadius: number;
   alreadyHit: Set<string>;
 }
 
@@ -91,6 +98,7 @@ const MIMIC_RECOVER_DISTANCE = 2.45;
 const MIMIC_STAGGER = 0.48;
 
 /** A world collision query shared by charge, knockback and bite checks. */
+export type ProjectileBlocked = (from: Point3, to: Point3) => number | null;
 export type MimicBlocked = (from: Point3, to: Point3, radius: number) => boolean;
 
 const distanceXZ = (a: Point3, b: Point3): number => Math.hypot(a[0] - b[0], a[2] - b[2]);
@@ -107,18 +115,23 @@ export class EncounterModel {
   private projectiles: EncounterProjectile[] = [];
   private nextProjectileId = 1;
   private mimicBlocked: MimicBlocked | null;
+  private projectileBlocked: ProjectileBlocked | null;
 
-  constructor(spawns: Array<{ kind: EncounterKind; position: Point3 }>,
+  constructor(spawns: Array<{ kind: EncounterKind; position: Point3; dormant?: boolean; leashRadius?: number }>,
     groundHeight: ((x: number, z: number) => number) | null = null,
-    initialRevision = 0, mimicBlocked: MimicBlocked | null = null) {
+    initialRevision = 0, mimicBlocked: MimicBlocked | null = null,
+    projectileBlocked: ProjectileBlocked | null = null) {
     this.groundHeight = groundHeight;
     this.mimicBlocked = mimicBlocked;
+    this.projectileBlocked = projectileBlocked;
     this.revision = initialRevision;
     for (const spawn of spawns) {
       this.encounters.set(spawn.kind, {
         kind: spawn.kind, position: [...spawn.position], heading: 0,
         phase: 'idle', timeLeft: 0, health: HEALTH[spawn.kind], baited: false,
         capturedVictimId: null, captureTimeLeft: 0,
+        dormant: !!spawn.dormant, returning: false, home: [...spawn.position],
+        leashRadius: spawn.leashRadius ?? Infinity,
         aim: [...spawn.position], alreadyHit: new Set(),
       });
     }
@@ -131,8 +144,50 @@ export class EncounterModel {
   }
 
   setTargets(targets: EncounterTarget[]): void {
-    this.targets = targets.filter(t => typeof t.id === 'string' && t.position.every(Number.isFinite))
+    this.targets = targets.filter(t => !t.protected && typeof t.id === 'string' && t.position.every(Number.isFinite))
       .map(t => ({ id: t.id, position: [...t.position] }));
+  }
+
+  activate(kind: EncounterKind): boolean {
+    const state = this.encounters.get(kind);
+    if (!state || state.phase === 'defeated') return false;
+    state.dormant = false;
+    this.revision++;
+    return true;
+  }
+
+  restoreCleared(kinds: Iterable<EncounterKind>): void {
+    for (const kind of kinds) {
+      const state = this.encounters.get(kind);
+      if (!state) continue;
+      state.phase = 'defeated'; state.health = 0; state.timeLeft = 0;
+      state.dormant = false; state.returning = false; state.baited = false;
+      state.capturedVictimId = null; state.captureTimeLeft = 0;
+      if (kind === 'spitter') this.projectiles = [];
+    }
+    this.revision++;
+  }
+
+  private returnHome(state: InternalState, dt: number): boolean {
+    if (state.kind !== 'mimic' || !Number.isFinite(state.leashRadius)) return false;
+    const homeDistance = distanceXZ(state.position, state.home);
+    const nearby = this.targets.some(t => distanceXZ(t.position, state.home) <= state.leashRadius);
+    if (!state.returning && nearby && homeDistance < state.leashRadius) return false;
+    if (homeDistance < .12) {
+      state.returning = false; state.phase = 'idle'; state.timeLeft = 0;
+      return !nearby;
+    }
+    state.returning = true; state.phase = 'idle'; state.timeLeft = 0;
+    const heading = headingTo(state.position, state.home);
+    const stride = Math.min(homeDistance, dt * 3.5);
+    for (const offset of [0, .65, -.65, 1.2, -1.2]) {
+      const next: Point3 = [state.position[0] + Math.sin(heading + offset) * stride,
+        state.position[1], state.position[2] + Math.cos(heading + offset) * stride];
+      if (this.groundHeight) next[1] = this.groundHeight(next[0], next[2]);
+      if (this.mimicBlocked?.(state.position, next, MIMIC_RADIUS)) continue;
+      state.position = next; state.heading = heading + offset; break;
+    }
+    return true;
   }
 
   step(dt: number): EncounterEvent[] {
@@ -149,11 +204,14 @@ export class EncounterModel {
           state.capturedVictimId = null;
         }
       }
-      if (state.phase === 'defeated') continue;
+      if (state.phase === 'defeated' || state.dormant || this.returnHome(state, dt)) continue;
       if (state.phase === 'idle') {
         const radius = state.kind === 'mimic' ? 13 : state.kind === 'spitter' ? 18 : 4.8;
         const nearest = this.targets.filter(t => distanceXZ(t.position, state.position) <= radius
-          && (state.kind !== 'spitter' || distanceXZ(t.position, state.position) >= 3.5))
+          && (state.kind !== 'mimic' || distanceXZ(t.position, state.home) <= state.leashRadius)
+          && (state.kind !== 'spitter' || (distanceXZ(t.position, state.position) >= 3.5
+            && this.projectileBlocked?.([state.position[0], state.position[1] + 2.1, state.position[2]],
+              [t.position[0], t.position[1] + 1, t.position[2]]) == null)))
           .sort((a, b) => distanceXZ(a.position, state.position) - distanceXZ(b.position, state.position))[0];
         if (nearest) this.beginWarning(state, nearest.position, false);
         continue;
@@ -292,7 +350,7 @@ export class EncounterModel {
     blocked: (contact: MeleeContact) => boolean): EncounterMeleeResult {
     const surfaces: MeleeSurface[] = [];
     for (const state of this.encounters.values()) {
-      if (state.phase === 'defeated') continue;
+      if (state.phase === 'defeated' || state.dormant) continue;
       const [x, y, z] = state.position;
       if (state.kind === 'mimic')
         surfaces.push({ id: state.kind, center: [x, y + 1.25, z], radius: 1.25 });
@@ -322,7 +380,16 @@ export class EncounterModel {
     const candidate = this.rayEnemy(origin, direction, length, strike, true);
     const projectile = strike === 'air' ? this.rayProjectile(origin, direction, length) : null;
     if (projectile && (!candidate || projectile.along < candidate.along)) {
-      this.projectiles = this.projectiles.filter(p => p.id !== projectile.state.id);
+      const seed = projectile.state;
+      const source = this.encounters.get('spitter');
+      if (!source || source.phase === 'defeated') return null;
+      const destination: Point3 = [source.position[0], source.position[1] + 2.1, source.position[2]];
+      const flight = Math.max(.08, Math.hypot(destination[0] - seed.position[0],
+        destination[1] - seed.position[1], destination[2] - seed.position[2]) / 20);
+      seed.velocity = [(destination[0] - seed.position[0]) / flight,
+        (destination[1] - seed.position[1] + .5 * PROJECTILE_GRAVITY * flight * flight) / flight,
+        (destination[2] - seed.position[2]) / flight];
+      seed.reflectedBy = attackerId ?? 'solo'; seed.timeLeft = Math.max(1, flight + .3);
       this.revision++;
       return { kind: 'spitter', damage: 0, defeated: false, attackerId,
         deflectedProjectileId: projectile.state.id };
@@ -375,9 +442,11 @@ export class EncounterModel {
         kind: s.kind, position: [...s.position], heading: s.heading, phase: s.phase,
         timeLeft: s.timeLeft, health: s.health, baited: s.baited,
         capturedVictimId: s.capturedVictimId, captureTimeLeft: s.captureTimeLeft,
+        dormant: !!s.dormant, returning: !!s.returning,
       })),
       projectiles: this.projectiles.map(p => ({ id: p.id, position: [...p.position],
-        velocity: [...p.velocity], timeLeft: p.timeLeft })),
+        velocity: [...p.velocity], timeLeft: p.timeLeft,
+        ...(p.reflectedBy ? { reflectedBy: p.reflectedBy } : {}) })),
     };
   }
 
@@ -396,6 +465,7 @@ export class EncounterModel {
       state.timeLeft = incoming.timeLeft;
       state.health = incoming.health;
       state.baited = !!incoming.baited;
+      state.dormant = !!incoming.dormant; state.returning = !!incoming.returning;
       state.capturedVictimId = typeof incoming.capturedVictimId === 'string'
         ? incoming.capturedVictimId : null;
       state.captureTimeLeft = Math.max(0, incoming.captureTimeLeft || 0);
@@ -405,7 +475,7 @@ export class EncounterModel {
         && p.position?.every(Number.isFinite) && p.velocity?.every(Number.isFinite)
         && Number.isFinite(p.timeLeft))
         .map(p => ({ id: p.id, position: [...p.position], velocity: [...p.velocity],
-          timeLeft: p.timeLeft }))
+          timeLeft: p.timeLeft, ...(typeof p.reflectedBy === 'string' ? { reflectedBy: p.reflectedBy } : {}) }))
       : [];
     this.lastApplied = snapshot.revision;
     this.revision = snapshot.revision;
@@ -422,6 +492,7 @@ export class EncounterModel {
 
   private launchProjectile(state: InternalState): void {
     const from: Point3 = [state.position[0], state.position[1] + 2.1, state.position[2]];
+    if (this.projectileBlocked?.(from, [state.aim[0], state.aim[1] + 1, state.aim[2]]) != null) return;
     const distance = distanceXZ(state.position, state.aim);
     const flight = Math.max(0.35, distance / 15);
     const velocity: Point3 = [
@@ -440,29 +511,37 @@ export class EncounterModel {
       const to: Point3 = [from[0] + p.velocity[0] * dt,
         from[1] + p.velocity[1] * dt - 0.5 * PROJECTILE_GRAVITY * dt * dt,
         from[2] + p.velocity[2] * dt];
-      const segment: Point3 = [to[0] - from[0], to[1] - from[1], to[2] - from[2]];
-      const segmentSq = segment[0] ** 2 + segment[1] ** 2 + segment[2] ** 2;
+      const wall = this.projectileBlocked?.(from, to) ?? null;
+      let contact = wall ?? Infinity;
       let struck: EncounterTarget | null = null;
-      for (const target of this.targets) {
-        const centre: Point3 = [target.position[0], target.position[1] + 1.0, target.position[2]];
-        const toward: Point3 = [centre[0] - from[0], centre[1] - from[1], centre[2] - from[2]];
-        const t = segmentSq > 0 ? Math.max(0, Math.min(1,
-          (toward[0] * segment[0] + toward[1] * segment[1] + toward[2] * segment[2]) / segmentSq)) : 0;
-        if (Math.hypot(from[0] + segment[0] * t - centre[0],
-          from[1] + segment[1] * t - centre[1],
-          from[2] + segment[2] * t - centre[2]) < 0.85) { struck = target; break; }
+      const source = this.encounters.get('spitter');
+      if (p.reflectedBy && source && source.phase !== 'defeated') {
+        const t = segmentSphere(from, to, [source.position[0], source.position[1] + 2.1,
+          source.position[2]], .92);
+        if (t !== null && t < contact) {
+          const hit = this.applyHit(source, 'air', p.reflectedBy, from, false);
+          if (hit) events.push({ type: 'reflected-hit', hit });
+          continue;
+        }
+      } else if (!p.reflectedBy) {
+        for (const target of this.targets) {
+          const t = segmentSphere(from, to, [target.position[0], target.position[1] + 1,
+            target.position[2]], .85);
+          if (t !== null && t < contact) { contact = t; struck = target; }
+        }
       }
       if (struck) {
         events.push({ type: 'damage', kind: 'spitter', victimId: struck.id, amount: 24 });
         continue;
       }
+      if (wall !== null) continue;
       p.position = to;
       p.velocity = [p.velocity[0], p.velocity[1] - PROJECTILE_GRAVITY * dt, p.velocity[2]];
       p.timeLeft -= dt;
       const ground = this.groundHeight?.(to[0], to[2]) ?? 0;
       if (p.timeLeft > 0 && to[1] > ground + 0.15) keep.push(p);
     }
-    this.projectiles = keep;
+    this.projectiles = this.encounters.get('spitter')?.phase === 'defeated' ? [] : keep;
   }
 
   private rayEnemy(origin: Point3, direction: Point3, length: number, strike: EncounterStrike,
@@ -470,7 +549,7 @@ export class EncounterModel {
     const maxReach = strike === 'air' ? 18 : 3.2;
     let candidate: { state: InternalState; along: number } | null = null;
     for (const state of this.encounters.values()) {
-      if (state.phase === 'defeated' || (vulnerable && state.kind === 'snapjaw'
+      if (state.phase === 'defeated' || state.dormant || (vulnerable && state.kind === 'snapjaw'
         && state.phase !== 'recover')) continue;
       const centre: Point3 = [state.position[0], state.position[1] + 1.15, state.position[2]];
       const relative: Point3 = [centre[0] - origin[0], centre[1] - origin[1], centre[2] - origin[2]];
@@ -499,4 +578,19 @@ export class EncounterModel {
     }
     return candidate;
   }
+}
+
+/** First intersection fraction, so world cover and actor hits share one ordering. */
+function segmentSphere(from: Point3, to: Point3, centre: Point3, radius: number): number | null {
+  const d = [to[0] - from[0], to[1] - from[1], to[2] - from[2]];
+  const r = [from[0] - centre[0], from[1] - centre[1], from[2] - centre[2]];
+  const a = d[0] ** 2 + d[1] ** 2 + d[2] ** 2;
+  const c = r[0] ** 2 + r[1] ** 2 + r[2] ** 2 - radius * radius;
+  if (c <= 0) return 0;
+  if (a < 1e-10) return null;
+  const b = r[0] * d[0] + r[1] * d[1] + r[2] * d[2];
+  const disc = b * b - a * c;
+  if (disc < 0) return null;
+  const t = (-b - Math.sqrt(disc)) / a;
+  return t >= 0 && t <= 1 ? t : null;
 }

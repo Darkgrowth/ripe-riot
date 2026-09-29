@@ -2,6 +2,16 @@ import type { Game, System } from '@/core/Game';
 
 const SAVE_VERSION = 1;
 const KEY_PREFIX = 'riperiot.save.';
+const ACTIVE_SLOT_KEY = 'riperiot.save.activeSlot';
+
+export interface SaveSessionOptions {
+  slot?: string;
+  loadOnBoot?: boolean;
+  autoPersist?: boolean;
+}
+
+const validSessionSlot = (slot: string | null): slot is string =>
+  !!slot && (slot === 'auto' || /^replay-[a-z0-9-]{8,}$/i.test(slot));
 
 interface Serializable {
   serialize(): unknown;
@@ -37,14 +47,23 @@ export class SaveSystem implements System {
   /** True when a previous session was restored at boot. */
   resumed = false;
 
+  constructor(private readonly options: SaveSessionOptions = {}) {}
+
   init(g: Game): void {
     this.g = g;
     // Pick up where the last session left off. Saves were written for months
     // before anything read them back, which made every session a fresh one.
     // `?fresh` skips it — the harness boots that way so a page that saved on
     // close cannot leak progress into the next test.
-    const fresh = /[?&]fresh\b/.test(window.location.search);
-    if (!fresh && this.exists(this.slot)) this.resumed = this.load(this.slot);
+    const params = new URLSearchParams(window.location.search);
+    const fresh = params.has('fresh');
+    const querySlot = params.get('saveSlot');
+    let active: string | null = null;
+    try { active = localStorage.getItem(ACTIVE_SLOT_KEY); } catch { /* private mode */ }
+    this.slot = this.options.slot ?? (validSessionSlot(querySlot) ? querySlot
+      : validSessionSlot(active) ? active : 'auto');
+    this.enabled = this.options.autoPersist ?? !fresh;
+    if ((this.options.loadOnBoot ?? !fresh) && this.exists(this.slot)) this.resumed = this.load(this.slot);
     g.debug?.addProbe('save', () => ({
       slot: this.slot, playtime: +this.playtime.toFixed(1),
       lastSaved: +this.lastSaved.toFixed(1), has: this.exists(this.slot),
@@ -56,7 +75,11 @@ export class SaveSystem implements System {
     g.debug?.addAction('save.peek', (slot?: string) => this.peek(slot ?? this.slot));
     g.debug?.addAction('save.enable', (on: boolean) => { this.enabled = on; return this.enabled; });
 
-    window.addEventListener('beforeunload', () => { if (this.enabled) this.save(this.slot); });
+    // Merely visiting the first title must not create an empty "Continue"
+    // entry. A resumed save remains eligible even if the player exits there.
+    window.addEventListener('beforeunload', () => {
+      if (this.enabled && (this.resumed || this.playtime > 0)) this.save(this.slot);
+    });
   }
 
   private participants(): Array<[string, Serializable]> {
@@ -72,6 +95,21 @@ export class SaveSystem implements System {
 
   exists(slot = this.slot): boolean {
     try { return localStorage.getItem(KEY_PREFIX + slot) !== null; } catch { return false; }
+  }
+
+  /** Remember the next page's slot; this running page keeps saving its own. */
+  activateSlot(slot: string): boolean {
+    if (!validSessionSlot(slot)) return false;
+    try { localStorage.setItem(ACTIVE_SLOT_KEY, slot); return true; } catch { return false; }
+  }
+
+  /** Every deliberate replay gets its own slot, leaving earlier runs intact. */
+  createReplaySlot(): string {
+    let slot: string;
+    do {
+      slot = `replay-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    } while (this.exists(slot));
+    return slot;
   }
 
   save(slot = this.slot): boolean {
@@ -144,7 +182,7 @@ export class SaveSystem implements System {
   }
 
   frameUpdate(dt: number): void {
-    if (!this.enabled) return;
+    if (!this.enabled || this.g.clock.paused) return;
     this.playtime += dt;
     this.timer += dt;
     if (this.timer >= this.autosaveInterval) {

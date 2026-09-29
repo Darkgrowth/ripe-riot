@@ -1,3 +1,4 @@
+import type { HarvestSiteDefinition } from '@/enemies/HarvestSites';
 import * as THREE from 'three';
 import type { Game, System } from '@/core/Game';
 import { Fruit } from './Fruit';
@@ -200,6 +201,9 @@ export class FruitSystem implements System {
   private regrow: Regrow[] = [];
   private hillHarvestPlantId = -1;
   private coopVinePlantId = -1;
+  readonly harvestSites: HarvestSiteDefinition[] = [];
+  beforeHarvest: ((plantId: number, cause: string) => boolean) | null = null;
+  private oneTimePlants = new Set<number>();
   private ctx!: TraitContext;
   private activationTimer = 0;
   private disposeVineSupports: (() => void) | null = null;
@@ -452,9 +456,45 @@ export class FruitSystem implements System {
     // so a line pinned before detachment remains a useful plan.
     nest.nodes[0].grip = 0.85;
     this.growFruitAt(nest, 0, 'boulderplum');
+    this.populateHarvestSites(nest);
     this.g.bus.emit('debug:log', {
       text: `populated: ${this.plants.count} plants, ${this.fruits.size} fruit`,
     });
+  }
+
+  private populateHarvestSites(hillNest: Plant): void {
+    // Append after all existing seeded plants/fruit. Their IDs and random rolls
+    // remain unchanged, and every peer receives the same authored identities.
+    const cropRng = new Rng('sunpatch-authored-harvests');
+    const x = -23, z = 25;
+    const melon = this.plants.plant(this.g.newId(), 'melonVine',
+      new THREE.Vector3(x, this.world.terrain.height(x, z), z), cropRng, { scale: 1.25 });
+    const first = melon.nodes[0];
+    first.local.set(0, .38, .3);
+    for (const [nx, ny, nz] of [[-.74, .4, -.25], [.72, .4, -.3]])
+      melon.nodes.push({ local: new THREE.Vector3(nx, ny, nz), world: new THREE.Vector3(),
+        quat: new THREE.Quaternion(), fruitId: -1, grip: .12 });
+    first.grip = .12;
+    this.plants.updateNodes(melon, 0);
+    for (let i = 0; i < melon.nodes.length; i++)
+      this.growFruitAt(melon, i, 'watermelon', { id: this.g.newId(), variantId: null, sizeRoll: .5 });
+    const cacheX = -26.8, cacheZ = 9.1;
+    const cache = this.plants.plant(this.g.newId(), 'puffBush',
+      new THREE.Vector3(cacheX, this.world.terrain.height(cacheX, cacheZ), cacheZ), cropRng, { scale: 1.1 });
+    this.plants.updateNodes(cache, 0);
+    for (let i = 0; i < Math.min(2, cache.nodes.length); i++) {
+      cache.nodes[i].grip = .3;
+      this.growFruitAt(cache, i, 'puffmelon', { id: this.g.newId(), variantId: null, sizeRoll: .5 });
+    }
+    for (const [id, kind, plant] of [
+      ['orchard-mimic', 'mimic', melon], ['snapjaw-cache', 'snapjaw', cache],
+      ['spitter-slope', 'spitter', hillNest],
+    ] as const) {
+      this.oneTimePlants.add(plant.id);
+      this.harvestSites.push({ id, kind, plantId: plant.id,
+        fruitIds: plant.nodes.filter(n => n.fruitId >= 0).map(n => n.fruitId),
+        position: plant.position.toArray() as [number, number, number] });
+    }
   }
 
   private scatter(type: PlantType, center: THREE.Vector3, radius: number, count: number,
@@ -661,9 +701,10 @@ export class FruitSystem implements System {
   }
 
   /** The mutation itself, with no authority question asked. Host only. */
-  detachAuthoritative(f: Fruit, cause: string, playerId = -1, inheritVel?: THREE.Vector3): void {
+  detachAuthoritative(f: Fruit, cause: string, playerId = -1, inheritVel?: THREE.Vector3, approved = false): void {
     if (f.state !== 'attached') return;
     const at = f.attach;
+    if (at && !approved && this.beforeHarvest && !this.beforeHarvest(at.plantId, cause)) return;
     this.aimElastic(f, playerId);
     f.detach(this.ctx, cause, playerId, inheritVel);
     if (at) {
@@ -672,7 +713,7 @@ export class FruitSystem implements System {
       if (node && node.fruitId === f.id) {
         node.fruitId = -1;
         // Schedule regrowth so the island does not strip-mine itself.
-        this.regrow.push({
+        if (!this.oneTimePlants.has(at.plantId)) this.regrow.push({
           plantId: at.plantId, nodeIndex: at.nodeIndex, species: f.species,
           readyAt: this.g.clock.elapsed + this.rng.range(95, 190),
         });
@@ -826,6 +867,7 @@ export class FruitSystem implements System {
     const plant = this.plants.get(plantId);
     if (!plant) return 0;
     const amount = this.plants.shakePlant(plantId, strength);
+    if (this.beforeHarvest && !this.beforeHarvest(plantId, 'shake')) return 0;
     if (strength > 0.3) {
       this.g.bus.emit('plant:shaken', {
         plantId, position: plant.position, height: plant.height, strength,
@@ -839,7 +881,7 @@ export class FruitSystem implements System {
       if (!f) continue;
       if (force > f.def.attachStrength * node.grip) {
         _v.set(this.rng.range(-0.7, 0.7), 0.4, this.rng.range(-0.7, 0.7));
-        this.detachAuthoritative(f, 'shake', playerId, _v);
+        this.detachAuthoritative(f, 'shake', playerId, _v, true);
         dropped++;
       }
     }
@@ -988,11 +1030,27 @@ export class FruitSystem implements System {
     const node = this.plants.get(at.plantId)?.nodes[at.nodeIndex];
     if (node && node.fruitId === f.id) {
       node.fruitId = -1;
-      this.regrow.push({
+      if (!this.oneTimePlants.has(at.plantId)) this.regrow.push({
         plantId: at.plantId, nodeIndex: at.nodeIndex, species: f.species,
         readyAt: this.g.clock.elapsed + this.rng.range(95, 190),
       });
     }
+  }
+
+  /** Restore only authored prizes, without replaying a harvest or minting a new ID. */
+  restoreHarvestPrize(id: number, saved: { position: [number, number, number]; damage: number } | null): void {
+    const f = this.get(id);
+    if (!f || !this.harvestSites.some(s => s.fruitIds.includes(id))) return;
+    const at = f.attach;
+    if (at) {
+      this.releaseAttachment(f);
+      this.logNode(at.plantId, at.nodeIndex, null);
+    }
+    if (!saved) { this.remove(f); return; }
+    if (f.body) { this.g.physics.removeBody(f.body, f.colliders); f.body = null; f.colliders.length = 0; }
+    f.position.set(...saved.position);
+    f.damage = saved.damage; f.refreshTint();
+    f.state = 'carried'; f.release(new THREE.Vector3());
   }
 
   /**

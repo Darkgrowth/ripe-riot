@@ -1,0 +1,26 @@
+
+> ripe-riot@0.1.0 build
+> tsc --noEmit && vite build --outDir capture/sunpatch-expedition-build
+
+vite v5.4.21 building for production...
+transforming...
+✓ 121 modules transformed.
+rendering chunks...
+computing gzip size...
+capture/sunpatch-expedition-build/index.html                           0.94 kB │ gzip:   0.48 kB
+capture/sunpatch-expedition-build/voxel-proof.html                     1.61 kB │ gzip:   0.77 kB
+capture/sunpatch-expedition-build/block-proof.html                     1.78 kB │ gzip:   0.84 kB
+capture/sunpatch-expedition-build/assets/blockProof-DOKQvBc6.css       0.49 kB │ gzip:   0.35 kB
+capture/sunpatch-expedition-build/assets/VoxelWorld-C5wN0gSY.css       2.69 kB │ gzip:   1.13 kB
+capture/sunpatch-expedition-build/assets/main-YEcTXMU7.css            19.84 kB │ gzip:   5.21 kB
+capture/sunpatch-expedition-build/assets/voxelProof-Cxw-RfhC.js        2.32 kB │ gzip:   1.23 kB │ map:     7.10 kB
+capture/sunpatch-expedition-build/assets/blockProof-Crw76ZHA.js        5.31 kB │ gzip:   2.63 kB │ map:    17.67 kB
+capture/sunpatch-expedition-build/assets/VoxelWorld-DLfTSWPK.js       23.43 kB │ gzip:   6.45 kB │ map:    71.54 kB
+capture/sunpatch-expedition-build/assets/three.module-DAoYlmEn.js    565.85 kB │ gzip: 145.34 kB │ map: 2,072.31 kB
+capture/sunpatch-expedition-build/assets/main-C44TejzQ.js          2,710.33 kB │ gzip: 979.56 kB │ map: 4,720.65 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 2.34s

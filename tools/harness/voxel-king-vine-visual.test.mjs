@@ -5,7 +5,7 @@ import { KingVine } from '../../src/boss/KingVine.ts';
 
 const fixture = () => {
   const scene = new THREE.Scene();
-  const world = { kingMelonPos: new THREE.Vector3(0, 17, 0) };
+  const world = { kingMelonPos: new THREE.Vector3(0, 17, 0), terrain: { height: () => 0 } };
   const game = { renderer: { scene }, get: name => name === 'world' ? world : null };
   return { game, scene };
 };

@@ -259,7 +259,8 @@ test('Air Cannon can deflect a spitter shot before it reaches the player', () =>
   const origin = [0, 1.4, 12];
   const direction = projectile.position.map((n, i) => n - origin[i]);
   assert.equal(model.tryHit(origin, direction, 'air', 'target')?.deflectedProjectileId, projectile.id);
-  assert.equal(model.snapshot().projectiles.length, 0);
+  assert.equal(model.snapshot().projectiles.length, 1);
+  assert.equal(model.snapshot().projectiles[0].reflectedBy, 'target');
 });
 
 test('read-only strike query sees enemy silhouettes without damaging them', () => {

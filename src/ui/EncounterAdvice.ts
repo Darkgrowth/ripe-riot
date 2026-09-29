@@ -9,7 +9,7 @@ export interface EncounterAdvice {
 /** Describe an observed opening without inventing damage or vulnerability. */
 export function encounterAdvice(state: EncounterState, carrying: boolean,
   hasCannon: boolean): EncounterAdvice | null {
-  if (state.health <= 0 || state.phase === 'defeated') return null;
+  if (state.health <= 0 || state.phase === 'defeated' || state.dormant) return null;
   const name = { mimic: 'MIMIC MELON', snapjaw: 'SNAPJAW', spitter: 'SPITTER PLANT' }[state.kind];
   const cue = (text: string, tone: EncounterAdvice['tone']): EncounterAdvice => ({ name, text, tone });
   if (state.kind === 'snapjaw') {

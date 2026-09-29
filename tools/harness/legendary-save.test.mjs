@@ -60,3 +60,31 @@ test('older completed saves put the melon on the extraction pad', () => {
   assert.ok(body.translation().y > 4);
   assert.equal(harvest.lastPayout, 9500);
 });
+
+function remoteFixture() {
+  const f = fixture(), events = [];
+  f.harvest.net = { authoritative: false };
+  f.harvest.g = { bus: { emit: (name, payload) => events.push({name,payload}) },
+    playerCamera: { addShake: () => events.push({name:'camera-shake'}) } };
+  const state = { ph:5, vm:0, p:[24,8,-31], q:[0,0,0,1], req:2, dtc:0, paid:9500, gen:0 };
+  return {...f, events, state};
+}
+
+test('late joining an already completed harvest mirrors the world without replaying cuts or victory', () => {
+  const {harvest,body,events,state} = remoteFixture();
+  harvest.applyNet(state);
+  assert.equal(harvest.phase,'complete');
+  assert.equal(harvest.vines.length,0);
+  assert.equal(harvest.lastPayout,9500);
+  assert.deepEqual(body.translation(),{x:24,y:8,z:-31});
+  assert.deepEqual(events,[], 'a first snapshot is history, not four new cuts and a new victory');
+});
+
+test('a live remote extraction still celebrates once', () => {
+  const {harvest,events,state} = remoteFixture();
+  harvest.applyNet({...state,ph:4,paid:0});
+  events.length=0;
+  harvest.applyNet(state); harvest.applyNet(state);
+  assert.equal(events.filter(e=>e.name==='legendary:complete').length,1);
+  assert.equal(events.filter(e=>e.name==='ui:celebrate').length,1);
+});

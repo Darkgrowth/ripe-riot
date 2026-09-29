@@ -15,16 +15,18 @@ function fixture(obstructed) {
   };
   const game = {
     renderer: { scene }, debug: null, input: { pointerLocked: true },
-    bus: { emit() {} },
-    player: { position: new THREE.Vector3(-23, 0, 19.8), body: {} },
+    bus: { emit() {}, on() {} }, has: () => false,
+    player: { state: 'active', position: new THREE.Vector3(-23, 0, 19.8), body: {} },
     physics: { raycast: (origin, direction, reach) => {
       obstacles.push({ origin: origin.clone(), direction: direction.clone(), reach });
       return obstructed ? { distance: 0.3 } : null;
     } },
-    get: name => name === 'world' ? world : null,
+    get: name => name === 'world' ? world : name === 'fruit'
+      ? { harvestSites: [], get: () => null } : null,
   };
   const system = new EncounterSystem();
   system.init(game);
+  system.model.activate('mimic'); // Combat fixture starts after deliberate harvest activation.
   system.fixedStep(1 / 60);
   return { system, obstacles };
 }
@@ -56,4 +58,17 @@ test('a melee defeat pays through the existing once-only callback', () => {
   for (let i = 0; i < 4; i++) system.resolveMelee(origin, direction, 'solo');
   assert.equal(system.snapshot().encounters.find(s => s.kind === 'mimic').phase, 'defeated');
   assert.equal(payouts, 1);
+});
+
+test('leaving co-op discards stale remote protection and restores the solo actor', () => {
+  const { system } = fixture(false);
+  system.setTargets([{ id: 'guest', position: [100, 0, 0], protected: true }]);
+  system.fixedStep(1 / 60);
+  assert.equal(system.currentTargets[0].id, 'guest');
+  system.setTargets(null);
+  system.fixedStep(1 / 60);
+  assert.equal(system.currentTargets[0].id, 'solo');
+  assert.equal(system.currentTargets[0].protected, false);
+  assert.equal(system.resolveMelee(new THREE.Vector3(-23, 1.7, 19.8),
+    new THREE.Vector3(0, 0, 1), 'solo').outcome, 'hit');
 });

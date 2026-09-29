@@ -1,0 +1,14 @@
+✔ route grading preserves the suspended melon floor, drop and landing basin (1.5862ms)
+✔ a slow-cut ridge landing has a broad walking approach from the existing farm (25.1606ms)
+✔ the painted orchard-to-farm approach stays below the player climb limit across walking width (1.6612ms)
+✔ both lower ravine walkouts still connect to safe ground after grading the rim road (5.224ms)
+✔ the marked hill-to-ravine path is walkable in both directions (3.6478ms)
+✔ default King Vine has ground-level starter-mallet access on every side of the worksite (12.0862ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 241.8809

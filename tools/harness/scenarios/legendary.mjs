@@ -230,22 +230,24 @@ export async function run(g, t) {
   t.eq(done.economy.money, 11780, 'two controlled tethers add a 24% bonus');
   t.note(`payout $${done.economy.money}`);
 
-  // --- the payoff: the next island. Announced a beat after the banner.
+  // Extraction leads back to the dock; a future island is not playable yet.
   await g.wait(4.0);
   const prog = (await g.state()).progress;
-  t.ok(prog.nextIsland, 'completing the King Melon unlocks the next island');
-  t.ok(prog.islands.includes('galegrove'), 'by name: Gale Grove');
+  t.ok(prog.nextIsland, 'legacy extraction flag remains compatible');
+  t.ok(!prog.islands.includes('galegrove'), 'no unfinished island is advertised as unlocked');
+  t.eq(await g.page.evaluate(() => window.__GAME.get('progress').chapterState), 'return',
+    'the completed harvest asks the crew to return to the dock');
   const flag = await g.page.evaluate(() => window.__GAME.get('world').built.boatFlag.visible);
-  t.ok(flag, 'and the flag goes up on the boat');
+  t.ok(!flag, 'the celebration flag waits for actual dock settlement');
   // …and it is progress, so it survives a save.
   await g.call('save.write', 'legendary-test');
   await g.call('progress.reset');
   await g.call('legendary.reset');
-  t.ok(!(await g.state()).progress.nextIsland, 'a reset locks it again');
+  t.ok(!(await g.state()).progress.nextIsland, 'a reset clears extraction progress');
   t.ok(!(await g.page.evaluate(() => window.__GAME.get('world').built.boatFlag.visible)),
     'and takes the flag down');
   await g.call('save.read', 'legendary-test');
-  t.ok((await g.state()).progress.nextIsland, 'and a save round-trip restores the unlock');
+  t.ok((await g.state()).progress.nextIsland, 'a save round-trip restores extraction progress');
   const restored = (await g.state()).legendary;
   t.eq(restored.phase, 'complete', 'a save round-trip restores the completed harvest');
   t.eq(restored.vines, 0, 'completed harvest does not regrow holding vines');

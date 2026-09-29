@@ -3,6 +3,8 @@ import type { Game, System } from '@/core/Game';
 import type { Sunpatch } from '@/world/Sunpatch';
 import { voxelKingVineArm, voxelKingVineBase, voxelKingVineConnector,
   voxelKingVineCore, voxelKingVineGuardLeaf, voxelKingVineSeed } from './VoxelKingVineGeometry.ts';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { KING_VINE_WORKSITE, KING_MELON_CUT_ROW } from '../world/LegendaryLayout.ts';
 
 export type VinePoint = [number, number, number];
 export type KingVineStrike = 'melee' | 'air';
@@ -60,7 +62,7 @@ const PHASES: KingVinePhase[] = ['idle', 'telegraph', 'sweep', 'seed', 'recover'
 const point = (p: VinePoint): VinePoint => [p[0], p[1], p[2]];
 
 /**
- * Active guardian rooted beneath the King Melon. Ropes can later extend its
+ * Active guardian rooted at the King Melon worksite. Ropes can later extend its
  * recovery window, but no rope is required: dodge a warning, hit the exposed
  * stem, or return a fired seed with the air cannon.
  *
@@ -119,8 +121,8 @@ export class KingVine implements System {
     this.g = g;
     if (!this.explicitCenter) {
       const world = g.get<Sunpatch>('world');
-      const melon = world.kingMelonPos;
-      this.center = [melon.x, world.terrain.height(melon.x, melon.z), melon.z];
+      const { x, z } = KING_VINE_WORKSITE;
+      this.center = [x, world.terrain.height(x, z), z];
     }
     this.buildVisuals();
     g.debug?.addProbe('kingVine', () => ({
@@ -144,8 +146,13 @@ export class KingVine implements System {
   fixedStep(dt: number): void {
     if (!this.authoritative || this.subdued || !Number.isFinite(dt) || dt <= 0) return;
     if (this.g && (!this.g.has('net') || !this.g.get<{ connected: boolean }>('net').connected)) {
-      const p = this.g.player.position;
-      this.setTargets([{ id: 'solo', position: [p.x, p.y, p.z] }]);
+      const player = this.g.player, p = player.position;
+      const vitals = this.g.has('vitals') ? this.g.get<{
+        downed: boolean; recoveryGraceRemaining: number;
+      }>('vitals') : null;
+      const available = player.state === 'active' && !vitals?.downed
+        && (vitals?.recoveryGraceRemaining ?? 0) <= 0;
+      this.setTargets(available ? [{ id: 'solo', position: [p.x, p.y, p.z] }] : []);
     }
     this.time += dt;
     if (this.phase === 'idle') {
@@ -227,6 +234,18 @@ export class KingVine implements System {
     this.heading = 0;
     this.projectile = null;
     this.attackIndex = 0;
+    this.hitVictims.clear();
+    this.hitByActor.clear();
+    this.revision++;
+  }
+
+  /** Restore a saved victory without paying or replaying the defeat callback. */
+  restoreSubdued(): void {
+    if (!this.authoritative || this.subdued) return;
+    this.phase = 'subdued';
+    this.health = 0;
+    this.timeLeft = 0;
+    this.projectile = null;
     this.hitVictims.clear();
     this.hitByActor.clear();
     this.revision++;
@@ -554,12 +573,8 @@ export class KingVine implements System {
     this.seedLane.receiveShadow = false;
     this.seedVisual = mesh(root, new THREE.IcosahedronGeometry(0.68, 1), seedMat, 0, 1.5, 0);
     this.seedVisual.visible = false;
-    // Connect the rooted guardian to the existing suspended fruit so this
-    // threat reads as part of the landmark, not a separate ordinary plant.
-    const world = this.g.get<Sunpatch>('world');
-    const melon = world.kingMelonPos;
-    const top: VinePoint = [melon.x - this.center[0], melon.y - this.center[1] - 2, melon.z - this.center[2]];
-    if (top[1] > 3.5) segment(root, [0, 3, 0], top, 0.21, bark);
+    const roots = this.cutRootPath();
+    for (let i = 1; i < roots.length; i++) segment(root, roots[i - 1], roots[i], 0.21, bark);
   }
 
   private buildVoxelVisuals(root: THREE.Group): void {
@@ -622,13 +637,33 @@ export class KingVine implements System {
     this.seedVisual.name = 'King Vine seed pod';
     this.seedVisual.visible = false;
 
-    // This single noncolliding stem connects to the existing suspended melon.
-    const melon = this.g!.get<Sunpatch>('world').kingMelonPos;
-    const topY = melon.y - this.center[1] - 2;
-    if (topY > 3.5) {
-      this.voxelConnector = mesh(root, voxelKingVineConnector(topY), shell, 0, 0, 0);
-      this.voxelConnector.name = 'King Vine melon connector';
+    // The guardian roots into the visible cutting ties, whose vines continue
+    // to the original anchors and suspended fruit. Keep this on the ground.
+    const roots = this.cutRootPath(), geometries: THREE.BufferGeometry[] = [];
+    for (let i = 1; i < roots.length; i++) {
+      const start = new THREE.Vector3(...roots[i - 1]);
+      const delta = new THREE.Vector3(...roots[i]).sub(start);
+      const geometry = voxelKingVineConnector(delta.length() + 2.88);
+      geometry.translate(0, -2.88, 0);
+      geometry.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0), delta.normalize()));
+      geometry.translate(start.x, start.y, start.z);
+      geometries.push(geometry);
     }
+    this.voxelConnector = mesh(root, mergeGeometries(geometries)!, shell, 0, 0, 0);
+    this.voxelConnector.name = 'King Vine melon connector';
+    for (const geometry of geometries) geometry.dispose();
+  }
+
+  private cutRootPath(): VinePoint[] {
+    const terrain = this.g!.get<Sunpatch>('world').terrain;
+    const end = KING_MELON_CUT_ROW;
+    const steps = Math.max(1, Math.floor(Math.hypot(end.x - this.center[0], end.z - this.center[2]) / 0.9));
+    return Array.from({ length: steps + 1 }, (_, i) => {
+      const t = i / steps, x = this.center[0] + (end.x - this.center[0]) * t;
+      const z = this.center[2] + (end.z - this.center[2]) * t;
+      return [x - this.center[0], terrain.height(x, z) + 0.35 - this.center[1], z - this.center[2]];
+    });
   }
 }
 

@@ -1,7 +1,15 @@
 import { defineConfig } from 'vite';
 import { fileURLToPath, URL } from 'node:url';
+import { execFileSync } from 'node:child_process';
+
+function buildId(): string {
+  if (process.env.RIPE_BUILD_ID) return process.env.RIPE_BUILD_ID.slice(0, 80);
+  try { return execFileSync('git', ['describe', '--always', '--dirty'], { encoding: 'utf8' }).trim(); }
+  catch { return 'development'; }
+}
 
 export default defineConfig({
+  define: { __RIPE_BUILD_ID__: JSON.stringify(buildId()) },
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },

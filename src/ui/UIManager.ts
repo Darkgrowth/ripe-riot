@@ -222,7 +222,7 @@ export class UIManager implements System {
   }
 
   private modalOpen(): boolean {
-    return ['shop', 'book'].some(name =>
+    return ['shop', 'book', 'expeditionShell'].some(name =>
       this.g.has(name) && this.g.get<{ open: boolean }>(name).open);
   }
 
@@ -277,7 +277,7 @@ export class UIManager implements System {
     const states = this.g.get<EncounterSystem>('encounters').snapshot().encounters;
     let nearest: EncounterState | null = null, best = 14;
     for (const state of states) {
-      if (state.health <= 0 || state.phase === 'defeated') continue;
+      if (state.health <= 0 || state.phase === 'defeated' || state.dormant) continue;
       this.cueRay.set(state.position[0], state.position[1] + 1.3, state.position[2]).sub(eye);
       const distance = this.cueRay.length();
       if (distance > best || distance < .01) continue;
@@ -511,7 +511,8 @@ export class UIManager implements System {
     if (held) {
       const f = held.fruit;
       const grip = held.cls === 'small' ? '' : ' · <b>both hands</b>';
-      parts.push(`${f.displayName} <span class="q">${f.quality}</span> · ${f.mass.toFixed(1)} kg${grip}`);
+      const value = this.g.has('economy') ? this.g.get<Economy>('economy').quote(f) : 0;
+      parts.push(`${f.displayName} <span class="q">${f.quality}</span> · ${f.mass.toFixed(1)} kg${grip}${value ? ` · ~$${value} unsecured` : ''}`);
       // How to put it down. Picking things up was always discoverable — the
       // look prompt says so — and putting them down never was: Q and the stow
       // click existed from the first build and appeared nowhere on screen.
@@ -523,7 +524,7 @@ export class UIManager implements System {
       }
     }
     if (basket.items.length) {
-      parts.push(`${toolIconMarkup('basket')} ${basket.items.length}/${basket.capacity} · $${inter.basketValue()}`);
+      parts.push(`${toolIconMarkup('basket')} ${basket.items.length}/${basket.capacity} · ~$${inter.basketValue()} unsecured`);
     }
     this.els.carry.innerHTML = parts.join('');
   }

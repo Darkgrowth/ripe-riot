@@ -450,8 +450,11 @@ export class InteractionSystem implements System {
         return;
       }
       this.targetKind = 'fruit';
+      const sitePrompt = f.state === 'attached' && this.g.has('encounters')
+        ? this.g.get<EncounterSystem>('encounters').harvestPrompt(f.id) : null;
       const verb = f.state === 'attached' ? 'Pick' : 'Grab';
-      this.promptText = `<b>E</b> ${verb} ${f.displayName}${q} — $${f.value()}`;
+      this.promptText = sitePrompt ? `<b>E</b> ${sitePrompt} — $${f.value()}`
+        : `<b>E</b> ${verb} ${f.displayName}${q} — $${f.value()}`;
       return;
     }
 
@@ -675,6 +678,7 @@ export class InteractionSystem implements System {
         this.fruitSys.releaseAttachment(f);
       } else {
         this.fruitSys.detach(f, 'hand', this.g.player.id);
+        if (f.state === 'attached') return false;
       }
       // The snap of a stem giving way. Bigger fruit lets go lower and harder.
       this.g.bus.emit('audio:sfx', {

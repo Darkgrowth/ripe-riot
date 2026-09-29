@@ -32,8 +32,9 @@ const LINES = [
   'Merv: That bruise is now a limited edition.',
   'Merv: I sold you that cannon. My solicitor says otherwise.',
   'Merv: That gull owes me rent.',
-  'Merv: Nine thousand five hundred. I should have bought a smaller melon.',
+  'Merv: King Melon secured. Head back to the dock boat to settle the expedition.',
   'Merv: Mind the coconuts. They have declined mediation.',
+  'Merv: Paid in full. Sunpatch is still yours to harvest.',
 ] as const;
 
 /** Two small island residents. Only the host may let the gull touch physics.
@@ -106,6 +107,7 @@ export class IslandCharacters implements System {
     this.root.add(this.merv, this.gull); g.renderer.scene.add(this.root);
     this.off.push(g.bus.on('fruit:sold', p => { this.gesture = 2.2; this.saleTotal += p.value; }));
     this.off.push(g.bus.on('legendary:complete', () => this.speak([10])));
+    this.off.push(g.bus.on('expedition:settled', () => this.speak([12])));
     this.off.push(g.bus.on('fruit:impact', p => {
       if (p.speed > 5 && p.point.distanceToSquared(this.mervAt) < 100) this.speak([7]);
       if (p.speed > 5 && p.point.distanceToSquared(this.mervAt) < 36) this.duck();
@@ -291,8 +293,9 @@ export class IslandCharacters implements System {
     if (index === undefined) return false;
     if (!force && (this.talkCooldown > 0 || this.g.player.position.distanceToSquared(this.mervAt) > 225)) {
       // Merv comments when you return to the shed, rather than speaking from
-      // sixty metres away. The legendary conclusion takes priority.
-      if (index === 10 || (index === 9 && this.pendingComment !== 10)) this.pendingComment = index;
+      // the dock or the far ridge. The settled chapter takes priority.
+      if (index === 12 || (index === 10 && this.pendingComment !== 12)
+        || (index === 9 && this.pendingComment === null)) this.pendingComment = index;
       return false;
     }
     this.talkSeen.add(index); this.talkCooldown = 30; this.gesture = 2.4;

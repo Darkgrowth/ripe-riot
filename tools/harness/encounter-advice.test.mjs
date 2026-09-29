@@ -19,6 +19,7 @@ test('rescue takes priority over attacking and defeated enemies give no advice',
 });
 
 test('combat advice follows the phase and the tools actually owned', () => {
+  assert.equal(encounterAdvice(state('mimic', 'idle', { dormant: true }), false, false), null);
   assert.match(encounterAdvice(state('mimic', 'warn'), false, false).text, /sidestep/i);
   assert.equal(encounterAdvice(state('mimic', 'stagger'), false, false).tone, 'opening');
   assert.doesNotMatch(encounterAdvice(state('spitter', 'warn'), false, false).text, /blast/);

@@ -32,7 +32,7 @@ import { MALLET_TIMING } from '@/tools/MalletSwing';
 export type IntentKind =
   | 'detach' | 'pick' | 'throw' | 'stow' | 'drop' | 'sell'
   | 'shove' | 'shake' | 'blast' | 'spawn'
-  | 'buy'
+  | 'buy' | 'settle'
   | 'lcut'
   | 'encounter' | 'revive' | 'vineHit' | 'melee'
   | 'rope'
@@ -136,6 +136,7 @@ interface RemoteState {
   height: number;
   state: string;
   busy: boolean;
+  recoveryUntil: number;
   hasNet: boolean;
   carrying: string | null;
   toolId: string | null;
@@ -510,6 +511,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     this.transport = null;
     this.connected = false;
     if (this.vitals) this.vitals.mode = 'solo';
+    this.encounters?.setTargets(null);
     this.kingVine?.setAuthority(true);
     this.isHost = true;
     this.established = false;
@@ -932,6 +934,18 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     this.g.bus.emit('money:changed', { money, delta: 0, reason: 'sync' });
   }
 
+  /** Preserve the expedition's result counters if this client becomes host.
+   * Assignment is silent: mirroring a sale must never replay its rewards. */
+  private syncEconomyStats(value: unknown): void {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+    const stats = value as Record<string, unknown>;
+    for (const key of ['lifetimeEarned', 'fruitSold', 'bestSale'] as const) {
+      const count = stats[key];
+      if (typeof count === 'number' && Number.isFinite(count) && count >= 0)
+        this.economy[key] = count;
+    }
+  }
+
   /** True when this peer may mutate authoritative state directly. */
   get authoritative(): boolean { return !this.connected || this.isHost; }
 
@@ -939,13 +953,21 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   activityCrew(): IslandCrew[] {
     const mine: IslandCrew = { position: this.g.player.position,
       busy: this.g.player.state !== 'active' || !!this.shop?.open
-        || this.g.get<{ open: boolean }>('book').open,
+        || this.g.get<{ open: boolean }>('book').open || this.shellOpen(),
       hasNet: !!this.tools?.owned.has('net') };
     return [mine, ...[...this.remotes.values()].map(r => ({ position: r.targetPos,
       busy: r.busy || r.state !== 'active', hasNet: r.hasNet }))];
   }
 
   get me(): PeerId { return this.transport?.id ?? ''; }
+
+  private shellOpen(): boolean {
+    return this.g.has('expeditionShell') && this.g.get<{ open: boolean }>('expeditionShell').open;
+  }
+
+  requestSettlement(): void {
+    if (this.connected && !this.isHost) this.send({ kind: 'settle' });
+  }
 
   // ---- outgoing requests --------------------------------------------------
   private send(intent: Omit<Intent, 'playerId' | 'rid'>, track?: Omit<Pending, 'at'>): number {
@@ -1256,7 +1278,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   // ---- LegendaryNet, for the King Melon -----------------------------------
   anyoneHasRopeGun(): boolean { return this.isHost && this.authority.anyoneHasRopeGun(); }
 
-  requestLegendary(intent: { kind: 'lcut'; vine: number }): void {
+  requestLegendary(intent: { kind: 'lcut'; vine: number; at: [number, number, number]; dir: [number, number, number] }): void {
     if (!this.connected || this.isHost) return;
     // A cut can be refused for a reason the player must hear.
     this.send(intent, { kind: intent.kind, fruitId: -1, ids: [], plantId: -1, nodeIndex: -1 });
@@ -1467,6 +1489,13 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     let deny: Deny | null = null;
 
     switch (intent.kind) {
+      case 'settle': {
+        const remote = this.remotes.get(from);
+        if (!remote || remote.state !== 'active' || remote.busy) deny = 'wrong-state';
+        else if (!this.progress?.isAtDock(this.authority.holdingFor(from).pos)) deny = 'out-of-reach';
+        else if (!this.progress.confirmSettlement()) deny = 'wrong-phase';
+        break;
+      }
       case 'detach':
         deny = this.authority.detach(from, fid, (intent.cause ?? 'hand') === 'hand');
         break;
@@ -1617,9 +1646,17 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       // `null` is success here, so no `??` on these: it reads null as "no
       // answer" and turned every cut and tether the host had just made into
       // a refusal on the wire.
-      case 'lcut':
-        deny = this.legendary ? this.legendary.remoteCut(intent.vine ?? -1, near) : 'no-fruit';
+      case 'lcut': {
+        const valid = (v: unknown): v is [number, number, number] =>
+          Array.isArray(v) && v.length === 3 && v.every(n => typeof n === 'number' && Number.isFinite(n));
+        const actor = this.remotes.get(from);
+        deny = !actor || actor.state !== 'active' || actor.busy ? 'wrong-state'
+          : !valid(intent.at) || !valid(intent.dir)
+            || this.authority.holdingFor(from).pos.distanceTo(new THREE.Vector3(...intent.at)) > 2.8 ? 'out-of-reach'
+          : this.legendary ? this.legendary.remoteCut(intent.vine ?? -1, near,
+            new THREE.Vector3(...intent.at), new THREE.Vector3(...intent.dir)) : 'no-fruit';
         break;
+      }
       case 'rope':
         deny = this.applyRope(intent, from);
         if (deny) { this.stats.denied++; this.lastDeny = `rope:${intent.op}:${deny}`; }
@@ -1636,7 +1673,8 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     if (rid >= 0) this.reply(from, rid, intent.kind, deny, { fruitId: fid });
     // Answer with the world as well as with a verdict: a claim that changed
     // hands should be visible to everyone on the next frame, not in 66 ms.
-    if (!deny) this.sendSnapshot();
+    if (!deny || (intent.kind === 'pick' && deny === 'wrong-phase'
+      && this.encounters?.harvestPrompt(fid))) this.sendSnapshot();
   }
 
   private reply(to: PeerId, rid: number, kind: IntentKind, deny: Deny | null,
@@ -1710,8 +1748,11 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     // Refused. Give the fruit back before the snapshot gets here, so the hand
     // empties on the same frame the refusal lands rather than a beat later.
     if (p.kind === 'pick') {
-      this.interaction.forfeit(p.fruitId, why);
       const f = this.fruitSys.get(p.fruitId);
+      const harvestWarning = m.reason === 'wrong-phase' && p.plantId >= 0
+        && !!this.encounters?.harvestPrompt(p.fruitId);
+      if (f && harvestWarning) this.interaction.reconcile(f, 'attached', false);
+      else this.interaction.forfeit(p.fruitId, why);
       // Only put it back on the branch if the host still thinks it is there.
       // If someone else took it, the host's copy is in their hands and the
       // snapshot — not us — decides where it is.
@@ -1761,7 +1802,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       h: +p.height.toFixed(2),
       s: p.state,
       ...(ragdollPose ? { rp: ragdollPose } : {}),
-      busy: !!this.shop?.open || this.g.get<{ open: boolean }>('book').open,
+      busy: !!this.shop?.open || this.g.get<{ open: boolean }>('book').open || this.shellOpen(),
       tool: this.tools?.activeId ?? null,
       nt: this.tools?.owned.has('net') ? 1 : 0,
       c: held?.species ?? null,
@@ -1799,7 +1840,9 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     r.targetPos.set(x, y, z);
     r.targetYaw = Number(m.yaw);
     r.height = Number(m.h ?? 1.82);
-    r.state = String(m.s ?? 'active');
+    const nextState = String(m.s ?? 'active');
+    if (r.state === 'downed' && nextState === 'active') r.recoveryUntil = this.g.clock.elapsed + 2;
+    r.state = nextState;
     r.ragdollPose = r.state === 'ragdoll' ? parseRagdollPose(m.rp) : null;
     r.busy = m.busy === true;
     r.toolId = typeof m.tool === 'string' ? m.tool : null;
@@ -1896,6 +1939,8 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       money: this.economy.money,
       tier: this.economy.discoveryTier,
       pts: this.economy.discoveryPoints,
+      economyStats: { lifetimeEarned: this.economy.lifetimeEarned,
+        fruitSold: this.economy.fruitSold, bestSale: this.economy.bestSale },
       nseq: this.fruitSys.nodeSeq,
       nlog: this.nodeLogFor(to),
       leg: this.legendary?.netState() ?? null,
@@ -1903,8 +1948,10 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       island: this.g.has('director') ? this.g.get<IslandDirector>('director').netState() : null,
       residents: this.g.has('characters') ? this.g.get<IslandCharacters>('characters').netState() : null,
       encounters: this.encounters?.snapshot() ?? null,
+      sites: this.encounters?.siteState() ?? null,
       kingVine: this.kingVine?.snapshot() ?? null,
       threatsCleared: this.progress ? [...this.progress.threatsCleared] : null,
+      chapter: this.progress?.chapterSnapshot() ?? null,
       baitStunts: this.g.has('scoring') ? this.g.get<{ baitState(): number[] }>('scoring').baitState() : [],
     };
     this.transport.send(msg, to);
@@ -2017,13 +2064,16 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     this.syncEconomy(Number(m.money ?? this.economy.money),
       typeof m.tier === 'number' ? m.tier : undefined,
       typeof m.pts === 'number' ? m.pts : undefined);
+    this.syncEconomyStats(m.economyStats);
     if (m.leg) this.legendary?.applyNet(m.leg as LegendaryNetState);
     if (Array.isArray(m.ropes)) this.applyRopes(m.ropes as RopePacket[], peers);
     if (m.island && this.g.has('director')) this.g.get<IslandDirector>('director').applyNet(m.island as IslandDirectorState);
     if (m.residents && this.g.has('characters')) this.g.get<IslandCharacters>('characters').applyNet(m.residents as CharacterNetState);
     if (m.encounters) this.encounters?.applySnapshot(m.encounters as EncounterNetState);
+    if (m.sites) this.encounters?.applySiteState(m.sites);
     if (m.kingVine) this.kingVine?.applySnapshot(m.kingVine as KingVineNetState);
     if (m.threatsCleared) this.progress?.applyHostThreats(m.threatsCleared);
+    if (m.chapter) this.progress?.applyChapterState(m.chapter);
   }
 
   private requestResync(): void {
@@ -2045,7 +2095,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       id, name, suit,
       pos: new THREE.Vector3(), targetPos: new THREE.Vector3(),
       yaw: 0, targetYaw: 0, height: 1.82, state: 'active', carrying: null,
-      busy: false, hasNet: false, toolId: null,
+      busy: false, recoveryUntil: 0, hasNet: false, toolId: null,
       rig, lastSeen: performance.now(), lastMoveAt: -Infinity, hasPlayerPacket: false,
       ragdollPose: null,
     };
@@ -2071,14 +2121,16 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       const targets = [
         ...(this.g.player.state === 'active' ? [{
           id: this.me,
+          protected: (this.vitals?.recoveryGraceRemaining ?? 0) > 0,
           position: [this.g.player.position.x, this.g.player.position.y, this.g.player.position.z] as [number, number, number],
         }] : []),
         ...[...this.remotes.values()].filter(r => r.state === 'active').map(r => ({
           id: r.id, position: [r.targetPos.x, r.targetPos.y, r.targetPos.z] as [number, number, number],
+          protected: r.recoveryUntil > this.g.clock.elapsed,
         })),
       ];
       this.encounters?.setTargets(targets);
-      this.kingVine?.setTargets(targets);
+      this.kingVine?.setTargets(targets.filter(target => !target.protected));
     }
     if (this.isHost) this.advanceMelee(dt);
     this.expirePending();

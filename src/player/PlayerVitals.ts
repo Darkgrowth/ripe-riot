@@ -28,6 +28,7 @@ export interface PlayerVitalsNetState {
   soloRecoveryRemaining: number;
   bleedoutRemaining: number;
   lastDamageSource: string;
+  recoveryGraceRemaining?: number;
 }
 
 /**
@@ -56,6 +57,8 @@ export class PlayerVitals implements System {
   /** One field self-recovery gives solo players time to learn an attack. */
   soloRecoveries = 0;
   lastDamageSource = '';
+  /** A short, bounded window to move clear after being helped up. */
+  recoveryGraceRemaining = 0;
 
   private g: Game | null = null;
   private offRecovered: (() => void) | null = null;
@@ -95,6 +98,7 @@ export class PlayerVitals implements System {
       bleedoutRemaining: this.bleedoutRemaining,
       source: this.lastDamageSource,
       authoritative: this.authoritative,
+      recoveryGraceRemaining: this.recoveryGraceRemaining,
     }));
   }
 
@@ -122,13 +126,14 @@ export class PlayerVitals implements System {
   applyHostAttack(amount: number, source: string, eventId?: string): boolean {
     if (this.authoritative) return false;
     if (eventId && this.seenHostAttacks.has(eventId)) return false;
+    if (eventId && Number.isFinite(amount) && amount > 0) this.rememberHostAttack(eventId);
     const changed = this.applyDamage(amount, source);
-    if (changed && eventId) this.rememberHostAttack(eventId);
     return changed;
   }
 
   private applyDamage(amount: number, source: string): boolean {
-    if (!Number.isFinite(amount) || amount <= 0 || this.downed || this.wiped) return false;
+    if (!Number.isFinite(amount) || amount <= 0 || this.downed || this.wiped
+      || this.recoveryGraceRemaining > 0) return false;
     const next = Math.max(0, this.health - amount);
     if (next === this.health) return false;
     this.health = next;
@@ -172,7 +177,12 @@ export class PlayerVitals implements System {
   }
 
   fixedStep(dt: number): void {
-    if (!this.authoritative || !this.downed || this.wiped || !Number.isFinite(dt) || dt <= 0) return;
+    if (!Number.isFinite(dt) || dt <= 0) return;
+    if (this.recoveryGraceRemaining > 0) {
+      this.recoveryGraceRemaining = Math.max(0, this.recoveryGraceRemaining - dt);
+      if (this.authoritative) this.revision++;
+    }
+    if (!this.authoritative || !this.downed || this.wiped) return;
     // PlayerRagdoll may end a tumble and set the controller active mid-down;
     // reassert this state until the explicit recovery/evacuation transition.
     this.syncPlayerState();
@@ -205,6 +215,7 @@ export class PlayerVitals implements System {
     if (!this.authoritative || !this.downed || this.wiped) return false;
     this.downed = false;
     this.health = Math.max(1, Math.round(this.maxHealth * 0.5));
+    this.recoveryGraceRemaining = 2;
     this.soloRecoveryRemaining = 0;
     this.bleedoutRemaining = 0;
     this.reviveProgress = 0;
@@ -238,6 +249,7 @@ export class PlayerVitals implements System {
   restoreAtCheckpoint(): void {
     const wasDown = this.downed;
     this.health = this.maxHealth;
+    this.recoveryGraceRemaining = 2;
     this.downed = false;
     this.wiped = false;
     this.reviveProgress = 0;
@@ -270,6 +282,7 @@ export class PlayerVitals implements System {
       soloRecoveryRemaining: this.soloRecoveryRemaining,
       bleedoutRemaining: this.bleedoutRemaining,
       lastDamageSource: this.lastDamageSource,
+      recoveryGraceRemaining: this.recoveryGraceRemaining,
     };
   }
 
@@ -290,6 +303,7 @@ export class PlayerVitals implements System {
     this.bleedoutRemaining = this.downed && !this.wiped
       ? clampFinite(state.bleedoutRemaining, 0, this.bleedoutSeconds) : 0;
     this.lastDamageSource = typeof state.lastDamageSource === 'string' ? state.lastDamageSource : '';
+    this.recoveryGraceRemaining = this.downed ? 0 : clampFinite(state.recoveryGraceRemaining ?? 0, 0, 2);
     this.syncPlayerState();
     if (!wasDown && this.downed) this.g?.bus.emit('player:downed', { playerId: this.g.player.id });
     if (wasDown && !this.downed) this.g?.bus.emit('player:revived', {

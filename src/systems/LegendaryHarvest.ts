@@ -12,6 +12,9 @@ import { Palette } from '@/render/Palette';
 import { KING_MELON_RADIUS } from '@/world/Landmarks';
 import { clamp, damp } from '@/core/MathUtils';
 import type { VisualMode } from '@/art/voxel/VisualMode';
+import { QueryMask } from '@/physics/Layers';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { KING_MELON_CUT_ROW } from '@/world/LegendaryLayout';
 
 export type LegendaryPhase = 'prepare' | 'tether' | 'detach' | 'drop' | 'recover' | 'complete' | 'failed';
 const PHASES: LegendaryPhase[] = ['prepare', 'tether', 'detach', 'drop', 'recover', 'complete', 'failed'];
@@ -72,6 +75,32 @@ export function buildVoxelExtractionBorderGeometry(radius: number): THREE.Buffer
   return geometry;
 }
 
+/** Amber planks mark the receiving apron at the open timber cradle. Each
+ * vertex follows the ground; the former horizontal disk was mostly buried. */
+export function buildExtractionApronGeometry(height: (x: number, z: number) => number): THREE.BufferGeometry {
+  const pieces: THREE.BufferGeometry[] = [];
+  const stripe = (ax: number, az: number, bx: number, bz: number): void => {
+    const length = Math.hypot(bx - ax, bz - az), count = Math.ceil(length / 1.1);
+    for (let i = 0; i < count; i++) {
+      const fraction = (i + .5) / count;
+      const geometry = new THREE.BoxGeometry(length / count * .78, .10, .28);
+      geometry.rotateY(-Math.atan2(bz - az, bx - ax));
+      geometry.translate(ax + (bx - ax) * fraction, .13, az + (bz - az) * fraction);
+      const p = geometry.attributes.position;
+      for (let j = 0; j < p.count; j++) p.setY(j, p.getY(j) + height(p.getX(j), p.getZ(j)));
+      geometry.computeVertexNormals(); pieces.push(geometry);
+    }
+  };
+  stripe(4, -47, 18, -47); stripe(18, -47, 18, -44);
+  stripe(18, -44, 4, -44); stripe(4, -44, 4, -47);
+  // Approach arrows point down the fall line into the cradle.
+  stripe(9, -49.5, 11.5, -47.8); stripe(14, -49.5, 11.5, -47.8);
+  const geometry = mergeGeometries(pieces, false)!;
+  for (const piece of pieces) piece.dispose();
+  geometry.name = 'TerrainFollowingExtractionApron';
+  return geometry;
+}
+
 /**
  * The legendary's state as it travels. Deliberately the minimum two peers
  * need to AGREE about: which phase, which vines are left, where the melon is,
@@ -99,7 +128,8 @@ export interface LegendaryNetState {
 export interface LegendaryNet {
   readonly authoritative: boolean;
   anyoneHasRopeGun(): boolean;
-  requestLegendary(intent: { kind: 'lcut'; vine: number }): void;
+  requestLegendary(intent: { kind: 'lcut'; vine: number;
+    at: [number, number, number]; dir: [number, number, number] }): void;
 }
 
 /**
@@ -156,6 +186,9 @@ export class LegendaryHarvest implements System, PhysicsOwner {
   dropTetherCount = 0;
   cutVines = 0;
   restStart = -1;
+  private extractionRestStart = -1;
+  private submergedAt = -1;
+  private failedAt = -1;
   /** Game time the last vine went; the drop has a clock of its own. */
   private dropStart = -1;
   completedAt = -1;
@@ -166,6 +199,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
   private padMesh: THREE.Mesh | null = null;
   private padBorder: THREE.Mesh | null = null;
   private anchors: THREE.Vector3[] = [];
+  private cutRootVisuals: Array<{ group: THREE.Group; stem: THREE.Mesh; label: THREE.Sprite }> = [];
   private homePosition = new THREE.Vector3();
   private lookingAtVine: Rope | null = null;
   private announced = new Set<string>();
@@ -220,7 +254,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     g.debug?.addAction('legendary.cut', (n = 1) => {
       for (let i = 0; i < n && this.vines.length; i++) {
         if (!this.authoritative) {
-          this.net!.requestLegendary({ kind: 'lcut', vine: this.vineIdx[i] });
+          this.requestCut(this.vineIdx[i]);
         } else {
           const deny = this.cutGate();
           if (deny) { this.refuse(deny); break; }
@@ -253,6 +287,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
       pad: [this.extractionPad.x, this.extractionPad.y, this.extractionPad.z],
       padRadius: this.extractionRadius,
       anchors: this.anchors.map((a) => [+a.x.toFixed(1), +a.y.toFixed(1), +a.z.toFixed(1)]),
+      cutPoints: this.cutPoints(),
     }));
   }
 
@@ -299,28 +334,15 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     }
     this.extractionPad.set(landing.x, this.world.terrain.height(landing.x, landing.z), landing.z);
 
-    const geo = new THREE.CylinderGeometry(this.extractionRadius, this.extractionRadius, 0.35, 28);
+    const geo = buildExtractionApronGeometry((x, z) => this.world.terrain.height(x, z));
     const mat = new THREE.MeshStandardMaterial({
-      color: Palette.gold, roughness: 0.85, transparent: true, opacity: 0.42,
+      color: Palette.gold, roughness: 0.85, transparent: true, opacity: 0.8,
+      emissive: 0x50310c, emissiveIntensity: 0.16,
     });
     this.padMesh = new THREE.Mesh(geo, mat);
-    this.padMesh.position.copy(this.extractionPad).add(_v.set(0, 0.18, 0));
     this.padMesh.receiveShadow = true;
     this.padMesh.name = 'ExtractionPad';
     this.g.renderer.scene.add(this.padMesh);
-    if (this.visualMode === 'voxel') {
-      const border = new THREE.Mesh(buildVoxelExtractionBorderGeometry(this.extractionRadius),
-        new THREE.MeshStandardMaterial({
-          color: 0xffffff, vertexColors: true, roughness: 0.82,
-          emissive: 0x50310c, emissiveIntensity: 0.16, side: THREE.DoubleSide,
-        }));
-      border.position.copy(this.extractionPad).add(_v.set(0, 0.37, 0));
-      border.receiveShadow = true;
-      border.visible = false;
-      border.name = 'ExtractionPadBorder';
-      this.g.renderer.scene.add(border);
-      this.padBorder = border;
-    }
   }
 
   private build(): void {
@@ -372,6 +394,97 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     this.mesh.position.copy(this.homePosition);
     this.mesh.quaternion.identity();
     this.hasRemoteTarget = false;
+    this.buildCutRoots();
+  }
+
+  /** Four deliberate cutting ties beside the existing ravine staging board.
+   * The load-bearing vine endpoints stay exactly where physics authored them. */
+  cutPoints(): Array<{ vine: number; position: [number, number, number]; remaining: boolean }> {
+    return [0, 1, 2, 3].map(vine => {
+      const x = KING_MELON_CUT_ROW.x + vine * KING_MELON_CUT_ROW.spacing, z = KING_MELON_CUT_ROW.z;
+      return { vine, position: [x, this.world.terrain.height(x, z) + 1.18, z],
+        remaining: this.vineIdx.includes(vine) };
+    });
+  }
+
+  private clearCutRoots(): void {
+    for (const { group } of this.cutRootVisuals) {
+      group.removeFromParent();
+      group.traverse(object => {
+        if (object instanceof THREE.Mesh) object.geometry.dispose();
+        if (object instanceof THREE.Mesh || object instanceof THREE.Sprite) {
+          const materials = Array.isArray(object.material) ? object.material : [object.material];
+          for (const material of materials) {
+            if ('map' in material) (material.map as THREE.Texture | null)?.dispose();
+            material.dispose();
+          }
+        }
+      });
+    }
+    this.cutRootVisuals = [];
+  }
+
+  private buildCutRoots(): void {
+    this.clearCutRoots();
+    const up = new THREE.Vector3(0, 1, 0);
+    const segment = (a: THREE.Vector3, b: THREE.Vector3, width: number) => {
+      const delta = b.clone().sub(a);
+      const geometry = new THREE.BoxGeometry(width, Math.max(.01, delta.length()), width);
+      geometry.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(up, delta.normalize()));
+      geometry.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
+      return geometry;
+    };
+    for (const point of this.cutPoints()) {
+      const [x, y, z] = point.position, base = y - 1.18;
+      const group = new THREE.Group(); group.name = `KingMelonCutTie${point.vine + 1}`;
+      const anchor = this.anchors[point.vine];
+      const pieces: THREE.BufferGeometry[] = [];
+      const radial = new THREE.Vector3(x - anchor.x, 0, z - anchor.z).normalize();
+      const foot = anchor.clone().addScaledVector(radial, 4.4);
+      foot.y = this.world.terrain.height(foot.x, foot.z) + .13;
+      let previous = new THREE.Vector3(x, base + .13, z);
+      const steps = Math.ceil(Math.hypot(foot.x - x, foot.z - z) / 1.1);
+      for (let i = 1; i <= steps; i++) {
+        const next = new THREE.Vector3(x, 0, z).lerp(foot, i / steps);
+        next.y = this.world.terrain.height(next.x, next.z) + .13;
+        pieces.push(segment(previous, next, .16)); previous = next;
+      }
+      const anchorGround = this.world.terrain.height(anchor.x, anchor.z);
+      for (const [fraction, radius] of [[.12, 3.7], [.36, 3.05], [.39, 2.55],
+        [.66, 2.1], [.69, 1.7], [.91, 1.3], [1, .85]]) {
+        const next = anchor.clone().addScaledVector(radial, radius + .25);
+        next.y = anchorGround + (anchor.y - anchorGround + .6) * fraction;
+        pieces.push(segment(previous, next, .17)); previous = next;
+      }
+      pieces.push(segment(previous, anchor, .17));
+      const trail = new THREE.Mesh(mergeGeometries(pieces),
+        new THREE.MeshStandardMaterial({ color: VINE_COLOR, roughness: 1 }));
+      pieces.forEach(piece => piece.dispose());
+      trail.name = `VineRootTrail${point.vine + 1}`; group.add(trail);
+      const stump = new THREE.Mesh(new THREE.BoxGeometry(.46, .55, .46),
+        new THREE.MeshStandardMaterial({ color: 0x47692d, roughness: 1 }));
+      stump.position.set(x, base + .275, z); group.add(stump);
+      const stem = new THREE.Mesh(new THREE.BoxGeometry(.34, .94, .34),
+        new THREE.MeshStandardMaterial({ color: 0x72a044, roughness: 1 }));
+      stem.position.set(x, base + .93, z); group.add(stem);
+      const band = new THREE.Mesh(new THREE.BoxGeometry(.49, .20, .49),
+        new THREE.MeshStandardMaterial({ color: 0xf1bd52, roughness: .85 }));
+      band.position.y = .25; stem.add(band);
+      const plate = document.createElement('canvas'); plate.width = 256; plate.height = 96;
+      const ink = plate.getContext('2d')!;
+      ink.fillStyle = '#d8a347'; ink.fillRect(0, 0, 256, 96);
+      ink.fillStyle = '#273d29'; ink.fillRect(6, 6, 244, 84);
+      ink.fillStyle = '#ffe2a1'; ink.font = 'bold 48px sans-serif';
+      ink.textAlign = 'center'; ink.textBaseline = 'middle';
+      ink.fillText(`CUT ${point.vine + 1}`, 128, 49);
+      const texture = new THREE.CanvasTexture(plate); texture.colorSpace = THREE.SRGBColorSpace;
+      const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthWrite: false }));
+      // Keep the billboard above the stem: at a downward close-up angle the
+      // physical gold band otherwise crosses the label's lettering.
+      label.position.set(x, base + 1.70, z + .30); label.scale.set(.78, .2925, 1);
+      group.add(label); this.g.renderer.scene.add(group);
+      this.cutRootVisuals.push({ group, stem, label });
+    }
   }
 
   reset(): void {
@@ -389,6 +502,10 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     this.dropTetherCount = 0;
     this.cutVines = 0;
     this.restStart = -1;
+    this.extractionRestStart = -1;
+    this.submergedAt = -1;
+    this.failedAt = -1;
+    this.announced.delete('ridge-recovery');
     this.dropStart = -1;
     this.lastPayout = 0;
     this.firstSightAt = -1;
@@ -401,18 +518,56 @@ export class LegendaryHarvest implements System, PhysicsOwner {
 
   // ---- interaction --------------------------------------------------------
   /** The vine the player is looking at, within cutting range. */
-  private findVineUnderCrosshair(maxDist = 7): Rope | null {
+  private findVineUnderCrosshair(): Rope | null {
     const p = this.g.player;
     _eye.copy(p.eyePosition);
     p.lookDir(_dir);
     let best: Rope | null = null;
     let bestScore = Infinity;
     for (const v of this.vines) {
-      this.ropes.endpoints(v, _a, _b);
-      const d = raySegmentDistance(_eye, _dir, _a, _b, maxDist);
-      if (d < 1.4 && d < bestScore) { bestScore = d; best = v; }
+      const i = this.vines.indexOf(v);
+      const contact = this.cutContact(this.vineIdx[i], _eye, _dir);
+      if (contact && contact.distanceTo(_eye) < bestScore) {
+        bestScore = contact.distanceTo(_eye); best = v;
+      }
     }
     return best;
+  }
+
+  /** Shared aim check for the local E key and host-validated client requests. */
+  validateCutAim(vine: number, origin: THREE.Vector3, direction: THREE.Vector3): boolean {
+    return this.cutContact(vine, origin, direction) !== null;
+  }
+
+  private cutContact(vine: number, origin: THREE.Vector3, direction: THREE.Vector3): THREE.Vector3 | null {
+    const index = this.vineIdx.indexOf(vine);
+    if (index < 0 || ![...origin.toArray(), ...direction.toArray()].every(Number.isFinite)
+      || direction.lengthSq() < .01) return null;
+    const dir = direction.clone().normalize();
+    const visible = (point: THREE.Vector3, reach: number, tolerance: number): boolean => {
+      const delta = point.clone().sub(origin), length = delta.length(), along = delta.dot(dir);
+      if (length > reach || along <= 0 || delta.clone().addScaledVector(dir, -along).length() > tolerance)
+        return false;
+      const hit = this.g.physics.raycast(origin, delta.divideScalar(length),
+        length, QueryMask.solid, this.g.player.body);
+      return !hit || hit.distance >= length - .08;
+    };
+    const point = new THREE.Vector3(...this.cutPoints()[vine].position);
+    if (visible(point, 3.4, .38)) return point;
+    const a = new THREE.Vector3(), b = new THREE.Vector3();
+    this.ropes.endpoints(this.vines[index], a, b);
+    for (let i = 0; i <= 12; i++) {
+      const sample = a.clone().lerp(b, i / 12);
+      if (visible(sample, 7, 1.4)) return sample;
+    }
+    return null;
+  }
+
+  private requestCut(vine: number): void {
+    const p = this.g.player, direction = p.lookDir(new THREE.Vector3());
+    this.net!.requestLegendary({ kind: 'lcut', vine,
+      at: p.eyePosition.toArray() as [number, number, number],
+      dir: direction.toArray() as [number, number, number] });
   }
 
   /** Every rope this player is still holding that ends on the melon. */
@@ -425,12 +580,12 @@ export class LegendaryHarvest implements System, PhysicsOwner {
    * or null when it cut (or asked the host to).
    */
   tryCut(): Deny | null {
-    const vine = this.lookingAtVine ?? this.findVineUnderCrosshair();
+    const vine = this.findVineUnderCrosshair();
     if (!vine) return 'no-fruit';
     if (!this.authoritative) {
       const i = this.vines.indexOf(vine);
       if (i < 0) return 'no-fruit';
-      this.net!.requestLegendary({ kind: 'lcut', vine: this.vineIdx[i] });
+      this.requestCut(this.vineIdx[i]);
       return null;
     }
     const deny = this.cutGate();
@@ -456,7 +611,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     }
   }
 
-  private cutVine(vine: Rope): void {
+  private cutVine(vine: Rope, present = true): void {
     const i = this.vines.indexOf(vine);
     if (i < 0) return;
     this.vines.splice(i, 1);
@@ -468,15 +623,17 @@ export class LegendaryHarvest implements System, PhysicsOwner {
       this.body?.wakeUp();
     }
 
-    this.g.playerCamera.addShake(0.05 + this.cutVines * 0.02, 0.7, 18);
-    this.g.bus.emit('audio:sfx', { name: 'ropeSnap', volume: 1 });
-    this.g.bus.emit('ui:toast', {
-      text: `VINE ${this.cutVines} OF ${this.cutVines + this.vines.length} CUT`,
-      sub: this.vines.length === 1 ? 'One left. It will not hold.'
-        : this.vines.length === 0 ? 'Nothing is holding it now.'
-          : `${this.vines.length} still holding`,
-      kind: this.vines.length <= 1 ? 'bad' : 'info', ms: 2800,
-    });
+    if (present) {
+      this.g.playerCamera.addShake(0.05 + this.cutVines * 0.02, 0.7, 18);
+      this.g.bus.emit('audio:sfx', { name: 'ropeSnap', volume: 1 });
+      this.g.bus.emit('ui:toast', {
+        text: `VINE ${this.cutVines} OF ${this.cutVines + this.vines.length} CUT`,
+        sub: this.vines.length === 1 ? 'One left. It will not hold.'
+          : this.vines.length === 0 ? 'Nothing is holding it now.'
+            : `${this.vines.length} still holding`,
+        kind: this.vines.length <= 1 ? 'bad' : 'info', ms: 2800,
+      });
+    }
 
     if (!this.authoritative) return;
     if (this.vines.length === 0) {
@@ -618,12 +775,13 @@ export class LegendaryHarvest implements System, PhysicsOwner {
 
   // ---- co-op: host side ---------------------------------------------------
   /** A client asked to cut a vine by anchor index. */
-  remoteCut(vine: number, near: (x: number, y: number, z: number, range: number) => boolean): Deny | null {
+  remoteCut(vine: number, near: (x: number, y: number, z: number, range: number) => boolean,
+    origin?: THREE.Vector3, direction?: THREE.Vector3): Deny | null {
     if (!this.body) return 'no-fruit';
     const i = this.vineIdx.indexOf(vine);
     if (i < 0) return 'no-fruit';
-    const t = this.body.translation();
-    if (!near(t.x, t.y, t.z, TETHER_RANGE)) return 'out-of-reach';
+    if (!origin || !direction || !near(origin.x, origin.y, origin.z, 2.8)
+      || !this.validateCutAim(vine, origin, direction)) return 'out-of-reach';
     const deny = this.cutGate();
     if (deny) return deny;
     this.cutVine(this.vines[i]);
@@ -668,6 +826,9 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     this.remoteGen = -1;
     this.syncTethers();
     const moving = this.phase === 'drop' || this.phase === 'recover';
+    this.extractionRestStart = -1;
+    this.submergedAt = -1;
+    this.failedAt = -1;
     if (moving || this.cutVines > 0) {
       if (this.body.isFixed()) this.body.setBodyType(RAPIER.RigidBodyType.Dynamic, true);
       this.body.wakeUp();
@@ -712,6 +873,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
   /** Make the local copy agree with the host. */
   applyNet(s: LegendaryNetState): void {
     if (this.authoritative || !this.body) return;
+    const live = this.remoteGen >= 0;
     if (this.remoteGen !== s.gen) {
       // A new attempt, or our first sight of this one: start from the seed.
       if (this.remoteGen >= 0 || this.cutVines > 0) this.reset();
@@ -719,11 +881,9 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     }
     this.requiredTethers = s.req;
     this.dropTetherCount = Math.max(0, s.dtc ?? 0);
-    // Vines the host has cut, by anchor index. Cutting locally plays the same
-    // snap the host heard, which is the point of mirroring it as a cut rather
-    // than as a vine quietly missing from the next frame.
+    // A first snapshot restores history silently; subsequent cuts are live.
     for (let i = this.vines.length - 1; i >= 0; i--) {
-      if (!(s.vm & (1 << this.vineIdx[i]))) this.cutVine(this.vines[i]);
+      if (!(s.vm & (1 << this.vineIdx[i]))) this.cutVine(this.vines[i], live);
     }
     // The melon goes where the host says. The body is fixed on a client, so
     // this is a teleport for the physics and a damp for the eye.
@@ -733,7 +893,13 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     this.body.setTranslation({ x: s.p[0], y: s.p[1], z: s.p[2] }, false);
     this.body.setRotation({ x: s.q[0], y: s.q[1], z: s.q[2], w: s.q[3] }, false);
     const phase = PHASES[s.ph] ?? 'prepare';
-    if (phase !== this.phase) {
+    if (!live) {
+      this.phase = phase;
+      this.announced.add(phase);
+      if (phase === 'complete' && this.padMesh) {
+        (this.padMesh.material as THREE.MeshStandardMaterial).color.set(0x66dd88);
+      }
+    } else if (phase !== this.phase) {
       const was = this.phase;
       this.setPhase(phase);
       if (phase === 'complete') this.celebrate(s.paid, was);
@@ -748,6 +914,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
   private setPhase(next: LegendaryPhase): void {
     if (this.phase === next) return;
     this.phase = next;
+    if (next !== 'prepare' && next !== 'tether' && next !== 'detach') this.lookingAtVine = null;
     this.g.bus.emit('legendary:phase', { id: 'kingMelon', phase: next });
     if (!this.announced.has(next)) {
       this.announced.add(next);
@@ -797,11 +964,11 @@ export class LegendaryHarvest implements System, PhysicsOwner {
   private fail(reason: string): void {
     if (this.phase === 'failed' || this.phase === 'complete') return;
     this.setPhase('failed');
+    this.failedAt = this.g.clock.elapsed;
     this.g.bus.emit('ui:toast', {
-      text: 'THE KING MELON IS GONE', sub: reason, kind: 'bad', ms: 5000,
+      text: 'THE KING MELON IS GONE', sub: `${reason} It will regrow in 25 seconds — try again at the vine ties.`,
+      kind: 'bad', ms: 7000,
     });
-    // Soft consequences: it grows back. Losing an hour of setup is not funny.
-    window.setTimeout(() => { if (this.phase === 'failed') this.reset(); }, 25_000);
   }
 
   // ---- loop ---------------------------------------------------------------
@@ -815,6 +982,14 @@ export class LegendaryHarvest implements System, PhysicsOwner {
       this.lookingAtVine = canInteract && this.guardianSubdued ? this.findVineUnderCrosshair() : null;
       if (canInteract && this.lookingAtVine && this.g.input.frame.interactPressed) this.tryCut();
       this.syncTethers();
+      return;
+    }
+
+    // Retry follows game time and survives host promotion. The guardian stays
+    // subdued; only the physical harvest attempt regrows.
+    if (this.phase === 'failed') {
+      if (this.failedAt < 0) this.failedAt = this.g.clock.elapsed;
+      if (this.g.clock.elapsed - this.failedAt >= 25) this.reset();
       return;
     }
 
@@ -854,10 +1029,21 @@ export class LegendaryHarvest implements System, PhysicsOwner {
 
     if (this.phase === 'recover' || this.phase === 'drop') {
       if (this.inExtraction() && speed < 1.6) {
-        this.restStart = this.restStart < 0 ? this.g.clock.elapsed : this.restStart;
-        if (this.g.clock.elapsed - this.restStart > 1.4) this.complete();
+        this.extractionRestStart = this.extractionRestStart < 0
+          ? this.g.clock.elapsed : this.extractionRestStart;
+        if (this.g.clock.elapsed - this.extractionRestStart > 1.4) this.complete();
+      } else {
+        this.extractionRestStart = -1;
       }
-      if (t.y < -6) this.fail('It went into the sea.');
+      // A radius-5.6 sphere rests with its center ABOVE a shallow basin. The
+      // old center<-6 check could never notice this unrecoverable wet landing.
+      const settledInWater = t.y < MELON_RADIUS * .4 && speed < 1.2
+        && this.world.terrain.height(t.x, t.z) < -1.5;
+      this.submergedAt = settledInWater
+        ? (this.submergedAt < 0 ? this.g.clock.elapsed : this.submergedAt) : -1;
+      if (t.y < -6 || (this.submergedAt >= 0 && this.g.clock.elapsed - this.submergedAt > 4)) {
+        this.fail('It settled too deep in the water.');
+      }
     }
   }
 
@@ -878,6 +1064,10 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     }
 
     this.updatePadVisuals();
+    for (let i = 0; i < this.cutRootVisuals.length; i++) {
+      const remaining = this.vineIdx.includes(i), visual = this.cutRootVisuals[i];
+      visual.stem.visible = remaining; visual.label.visible = remaining;
+    }
 
     // Prompts, only when the player is close enough to act.
     const p = this.g.player;
@@ -885,7 +1075,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     const dist = Math.hypot(t.x - p.position.x, t.z - p.position.z);
     if (dist > 60) return;
     if (this.lookingAtVine) {
-      this.g.bus.emit('ui:prompt', { text: '<b>E</b> Cut the vine', priority: 'action' });
+      this.g.bus.emit('ui:prompt', { text: '<b>E</b> Cut the vine tie', priority: 'action' });
     } else if (this.phase === 'prepare' && dist < 40) {
       if (this.firstSightAt < 0) this.firstSightAt = this.g.clock.elapsed;
       if (this.g.clock.elapsed - this.firstSightAt < 4.5) {
@@ -900,6 +1090,14 @@ export class LegendaryHarvest implements System, PhysicsOwner {
         priority: 'context',
       });
     } else if (this.phase === 'recover' && dist < 40) {
+      if (t.y > 30 && t.z < -64 && !this.announced.has('ridge-recovery')) {
+        this.announced.add('ridge-recovery');
+        this.g.bus.emit('ui:toast', {
+          text: 'THE MELON LANDED ON THE RIDGE',
+          sub: 'Follow the marked path behind the hill farm, then push it downhill into the timber receiver.',
+          kind: 'gold', ms: 8000,
+        });
+      }
       const d = this.distanceToPad();
       this.g.bus.emit('ui:prompt', {
         text: `Get it to the pad — <b>${d.toFixed(0)} m</b>`,
@@ -914,7 +1112,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
     this.padMesh.visible = active || this.phase === 'complete';
     if (this.padBorder) this.padBorder.visible = this.padMesh.visible;
     if (active) {
-      const pulse = 0.32 + Math.sin(performance.now() / 380) * 0.12;
+      const pulse = 0.78 + Math.sin(performance.now() / 380) * 0.12;
       (this.padMesh.material as THREE.MeshStandardMaterial).opacity = pulse;
     }
   }
@@ -976,6 +1174,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
   }
 
   dispose(): void {
+    this.clearCutRoots();
     for (const mesh of [this.padBorder, this.padMesh]) {
       if (!mesh) continue;
       this.g?.renderer?.scene.remove(mesh);
@@ -996,23 +1195,4 @@ const PHASE_BLURB: Partial<Record<LegendaryPhase, { title: string; sub: string }
 
 function len(v: { x: number; y: number; z: number }): number {
   return Math.hypot(v.x, v.y, v.z);
-}
-
-/** Shortest distance from a ray to a segment, used for aiming at vines. */
-function raySegmentDistance(origin: THREE.Vector3, dir: THREE.Vector3,
-  a: THREE.Vector3, b: THREE.Vector3, maxDist: number): number {
-  // Sample the segment: exact ray/segment closest-approach is overkill for a
-  // 1.4 m aim tolerance, and sampling handles the sagging catenary better than
-  // treating the vine as a straight line anyway.
-  let best = Infinity;
-  const steps = 12;
-  for (let i = 0; i <= steps; i++) {
-    _v.copy(a).lerp(b, i / steps);
-    _v.sub(origin);
-    const along = _v.dot(dir);
-    if (along < 0 || along > maxDist) continue;
-    const perp = Math.sqrt(Math.max(0, _v.lengthSq() - along * along));
-    if (perp < best) best = perp;
-  }
-  return best;
 }

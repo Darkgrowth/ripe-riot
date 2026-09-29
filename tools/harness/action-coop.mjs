@@ -72,6 +72,8 @@ try {
   await host.page.evaluate((peer) => window.__GAME.get('net').requestRevive(peer, false), clientId);
 
   const enemies = await host.call('encounters.info');
+  // The combat authority fixture starts after the deliberately gated harvest.
+  await host.page.evaluate(() => window.__GAME.get('encounters').model.activate('mimic'));
   const [mx, my, mz] = enemies.threats.mimic.pos;
   await client.tp(mx, my + 1.2, mz - 2.2);
   await faceTo(client, mx, my + 1.15, mz);
@@ -114,6 +116,92 @@ try {
   check(afterBoss.health < boss.health,
     'client Air Cannon damages host-owned King Vine through a validated intent',
     `health ${boss.health} -> ${afterBoss.health}, phase ${afterBoss.phase}`);
+
+  // Chapter edge fixtures are separate from the no-shortcuts expedition run.
+  const siteId = await host.page.evaluate(() => {
+    const game = window.__GAME, sites = game.get('encounters').siteState();
+    const site = sites.find(s => s.kind === 'mimic');
+    game.get('fruit').detachAuthoritative(game.get('fruit').get(site.fruitIds[0]), 'hand');
+    return site.id;
+  });
+  await sleep(800);
+  check((await client.page.evaluate(id => window.__GAME.get('encounters').siteState()
+    .find(s => s.id === id)?.phase, siteId)) === 'warning', 'harvest warning replicates before release');
+  const releasedId = await host.page.evaluate(id => {
+    const game = window.__GAME, site = game.get('encounters').siteState().find(s => s.id === id);
+    const fruit = game.get('fruit').get(site.fruitIds[0]);
+    game.get('fruit').detachAuthoritative(fruit, 'hand');
+    return fruit.id;
+  }, siteId);
+  await sleep(700);
+  check((await client.page.evaluate(id => window.__GAME.get('encounters').siteState()
+    .find(s => s.id === id)?.released.length, siteId)) > 0, 'released crop ledger reaches the client');
+  await host.page.evaluate(id => {
+    const fruits = window.__GAME.get('fruit'); fruits.remove(fruits.get(id));
+  }, releasedId);
+  await sleep(700);
+  check(await client.page.evaluate(({ siteId, releasedId }) => window.__GAME.get('encounters').siteState()
+    .find(s => s.id === siteId)?.consumed.includes(releasedId), { siteId, releasedId }),
+  'removed prize is consumed on the client without replenishment');
+
+  const beforeSettlement = (await host.state()).economy.money;
+  await host.page.evaluate(() => {
+    const game = window.__GAME;
+    game.get('legendary').phase = 'complete';
+    game.get('progress').chapterState = 'return';
+  });
+  await sleep(500);
+  await client.page.evaluate(() => window.__GAME.get('net').requestSettlement());
+  await sleep(350);
+  check((await host.page.evaluate(() => window.__GAME.get('progress').chapterState)) === 'return',
+    'a remote settlement away from the dock is refused');
+  const dock = await client.page.evaluate(() => window.__GAME.get('world').spawnPoint.toArray());
+  await client.tp(...dock);
+  await sleep(700);
+  await client.page.evaluate(() => window.__GAME.get('net').requestSettlement());
+  await sleep(750);
+  check((await host.page.evaluate(() => window.__GAME.get('progress').chapterState)) === 'settled'
+    && (await client.page.evaluate(() => window.__GAME.get('progress').chapterState)) === 'settled',
+    'a nearby remote settlement completes on host and client');
+  check((await host.state()).economy.money === beforeSettlement,
+    'settlement presents the paid result without duplicating money');
+
+  // A separate migration fixture starts before settlement. These counters and
+  // the completed melon are authored setup, not a claimed harvest playthrough;
+  // their snapshot transport, promotion, and dock settlement are real systems.
+  const expectedStats = { lifetimeEarned: 10437, fruitSold: 17, bestSale: 320 };
+  await host.page.evaluate(stats => {
+    const game = window.__GAME;
+    Object.assign(game.get('economy'), stats);
+    game.get('legendary').lastPayout = 9500;
+    game.get('progress').chapterState = 'return';
+    game.get('progress').results = null;
+  }, expectedStats);
+  await sleep(700);
+  check(await client.page.evaluate(stats => {
+    const game = window.__GAME, economy = game.get('economy'), progress = game.get('progress');
+    return Object.entries(stats).every(([key, value]) => economy[key] === value)
+      && progress.chapterState === 'return' && progress.results === null;
+  }, expectedStats), 'host result counters reach the guest before settlement');
+  await host.call('net.disconnect');
+  await sleep(2200);
+  check((await client.state()).net.isHost && await client.page.evaluate(({ siteId, releasedId }) => {
+    const game = window.__GAME, site = game.get('encounters').siteState().find(s => s.id === siteId);
+    return site.consumed.includes(releasedId) && !game.get('fruit').get(releasedId)
+      && game.get('progress').chapterState === 'return';
+  }, { siteId, releasedId }), 'host migration preserves consumed prizes and the pending dock return');
+  const promotedSettlement = await client.page.evaluate(() => {
+    const game = window.__GAME, progress = game.get('progress');
+    return { settled: progress.settleAtDock(), duplicate: progress.settleAtDock(),
+      results: progress.results, money: game.get('economy').money };
+  });
+  check(promotedSettlement.settled && !promotedSettlement.duplicate
+    && Object.entries(expectedStats).every(([key, value]) => promotedSettlement.results?.[key] === value)
+    && promotedSettlement.results?.payout === 9500,
+  'promotion before settlement freezes the original host expedition statistics',
+  JSON.stringify(promotedSettlement.results));
+  check(promotedSettlement.money === beforeSettlement,
+    'promoted settlement and duplicate interaction do not award money again');
 
   const errors = [...first.consoleErrors, ...second.consoleErrors]
     .filter(e => !/DevTools|deprecat|ReadPixels|GPU stall/i.test(e));

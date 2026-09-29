@@ -1,0 +1,31 @@
+✔ the painted orchard-to-farm approach stays below the player climb limit across walking width (3.9902ms)
+✖ the marked hill-to-ravine path is walkable in both directions (5.5573ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 1
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 174.7005
+
+✖ failing tests:
+
+test at tools\harness\expedition-route.test.mjs:21:1
+✖ the marked hill-to-ravine path is walkable in both directions (5.5573ms)
+  AssertionError [ERR_ASSERTION]: marked return route exceeds safe walking slope: {"degrees":68.97096480481133,"x":-17.38564293117863,"z":-47.70749060945487}
+      at TestContext.<anonymous> (file:///C:/Users/benma/.codex/worktrees/sunpatch-finish/RIPE%20RIOT/tools/harness/expedition-route.test.mjs:34:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

@@ -38,8 +38,7 @@ export const ROUTE: ReadonlyArray<readonly [number, number, number]> = [
 
 /**
  * The second track: out of the back of the orchard, up the one walkable
- * shoulder of the central hill (29 degrees at its worst — measured, not
- * hoped), across the hill farm and down to the ravine rim where the King
+ * graded shoulder of the central hill, across the hill farm and down to the ravine rim where the King
  * Melon hangs. It is the island's escalation drawn on the ground: apples
  * behind you, watermelons and Boulder Plums beside you, the legendary ahead.
  * It is narrower than the first because fewer people walk it.
@@ -58,7 +57,18 @@ export const ROUTE_RAVINE_WEST: ReadonlyArray<readonly [number, number, number]>
   [-20, -62, 2.2], [-18.2, -58, 2.2], [-15.6, -52, 2.2], [-12, -44, 2.2],
 ];
 
-const ROUTES = [ROUTE, ROUTE_HILL, ROUTE_RAVINE, ROUTE_RAVINE_WEST];
+/** Slow vine cuts can swing the melon onto the high ridge. A marked western
+ * shoulder lets the crew get behind that real landing without buying a tool. */
+export const ROUTE_RIDGE: ReadonlyArray<readonly [number, number, number]> = [
+  [-36, -30, 2.4], [-35, -44, 2.4], [-30, -53, 2.4], [-31, -60, 2.4],
+  [-28, -69, 2.4], [-22, -75, 2.4], [-15, -77, 2.4], [8, -76, 2.4],
+];
+
+const ROUTES = [ROUTE, ROUTE_HILL, ROUTE_RAVINE, ROUTE_RAVINE_WEST, ROUTE_RIDGE];
+// x, z, elevation at the existing marked hill/ravine junctions.
+const RIM_GRADE = [[-22, -44, 19.9242], [-13, -49, 17.2], [-5, -51.5, 14.6981]] as const;
+const RIDGE_GRADE = ROUTE_RIDGE.map(([x, z], i) =>
+  [x, z, [21, 21, 21, 25, 27, 28, 30, 30][i]] as const);
 
 export interface BiomeWeights { sand: number; grass: number; rock: number; dirt: number; }
 
@@ -134,6 +144,19 @@ export class Terrain {
       if (w > 0) h = h * (1 - w) + f.y * w;
     }
 
+    // The orchard flatten originally left a 61-degree lip across ROUTE_HILL,
+    // above the controller's 53-degree limit. Grade its existing shoulder
+    // between the unchanged 7.5 m orchard and 21 m farm. The full walking width
+    // shares a gentle profile; a broad edge blend joins the surrounding hill.
+    const hillTrackX = -28.6 + (z - 4) * .2;
+    const hillAlong = smoothstep(-22, -20, z) * smoothstep(6, 4, z);
+    const hillAcross = smoothstep(7, 3.6, Math.abs(x - hillTrackX));
+    const hillWeight = hillAlong * hillAcross;
+    if (hillWeight > 0) {
+      const hillHeight = 7.5 + 13.5 * smoothstep(0, 1, clamp((4 - z) / 24, 0, 1));
+      h += (hillHeight - h) * hillWeight;
+    }
+
     // A lower ravine player must be able to walk out without a tool. Blend a
     // broad, shallow ramp into the south bank rather than changing the King
     // Melon's landing ground or the high rim where its vines are anchored.
@@ -152,9 +175,47 @@ export class Terrain {
     const westAlong = smoothstep(-63, -61.8, z) * smoothstep(-42.5, -45.3, z);
     const westAcross = smoothstep(5.0, 2.2, Math.abs(x - westX));
     const westWeight = westAlong * westAcross;
+
+    // The painted return route crossed two short cliff lips. Give that same
+    // route a continuous walking surface, blending overlapping segments at
+    // the bend. The melon landing stays unchanged; its suspension rig is
+    // authored separately so grading nearby ground cannot relocate a vine.
+    if (x > -33 && x < 6 && z > -63 && z < -33) {
+      let weightedHeight = 0, gradeWeight = 0;
+      for (let i = 0; i < RIM_GRADE.length - 1; i++) {
+        const a = RIM_GRADE[i], b = RIM_GRADE[i + 1];
+        const dx = b[0] - a[0], dz = b[1] - a[1], length = Math.hypot(dx, dz);
+        const raw = ((x - a[0]) * dx + (z - a[1]) * dz) / (length * length);
+        const t = clamp(raw, 0, 1);
+        const distance = Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t);
+        const weight = smoothstep(10, 3, distance);
+        weightedHeight += (a[2] + (b[2] - a[2]) * t) * weight;
+        gradeWeight += weight;
+      }
+      if (gradeWeight > 0) h += (weightedHeight / gradeWeight - h) * Math.min(1, gradeWeight);
+    }
+
+    // Join the western walkout to the graded road, instead of cutting a deep
+    // trench across it. Apply this continuous approach last so the road's
+    // shoulder blend cannot create a new lip on the walkout itself.
     if (westWeight > 0) {
-      const westHeight = 4.7 + (z + 62) * 0.49;
+      const westHeight = Math.min(17.5, 4.7 + (z + 62) * .985);
       h += (westHeight - h) * westWeight;
+    }
+
+    // Round the three steep pinches on the western approach. The suspension
+    // anchors, initial drop and extraction basin are outside this grade.
+    if (x > -43 && x < 15 && z > -84 && z < -24) {
+      let weightedHeight = 0, gradeWeight = 0;
+      for (let i = 1; i < RIDGE_GRADE.length; i++) {
+        const a = RIDGE_GRADE[i - 1], b = RIDGE_GRADE[i];
+        const dx = b[0] - a[0], dz = b[1] - a[1];
+        const t = clamp(((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz), 0, 1);
+        const weight = smoothstep(6, 2.6, Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t));
+        weightedHeight += (a[2] + (b[2] - a[2]) * t) * weight;
+        gradeWeight += weight;
+      }
+      if (gradeWeight > 0) h += (weightedHeight / gradeWeight - h) * Math.min(1, gradeWeight);
     }
 
     // Beaches: flatten anything close to sea level into a gentle shelf.

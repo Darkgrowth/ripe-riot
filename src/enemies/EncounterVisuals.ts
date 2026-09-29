@@ -117,6 +117,7 @@ export class EncounterVisual {
 
     if (this.kind === 'mimic') {
       this.mimicRig?.update(state, dt);
+      if (state.dormant) this.root.visible = false;
     } else if (this.kind === 'snapjaw') {
       if (this.voxelSnapjaw) {
         if (this.snapjawHealth !== null && state.health < this.snapjawHealth)
@@ -406,7 +407,12 @@ export class EncounterProjectileVisual {
       const direction = new THREE.Vector3(...state.velocity).normalize();
       if (direction.lengthSq() > 0)
         this.root.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction);
-      if (this.pod) this.pod.rotation.z += dt * 6;
+      if (this.pod) {
+        this.pod.rotation.z += dt * 6;
+        const mat = this.pod.material as THREE.MeshStandardMaterial;
+        mat.emissive.setHex(state.reflectedBy ? 0x42b9d1 : 0x8c8430);
+        mat.emissiveIntensity = state.reflectedBy ? .55 : .12;
+      }
     } else {
       if (!this.positioned) { this.root.position.copy(target); this.positioned = true; }
       else this.root.position.lerp(target, 1 - Math.exp(-Math.max(0, dt) * 30));

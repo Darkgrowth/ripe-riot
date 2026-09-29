@@ -1,0 +1,272 @@
+{"wallSeconds":5.49,"stage":"boot","kind":"fresh-dock","pos":[71.49999981020659,2.350725860545557,71.50000055896021],"health":100,"playerState":"active","mimic":{"pos":[-23,7.5,22],"phase":"idle","health":3,"timeLeft":0},"tool":"hand","carried":null,"targetKind":null,"targetId":null,"money":0,"render":{"drawCalls":177,"triangles":3277066,"geometries":146,"textures":25,"programs":35}}
+{"wallSeconds":5.71,"stage":"walk","kind":"waypoint","point":[60,0,65],"radius":1.4}
+{"wallSeconds":8.58,"stage":"walk","kind":"waypoint","point":[55.5,0,61],"radius":1.4}
+{"wallSeconds":10.34,"stage":"walk","kind":"waypoint","point":[50.5,0,61.5],"radius":1.4}
+{"wallSeconds":11.41,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":6.066666666666652,"payload":{"text":"Merv: The fruit is insured. You are not.","kind":"info","ms":4200}}
+{"wallSeconds":11.81,"stage":"walk","kind":"waypoint","point":[44,0,62.5],"radius":1.4}
+{"wallSeconds":14.11,"stage":"walk","kind":"waypoint","point":[37.2,0,58.2],"radius":1.4}
+{"wallSeconds":16.37,"stage":"walk","kind":"waypoint","point":[30,0,54],"radius":1.4}
+{"wallSeconds":18.06,"stage":"walk","kind":"waypoint","point":[25,0,46],"radius":1.4}
+{"wallSeconds":20.73,"stage":"walk","kind":"waypoint","point":[11,0,38.6],"radius":1.4}
+{"wallSeconds":24.48,"stage":"walk","kind":"waypoint","point":[-3.5,0,31.4],"radius":1.4}
+{"wallSeconds":27.67,"stage":"walk","kind":"waypoint","point":[-7.5,0,29.5],"radius":1.4}
+{"wallSeconds":29.22,"stage":"walk","kind":"waypoint","point":[-21.314256109273554,0,25.80661486572317],"radius":0.45}
+{"wallSeconds":34.91,"stage":"walk","kind":"event","name":"harvest:site","gameSeconds":29.466666666666278,"payload":{"siteId":"orchard-mimic","phase":"warning","position":{"x":-23,"y":7.5,"z":25}}}
+{"wallSeconds":34.91,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":29.466666666666278,"payload":{"text":"Something moved beneath the harvest","sub":"Step back, or press E again to risk the loaded crop.","ms":3400}}
+{"wallSeconds":35.94,"stage":"walk","kind":"event","name":"harvest:site","gameSeconds":30.499999999999552,"payload":{"siteId":"orchard-mimic","phase":"active","position":{"x":-23,"y":7.5,"z":25}}}
+{"wallSeconds":35.94,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":30.499999999999552,"payload":{"text":"The harvest woke a Mimic!","sub":"Drop your prize, dodge the rush, then strike its recovery.","ms":3200}}
+{"wallSeconds":35.94,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":30.499999999999552,"payload":{"text":"Watermelon","sub":"Detaching it is the easy half.","kind":"gold","ms":4000}}
+{"wallSeconds":35.94,"stage":"walk","kind":"event","name":"fruit:grabbed","gameSeconds":30.499999999999552,"payload":{"fruitId":682,"species":"watermelon","mass":22,"heavy":true}}
+{"wallSeconds":35.94,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":30.499999999999552,"payload":{"text":"Watermelon — 22.0 kg","sub":"Too big for the basket. Both hands.","ms":2400}}
+{"wallSeconds":35.94,"stage":"walk","kind":"warning-observed","pos":[-21.181112397176612,7.52009849261602,25.814553371128156],"mimic":{"pos":[-23,7.5,22],"phase":"warn","health":3,"timeLeft":0.7333333333333332},"health":100}
+{"wallSeconds":37.33,"stage":"mimic-fight","kind":"rapid-mallet-click","index":2}
+{"wallSeconds":38.16,"stage":"mimic-fight","kind":"rapid-mallet-click","index":3}
+{"wallSeconds":38.21,"stage":"mimic-fight","kind":"event","name":"encounter:attack","gameSeconds":31.59999999999949,"payload":{"kind":"mimic","victimId":"solo","damage":28}}
+{"wallSeconds":38.21,"stage":"mimic-fight","kind":"event","name":"tool:swing","gameSeconds":31.91666666666614,"payload":{"toolId":"hand","duration":0.44,"swingId":1}}
+{"wallSeconds":38.21,"stage":"mimic-fight","kind":"event","name":"tool:swing","gameSeconds":32.74999999999943,"payload":{"toolId":"hand","duration":0.44,"swingId":2}}
+{"wallSeconds":38.21,"stage":"mimic-fight","kind":"damage-observed","pos":[-21.181112397176612,7.520098016768392,25.814553371128156],"mimic":{"pos":[-22.472321228105354,7.5,23.106642782698096],"phase":"recover","health":2,"timeLeft":1.000000000000001},"health":72}
+{"wallSeconds":38.21,"stage":"mimic-fight","kind":"rapid-mallet-result","pos":[-21.181112397176612,7.520098016768392,25.814553371128156],"health":72,"playerState":"active","mimic":{"pos":[-22.472321228105354,7.5,23.106642782698096],"phase":"recover","health":2,"timeLeft":1.000000000000001},"tool":"hand","carried":null,"targetKind":null,"targetId":null,"money":0,"render":{"drawCalls":215,"triangles":3439190,"geometries":173,"textures":25,"programs":36}}
+{"wallSeconds":38.26,"stage":"walk","kind":"waypoint","point":[-21.7406362239124,0,24.64112544947513],"radius":0.5}
+{"wallSeconds":39.44,"stage":"walk","kind":"event","name":"tool:swing","gameSeconds":33.983333333332695,"payload":{"toolId":"hand","duration":0.44,"swingId":3}}
+{"wallSeconds":39.44,"stage":"walk","kind":"mallet-swing","pos":[-21.539894209368185,7.52009881219063,24.810561336990176],"health":72,"playerState":"active","mimic":{"pos":[-22.709042847108957,7.5,22.610192508152586],"phase":"recover","health":1,"timeLeft":0.5999999999999999},"tool":"hand","carried":null,"targetKind":null,"targetId":null,"money":0,"render":{"drawCalls":214,"triangles":3459108,"geometries":173,"textures":25,"programs":36}}
+{"wallSeconds":39.44,"stage":"walk","kind":"strike-result","swings":1,"beforeHealth":1,"afterHealth":1,"distance":2.491692501102656}
+{"wallSeconds":39.92,"stage":"walk","kind":"event","name":"harvest:site","gameSeconds":34.14999999999935,"payload":{"siteId":"orchard-mimic","phase":"cleared","position":{"x":-23,"y":7.5,"z":25}}}
+{"wallSeconds":39.92,"stage":"walk","kind":"event","name":"money:changed","gameSeconds":34.14999999999935,"payload":{"money":80,"delta":80,"reason":"defeat:mimic"}}
+{"wallSeconds":39.92,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":34.14999999999935,"payload":{"text":"Mimic Melon subdued","sub":"Base reward banked. Secure the prize for more.","kind":"good","ms":3200}}
+{"wallSeconds":39.92,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":34.14999999999935,"payload":{"text":"Objective updated","sub":"Take the hill path. Free the harvest from Snapjaw.","kind":"gold","ms":3800}}
+{"wallSeconds":39.92,"stage":"walk","kind":"event","name":"encounter:defeated","gameSeconds":34.14999999999935,"payload":{"kind":"mimic","position":{"x":-22.709042847108957,"y":7.5,"z":22.610192508152586},"actorId":"solo"}}
+{"wallSeconds":39.98,"stage":"walk","kind":"fight-end","pos":[-21.53989710501915,7.5201000922280254,24.810561476371575],"health":72,"playerState":"active","mimic":{"pos":[-22.709042847108957,7.5,22.610192508152586],"phase":"defeated","health":0,"timeLeft":0},"tool":"hand","carried":null,"targetKind":null,"targetId":null,"money":80,"render":{"drawCalls":211,"triangles":3458324,"geometries":173,"textures":25,"programs":36}}
+{"wallSeconds":41.07,"stage":"recover-prize","kind":"prize-target","pos":[-21.53989710501915,7.520099712117448,24.810561476371575],"health":72,"playerState":"active","mimic":{"pos":[-22.709042847108957,7.5,22.610192508152586],"phase":"defeated","health":0,"timeLeft":0},"tool":"hand","carried":null,"targetKind":"fruit","targetId":682,"money":80,"render":{"drawCalls":153,"triangles":3396068,"geometries":173,"textures":25,"programs":36}}
+{"wallSeconds":41.22,"stage":"recover-prize","kind":"event","name":"fruit:grabbed","gameSeconds":35.78333333333259,"payload":{"fruitId":682,"species":"watermelon","mass":22,"heavy":true}}
+{"wallSeconds":41.22,"stage":"recover-prize","kind":"event","name":"ui:toast","gameSeconds":35.78333333333259,"payload":{"text":"Watermelon — 22.0 kg","sub":"Too big for the basket. Both hands.","ms":2400}}
+{"wallSeconds":41.22,"stage":"recover-prize","kind":"prize-E","pos":[-21.53989710501915,7.520099920377183,24.810561476371575],"health":72,"playerState":"active","mimic":{"pos":[-22.709042847108957,7.5,22.610192508152586],"phase":"defeated","health":0,"timeLeft":0},"tool":"hand","carried":682,"targetKind":null,"targetId":null,"money":80,"render":{"drawCalls":153,"triangles":3387856,"geometries":173,"textures":25,"programs":36}}
+{"wallSeconds":41.33,"stage":"walk","kind":"waypoint","point":[-7.5,0,29.5],"radius":1.4}
+{"wallSeconds":43.87,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":38.266666666665785,"payload":{"text":"OPTIONAL: cash in the Mimic prize","sub":"Sell the prize or nearby fruit at the dock pad toward the $110 Air Cannon. Snapjaw is still ahead.","kind":"gold","ms":7000}}
+{"wallSeconds":45.63,"stage":"walk","kind":"waypoint","point":[-3.5,0,31.4],"radius":1.4}
+{"wallSeconds":47.48,"stage":"walk","kind":"waypoint","point":[11,0,38.6],"radius":1.4}
+{"wallSeconds":51.72,"stage":"walk","kind":"waypoint","point":[25,0,46],"radius":1.4}
+{"wallSeconds":56.11,"stage":"walk","kind":"waypoint","point":[30,0,54],"radius":1.4}
+{"wallSeconds":58.31,"stage":"walk","kind":"waypoint","point":[37.2,0,58.2],"radius":1.4}
+{"wallSeconds":59.23,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":53.64999999999825,"payload":{"text":"Merv: Mind the coconuts. They have declined mediation.","kind":"info","ms":4200}}
+{"wallSeconds":60.47,"stage":"walk","kind":"waypoint","point":[44,0,62.5],"radius":1.4}
+{"wallSeconds":63.05,"stage":"walk","kind":"waypoint","point":[40.77003468801159,2.4811767578125,55.35669382866159],"radius":2.2}
+{"wallSeconds":65.69,"stage":"walk","kind":"real-sell-pad","pos":[40.86293378506272,2.6011525341792403,56.175752134899234],"health":72,"playerState":"active","mimic":{"pos":[-22.709042847108957,7.5,22.610192508152586],"phase":"defeated","health":0,"timeLeft":0},"tool":"hand","carried":682,"targetKind":"sell","targetId":null,"money":80,"render":{"drawCalls":179,"triangles":3300244,"geometries":174,"textures":25,"programs":37}}
+{"wallSeconds":65.98,"stage":"walk","kind":"event","name":"fruit:sold","gameSeconds":60.53333333333119,"payload":{"fruitId":682,"species":"watermelon","value":163,"quality":"Perfect","mass":22}}
+{"wallSeconds":65.98,"stage":"walk","kind":"event","name":"money:changed","gameSeconds":60.53333333333119,"payload":{"money":243,"delta":163,"reason":"sale"}}
+{"wallSeconds":65.98,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":60.53333333333119,"payload":{"text":"Sold 1 — $163","sub":"Perfect · 22 kg","kind":"gold","ms":2600}}
+{"wallSeconds":65.98,"stage":"walk","kind":"sale-E","pos":[40.86293360578128,2.601267404262293,56.1757521463616],"health":72,"playerState":"active","mimic":{"pos":[-22.709042847108957,7.5,22.610192508152586],"phase":"defeated","health":0,"timeLeft":0},"tool":"hand","carried":null,"targetKind":null,"targetId":null,"money":243,"render":{"drawCalls":178,"triangles":3298008,"geometries":174,"textures":25,"programs":37}}
+{"wallSeconds":66.15,"stage":"walk","kind":"waypoint","point":[42.33668850726656,3.8811767578125,54.11347389212026],"radius":2}
+{"wallSeconds":67.45,"stage":"first-upgrade","kind":"at-supply-shed","pos":[41.439449361629016,2.6009782956581002,55.58487401825304],"health":72,"playerState":"active","mimic":{"pos":[-22.709042847108957,7.5,22.610192508152586],"phase":"defeated","health":0,"timeLeft":0},"tool":"hand","carried":null,"targetKind":null,"targetId":null,"money":243,"render":{"drawCalls":129,"triangles":3253238,"geometries":174,"textures":25,"programs":37}}
+{"wallSeconds":67.9,"stage":"first-upgrade","kind":"event","name":"money:changed","gameSeconds":62.499999999997755,"payload":{"money":133,"delta":-110,"reason":"buy:aircannon"}}
+{"wallSeconds":67.9,"stage":"first-upgrade","kind":"event","name":"ui:toast","gameSeconds":62.499999999997755,"payload":{"text":"Air Cannon equipped","sub":"Blast a threat away or knock fruit loose. Hold to charge a stronger shot.","kind":"good","ms":4200}}
+{"wallSeconds":67.9,"stage":"first-upgrade","kind":"event","name":"shop:purchased","gameSeconds":62.499999999997755,"payload":{"itemId":"aircannon","cost":110}}
+{"wallSeconds":68.71,"stage":"first-upgrade","kind":"event","name":"ui:toast","gameSeconds":63.316666666664375,"payload":{"text":"Resting at the dock","sub":"Catch your breath here to recover health.","kind":"good","ms":2600}}
+{"wallSeconds":73.92,"stage":"first-upgrade","kind":"event","name":"ui:toast","gameSeconds":65.56666666666425,"payload":{"text":"Resting at the dock","sub":"Catch your breath here to recover health.","kind":"good","ms":2600}}
+{"wallSeconds":73.92,"stage":"first-upgrade","kind":"event","name":"ui:toast","gameSeconds":66.91666666666417,"payload":{"text":"TRY THIS: take a ranged shot at the Spitter","sub":"LMB fires on release; hold for power. RMB launches you. Hit Spitter or King Vine, deflect seeds, or shoot fruit to the sell pad.","kind":"gold","ms":7000}}
+{"wallSeconds":73.92,"stage":"first-upgrade","kind":"first-upgrade-in-use","pos":[41.944301201272815,2.6011382692132283,56.21240651168365],"health":100,"playerState":"active","mimic":{"pos":[-22.709042847108957,7.5,22.610192508152586],"phase":"defeated","health":0,"timeLeft":0},"tool":"aircannon","carried":null,"targetKind":null,"targetId":null,"money":133,"render":{"drawCalls":179,"triangles":3307638,"geometries":176,"textures":25,"programs":37}}
+{"wallSeconds":74.04,"stage":"walk","kind":"waypoint","point":[25,0,46],"radius":1.4}
+{"wallSeconds":78.18,"stage":"walk","kind":"waypoint","point":[11,0,38.6],"radius":1.4}
+{"wallSeconds":81.83,"stage":"walk","kind":"waypoint","point":[-3.5,0,31.4],"radius":1.4}
+{"wallSeconds":85.17,"stage":"walk","kind":"waypoint","point":[-7.5,0,29.5],"radius":1.4}
+{"wallSeconds":86.63,"stage":"walk","kind":"waypoint","point":[-17,0,25],"radius":1.4}
+{"wallSeconds":89.06,"stage":"walk","kind":"waypoint","point":[-23,0,22],"radius":1.4}
+{"wallSeconds":91.17,"stage":"walk","kind":"waypoint","point":[-24.4,0,14.5],"radius":1.4}
+{"wallSeconds":94.17,"stage":"walk","kind":"obstacle-recovery","pos":[-24.312408273495787,7.520000501842942,17.059662262351726]}
+{"wallSeconds":95.44,"stage":"walk","kind":"waypoint","point":[-24.4,0,11],"radius":0.35}
+{"wallSeconds":98.23,"stage":"walk","kind":"event","name":"harvest:site","gameSeconds":92.79999999999603,"payload":{"siteId":"snapjaw-cache","phase":"cleared","position":{"x":-26.8,"y":7.5,"z":9.1}}}
+{"wallSeconds":98.23,"stage":"walk","kind":"event","name":"money:changed","gameSeconds":92.79999999999603,"payload":{"money":273,"delta":140,"reason":"defeat:snapjaw"}}
+{"wallSeconds":98.23,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":92.79999999999603,"payload":{"text":"Snapjaw opened","sub":"Base reward banked. Secure the prize for more.","kind":"good","ms":3200}}
+{"wallSeconds":98.23,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":92.79999999999603,"payload":{"text":"Objective updated","sub":"Climb toward the ridge. Silence the Spitter Plant.","kind":"gold","ms":3800}}
+{"wallSeconds":98.23,"stage":"walk","kind":"event","name":"encounter:defeated","gameSeconds":92.79999999999603,"payload":{"kind":"snapjaw","position":{"x":-28,"y":7.5,"z":11},"actorId":"solo"}}
+{"wallSeconds":98.23,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":92.79999999999603,"payload":{"text":"Apple","sub":"The one everybody starts with. Nobody respects it.","kind":"gold","ms":4000}}
+{"wallSeconds":98.23,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":92.79999999999603,"payload":{"text":"CHAIN REACTION","sub":"Five at once. Nobody meant that.","kind":"gold","ms":3400}}
+{"wallSeconds":98.23,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":92.79999999999603,"payload":{"text":"DISCOVERY TIER 1","sub":"New equipment available at the shed","kind":"gold","ms":4200}}
+{"wallSeconds":98.53,"stage":"walk","kind":"waypoint","point":[-24.504846694433127,0,10.913142276741821],"radius":0.45}
+{"wallSeconds":99.89,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":94.44999999999594,"payload":{"text":"Puff Melon","sub":"The only fruit that harvests YOU.","kind":"gold","ms":4000}}
+{"wallSeconds":99.89,"stage":"walk","kind":"event","name":"fruit:grabbed","gameSeconds":94.44999999999594,"payload":{"fruitId":687,"species":"puffmelon","mass":1.9,"heavy":false}}
+{"wallSeconds":99.89,"stage":"walk","kind":"snapjaw-crop-picked","id":687,"before":{"id":687,"species":"puffmelon","pos":[-26.56840105639391,8.5999794725493,9.61327821740993],"state":"attached","speed":0,"radius":0.28},"carried":687,"basket":[],"prompt":"<b>E</b> Pick Puff Melon — $202"}
+{"wallSeconds":100.24,"stage":"walk","kind":"waypoint","point":[-27,0,12],"radius":1.4}
+{"wallSeconds":100.27,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":94.76666666666259,"payload":{"text":"Puff Melon got away from you","sub":"1.1 m across — rope it, net it, or shove it home","kind":"bad","ms":2600}}
+{"wallSeconds":101.34,"stage":"walk","kind":"waypoint","point":[-29,0,2],"radius":1.4}
+{"wallSeconds":106.03,"stage":"spitter","kind":"event","name":"harvest:site","gameSeconds":99.99999999999562,"payload":{"siteId":"spitter-slope","phase":"cleared","position":{"x":-35,"y":17.119384765625,"z":-11.5}}}
+{"wallSeconds":106.03,"stage":"spitter","kind":"event","name":"money:changed","gameSeconds":99.99999999999562,"payload":{"money":383,"delta":110,"reason":"defeat:spitter"}}
+{"wallSeconds":106.03,"stage":"spitter","kind":"event","name":"ui:toast","gameSeconds":99.99999999999562,"payload":{"text":"Spitter Plant silenced","sub":"Base reward banked. Secure the prize for more.","kind":"good","ms":3200}}
+{"wallSeconds":106.03,"stage":"spitter","kind":"event","name":"ui:toast","gameSeconds":99.99999999999562,"payload":{"text":"Objective updated","sub":"Confront King Vine at King Melon.","kind":"gold","ms":3800}}
+{"wallSeconds":106.03,"stage":"spitter","kind":"event","name":"encounter:defeated","gameSeconds":99.99999999999562,"payload":{"kind":"spitter","position":{"x":-31,"y":14.25,"z":-8},"actorId":"solo"}}
+{"wallSeconds":106.03,"stage":"spitter","kind":"spitter-shot","pos":[-25.963281566631828,7.66535234917289,2.7350196406771623],"health":100,"playerState":"active","mimic":{"pos":[-22.709042847108957,7.5,22.610192508152586],"phase":"defeated","health":0,"timeLeft":0},"tool":"aircannon","carried":null,"targetKind":null,"targetId":null,"money":383,"render":{"drawCalls":159,"triangles":3493680,"geometries":177,"textures":25,"programs":37}}
+{"wallSeconds":106.17,"stage":"walk","kind":"waypoint","point":[-31,0,-8],"radius":1.4}
+{"wallSeconds":108.21,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":102.8333333333288,"payload":{"text":"The King Vine guards the prize","sub":"Dodge its attacks, hit the exposed stem, then cut the melon free. Ropes can steady the drop.","kind":"gold","ms":6000}}
+{"wallSeconds":109.99,"stage":"walk","kind":"waypoint","point":[-32,0,-13],"radius":0.6}
+{"wallSeconds":113.47,"stage":"walk","kind":"waypoint","point":[-33,0,-18],"radius":1.4}
+{"wallSeconds":115.01,"stage":"walk","kind":"waypoint","point":[-34.96143570294279,0,-16.978105450222465],"radius":0.6}
+{"wallSeconds":119.96,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":113.84999999999484,"payload":{"text":"Boulder Plum","sub":"Dense enough to have its own weather.","kind":"gold","ms":4000}}
+{"wallSeconds":119.96,"stage":"walk","kind":"damage-observed","pos":[-34.15339466415232,21.017514957565865,-20.435089131580046],"mimic":{"pos":[-22.709042847108957,7.5,22.610192508152586],"phase":"defeated","health":0,"timeLeft":0},"health":78}
+{"wallSeconds":120.03,"stage":"walk","kind":"hillside-plum-physical-release","id":680,"before":{"id":680,"species":"boulderplum","pos":[-34.96143570294279,17.938837487890023,-11.478105450222467],"state":"attached","speed":0,"radius":0.25},"after":{"id":680,"species":"boulderplum","pos":[-35.088687896728516,16.04364013671875,-9.477445602416992],"state":"free","speed":6.550121599161326,"radius":0.25},"site":{"id":"spitter-slope","kind":"spitter","plantId":679,"fruitIds":[680],"position":[-35,17.119384765625,-11.5],"phase":"cleared","released":[680],"consumed":[]}}
+{"wallSeconds":120.32,"stage":"walk","kind":"waypoint","point":[-36,0,-30],"radius":1.4}
+{"wallSeconds":123.71,"stage":"walk","kind":"waypoint","point":[-27,0,-30],"radius":1.4}
+{"wallSeconds":126.06,"stage":"walk","kind":"damage-observed","pos":[-28.862639140190556,21.020656666463466,-29.86896125432019],"mimic":{"pos":[-22.709042847108957,7.5,22.610192508152586],"phase":"defeated","health":0,"timeLeft":0},"health":56}
+{"wallSeconds":126.61,"stage":"walk","kind":"waypoint","point":[-26,0,-35],"radius":1.4}
+{"wallSeconds":128.49,"stage":"walk","kind":"obstacle-recovery","pos":[-27.73143472157389,21.020045420967264,-31.02921602711149]}
+{"wallSeconds":128.97,"stage":"walk","kind":"damage-observed","pos":[-26.822061621400167,21.993766305641813,-30.10926481374054],"mimic":{"pos":[-22.709042847108957,7.5,22.610192508152586],"phase":"defeated","health":0,"timeLeft":0},"health":26}
+{"wallSeconds":130.48,"stage":"walk","kind":"obstacle-recovery","pos":[-25.70182621950791,21.020000650773934,-30.494674510187036]}
+{"wallSeconds":133.64,"stage":"walk","kind":"waypoint","point":[-23.1,0,-35],"radius":0.4}
+{"wallSeconds":135.18,"stage":"walk","kind":"king-vine-health","bossHealth":6,"playerHealth":26,"position":[-23.195663088422293,20.945500809096327,-34.99883859867591]}
+{"wallSeconds":135.74,"stage":"walk","kind":"king-vine-health","bossHealth":5,"playerHealth":26,"position":[-23.195618517247453,20.94573528210915,-34.999081011183215]}
+{"wallSeconds":136.16,"stage":"walk","kind":"king-vine-health","bossHealth":4,"playerHealth":26,"position":[-23.195585765847454,20.945495741166294,-34.99925955680978]}
+{"wallSeconds":136.59,"stage":"walk","kind":"king-vine-health","bossHealth":3,"playerHealth":26,"position":[-23.195551676929767,20.94564548670044,-34.99944488247697]}
+{"wallSeconds":137.03,"stage":"walk","kind":"king-vine-health","bossHealth":2,"playerHealth":26,"position":[-23.19551748528579,20.945542577156655,-34.999630538955124]}
+{"wallSeconds":137.59,"stage":"walk","kind":"king-vine-dodge","attack":"sweep","before":[-23.19551748528579,20.945542577156655,-34.999630538955124],"after":[-20.16697347462116,20.358104061616384,-38.040998034841],"health":26}
+{"wallSeconds":139.47,"stage":"walk","kind":"king-vine-health","bossHealth":1,"playerHealth":26,"position":[-20.043510029382674,20.32406771280878,-38.169975446091165]}
+{"wallSeconds":139.91,"stage":"walk","kind":"king-vine-health","bossHealth":0,"playerHealth":26,"position":[-20.043434315931904,20.324020276806575,-38.170572127428066]}
+{"wallSeconds":139.97,"stage":"walk","kind":"event","name":"tool:swing","gameSeconds":129.99999999999562,"payload":{"toolId":"hand","duration":0.44,"swingId":4}}
+{"wallSeconds":139.97,"stage":"walk","kind":"event","name":"tool:swing","gameSeconds":130.44999999999598,"payload":{"toolId":"hand","duration":0.44,"swingId":5}}
+{"wallSeconds":139.97,"stage":"walk","kind":"event","name":"tool:swing","gameSeconds":130.88333333332966,"payload":{"toolId":"hand","duration":0.44,"swingId":6}}
+{"wallSeconds":139.97,"stage":"walk","kind":"event","name":"tool:swing","gameSeconds":131.33333333333002,"payload":{"toolId":"hand","duration":0.44,"swingId":7}}
+{"wallSeconds":139.97,"stage":"walk","kind":"event","name":"tool:swing","gameSeconds":133.7666666666653,"payload":{"toolId":"hand","duration":0.44,"swingId":8}}
+{"wallSeconds":139.97,"stage":"walk","kind":"event","name":"tool:swing","gameSeconds":134.19999999999897,"payload":{"toolId":"hand","duration":0.44,"swingId":9}}
+{"wallSeconds":139.97,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":134.38333333333244,"payload":{"text":"King Vine subdued","sub":"Cut the King Melon free, then bring it to the marked pad.","kind":"good","ms":4500}}
+{"wallSeconds":139.97,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":134.38333333333244,"payload":{"text":"KING VINE SUBDUED","sub":"The King Melon can be extracted","kind":"good","ms":3800}}
+{"wallSeconds":139.97,"stage":"walk","kind":"event","name":"legendary:phase","gameSeconds":134.38333333333244,"payload":{"id":"kingMelon","phase":"tether"}}
+{"wallSeconds":139.97,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":134.38333333333244,"payload":{"text":"PHASE 1 — FREE THE FRUIT","sub":"Cut its vines. Ropes to the towers can control the drop, but are optional.","kind":"gold","ms":4200}}
+{"wallSeconds":140.25,"stage":"walk","kind":"terrain-walk-plan","target":[-10.2,0,-33.95],"points":[[-18,-38],[-17,-37],[-15,-35],[-14,-35],[-13,-34],[-11,-34],[-10,-34]]}
+{"wallSeconds":140.25,"stage":"walk","kind":"waypoint","point":[-18,0,-38],"radius":1.4}
+{"wallSeconds":141.37,"stage":"walk","kind":"waypoint","point":[-17,0,-37],"radius":1.4}
+{"wallSeconds":141.81,"stage":"walk","kind":"waypoint","point":[-15,0,-35],"radius":1.4}
+{"wallSeconds":142.66,"stage":"walk","kind":"waypoint","point":[-14,0,-35],"radius":1.4}
+{"wallSeconds":143.37,"stage":"walk","kind":"waypoint","point":[-13,0,-34],"radius":1.4}
+{"wallSeconds":144.12,"stage":"walk","kind":"waypoint","point":[-11,0,-34],"radius":1.4}
+{"wallSeconds":144.89,"stage":"walk","kind":"waypoint","point":[-10,0,-34],"radius":1.4}
+{"wallSeconds":145.79,"stage":"walk","kind":"waypoint","point":[-10.2,0,-33.95],"radius":0.75}
+{"wallSeconds":146.34,"stage":"walk","kind":"waypoint","point":[-10.2,0,-33.95],"radius":0.4}
+{"wallSeconds":147.63,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":142.20000000000533,"payload":{"text":"VINE 1 OF 4 CUT","sub":"3 still holding","kind":"info","ms":2800}}
+{"wallSeconds":147.63,"stage":"walk","kind":"event","name":"legendary:phase","gameSeconds":142.20000000000533,"payload":{"id":"kingMelon","phase":"detach"}}
+{"wallSeconds":147.63,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":142.20000000000533,"payload":{"text":"PHASE 2 — CUT THE VINES","sub":"Every cut puts more load on the rest","kind":"gold","ms":4200}}
+{"wallSeconds":147.63,"stage":"walk","kind":"cut-with-E","index":1,"phase":"detach"}
+{"wallSeconds":147.68,"stage":"walk","kind":"waypoint","point":[-8.299999999999999,0,-33.95],"radius":0.4}
+{"wallSeconds":150.26,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":144.83333333334076,"payload":{"text":"VINE 2 OF 4 CUT","sub":"2 still holding","kind":"info","ms":2800}}
+{"wallSeconds":150.26,"stage":"walk","kind":"cut-with-E","index":2,"phase":"detach"}
+{"wallSeconds":150.3,"stage":"walk","kind":"waypoint","point":[-6.3999999999999995,0,-33.95],"radius":0.4}
+{"wallSeconds":152.61,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":147.18333333334263,"payload":{"text":"VINE 3 OF 4 CUT","sub":"One left. It will not hold.","kind":"bad","ms":2800}}
+{"wallSeconds":152.61,"stage":"walk","kind":"cut-with-E","index":3,"phase":"detach"}
+{"wallSeconds":152.65,"stage":"walk","kind":"waypoint","point":[-4.5,0,-33.95],"radius":0.4}
+{"wallSeconds":155.08,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":149.63333333334458,"payload":{"text":"VINE 4 OF 4 CUT","sub":"Nothing is holding it now.","kind":"bad","ms":2800}}
+{"wallSeconds":155.08,"stage":"walk","kind":"event","name":"legendary:phase","gameSeconds":149.63333333334458,"payload":{"id":"kingMelon","phase":"drop"}}
+{"wallSeconds":155.08,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":149.63333333334458,"payload":{"text":"PHASE 3 — FOLLOW THE DROP","sub":"Two and a half tonnes, going where it wants","kind":"gold","ms":4200}}
+{"wallSeconds":155.08,"stage":"walk","kind":"cut-with-E","index":4,"phase":"drop"}
+{"wallSeconds":156.02,"stage":"walk","kind":"event","name":"legendary:phase","gameSeconds":150.6333333333453,"payload":{"id":"kingMelon","phase":"recover"}}
+{"wallSeconds":156.02,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":150.6333333333453,"payload":{"text":"PHASE 4 — GET IT TO THE PAD","sub":"Push, rope, winch, or shout at it","kind":"gold","ms":4200}}
+{"wallSeconds":156.02,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":150.6333333333453,"payload":{"text":"THE MELON LANDED ON THE RIDGE","sub":"Follow the marked path behind the hill farm, then push it downhill into the timber receiver.","kind":"gold","ms":8000}}
+{"wallSeconds":156.09,"stage":"walk","kind":"terrain-walk-plan","target":[-27,0,-30],"points":[[-8,-34],[-11,-34],[-14,-34],[-17,-34],[-18,-34],[-20,-32],[-23,-32],[-24,-31],[-26,-31],[-27,-30]]}
+{"wallSeconds":156.09,"stage":"walk","kind":"waypoint","point":[-8,0,-34],"radius":1.4}
+{"wallSeconds":157.84,"stage":"walk","kind":"waypoint","point":[-11,0,-34],"radius":1.4}
+{"wallSeconds":159.68,"stage":"walk","kind":"waypoint","point":[-14,0,-34],"radius":1.4}
+{"wallSeconds":161.4,"stage":"walk","kind":"waypoint","point":[-17,0,-34],"radius":1.4}
+{"wallSeconds":162.59,"stage":"walk","kind":"waypoint","point":[-18,0,-34],"radius":1.4}
+{"wallSeconds":163.07,"stage":"walk","kind":"waypoint","point":[-20,0,-32],"radius":1.4}
+{"wallSeconds":164.12,"stage":"walk","kind":"waypoint","point":[-23,0,-32],"radius":1.4}
+{"wallSeconds":165.41,"stage":"walk","kind":"waypoint","point":[-24,0,-31],"radius":1.4}
+{"wallSeconds":166.17,"stage":"walk","kind":"waypoint","point":[-26,0,-31],"radius":1.4}
+{"wallSeconds":166.99,"stage":"walk","kind":"waypoint","point":[-27,0,-30],"radius":1.4}
+{"wallSeconds":167.74,"stage":"walk","kind":"waypoint","point":[-27,0,-30],"radius":0.75}
+{"wallSeconds":168.41,"stage":"walk","kind":"waypoint","point":[-36,0,-30],"radius":1.4}
+{"wallSeconds":170.37,"stage":"walk","kind":"waypoint","point":[-35,0,-44],"radius":1.4}
+{"wallSeconds":174.11,"stage":"walk","kind":"waypoint","point":[-30,0,-53],"radius":1.4}
+{"wallSeconds":176.93,"stage":"walk","kind":"waypoint","point":[-31,0,-60],"radius":1.4}
+{"wallSeconds":178.81,"stage":"walk","kind":"waypoint","point":[-28,0,-69],"radius":1.4}
+{"wallSeconds":181,"stage":"walk","kind":"waypoint","point":[-22,0,-75],"radius":1.4}
+{"wallSeconds":183.02,"stage":"walk","kind":"waypoint","point":[-15,0,-77],"radius":1.4}
+{"wallSeconds":185.08,"stage":"walk","kind":"waypoint","point":[0,0,-78],"radius":1.4}
+{"wallSeconds":189.21,"stage":"walk","kind":"terrain-walk-plan","target":[7.329480627234471,0,-76.73634039535037],"points":[[2,-78],[5,-78],[6,-78],[7,-77]]}
+{"wallSeconds":189.21,"stage":"walk","kind":"waypoint","point":[2,0,-78],"radius":1.4}
+{"wallSeconds":190.04,"stage":"walk","kind":"waypoint","point":[5,0,-78],"radius":1.4}
+{"wallSeconds":191.21,"stage":"walk","kind":"waypoint","point":[6,0,-78],"radius":1.4}
+{"wallSeconds":191.64,"stage":"walk","kind":"waypoint","point":[7,0,-77],"radius":1.4}
+{"wallSeconds":192.51,"stage":"walk","kind":"waypoint","point":[7.329480627234471,0,-76.73634039535037],"radius":0.75}
+{"wallSeconds":193.72,"stage":"walk","kind":"physical-melon-push","pos":[6.792510744775385,30.020098360815634,-76.8969974203732],"eye":[6.792510744775385,31.650098360815633,-76.8969974203732],"yaw":-1.9172900891779727,"pitch":-0.04399999999999996,"sensitivity":0.0022,"invertY":false,"phase":"recover","melon":[8.25356674194336,35.598419189453125,-70.70674133300781],"pad":[10.427740380543167,4.678916203405307,-56.52040618089798],"inPad":false,"speed":5.5732755383947484e-14}
+{"wallSeconds":195.24,"stage":"walk","kind":"physical-melon-push","pos":[7.771823451851794,30.019999616909015,-74.76441982474117],"eye":[7.771823451851794,31.649999616909014,-74.76441982474117],"yaw":-3.0898900891779726,"pitch":4.163336342344337e-17,"sensitivity":0.0022,"invertY":false,"phase":"recover","melon":[8.293083190917969,35.59866714477539,-70.46322631835938],"pad":[10.427740380543167,4.678916203405307,-56.52040618089798],"inPad":false,"speed":0.3250014223988819}
+{"wallSeconds":196.84,"stage":"walk","kind":"physical-melon-push","pos":[7.790148134000908,30.019888840879982,-74.20223001304686],"eye":[7.790148134000908,31.64988884087998,-74.20223001304686],"yaw":-3.120690089177973,"pitch":4.163336342344337e-17,"sensitivity":0.0022,"invertY":false,"phase":"recover","melon":[8.303346633911133,35.59842300415039,-69.89928436279297],"pad":[10.427740380543167,4.678916203405307,-56.52040618089798],"inPad":false,"speed":0.3821327536683415}
+{"wallSeconds":198.39,"stage":"walk","kind":"physical-melon-push","pos":[7.813666336572546,30.0201007310375,-73.53710812152697],"eye":[7.813666336572546,31.650100731037497,-73.53710812152697],"yaw":-3.120690089177973,"pitch":4.163336342344337e-17,"sensitivity":0.0022,"invertY":false,"phase":"recover","melon":[8.343113899230957,35.598419189453125,-69.23465728759766],"pad":[10.427740380543167,4.678916203405307,-56.52040618089798],"inPad":false,"speed":0.455423285541947}
+{"wallSeconds":200,"stage":"walk","kind":"physical-melon-push","pos":[7.803078468383636,30.02008287785659,-72.84429674401895],"eye":[7.803078468383636,31.65008287785659,-72.84429674401895],"yaw":-3.1404900891779732,"pitch":4.163336342344337e-17,"sensitivity":0.0022,"invertY":false,"phase":"recover","melon":[8.351731300354004,35.598899841308594,-68.5456771850586],"pad":[10.427740380543167,4.678916203405307,-56.52040618089798],"inPad":false,"speed":0.4006563677338428}
+{"wallSeconds":201.53,"stage":"walk","kind":"physical-melon-push","pos":[7.791508175586317,30.020099277992838,-72.16654101645359],"eye":[7.791508175586317,31.650099277992837,-72.16654101645359],"yaw":-3.133890089177973,"pitch":4.163336342344337e-17,"sensitivity":0.0022,"invertY":false,"phase":"recover","melon":[8.370087623596191,35.598419189453125,-67.87030792236328],"pad":[10.427740380543167,4.678916203405307,-56.52040618089798],"inPad":false,"speed":0.46296493985736364}
+{"wallSeconds":203.05,"stage":"walk","kind":"physical-melon-push","pos":[7.774879817859047,30.020010091851898,-71.47146109559338],"eye":[7.774879817859047,31.650010091851897,-71.47146109559338],"yaw":3.140495218001613,"pitch":4.163336342344337e-17,"sensitivity":0.0022,"invertY":false,"phase":"recover","melon":[8.386421203613281,35.59675979614258,-67.177734375],"pad":[10.427740380543167,4.678916203405307,-56.52040618089798],"inPad":false,"speed":0.5031324293109436}
+{"wallSeconds":204.68,"stage":"walk","kind":"physical-melon-push","pos":[8.255986437891305,30.020100367699367,-70.140947753502],"eye":[8.255986437891305,31.650100367699366,-70.140947753502],"yaw":-2.8720900891779744,"pitch":-0.0021999999999999585,"sensitivity":0.0022,"invertY":false,"phase":"recover","melon":[9.326828002929688,35.30768966674805,-65.319091796875],"pad":[10.427740380543167,4.678916203405307,-56.52040618089798],"inPad":false,"speed":2.821665004191001}
+{"wallSeconds":206.27,"stage":"walk","kind":"physical-melon-push","pos":[8.255986437891305,30.020100681787905,-70.140947753502],"eye":[8.255986437891305,31.650100681787904,-70.140947753502],"yaw":-2.8720900891779744,"pitch":-0.0021999999999999585,"sensitivity":0.0022,"invertY":false,"phase":"recover","melon":[13.348745346069336,24.8861026763916,-58.14720916748047],"pad":[10.427740380543167,4.678916203405307,-56.52040618089798],"inPad":false,"speed":18.663676159569743}
+{"wallSeconds":207.89,"stage":"walk","kind":"physical-melon-push","pos":[8.255986437891305,30.02009990639638,-70.140947753502],"eye":[8.255986437891305,31.650099906396377,-70.140947753502],"yaw":-2.8720900891779744,"pitch":-0.0021999999999999585,"sensitivity":0.0022,"invertY":false,"phase":"recover","melon":[15.473748207092285,12.526729583740234,-55.469722747802734],"pad":[10.427740380543167,4.678916203405307,-56.52040618089798],"inPad":true,"speed":0.0029614528654487156}
+{"wallSeconds":208.27,"stage":"walk","kind":"event","name":"legendary:phase","gameSeconds":202.8166666667201,"payload":{"id":"kingMelon","phase":"complete"}}
+{"wallSeconds":208.27,"stage":"walk","kind":"event","name":"money:changed","gameSeconds":202.8166666667201,"payload":{"money":9883,"delta":9500,"reason":"legendary"}}
+{"wallSeconds":208.27,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":202.8166666667201,"payload":{"text":"DISCOVERY TIER 4","sub":"New equipment available at the shed","kind":"gold","ms":4200}}
+{"wallSeconds":208.27,"stage":"walk","kind":"event","name":"legendary:complete","gameSeconds":202.8166666667201,"payload":{"id":"kingMelon","payout":9500}}
+{"wallSeconds":208.27,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":202.8166666667201,"payload":{"text":"THE KING MELON","sub":"Nobody is going to believe this","kind":"gold","ms":6000}}
+{"wallSeconds":208.52,"stage":"walk","kind":"waypoint","point":[8,0,-76],"radius":1.4}
+{"wallSeconds":211.14,"stage":"walk","kind":"waypoint","point":[0,0,-78],"radius":1.4}
+{"wallSeconds":211.63,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":206.2166666667228,"payload":{"text":"Head back to the dock","sub":"The King Melon is secured. Settle the expedition at the boat.","kind":"gold","ms":6000}}
+{"wallSeconds":213.75,"stage":"walk","kind":"waypoint","point":[-15,0,-77],"radius":1.4}
+{"wallSeconds":217.15,"stage":"walk","kind":"waypoint","point":[-22,0,-75],"radius":1.4}
+{"wallSeconds":219.31,"stage":"walk","kind":"waypoint","point":[-28,0,-69],"radius":1.4}
+{"wallSeconds":221.4,"stage":"walk","kind":"waypoint","point":[-31,0,-60],"radius":1.4}
+{"wallSeconds":224.41,"stage":"walk","kind":"waypoint","point":[-30,0,-53],"radius":1.4}
+{"wallSeconds":226.43,"stage":"walk","kind":"waypoint","point":[-35,0,-44],"radius":1.4}
+{"wallSeconds":229.24,"stage":"walk","kind":"waypoint","point":[-36,0,-30],"radius":1.4}
+{"wallSeconds":232.56,"stage":"walk","kind":"waypoint","point":[-30,0,-38],"radius":1.4}
+{"wallSeconds":235.26,"stage":"walk","kind":"waypoint","point":[-22,0,-44],"radius":1.4}
+{"wallSeconds":237.67,"stage":"walk","kind":"waypoint","point":[-13,0,-49],"radius":1.4}
+{"wallSeconds":240.15,"stage":"walk","kind":"waypoint","point":[-5,0,-51.5],"radius":1.4}
+{"wallSeconds":242.82,"stage":"walk","kind":"waypoint","point":[-13,0,-49],"radius":1.4}
+{"wallSeconds":245.02,"stage":"walk","kind":"waypoint","point":[-22,0,-44],"radius":1.4}
+{"wallSeconds":247.4,"stage":"walk","kind":"waypoint","point":[-30,0,-38],"radius":1.4}
+{"wallSeconds":249.24,"stage":"walk","kind":"waypoint","point":[-36,0,-30],"radius":1.4}
+{"wallSeconds":251.71,"stage":"walk","kind":"waypoint","point":[-33,0,-18],"radius":1.4}
+{"wallSeconds":254.86,"stage":"walk","kind":"waypoint","point":[-31,0,-8],"radius":1.4}
+{"wallSeconds":257.42,"stage":"walk","kind":"waypoint","point":[-29,0,2],"radius":1.4}
+{"wallSeconds":260.4,"stage":"walk","kind":"waypoint","point":[-27,0,12],"radius":1.4}
+{"wallSeconds":264.84,"stage":"walk","kind":"waypoint","point":[-24,0,22],"radius":1.4}
+{"wallSeconds":269.36,"stage":"walk","kind":"obstacle-recovery","pos":[-23.898633822375793,7.520075360585519,16.303735378236603]}
+{"wallSeconds":271.89,"stage":"walk","kind":"obstacle-recovery","pos":[-24.171512721307778,7.520482880703508,16.16894374981046]}
+{"wallSeconds":273.65,"stage":"walk","kind":"waypoint","point":[-7.5,0,29.5],"radius":1.4}
+{"wallSeconds":278.11,"stage":"walk","kind":"waypoint","point":[-3.5,0,31.4],"radius":1.4}
+{"wallSeconds":279.45,"stage":"walk","kind":"waypoint","point":[11,0,38.6],"radius":1.4}
+{"wallSeconds":283.32,"stage":"walk","kind":"waypoint","point":[25,0,46],"radius":1.4}
+{"wallSeconds":287.16,"stage":"walk","kind":"waypoint","point":[30,0,54],"radius":1.4}
+{"wallSeconds":289.36,"stage":"walk","kind":"waypoint","point":[37.2,0,58.2],"radius":1.4}
+{"wallSeconds":290.05,"stage":"walk","kind":"event","name":"ui:toast","gameSeconds":284.7166666667363,"payload":{"text":"Merv: King Melon secured. Head back to the dock boat to settle the expedition.","kind":"info","ms":4200}}
+{"wallSeconds":291.58,"stage":"walk","kind":"waypoint","point":[44,0,62.5],"radius":1.4}
+{"wallSeconds":293.72,"stage":"walk","kind":"waypoint","point":[50.5,0,61.5],"radius":1.4}
+{"wallSeconds":295.64,"stage":"walk","kind":"waypoint","point":[55.5,0,61],"radius":1.4}
+{"wallSeconds":297.14,"stage":"walk","kind":"waypoint","point":[60,0,65],"radius":1.4}
+{"wallSeconds":299.09,"stage":"walk","kind":"waypoint","point":[71.5,2.450734972582344,71.5],"radius":1.5}
+{"wallSeconds":308.91,"stage":"dock-settlement","kind":"earned-settlement-reload","earnedMoney":9883,"afterMoney":9883,"chapter":"settled","legendary":{"phase":"complete","position":[15.472726821899414,12.529671669006348,-55.47053909301758],"speed":0,"cut":4,"cutPoints":[{"vine":0,"position":[-10.2,16.65830604068581,-36],"remaining":false},{"vine":1,"position":[-8.299999999999999,15.069674084053313,-36],"remaining":false},{"vine":2,"position":[-6.3999999999999995,13.852099519478971,-36],"remaining":false},{"vine":3,"position":[-4.5,13.111814875797714,-36],"remaining":false}],"pad":[10.427740380543167,4.678916203405307,-56.52040618089798],"padRadius":15,"paid":9500,"inPad":true},"kingVine":{"revision":1,"generation":0,"center":[-20,20.946396047893884,-35],"phase":"subdued","attack":"sweep","timeLeft":0,"health":0,"heading":0,"projectile":null},"beats":{"reload":true,"dedupe":true}}
+{"wallSeconds":309.12,"stage":"dock-settlement","kind":"final","pos":[71.50000449926463,2.350834854849003,71.49999657971124],"health":100,"playerState":"active","mimic":{"pos":[-23,7.5,22],"phase":"defeated","health":0,"timeLeft":0},"tool":"hand","carried":null,"targetKind":null,"targetId":null,"money":9883,"render":{"drawCalls":182,"triangles":3285506,"geometries":153,"textures":21,"programs":36}}
+{
+  "out": "C:\\Users\\benma\\.codex\\worktrees\\sunpatch-finish\\RIPE RIOT\\capture\\sunpatch-expedition\\normal-attempt-7",
+  "durationSeconds": 309.53,
+  "beats": {
+    "title": true,
+    "dock": true,
+    "cropWarning": true,
+    "cropActivated": true,
+    "warning": true,
+    "mimicDefeated": true,
+    "physicalPrize": true,
+    "carriedPrize": true,
+    "reachedRealPad": true,
+    "soldWithE": true,
+    "browsedWithE": true,
+    "boughtCannon": true,
+    "firedCannon": true,
+    "snapjawDefeated": true,
+    "snapjawHarvested": true,
+    "spitterDefeated": true,
+    "plumReleased": true,
+    "kingVineSubdued": true,
+    "fourVinesCutWithE": true,
+    "physicalDrop": true,
+    "extracted": true,
+    "returnedToDock": true,
+    "settledWithE": true,
+    "resultsVisible": true,
+    "reloadPreservedSettlement": true,
+    "noRepeatPayout": true
+  },
+  "failure": null,
+  "errors": []
+}

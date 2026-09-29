@@ -327,6 +327,9 @@ export class FruitAuthority {
     if (f.state === 'attached') {
       if (f.def.attachStrength > 6.0) return this.no('needs-tool');
       this.hooks.fruit.detachAuthoritative(f, 'remote-hand', -1);
+      // A marked harvest may deliberately warn before releasing its crop.
+      // Do not claim attached fruit or spill the peer's existing cargo.
+      if (f.state === 'attached') return this.no('wrong-phase');
     }
     // Hands are not a stack: taking something new puts the old thing in the
     // basket if it fits and on the ground if it does not. The client does
