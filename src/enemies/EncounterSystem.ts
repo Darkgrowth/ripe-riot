@@ -6,6 +6,8 @@ import { EncounterModel, type EncounterHit, type EncounterKind,
   type Point3 } from './EncounterModel';
 import { EncounterProjectileVisual, EncounterVisual } from './EncounterVisuals';
 import { Layer, QueryMask, groups } from '@/physics/Layers';
+import type { FruitSystem } from '@/fruit/FruitSystem';
+import { ThrownFruitBait } from './ThrownFruitBait';
 
 export type EncounterIntent =
   | { kind: 'hit'; origin: Point3; direction: Point3; strike: EncounterStrike; actorId: string }
@@ -38,6 +40,9 @@ export class EncounterSystem implements System {
   private explicitTargets: EncounterTarget[] | null = null;
   private currentTargets: EncounterTarget[] = [];
   private suspendedForHarness = false;
+  private readonly baitFlights = new ThrownFruitBait();
+  private baitCount = 0;
+  private baitFocus: number | null = null;
 
   constructor(private readonly comparisonStyle: 'polygon' | 'block' | null = null,
     private readonly detailedVoxelClearing = false) {}
@@ -87,12 +92,13 @@ export class EncounterSystem implements System {
   }
 
   fixedStep(dt: number): void {
-    if (!this.authoritative) return;
+    if (!this.authoritative) { this.clearBaitFlights(); return; }
     if (this.comparisonStyle && !this.g.input.pointerLocked) return;
     const targets = this.explicitTargets ?? [{ id: 'solo', position: point(this.g.player.position) }];
     this.currentTargets = targets;
     this.model.setTargets(targets);
     if (this.suspendedForHarness) return;
+    this.stepBait(dt);
     for (const event of this.model.step(dt)) {
       if (event.type === 'damage') {
         this.onPlayerDamaged?.(event.amount, event.kind, event.victimId);
@@ -106,6 +112,54 @@ export class EncounterSystem implements System {
         this.release(event.victimId, 'timeout');
       }
     }
+  }
+
+  /** Called only after a new, accepted carried-to-free throw on the host. */
+  trackThrownFruit(fruitId: number, actorId: string): void {
+    if (!this.authoritative || this.comparisonStyle) return;
+    const fruit = this.g.get<FruitSystem>('fruit').get(fruitId);
+    if (!fruit || fruit.state !== 'free' || !fruit.body || fruit.speed < 2.2) return;
+    this.baitFlights.arm(fruitId, actorId, point(fruit.position));
+  }
+
+  clearBaitFlights(): void { this.baitFlights.clear(); this.baitFocus = null; }
+  cancelThrownFruit(fruitId: number): void {
+    this.baitFlights.disarm(fruitId);
+    if (this.baitFocus === fruitId) this.baitFocus = null;
+  }
+
+  private stepBait(dt: number): void {
+    if (this.comparisonStyle) return;
+    const fruits = this.g.get<FruitSystem>('fruit');
+    const jaw = this.model.get('snapjaw');
+    if (this.baitFocus !== null) {
+      const f = fruits.get(this.baitFocus);
+      if (!f || f.state !== 'free' || jaw.phase !== 'warn'
+        || this.baitOccluded(point(f.position), [jaw.position[0], jaw.position[1] + 1.25, jaw.position[2]])
+        || !this.model.followBait(point(f.position))) this.baitFocus = null;
+    }
+    if (this.baitFlights.size === 0) return;
+    this.baitFlights.step(dt, id => {
+      const f = fruits.get(id);
+      return f ? { state: f.state, speed: f.speed, position: point(f.position) } : null;
+    }, jaw.position, (from, to) => this.baitOccluded(from, to), (flight, position) => {
+      if (!this.model.offerBait(position)) return false;
+      this.baitFocus = flight.fruitId;
+      this.baitCount++;
+      this.g.bus.emit('encounter:baited', { kind: 'snapjaw', fruitId: flight.fruitId,
+        actorId: flight.actorId, position: new THREE.Vector3(...position) });
+      return true;
+    });
+  }
+
+  private baitOccluded(from: Point3, to: Point3): boolean {
+    const origin = new THREE.Vector3(...from);
+    const direction = new THREE.Vector3(...to).sub(origin);
+    const distance = direction.length();
+    if (distance < .1) return false;
+    const hit = this.g.physics.raycast(origin, direction.divideScalar(distance),
+      distance, QueryMask.solid, this.g.player.body);
+    return !!hit && hit.distance < distance - .08;
   }
 
   frameUpdate(dt: number): void {
@@ -233,6 +287,7 @@ export class EncounterSystem implements System {
   }
 
   private resetModel(): void {
+    this.clearBaitFlights();
     // Compact second route: orchard ambush, jaws on the hill approach, then
     // ranged pressure on the climb toward the King Melon.
     const mimic = this.world.groundAt(-23, 22, 0);
@@ -272,6 +327,7 @@ export class EncounterSystem implements System {
     const snap = this.model.snapshot();
     return {
       authoritative: this.authoritative,
+      bait: { pending: this.baitFlights.size, accepted: this.baitCount },
       revision: snap.revision,
       projectiles: snap.projectiles.map(p => ({ id: p.id,
         pos: p.position.map(n => +n.toFixed(3)), timeLeft: +p.timeLeft.toFixed(3) })),

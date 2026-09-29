@@ -15,6 +15,8 @@ export interface GameEventMap {
   'encounter:defeated': { kind: 'mimic' | 'snapjaw' | 'spitter'; position: THREE.Vector3; actorId: string };
   'encounter:attack': { kind: 'mimic' | 'snapjaw' | 'spitter'; victimId: string; damage: number };
   'encounter:capture': { kind: 'snapjaw'; victimId: string };
+  /** Host-confirmed physical bait. Clients may present this but never score it. */
+  'encounter:baited': { kind: 'snapjaw'; fruitId: number; actorId: string; position: THREE.Vector3 };
   'encounter:release': { kind: 'snapjaw'; victimId: string;
     reason: 'escape' | 'rescue' | 'timeout' | 'defeat' };
 

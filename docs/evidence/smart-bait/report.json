@@ -1,0 +1,3370 @@
+{
+  "url": "http://127.0.0.1:5243",
+  "build": "isolated production snapshot (capture/sunpatch-playful-build)",
+  "input": "Playwright hardware Chromium mouse and keyboard; no synthetic game input",
+  "fixtures": "Teleport, encounter reset, fruit spawn and debug pickup establish focused encounter scenarios. Post-migration fruit reposition is fixture setup.",
+  "limits": "No full island walk, actual sale payout, or real wall LOS integration test. Sale reward verified at multiplier level; blocked LOS has unit callback coverage.",
+  "checks": [
+    {
+      "ok": true,
+      "label": "fixture fruit held",
+      "detail": "686"
+    },
+    {
+      "ok": true,
+      "label": "throw used real mouse without synthetic input",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "label": "real solo throw triggers exactly one bait event",
+      "detail": "[{\"fruitId\":686,\"actorId\":\"solo\",\"at\":2.2833333333333306}]"
+    },
+    {
+      "ok": true,
+      "label": "jaws enter baited state",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "label": "snap follows the real fruit away from its thrower",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "label": "host awards SMART BAIT to the retrievable fruit",
+      "detail": "{\"stunts\":[\"smartBait\"],\"multiplier\":1.5}"
+    },
+    {
+      "ok": true,
+      "label": "fixture fruit held",
+      "detail": "687"
+    },
+    {
+      "ok": true,
+      "label": "real throw then normal forward movement reaches the existing counterattack window",
+      "detail": "{\"player\":{\"pos\":[-24.694,7.52,11],\"vel\":[0,0,0],\"yaw\":1.5708,\"pitch\":0,\"grounded\":true,\"speed\":0,\"state\":\"active\",\"height\":1.82},\"jaw\":{\"phase\":\"recover\",\"health\":2,\"timeLeft\":1.6,\"pos\":[-28,7.5,11],\"heading\":-1.613,\"baited\":true,\"capturedVictimId\":null,\"captureTimeLeft\":0}}"
+    },
+    {
+      "ok": true,
+      "label": "bait fruit survives the distraction and counterattack",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "label": "fixture fruit held",
+      "detail": "688"
+    },
+    {
+      "ok": true,
+      "label": "client mouse throw produces one host-confirmed bait",
+      "detail": "[{\"fruitId\":688,\"actorId\":\"b6tw6q8w\",\"at\":14.71666666666695}]"
+    },
+    {
+      "ok": true,
+      "label": "client receives one confirmed cue",
+      "detail": "[{\"fruitId\":688,\"actorId\":\"b6tw6q8w\",\"at\":5.53333333333332}]"
+    },
+    {
+      "ok": true,
+      "label": "host scores client bait",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "label": "client cue does not award independent scoring",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "label": "promoted host retains earned SMART BAIT multiplier",
+      "detail": "{\"record\":{\"stunts\":[\"smartBait\"],\"multiplier\":1.5},\"total\":0}"
+    },
+    {
+      "ok": true,
+      "label": "same bait fruit remains retrievable after host migration",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "label": "promoted host accepts a new real throw of the same fruit",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "label": "same fruit rethrow after migration cannot award SMART BAIT twice",
+      "detail": "{\"stunts\":[\"smartBait\"],\"multiplier\":1.5}"
+    },
+    {
+      "ok": true,
+      "label": "no runtime exceptions",
+      "detail": "[]"
+    }
+  ],
+  "samples": [
+    {
+      "time": 2.3166666666666638,
+      "encounter": {
+        "authoritative": true,
+        "bait": {
+          "pending": 0,
+          "accepted": 1
+        },
+        "revision": 143,
+        "projectiles": [],
+        "threats": {
+          "mimic": {
+            "phase": "attack",
+            "health": 3,
+            "timeLeft": 0.567,
+            "pos": [
+              -26.774,
+              7.5,
+              18.981
+            ],
+            "heading": -2.246,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "snapjaw": {
+            "phase": "warn",
+            "health": 2,
+            "timeLeft": 0.67,
+            "pos": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": 0.063,
+            "baited": true,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "spitter": {
+            "phase": "idle",
+            "health": 2,
+            "timeLeft": 0,
+            "pos": [
+              -31,
+              16.302,
+              -8
+            ],
+            "heading": 0,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        }
+      },
+      "fruit": {
+        "state": "free",
+        "pos": [
+          -27.7186336517334,
+          9.004724502563477,
+          15.46596908569336
+        ],
+        "speed": 20.202020555448197
+      },
+      "events": [
+        {
+          "fruitId": 686,
+          "actorId": "solo",
+          "at": 2.2833333333333306
+        }
+      ]
+    },
+    {
+      "time": 2.399999999999997,
+      "encounter": {
+        "authoritative": true,
+        "bait": {
+          "pending": 0,
+          "accepted": 1
+        },
+        "revision": 153,
+        "projectiles": [],
+        "threats": {
+          "mimic": {
+            "phase": "recover",
+            "health": 3,
+            "timeLeft": 1.233,
+            "pos": [
+              -26.087,
+              7.5,
+              19.531
+            ],
+            "heading": -2.246,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "snapjaw": {
+            "phase": "warn",
+            "health": 2,
+            "timeLeft": 0.587,
+            "pos": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": 0.101,
+            "baited": true,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "spitter": {
+            "phase": "idle",
+            "health": 2,
+            "timeLeft": 0,
+            "pos": [
+              -31,
+              16.302,
+              -8
+            ],
+            "heading": 0,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        }
+      },
+      "fruit": {
+        "state": "free",
+        "pos": [
+          -27.7186336517334,
+          8.885946273803711,
+          13.784923553466797
+        ],
+        "speed": 20.310744653737487
+      },
+      "events": [
+        {
+          "fruitId": 686,
+          "actorId": "solo",
+          "at": 2.2833333333333306
+        }
+      ]
+    },
+    {
+      "time": 2.4999999999999964,
+      "encounter": {
+        "authoritative": true,
+        "bait": {
+          "pending": 0,
+          "accepted": 1
+        },
+        "revision": 165,
+        "projectiles": [],
+        "threats": {
+          "mimic": {
+            "phase": "recover",
+            "health": 3,
+            "timeLeft": 1.133,
+            "pos": [
+              -26.087,
+              7.5,
+              19.531
+            ],
+            "heading": -2.246,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "snapjaw": {
+            "phase": "warn",
+            "health": 2,
+            "timeLeft": 0.487,
+            "pos": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": 0.349,
+            "baited": true,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "spitter": {
+            "phase": "idle",
+            "health": 2,
+            "timeLeft": 0,
+            "pos": [
+              -31,
+              16.302,
+              -8
+            ],
+            "heading": 0,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        }
+      },
+      "fruit": {
+        "state": "free",
+        "pos": [
+          -27.7186336517334,
+          8.542434692382812,
+          11.77320671081543
+        ],
+        "speed": 20.654131059607
+      },
+      "events": [
+        {
+          "fruitId": 686,
+          "actorId": "solo",
+          "at": 2.2833333333333306
+        }
+      ]
+    },
+    {
+      "time": 2.599999999999996,
+      "encounter": {
+        "authoritative": true,
+        "bait": {
+          "pending": 0,
+          "accepted": 1
+        },
+        "revision": 177,
+        "projectiles": [],
+        "threats": {
+          "mimic": {
+            "phase": "recover",
+            "health": 3,
+            "timeLeft": 1.033,
+            "pos": [
+              -26.087,
+              7.5,
+              19.531
+            ],
+            "heading": -2.246,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "snapjaw": {
+            "phase": "warn",
+            "health": 2,
+            "timeLeft": 0.387,
+            "pos": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": 2.917,
+            "baited": true,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "spitter": {
+            "phase": "idle",
+            "health": 2,
+            "timeLeft": 0,
+            "pos": [
+              -31,
+              16.302,
+              -8
+            ],
+            "heading": 0,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        }
+      },
+      "fruit": {
+        "state": "free",
+        "pos": [
+          -27.7186336517334,
+          7.980284690856934,
+          9.767515182495117
+        ],
+        "speed": 21.216926660965083
+      },
+      "events": [
+        {
+          "fruitId": 686,
+          "actorId": "solo",
+          "at": 2.2833333333333306
+        }
+      ]
+    },
+    {
+      "time": 2.683333333333329,
+      "encounter": {
+        "authoritative": true,
+        "bait": {
+          "pending": 0,
+          "accepted": 1
+        },
+        "revision": 187,
+        "projectiles": [],
+        "threats": {
+          "mimic": {
+            "phase": "recover",
+            "health": 3,
+            "timeLeft": 0.95,
+            "pos": [
+              -26.087,
+              7.5,
+              19.531
+            ],
+            "heading": -2.246,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "snapjaw": {
+            "phase": "warn",
+            "health": 2,
+            "timeLeft": 0.303,
+            "pos": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": 3.034,
+            "baited": true,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "spitter": {
+            "phase": "idle",
+            "health": 2,
+            "timeLeft": 0,
+            "pos": [
+              -31,
+              16.302,
+              -8
+            ],
+            "heading": 0,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        }
+      },
+      "fruit": {
+        "state": "free",
+        "pos": [
+          -27.718294143676758,
+          7.688908100128174,
+          8.402947425842285
+        ],
+        "speed": 14.185304099891626
+      },
+      "events": [
+        {
+          "fruitId": 686,
+          "actorId": "solo",
+          "at": 2.2833333333333306
+        }
+      ]
+    },
+    {
+      "time": 2.7833333333333288,
+      "encounter": {
+        "authoritative": true,
+        "bait": {
+          "pending": 0,
+          "accepted": 1
+        },
+        "revision": 199,
+        "projectiles": [],
+        "threats": {
+          "mimic": {
+            "phase": "recover",
+            "health": 3,
+            "timeLeft": 0.85,
+            "pos": [
+              -26.087,
+              7.5,
+              19.531
+            ],
+            "heading": -2.246,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "snapjaw": {
+            "phase": "warn",
+            "health": 2,
+            "timeLeft": 0.203,
+            "pos": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": 3.068,
+            "baited": true,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "spitter": {
+            "phase": "idle",
+            "health": 2,
+            "timeLeft": 0,
+            "pos": [
+              -31,
+              16.302,
+              -8
+            ],
+            "heading": 0,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        }
+      },
+      "fruit": {
+        "state": "free",
+        "pos": [
+          -27.717405319213867,
+          7.660000801086426,
+          7.181649208068848
+        ],
+        "speed": 14.102633968396077
+      },
+      "events": [
+        {
+          "fruitId": 686,
+          "actorId": "solo",
+          "at": 2.2833333333333306
+        }
+      ]
+    },
+    {
+      "time": 2.866666666666662,
+      "encounter": {
+        "authoritative": true,
+        "bait": {
+          "pending": 0,
+          "accepted": 1
+        },
+        "revision": 209,
+        "projectiles": [],
+        "threats": {
+          "mimic": {
+            "phase": "recover",
+            "health": 3,
+            "timeLeft": 0.767,
+            "pos": [
+              -26.087,
+              7.5,
+              19.531
+            ],
+            "heading": -2.246,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "snapjaw": {
+            "phase": "warn",
+            "health": 2,
+            "timeLeft": 0.12,
+            "pos": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": 3.081,
+            "baited": true,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "spitter": {
+            "phase": "idle",
+            "health": 2,
+            "timeLeft": 0,
+            "pos": [
+              -31,
+              16.302,
+              -8
+            ],
+            "heading": 0,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        }
+      },
+      "fruit": {
+        "state": "free",
+        "pos": [
+          -27.716894149780273,
+          7.706286907196045,
+          6.306227207183838
+        ],
+        "speed": 13.679609245475103
+      },
+      "events": [
+        {
+          "fruitId": 686,
+          "actorId": "solo",
+          "at": 2.2833333333333306
+        }
+      ]
+    },
+    {
+      "time": 2.9666666666666615,
+      "encounter": {
+        "authoritative": true,
+        "bait": {
+          "pending": 0,
+          "accepted": 1
+        },
+        "revision": 218,
+        "projectiles": [],
+        "threats": {
+          "mimic": {
+            "phase": "recover",
+            "health": 3,
+            "timeLeft": 0.667,
+            "pos": [
+              -26.087,
+              7.5,
+              19.531
+            ],
+            "heading": -2.246,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "snapjaw": {
+            "phase": "warn",
+            "health": 2,
+            "timeLeft": 0.02,
+            "pos": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": 3.089,
+            "baited": true,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "spitter": {
+            "phase": "idle",
+            "health": 2,
+            "timeLeft": 0,
+            "pos": [
+              -31,
+              16.302,
+              -8
+            ],
+            "heading": 0,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        }
+      },
+      "fruit": {
+        "state": "free",
+        "pos": [
+          -27.71668815612793,
+          7.882237434387207,
+          4.962887763977051
+        ],
+        "speed": 13.408168292132299
+      },
+      "events": [
+        {
+          "fruitId": 686,
+          "actorId": "solo",
+          "at": 2.2833333333333306
+        }
+      ]
+    },
+    {
+      "time": 3.0499999999999945,
+      "encounter": {
+        "authoritative": true,
+        "bait": {
+          "pending": 0,
+          "accepted": 1
+        },
+        "revision": 223,
+        "projectiles": [],
+        "threats": {
+          "mimic": {
+            "phase": "recover",
+            "health": 3,
+            "timeLeft": 0.583,
+            "pos": [
+              -26.087,
+              7.5,
+              19.531
+            ],
+            "heading": -2.246,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "snapjaw": {
+            "phase": "attack",
+            "health": 2,
+            "timeLeft": 0.27,
+            "pos": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": 3.089,
+            "baited": true,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "spitter": {
+            "phase": "idle",
+            "health": 2,
+            "timeLeft": 0,
+            "pos": [
+              -31,
+              16.302,
+              -8
+            ],
+            "heading": 0,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        }
+      },
+      "fruit": {
+        "state": "free",
+        "pos": [
+          -27.716516494750977,
+          7.8606390953063965,
+          3.846515417098999
+        ],
+        "speed": 13.455884193926755
+      },
+      "events": [
+        {
+          "fruitId": 686,
+          "actorId": "solo",
+          "at": 2.2833333333333306
+        }
+      ]
+    },
+    {
+      "time": 3.149999999999994,
+      "encounter": {
+        "authoritative": true,
+        "bait": {
+          "pending": 0,
+          "accepted": 1
+        },
+        "revision": 229,
+        "projectiles": [],
+        "threats": {
+          "mimic": {
+            "phase": "recover",
+            "health": 3,
+            "timeLeft": 0.483,
+            "pos": [
+              -26.087,
+              7.5,
+              19.531
+            ],
+            "heading": -2.246,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "snapjaw": {
+            "phase": "attack",
+            "health": 2,
+            "timeLeft": 0.17,
+            "pos": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": 3.089,
+            "baited": true,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "spitter": {
+            "phase": "idle",
+            "health": 2,
+            "timeLeft": 0,
+            "pos": [
+              -31,
+              16.302,
+              -8
+            ],
+            "heading": 0,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        }
+      },
+      "fruit": {
+        "state": "free",
+        "pos": [
+          -27.716327667236328,
+          7.660000324249268,
+          2.6218841075897217
+        ],
+        "speed": 13.355392087121226
+      },
+      "events": [
+        {
+          "fruitId": 686,
+          "actorId": "solo",
+          "at": 2.2833333333333306
+        }
+      ]
+    },
+    {
+      "time": 3.233333333333327,
+      "encounter": {
+        "authoritative": true,
+        "bait": {
+          "pending": 0,
+          "accepted": 1
+        },
+        "revision": 234,
+        "projectiles": [],
+        "threats": {
+          "mimic": {
+            "phase": "recover",
+            "health": 3,
+            "timeLeft": 0.4,
+            "pos": [
+              -26.087,
+              7.5,
+              19.531
+            ],
+            "heading": -2.246,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "snapjaw": {
+            "phase": "attack",
+            "health": 2,
+            "timeLeft": 0.087,
+            "pos": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": 3.089,
+            "baited": true,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "spitter": {
+            "phase": "idle",
+            "health": 2,
+            "timeLeft": 0,
+            "pos": [
+              -31,
+              16.302,
+              -8
+            ],
+            "heading": 0,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        }
+      },
+      "fruit": {
+        "state": "free",
+        "pos": [
+          -27.715662002563477,
+          7.657861709594727,
+          1.7553949356079102
+        ],
+        "speed": 13.124114494628321
+      },
+      "events": [
+        {
+          "fruitId": 686,
+          "actorId": "solo",
+          "at": 2.2833333333333306
+        }
+      ]
+    },
+    {
+      "time": 3.333333333333327,
+      "encounter": {
+        "authoritative": true,
+        "bait": {
+          "pending": 0,
+          "accepted": 1
+        },
+        "revision": 240,
+        "projectiles": [],
+        "threats": {
+          "mimic": {
+            "phase": "recover",
+            "health": 3,
+            "timeLeft": 0.3,
+            "pos": [
+              -26.087,
+              7.5,
+              19.531
+            ],
+            "heading": -2.246,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "snapjaw": {
+            "phase": "recover",
+            "health": 2,
+            "timeLeft": 1.6,
+            "pos": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": 3.089,
+            "baited": true,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "spitter": {
+            "phase": "idle",
+            "health": 2,
+            "timeLeft": 0,
+            "pos": [
+              -31,
+              16.302,
+              -8
+            ],
+            "heading": 0,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        }
+      },
+      "fruit": {
+        "state": "free",
+        "pos": [
+          -27.69489097595215,
+          7.733582496643066,
+          0.45298898220062256
+        ],
+        "speed": 13.012929329537656
+      },
+      "events": [
+        {
+          "fruitId": 686,
+          "actorId": "solo",
+          "at": 2.2833333333333306
+        }
+      ]
+    },
+    {
+      "time": 3.41666666666666,
+      "encounter": {
+        "authoritative": true,
+        "bait": {
+          "pending": 0,
+          "accepted": 1
+        },
+        "revision": 245,
+        "projectiles": [],
+        "threats": {
+          "mimic": {
+            "phase": "recover",
+            "health": 3,
+            "timeLeft": 0.217,
+            "pos": [
+              -26.087,
+              7.5,
+              19.531
+            ],
+            "heading": -2.246,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "snapjaw": {
+            "phase": "recover",
+            "health": 2,
+            "timeLeft": 1.517,
+            "pos": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": 3.089,
+            "baited": true,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "spitter": {
+            "phase": "idle",
+            "health": 2,
+            "timeLeft": 0,
+            "pos": [
+              -31,
+              16.302,
+              -8
+            ],
+            "heading": 0,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        }
+      },
+      "fruit": {
+        "state": "free",
+        "pos": [
+          -27.68069839477539,
+          7.660000324249268,
+          -0.42868953943252563
+        ],
+        "speed": 12.981471746444363
+      },
+      "events": [
+        {
+          "fruitId": 686,
+          "actorId": "solo",
+          "at": 2.2833333333333306
+        }
+      ]
+    },
+    {
+      "time": 3.5166666666666595,
+      "encounter": {
+        "authoritative": true,
+        "bait": {
+          "pending": 0,
+          "accepted": 1
+        },
+        "revision": 251,
+        "projectiles": [],
+        "threats": {
+          "mimic": {
+            "phase": "recover",
+            "health": 3,
+            "timeLeft": 0.117,
+            "pos": [
+              -26.087,
+              7.5,
+              19.531
+            ],
+            "heading": -2.246,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "snapjaw": {
+            "phase": "recover",
+            "health": 2,
+            "timeLeft": 1.417,
+            "pos": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": 3.089,
+            "baited": true,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "spitter": {
+            "phase": "idle",
+            "health": 2,
+            "timeLeft": 0,
+            "pos": [
+              -31,
+              16.302,
+              -8
+            ],
+            "heading": 0,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        }
+      },
+      "fruit": {
+        "state": "free",
+        "pos": [
+          -27.660131454467773,
+          7.749406337738037,
+          -1.5327367782592773
+        ],
+        "speed": 12.495879225116568
+      },
+      "events": [
+        {
+          "fruitId": 686,
+          "actorId": "solo",
+          "at": 2.2833333333333306
+        }
+      ]
+    },
+    {
+      "time": 3.5999999999999925,
+      "encounter": {
+        "authoritative": true,
+        "bait": {
+          "pending": 0,
+          "accepted": 1
+        },
+        "revision": 256,
+        "projectiles": [],
+        "threats": {
+          "mimic": {
+            "phase": "recover",
+            "health": 3,
+            "timeLeft": 0.033,
+            "pos": [
+              -26.087,
+              7.5,
+              19.531
+            ],
+            "heading": -2.246,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "snapjaw": {
+            "phase": "recover",
+            "health": 2,
+            "timeLeft": 1.333,
+            "pos": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": 3.089,
+            "baited": true,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "spitter": {
+            "phase": "idle",
+            "health": 2,
+            "timeLeft": 0,
+            "pos": [
+              -31,
+              16.302,
+              -8
+            ],
+            "heading": 0,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        }
+      },
+      "fruit": {
+        "state": "free",
+        "pos": [
+          -27.62752914428711,
+          7.936027526855469,
+          -2.37187123298645
+        ],
+        "speed": 12.077863080560068
+      },
+      "events": [
+        {
+          "fruitId": 686,
+          "actorId": "solo",
+          "at": 2.2833333333333306
+        }
+      ]
+    },
+    {
+      "time": 3.699999999999992,
+      "encounter": {
+        "authoritative": true,
+        "bait": {
+          "pending": 0,
+          "accepted": 1
+        },
+        "revision": 262,
+        "projectiles": [],
+        "threats": {
+          "mimic": {
+            "phase": "warn",
+            "health": 3,
+            "timeLeft": 0.75,
+            "pos": [
+              -26.087,
+              7.5,
+              19.531
+            ],
+            "heading": -2.246,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "snapjaw": {
+            "phase": "recover",
+            "health": 2,
+            "timeLeft": 1.233,
+            "pos": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": 3.089,
+            "baited": true,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "spitter": {
+            "phase": "idle",
+            "health": 2,
+            "timeLeft": 0,
+            "pos": [
+              -31,
+              16.302,
+              -8
+            ],
+            "heading": 0,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        }
+      },
+      "fruit": {
+        "state": "free",
+        "pos": [
+          -27.551166534423828,
+          8.412758827209473,
+          -3.1835951805114746
+        ],
+        "speed": 10.627723233856766
+      },
+      "events": [
+        {
+          "fruitId": 686,
+          "actorId": "solo",
+          "at": 2.2833333333333306
+        }
+      ]
+    },
+    {
+      "time": 3.799999999999992,
+      "encounter": {
+        "authoritative": true,
+        "bait": {
+          "pending": 0,
+          "accepted": 1
+        },
+        "revision": 268,
+        "projectiles": [],
+        "threats": {
+          "mimic": {
+            "phase": "warn",
+            "health": 3,
+            "timeLeft": 0.65,
+            "pos": [
+              -26.087,
+              7.5,
+              19.531
+            ],
+            "heading": -2.246,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "snapjaw": {
+            "phase": "recover",
+            "health": 2,
+            "timeLeft": 1.133,
+            "pos": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": 3.089,
+            "baited": true,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "spitter": {
+            "phase": "idle",
+            "health": 2,
+            "timeLeft": 0,
+            "pos": [
+              -31,
+              16.302,
+              -8
+            ],
+            "heading": 0,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        }
+      },
+      "fruit": {
+        "state": "free",
+        "pos": [
+          -27.452306747436523,
+          8.863706588745117,
+          -3.8758115768432617
+        ],
+        "speed": 9.320959469379488
+      },
+      "events": [
+        {
+          "fruitId": 686,
+          "actorId": "solo",
+          "at": 2.2833333333333306
+        }
+      ]
+    },
+    {
+      "time": 3.883333333333325,
+      "encounter": {
+        "authoritative": true,
+        "bait": {
+          "pending": 0,
+          "accepted": 1
+        },
+        "revision": 273,
+        "projectiles": [],
+        "threats": {
+          "mimic": {
+            "phase": "warn",
+            "health": 3,
+            "timeLeft": 0.567,
+            "pos": [
+              -26.087,
+              7.5,
+              19.531
+            ],
+            "heading": -2.246,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "snapjaw": {
+            "phase": "recover",
+            "health": 2,
+            "timeLeft": 1.05,
+            "pos": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": 3.089,
+            "baited": true,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "spitter": {
+            "phase": "idle",
+            "health": 2,
+            "timeLeft": 0,
+            "pos": [
+              -31,
+              16.302,
+              -8
+            ],
+            "heading": 0,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        }
+      },
+      "fruit": {
+        "state": "free",
+        "pos": [
+          -27.309614181518555,
+          9.416316032409668,
+          -4.346224784851074
+        ],
+        "speed": 7.962860819532249
+      },
+      "events": [
+        {
+          "fruitId": 686,
+          "actorId": "solo",
+          "at": 2.2833333333333306
+        }
+      ]
+    },
+    {
+      "time": 3.9833333333333245,
+      "encounter": {
+        "authoritative": true,
+        "bait": {
+          "pending": 0,
+          "accepted": 1
+        },
+        "revision": 279,
+        "projectiles": [],
+        "threats": {
+          "mimic": {
+            "phase": "warn",
+            "health": 3,
+            "timeLeft": 0.467,
+            "pos": [
+              -26.087,
+              7.5,
+              19.531
+            ],
+            "heading": -2.246,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "snapjaw": {
+            "phase": "recover",
+            "health": 2,
+            "timeLeft": 0.95,
+            "pos": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": 3.089,
+            "baited": true,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "spitter": {
+            "phase": "idle",
+            "health": 2,
+            "timeLeft": 0,
+            "pos": [
+              -31,
+              16.302,
+              -8
+            ],
+            "heading": 0,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        }
+      },
+      "fruit": {
+        "state": "free",
+        "pos": [
+          -27.15485191345215,
+          9.853672981262207,
+          -4.824293613433838
+        ],
+        "speed": 6.999655907040383
+      },
+      "events": [
+        {
+          "fruitId": 686,
+          "actorId": "solo",
+          "at": 2.2833333333333306
+        }
+      ]
+    },
+    {
+      "time": 4.0666666666666575,
+      "encounter": {
+        "authoritative": true,
+        "bait": {
+          "pending": 0,
+          "accepted": 1
+        },
+        "revision": 284,
+        "projectiles": [],
+        "threats": {
+          "mimic": {
+            "phase": "warn",
+            "health": 3,
+            "timeLeft": 0.383,
+            "pos": [
+              -26.087,
+              7.5,
+              19.531
+            ],
+            "heading": -2.246,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "snapjaw": {
+            "phase": "recover",
+            "health": 2,
+            "timeLeft": 0.867,
+            "pos": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": 3.089,
+            "baited": true,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "spitter": {
+            "phase": "idle",
+            "health": 2,
+            "timeLeft": 0,
+            "pos": [
+              -31,
+              16.302,
+              -8
+            ],
+            "heading": 0,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        }
+      },
+      "fruit": {
+        "state": "free",
+        "pos": [
+          -26.987764358520508,
+          10.225093841552734,
+          -5.185852527618408
+        ],
+        "speed": 6.142984572253332
+      },
+      "events": [
+        {
+          "fruitId": 686,
+          "actorId": "solo",
+          "at": 2.2833333333333306
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "approach": {
+    "player": {
+      "pos": [
+        -24.694,
+        7.52,
+        11
+      ],
+      "vel": [
+        0,
+        0,
+        0
+      ],
+      "yaw": 1.5708,
+      "pitch": 0,
+      "grounded": true,
+      "speed": 0,
+      "state": "active",
+      "height": 1.82
+    },
+    "jaw": {
+      "phase": "recover",
+      "health": 2,
+      "timeLeft": 1.6,
+      "pos": [
+        -28,
+        7.5,
+        11
+      ],
+      "heading": -1.613,
+      "baited": true,
+      "capturedVictimId": null,
+      "captureTimeLeft": 0
+    }
+  },
+  "baitDiagnostics": [
+    {
+      "type": "track",
+      "id": 688,
+      "actor": "b6tw6q8w",
+      "position": [
+        -21.85,
+        8.97,
+        10.72
+      ],
+      "speed": 19.423551872593656,
+      "pending": {
+        "pending": 1,
+        "accepted": 2
+      }
+    },
+    {
+      "type": "los",
+      "a": [
+        -22.757471969599393,
+        9.004837810654001,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -23.140939712524414,
+        9.00570011138916,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -23.4632625579834,
+        8.999342918395996,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -23.785425186157227,
+        8.9868803024292,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -24.1074275970459,
+        8.968317985534668,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -24.429269790649414,
+        8.943655967712402,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -24.750951766967773,
+        8.912894248962402,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -25.072473526000977,
+        8.876038551330566,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -25.393835067749023,
+        8.833094596862793,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -25.715036392211914,
+        8.784062385559082,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -26.03607749938965,
+        8.728941917419434,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -26.356958389282227,
+        8.667738914489746,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -26.67767906188965,
+        8.600459098815918,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -26.998239517211914,
+        8.52710247039795,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -27.318639755249023,
+        8.447674751281738,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -27.638879776000977,
+        8.362175941467285,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -27.958959579467773,
+        8.270611763000488,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -28.278879165649414,
+        8.172982215881348,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -28.5986385345459,
+        8.069293022155762,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -28.918237686157227,
+        7.959548473358154,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -29.2376766204834,
+        7.843748569488525,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -29.556955337524414,
+        7.721897602081299,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -29.711393356323242,
+        7.660000801086426,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -29.940656661987305,
+        7.675683975219727,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -30.168371200561523,
+        7.689179420471191,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -30.395971298217773,
+        7.696557998657227,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -30.623456954956055,
+        7.697822570800781,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -30.850828170776367,
+        7.692978858947754,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -31.07808494567871,
+        7.6820268630981445,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -31.305238723754883,
+        7.664972305297852,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -31.353988647460938,
+        7.659999847412109,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -31.580307006835938,
+        7.661025524139404,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -31.63437271118164,
+        7.660000324249268,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -31.860313415527344,
+        7.658382415771484,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -32.08573913574219,
+        7.655735492706299,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -32.16080093383789,
+        7.654933452606201,
+        10.720000267028809
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -32.37715530395508,
+        7.696113586425781,
+        10.726872444152832
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -32.5931510925293,
+        7.732448577880859,
+        10.73398494720459
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -32.80903244018555,
+        7.762655258178711,
+        10.741097450256348
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -33.02482223510742,
+        7.786738395690918,
+        10.748204231262207
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -33.24049758911133,
+        7.804699897766113,
+        10.755311012268066
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -33.456058502197266,
+        7.816542625427246,
+        10.762412071228027
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    },
+    {
+      "type": "los",
+      "a": [
+        -33.671504974365234,
+        7.822270393371582,
+        10.76950740814209
+      ],
+      "b": [
+        -28,
+        8.75,
+        11
+      ],
+      "blocked": false
+    }
+  ],
+  "coop": {
+    "host": {
+      "ready": true,
+      "tick": 955,
+      "elapsed": 15.917,
+      "fps": 142.6,
+      "player": {
+        "pos": [
+          35.003,
+          2.583,
+          55
+        ],
+        "vel": [
+          0.092,
+          0,
+          -0.009
+        ],
+        "yaw": 1.5708,
+        "pitch": 0,
+        "grounded": true,
+        "speed": 0.093,
+        "state": "active",
+        "height": 1.82
+      },
+      "physics": {
+        "bodies": 420,
+        "active": 4
+      },
+      "render": {
+        "drawCalls": 226,
+        "triangles": 3264564,
+        "geometries": 176,
+        "textures": 21,
+        "programs": 37
+      },
+      "profile": {
+        "physics": 0,
+        "fixed": 0,
+        "frame": 1.7,
+        "render": 4.5,
+        "total": 6.2
+      },
+      "economy": {
+        "money": 0,
+        "lifetime": 0,
+        "sold": 0,
+        "tier": 0,
+        "points": 0,
+        "best": 0
+      },
+      "fruit": {
+        "attached": 525,
+        "free": 3,
+        "carried": 0,
+        "stowed": 0,
+        "total": 528,
+        "plants": 155,
+        "drawn": 528,
+        "species": 10,
+        "drawBatches": 10,
+        "regrowQueued": 0,
+        "byState": {
+          "apple:attached": 195,
+          "orange:attached": 78,
+          "watermelon:attached": 10,
+          "puffmelon:attached": 34,
+          "boulderplum:attached": 9,
+          "coconut:attached": 120,
+          "banana:attached": 26,
+          "spikefruit:attached": 24,
+          "gluefruit:attached": 22,
+          "vinebomb:attached": 7,
+          "orange:free": 3
+        }
+      },
+      "ragdoll": {
+        "active": false,
+        "timer": 0,
+        "knockdowns": 0,
+        "lastSource": "",
+        "lastSpeed": 0,
+        "parts": 0
+      },
+      "safeRecovery": {
+        "checkpoint": [
+          35.002834025340256,
+          2.676222388763544,
+          54.99973693893551
+        ],
+        "holding": 0
+      },
+      "vitals": {
+        "health": 16,
+        "maxHealth": 100,
+        "downed": false,
+        "wiped": false,
+        "reviveProgress": 0,
+        "soloRecoveryRemaining": 0,
+        "bleedoutRemaining": 0,
+        "source": "mimic",
+        "authoritative": true
+      },
+      "encounters": {
+        "authoritative": true,
+        "bait": {
+          "pending": 0,
+          "accepted": 3
+        },
+        "revision": 1080,
+        "projectiles": [],
+        "threats": {
+          "mimic": {
+            "phase": "warn",
+            "health": 3,
+            "timeLeft": 0.65,
+            "pos": [
+              -22.314,
+              7.5,
+              18.228
+            ],
+            "heading": 2.962,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "snapjaw": {
+            "phase": "recover",
+            "health": 2,
+            "timeLeft": 1.45,
+            "pos": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": -1.614,
+            "baited": true,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "spitter": {
+            "phase": "idle",
+            "health": 2,
+            "timeLeft": 0,
+            "pos": [
+              -31,
+              16.302,
+              -8
+            ],
+            "heading": 0,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        }
+      },
+      "kingVine": {
+        "health": 6,
+        "maxHealth": 6,
+        "phase": "idle",
+        "attack": "sweep",
+        "timeLeft": 0,
+        "targetCount": 2,
+        "projectile": null,
+        "subdued": false,
+        "authoritative": true,
+        "generation": 0
+      },
+      "interaction": {
+        "carrying": null,
+        "carryClass": "small",
+        "lastRefusal": null,
+        "basket": 0,
+        "basketMass": 0,
+        "basketValue": 0,
+        "target": null,
+        "targetKind": null,
+        "prompt": null,
+        "nearSellPad": false,
+        "carriedId": -1,
+        "basketIds": [],
+        "pendingSells": 0,
+        "stuckHands": 0,
+        "pricks": 0
+      },
+      "ropes": {
+        "count": 4,
+        "shared": 0,
+        "mirrors": 0,
+        "taut": 0,
+        "list": [
+          {
+            "id": 682,
+            "len": 33.3,
+            "dist": 33.3,
+            "tension": 0,
+            "a": -1,
+            "b": -200,
+            "ak": "world",
+            "bk": "legendary",
+            "held": false,
+            "owner": null,
+            "cid": null,
+            "mirror": false,
+            "acked": null
+          },
+          {
+            "id": 683,
+            "len": 33.3,
+            "dist": 33.3,
+            "tension": 0,
+            "a": -1,
+            "b": -200,
+            "ak": "world",
+            "bk": "legendary",
+            "held": false,
+            "owner": null,
+            "cid": null,
+            "mirror": false,
+            "acked": null
+          },
+          {
+            "id": 684,
+            "len": 22.01,
+            "dist": 22.01,
+            "tension": 0,
+            "a": -1,
+            "b": -200,
+            "ak": "world",
+            "bk": "legendary",
+            "held": false,
+            "owner": null,
+            "cid": null,
+            "mirror": false,
+            "acked": null
+          },
+          {
+            "id": 685,
+            "len": 29.47,
+            "dist": 29.47,
+            "tension": 0,
+            "a": -1,
+            "b": -200,
+            "ak": "world",
+            "bk": "legendary",
+            "held": false,
+            "owner": null,
+            "cid": null,
+            "mirror": false,
+            "acked": null
+          }
+        ]
+      },
+      "scoring": {
+        "tracked": 3,
+        "totalAwarded": 3,
+        "best": 1.5,
+        "seen": [
+          "smartBait"
+        ]
+      },
+      "fx": {
+        "alive": 0,
+        "spawned": 53,
+        "enabled": true
+      },
+      "tools": {
+        "slots": [
+          "hand",
+          null,
+          null,
+          "basket"
+        ],
+        "active": "hand",
+        "owned": [
+          "hand",
+          "basket",
+          "ladder"
+        ],
+        "status": "",
+        "cooldown": 0
+      },
+      "viewmodel": {
+        "tool": "hand",
+        "handsSource": "glb",
+        "stow": 0,
+        "kick": 0,
+        "visible": true,
+        "cached": 1,
+        "toolShown": true,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 21.5
+      },
+      "shop": {
+        "open": false,
+        "near": false,
+        "purchased": [],
+        "offers": 8,
+        "pendingBuy": null
+      },
+      "book": {
+        "discovered": 0,
+        "species": 10,
+        "harvested": 0,
+        "variants": 0,
+        "open": false
+      },
+      "legendary": {
+        "phase": "prepare",
+        "vines": 4,
+        "cut": 0,
+        "tethers": 0,
+        "dropTetherCount": 0,
+        "required": 2,
+        "held": 0,
+        "authoritative": true,
+        "gen": 0,
+        "remoteGen": -1,
+        "paid": 0,
+        "pos": [
+          8,
+          38.9,
+          -62
+        ],
+        "speed": 0,
+        "mass": 2600,
+        "fixed": true,
+        "inPad": false,
+        "distanceToPad": 6,
+        "highTethers": 0,
+        "firstSight": -1
+      },
+      "progress": {
+        "islands": [
+          "sunpatch"
+        ],
+        "nextIsland": false,
+        "shown": [],
+        "milestones": {
+          "firstStunt": 2.3
+        },
+        "objective": "Follow the orchard path. Investigate the moving fruit.",
+        "threatsCleared": []
+      },
+      "director": {
+        "event": {
+          "id": 0,
+          "kind": null,
+          "phase": "idle",
+          "remaining": 0,
+          "targets": [],
+          "plants": [],
+          "released": 0,
+          "at": [
+            0,
+            0,
+            0
+          ],
+          "progress": 0,
+          "goal": 0,
+          "reward": 0,
+          "species": [],
+          "counted": [],
+          "paid": false,
+          "result": ""
+        },
+        "sequence": 0,
+        "cooldown": 0,
+        "last": null,
+        "firstPick": true,
+        "firstSale": false,
+        "introDone": false,
+        "introDelay": 12,
+        "orders": 0,
+        "authoritative": true,
+        "automatic": false
+      },
+      "audio": {
+        "running": "running",
+        "played": 13,
+        "last": "fruitHit",
+        "enabled": true,
+        "settings": {
+          "master": 0.7,
+          "music": 0.35,
+          "sfx": 0.9,
+          "ambience": 0.5,
+          "muted": false
+        },
+        "activeVoices": 0,
+        "ambienceSources": 4,
+        "music": {
+          "ready": true,
+          "mood": "calm",
+          "sources": 3,
+          "epoch": 0.7706666666666666,
+          "transitionAt": 10.770666666666667,
+          "error": ""
+        },
+        "masterGain": 0.699999988079071
+      },
+      "characters": {
+        "enabled": false,
+        "phase": "perched",
+        "elapsed": 0,
+        "duration": 1,
+        "cooldown": 45,
+        "grace": 12,
+        "target": -1,
+        "pecked": false,
+        "cycle": 0,
+        "from": [
+          -12.5,
+          8.83,
+          32.8
+        ],
+        "to": [
+          -12.5,
+          8.83,
+          32.8
+        ],
+        "pecks": 0,
+        "aborted": 0,
+        "scares": 0,
+        "lastFruit": -1,
+        "lastDeltaSpeed": 0,
+        "gull": [
+          -12.5,
+          8.83,
+          32.8
+        ],
+        "merv": [
+          43.02273267410838,
+          2.8211767578124998,
+          54.398856794800686
+        ],
+        "caption": {
+          "text": "Merv: The fruit is insured. You are not.",
+          "remaining": 1.4743000000000017
+        },
+        "talkCooldown": 27.274299999999936,
+        "spoken": [
+          0
+        ],
+        "duck": 0
+      },
+      "characters.info": {
+        "enabled": false,
+        "phase": "perched",
+        "elapsed": 0,
+        "duration": 1,
+        "cooldown": 45,
+        "grace": 12,
+        "target": -1,
+        "pecked": false,
+        "cycle": 0,
+        "from": [
+          -12.5,
+          8.83,
+          32.8
+        ],
+        "to": [
+          -12.5,
+          8.83,
+          32.8
+        ],
+        "pecks": 0,
+        "aborted": 0,
+        "scares": 0,
+        "lastFruit": -1,
+        "lastDeltaSpeed": 0,
+        "gull": [
+          -12.5,
+          8.83,
+          32.8
+        ],
+        "merv": [
+          43.02273267410838,
+          2.8211767578124998,
+          54.398856794800686
+        ],
+        "caption": {
+          "text": "Merv: The fruit is insured. You are not.",
+          "remaining": 1.4743000000000017
+        },
+        "talkCooldown": 27.274299999999936,
+        "spoken": [
+          0
+        ],
+        "duck": 0
+      },
+      "net": {
+        "connected": true,
+        "kind": "broadcast",
+        "id": "t9bsa4ky",
+        "isHost": true,
+        "hostId": "t9bsa4ky",
+        "peers": 1,
+        "remotes": 1,
+        "pending": 0,
+        "lastDeny": "",
+        "melee": {
+          "accepted": 1,
+          "rejected": 0,
+          "lastReason": ""
+        },
+        "owned": 0,
+        "nodeSeq": 0,
+        "ropes": [],
+        "sent": 194,
+        "received": 100,
+        "intents": 2,
+        "denied": 0,
+        "snapshotBytes": 1867,
+        "manifests": 1,
+        "claims": 1,
+        "denials": 0,
+        "sales": 0,
+        "spilled": 0,
+        "buys": 0
+      },
+      "save": {
+        "slot": "auto",
+        "playtime": 15.8,
+        "lastSaved": 0,
+        "has": false,
+        "enabled": true,
+        "resumed": false
+      }
+    },
+    "client": {
+      "ready": true,
+      "tick": 405,
+      "elapsed": 6.75,
+      "fps": 224.6,
+      "player": {
+        "pos": [
+          -21,
+          7.52,
+          11
+        ],
+        "vel": [
+          0,
+          0,
+          0
+        ],
+        "yaw": 1.5708,
+        "pitch": 0,
+        "grounded": true,
+        "speed": 0,
+        "state": "active",
+        "height": 1.82
+      },
+      "physics": {
+        "bodies": 647,
+        "active": 1
+      },
+      "render": {
+        "drawCalls": 145,
+        "triangles": 3388052,
+        "geometries": 176,
+        "textures": 21,
+        "programs": 37
+      },
+      "profile": {
+        "physics": 0,
+        "fixed": 0,
+        "frame": 1.3,
+        "render": 1.4,
+        "total": 2.7
+      },
+      "economy": {
+        "money": 0,
+        "lifetime": 0,
+        "sold": 0,
+        "tier": 0,
+        "points": 0,
+        "best": 0
+      },
+      "fruit": {
+        "attached": 525,
+        "free": 3,
+        "carried": 0,
+        "stowed": 0,
+        "total": 528,
+        "plants": 155,
+        "drawn": 528,
+        "species": 10,
+        "drawBatches": 12,
+        "regrowQueued": 0,
+        "byState": {
+          "apple:attached": 195,
+          "orange:attached": 78,
+          "watermelon:attached": 10,
+          "puffmelon:attached": 34,
+          "boulderplum:attached": 9,
+          "coconut:attached": 120,
+          "banana:attached": 26,
+          "spikefruit:attached": 24,
+          "gluefruit:attached": 22,
+          "vinebomb:attached": 7,
+          "orange:free": 3
+        }
+      },
+      "ragdoll": {
+        "active": false,
+        "timer": 0,
+        "knockdowns": 0,
+        "lastSource": "",
+        "lastSpeed": 0,
+        "parts": 0
+      },
+      "safeRecovery": {
+        "checkpoint": [
+          -20.999983034236095,
+          7.62,
+          10.999999621216242
+        ],
+        "holding": 0
+      },
+      "vitals": {
+        "health": 100,
+        "maxHealth": 100,
+        "downed": false,
+        "wiped": false,
+        "reviveProgress": 0,
+        "soloRecoveryRemaining": 0,
+        "bleedoutRemaining": 0,
+        "source": "",
+        "authoritative": true
+      },
+      "encounters": {
+        "authoritative": false,
+        "bait": {
+          "pending": 0,
+          "accepted": 0
+        },
+        "revision": 1078,
+        "projectiles": [],
+        "threats": {
+          "mimic": {
+            "phase": "warn",
+            "health": 3,
+            "timeLeft": 0.683,
+            "pos": [
+              -22.314,
+              7.5,
+              18.228
+            ],
+            "heading": 2.962,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "snapjaw": {
+            "phase": "recover",
+            "health": 2,
+            "timeLeft": 1.483,
+            "pos": [
+              -28,
+              7.5,
+              11
+            ],
+            "heading": -1.614,
+            "baited": true,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          },
+          "spitter": {
+            "phase": "idle",
+            "health": 2,
+            "timeLeft": 0,
+            "pos": [
+              -31,
+              16.302,
+              -8
+            ],
+            "heading": 0,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0
+          }
+        }
+      },
+      "kingVine": {
+        "health": 6,
+        "maxHealth": 6,
+        "phase": "idle",
+        "attack": "sweep",
+        "timeLeft": 0,
+        "targetCount": 1,
+        "projectile": null,
+        "subdued": false,
+        "authoritative": false,
+        "generation": 0
+      },
+      "interaction": {
+        "carrying": null,
+        "carryClass": "small",
+        "lastRefusal": null,
+        "basket": 0,
+        "basketMass": 0,
+        "basketValue": 0,
+        "target": null,
+        "targetKind": null,
+        "prompt": null,
+        "nearSellPad": false,
+        "carriedId": -1,
+        "basketIds": [],
+        "pendingSells": 0,
+        "stuckHands": 0,
+        "pricks": 0
+      },
+      "ropes": {
+        "count": 4,
+        "shared": 0,
+        "mirrors": 0,
+        "taut": 4,
+        "list": [
+          {
+            "id": 682,
+            "len": 33.3,
+            "dist": 33.3,
+            "tension": 1995,
+            "a": -1,
+            "b": -200,
+            "ak": "world",
+            "bk": "legendary",
+            "held": false,
+            "owner": null,
+            "cid": null,
+            "mirror": false,
+            "acked": null
+          },
+          {
+            "id": 683,
+            "len": 33.3,
+            "dist": 33.3,
+            "tension": 1995,
+            "a": -1,
+            "b": -200,
+            "ak": "world",
+            "bk": "legendary",
+            "held": false,
+            "owner": null,
+            "cid": null,
+            "mirror": false,
+            "acked": null
+          },
+          {
+            "id": 684,
+            "len": 22.01,
+            "dist": 22.02,
+            "tension": 3017,
+            "a": -1,
+            "b": -200,
+            "ak": "world",
+            "bk": "legendary",
+            "held": false,
+            "owner": null,
+            "cid": null,
+            "mirror": false,
+            "acked": null
+          },
+          {
+            "id": 685,
+            "len": 29.47,
+            "dist": 29.47,
+            "tension": 2254,
+            "a": -1,
+            "b": -200,
+            "ak": "world",
+            "bk": "legendary",
+            "held": false,
+            "owner": null,
+            "cid": null,
+            "mirror": false,
+            "acked": null
+          }
+        ]
+      },
+      "scoring": {
+        "tracked": 3,
+        "totalAwarded": 0,
+        "best": 1,
+        "seen": []
+      },
+      "fx": {
+        "alive": 0,
+        "spawned": 0,
+        "enabled": true
+      },
+      "tools": {
+        "slots": [
+          "hand",
+          null,
+          null,
+          "basket"
+        ],
+        "active": "hand",
+        "owned": [
+          "hand",
+          "basket",
+          "ladder"
+        ],
+        "status": "",
+        "cooldown": 0
+      },
+      "viewmodel": {
+        "tool": "hand",
+        "handsSource": "glb",
+        "stow": 0,
+        "kick": 0,
+        "visible": true,
+        "cached": 1,
+        "toolShown": true,
+        "carryShown": false,
+        "carryClass": "small",
+        "carryHeightPct": 21.5
+      },
+      "shop": {
+        "open": false,
+        "near": false,
+        "purchased": [],
+        "offers": 8,
+        "pendingBuy": null
+      },
+      "book": {
+        "discovered": 0,
+        "species": 10,
+        "harvested": 0,
+        "variants": 0,
+        "open": false
+      },
+      "legendary": {
+        "phase": "prepare",
+        "vines": 4,
+        "cut": 0,
+        "tethers": 0,
+        "dropTetherCount": 0,
+        "required": 2,
+        "held": 0,
+        "authoritative": false,
+        "gen": 0,
+        "remoteGen": 0,
+        "paid": 0,
+        "pos": [
+          8,
+          38.8,
+          -62
+        ],
+        "speed": 0,
+        "mass": 2600,
+        "fixed": true,
+        "inPad": false,
+        "distanceToPad": 6,
+        "highTethers": 0,
+        "firstSight": -1
+      },
+      "progress": {
+        "islands": [
+          "sunpatch"
+        ],
+        "nextIsland": false,
+        "shown": [],
+        "milestones": {},
+        "objective": "Follow the orchard path. Investigate the moving fruit.",
+        "threatsCleared": []
+      },
+      "director": {
+        "event": {
+          "id": 0,
+          "kind": null,
+          "phase": "idle",
+          "remaining": 0,
+          "targets": [],
+          "plants": [],
+          "released": 0,
+          "at": [
+            0,
+            0,
+            0
+          ],
+          "progress": 0,
+          "goal": 0,
+          "reward": 0,
+          "species": [],
+          "counted": [],
+          "paid": false,
+          "result": ""
+        },
+        "sequence": 0,
+        "cooldown": 0,
+        "last": null,
+        "firstPick": true,
+        "firstSale": false,
+        "introDone": false,
+        "introDelay": 12,
+        "orders": 0,
+        "authoritative": false,
+        "automatic": false
+      },
+      "audio": {
+        "running": "running",
+        "played": 2,
+        "last": "stunt",
+        "enabled": true,
+        "settings": {
+          "master": 0.7,
+          "music": 0.35,
+          "sfx": 0.9,
+          "ambience": 0.5,
+          "muted": false
+        },
+        "activeVoices": 0,
+        "ambienceSources": 4,
+        "music": {
+          "ready": true,
+          "mood": "calm",
+          "sources": 3,
+          "epoch": 0.8,
+          "transitionAt": 0,
+          "error": ""
+        },
+        "masterGain": 0.699999988079071
+      },
+      "characters": {
+        "enabled": false,
+        "phase": "perched",
+        "elapsed": 0.06520000000000073,
+        "duration": 1,
+        "cooldown": 45,
+        "grace": 12,
+        "target": -1,
+        "pecked": false,
+        "cycle": 0,
+        "from": [
+          -12.5,
+          8.83,
+          32.8
+        ],
+        "to": [
+          -12.5,
+          8.83,
+          32.8
+        ],
+        "pecks": 0,
+        "aborted": 0,
+        "scares": 0,
+        "lastFruit": -1,
+        "lastDeltaSpeed": 0,
+        "gull": [
+          -12.5,
+          8.83,
+          32.8
+        ],
+        "merv": [
+          43.02273267410838,
+          2.8211767578124998,
+          54.398856794800686
+        ],
+        "caption": {
+          "text": "",
+          "remaining": 0
+        },
+        "talkCooldown": 0,
+        "spoken": [],
+        "duck": 0
+      },
+      "characters.info": {
+        "enabled": false,
+        "phase": "perched",
+        "elapsed": 0.06520000000000073,
+        "duration": 1,
+        "cooldown": 45,
+        "grace": 12,
+        "target": -1,
+        "pecked": false,
+        "cycle": 0,
+        "from": [
+          -12.5,
+          8.83,
+          32.8
+        ],
+        "to": [
+          -12.5,
+          8.83,
+          32.8
+        ],
+        "pecks": 0,
+        "aborted": 0,
+        "scares": 0,
+        "lastFruit": -1,
+        "lastDeltaSpeed": 0,
+        "gull": [
+          -12.5,
+          8.83,
+          32.8
+        ],
+        "merv": [
+          43.02273267410838,
+          2.8211767578124998,
+          54.398856794800686
+        ],
+        "caption": {
+          "text": "",
+          "remaining": 0
+        },
+        "talkCooldown": 0,
+        "spoken": [],
+        "duck": 0
+      },
+      "net": {
+        "connected": true,
+        "kind": "broadcast",
+        "id": "b6tw6q8w",
+        "isHost": false,
+        "hostId": "t9bsa4ky",
+        "peers": 1,
+        "remotes": 1,
+        "pending": 0,
+        "lastDeny": "",
+        "melee": {
+          "accepted": 0,
+          "rejected": 0,
+          "lastReason": ""
+        },
+        "owned": 0,
+        "nodeSeq": 0,
+        "ropes": [],
+        "sent": 97,
+        "received": 182,
+        "intents": 2,
+        "denied": 0,
+        "snapshotBytes": 0,
+        "manifests": 0,
+        "claims": 0,
+        "denials": 0,
+        "sales": 0,
+        "spilled": 0,
+        "buys": 0
+      },
+      "save": {
+        "slot": "auto",
+        "playtime": 6.6,
+        "lastSaved": 0,
+        "has": false,
+        "enabled": true,
+        "resumed": false
+      }
+    },
+    "hostEvents": [
+      {
+        "fruitId": 688,
+        "actorId": "b6tw6q8w",
+        "at": 14.71666666666695
+      }
+    ],
+    "clientEvents": [
+      {
+        "fruitId": 688,
+        "actorId": "b6tw6q8w",
+        "at": 5.53333333333332
+      }
+    ],
+    "hostFruit": {
+      "id": 688,
+      "species": "orange",
+      "variant": null,
+      "state": "free",
+      "pos": [
+        -40.01,
+        7.73,
+        11.13
+      ],
+      "mass": 1,
+      "size": 0.32,
+      "damage": 0,
+      "quality": "Perfect",
+      "value": 23,
+      "speed": 12.38,
+      "peakSpeed": 20.68,
+      "inflate": 1,
+      "hasBody": true,
+      "vel": [
+        -11.98,
+        -2.95,
+        0.98
+      ],
+      "netVel": [
+        0,
+        0,
+        0
+      ],
+      "travelled": 18.17,
+      "peak": 9.01,
+      "stuck": false,
+      "stuckHands": 0,
+      "traits": [
+        "roller"
+      ]
+    },
+    "clientFruit": {
+      "id": 688,
+      "species": "orange",
+      "variant": null,
+      "state": "free",
+      "pos": [
+        -40.01,
+        7.73,
+        11.13
+      ],
+      "mass": 1,
+      "size": 0.32,
+      "damage": 0,
+      "quality": "Perfect",
+      "value": 23,
+      "speed": 0,
+      "peakSpeed": 0,
+      "inflate": 1,
+      "hasBody": false,
+      "vel": [
+        0,
+        0,
+        0
+      ],
+      "netVel": [
+        -11.99,
+        -2.59,
+        0.98
+      ],
+      "travelled": 0,
+      "peak": 0,
+      "stuck": false,
+      "stuckHands": 0,
+      "traits": [
+        "roller"
+      ]
+    }
+  },
+  "promoted": {
+    "connected": true,
+    "kind": "broadcast",
+    "id": "b6tw6q8w",
+    "isHost": true,
+    "hostId": "b6tw6q8w",
+    "peers": 0,
+    "remotes": 0,
+    "pending": 0,
+    "lastDeny": "",
+    "melee": {
+      "accepted": 0,
+      "rejected": 0,
+      "lastReason": ""
+    },
+    "owned": 0,
+    "nodeSeq": 0,
+    "ropes": [],
+    "sent": 100,
+    "received": 189,
+    "intents": 2,
+    "denied": 0,
+    "snapshotBytes": 0,
+    "manifests": 0,
+    "claims": 0,
+    "denials": 0,
+    "sales": 0,
+    "spilled": 0,
+    "buys": 0
+  }
+}

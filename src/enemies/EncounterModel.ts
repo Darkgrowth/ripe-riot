@@ -232,9 +232,22 @@ export class EncounterModel {
   /** A thrown fruit near the rooted jaws can draw their next snap away. */
   offerBait(position: Point3): boolean {
     const state = this.encounters.get('snapjaw');
-    if (!state || (state.phase !== 'idle' && state.phase !== 'warn') || !position.every(Number.isFinite)
+    if (!state || state.baited || (state.phase !== 'idle' && state.phase !== 'warn') || !position.every(Number.isFinite)
       || distanceXZ(position, state.position) > 5.5) return false;
     this.beginWarning(state, position, true);
+    this.revision++;
+    return true;
+  }
+
+  /** Follow the one accepted physical lure during warning; never restart its
+   * clock. Once the bite begins, its direction is committed like a normal snap. */
+  followBait(position: Point3): boolean {
+    const state = this.encounters.get('snapjaw');
+    if (!state || state.phase !== 'warn' || !state.baited || !position.every(Number.isFinite)
+      || distanceXZ(position, state.position) > 5.5
+      || position[1] < state.position[1] - .2 || position[1] > state.position[1] + 3.5) return false;
+    state.aim = [...position];
+    state.heading = headingTo(state.position, position);
     this.revision++;
     return true;
   }

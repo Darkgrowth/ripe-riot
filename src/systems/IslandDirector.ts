@@ -111,6 +111,12 @@ export class IslandDirector implements System {
     const crew = this.crew().filter(c => !c.busy);
     if (!crew.length) return false;
     if (kind === 'order' && !force && !this.state.firstSale) return false;
+    if (kind === 'order' && !force) {
+      const orchard = this.world.at('orchard').position;
+      const dock = this.world.sellPad;
+      if (crew.every(c => Math.hypot(c.position.x - orchard.x, c.position.z - orchard.z) > 33
+        && Math.hypot(c.position.x - dock.x, c.position.z - dock.z) > 30)) return false;
+    }
     const e = blank(); e.id = this.state.sequence + 1; e.kind = kind;
     if (kind === 'order') {
       const coconuts = this.state.orders > 0 && crew.some(c => c.hasNet);

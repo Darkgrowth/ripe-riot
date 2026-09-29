@@ -100,6 +100,24 @@ html, body {
   border-radius: 6px; background: rgba(10, 18, 26, 0.75); }
 .health i b { display: block; width: 100%; height: 100%; background: #7bc88d; }
 .health.low i b { background: #e7836c; }
+.encounter-cue {
+  position: absolute; top: calc(18 * var(--hud-u)); left: 50%; transform: translateX(-50%);
+  width: max-content; max-width: min(29vw, calc(300 * var(--hud-u)));
+  padding: calc(7 * var(--hud-u)) calc(13 * var(--hud-u));
+  border-top: calc(2 * var(--hud-u)) solid #c3c9b6; border-radius: 4px;
+  background: rgba(12, 22, 32, .8); color: var(--paper); text-align: center;
+  text-shadow: var(--shadow); line-height: 1.4;
+}
+.encounter-cue strong { display: block; font-size: calc(10 * var(--hud-u)); letter-spacing: .08em; }
+.encounter-cue span { font-size: calc(12 * var(--hud-u)); }
+.encounter-cue[data-tone="danger"] { border-color: #f3a06f; }
+.encounter-cue[data-tone="opening"] { border-color: var(--good); }
+.encounter-cue[data-tone="opening"] strong { color: var(--good); }
+.encounter-cue[data-tone="bait"] { border-color: var(--gold); }
+.encounter-cue[data-tone="bait"] strong { color: var(--gold); }
+@media (max-width: 900px) {
+  .encounter-cue { top: calc(108 * var(--hud-u)); max-width: 68vw; }
+}
 @keyframes floatUp {
   0% { opacity: 0; transform: translateY(0); }
   15% { opacity: 1; }

@@ -692,6 +692,7 @@ export class InteractionSystem implements System {
     }
     const from = _v2.copy(f.position);
     f.pickUp(this.g.player.id);
+    if (this.g.has('encounters')) this.g.get<EncounterSystem>('encounters').cancelThrownFruit(f.id);
     this.carried = {
       fruit: f,
       heavy: f.mass > this.basket.maxItemMass,
@@ -793,9 +794,16 @@ export class InteractionSystem implements System {
    * two places with one id, which is exactly the disagreement the host is
    * supposed to settle.
    */
-  private letGo(f: Fruit, vel: THREE.Vector3, angular?: THREE.Vector3): void {
-    this.net?.noteRelease(f.id, f.position, vel);
-    if (this.fruitSys.authoritative) f.release(vel, angular);
+  private letGo(f: Fruit, vel: THREE.Vector3, angular?: THREE.Vector3, thrown = false): void {
+    this.net?.noteRelease(f.id, f.position, vel, thrown);
+    if (this.fruitSys.authoritative) {
+      const wasCarried = f.state === 'carried';
+      if (wasCarried && this.g.has('encounters'))
+        this.g.get<EncounterSystem>('encounters').cancelThrownFruit(f.id);
+      f.release(vel, angular);
+      if (thrown && wasCarried && this.g.has('encounters'))
+        this.g.get<EncounterSystem>('encounters').trackThrownFruit(f.id, this.net?.me || 'solo');
+    }
     else this.fruitSys.applyRemoteState(f, 'free');
   }
 
@@ -861,7 +869,7 @@ export class InteractionSystem implements System {
     // leave the hand rotating like a shuriken.
     const spin = 3 + power * 5 * clamp(2.5 / Math.max(0.5, f.mass), 0.3, 1.6);
     this.letGo(f, _v, _v2.set(
-      (Math.random() - 0.5) * spin, (Math.random() - 0.5) * spin, (Math.random() - 0.5) * spin));
+      (Math.random() - 0.5) * spin, (Math.random() - 0.5) * spin, (Math.random() - 0.5) * spin), true);
     this.carried = null;
     // Follow-through: heavier releases kick the view harder and lower.
     const heft = clamp(Math.pow(f.mass, 0.45) * 0.5, 0.4, 2.2);

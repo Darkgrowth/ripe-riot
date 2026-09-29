@@ -6,6 +6,7 @@
  * RIPE_URL=http://127.0.0.1:5205 node tools/harness/voxel-clearing-loop.mjs \
  *   --width 320 --height 180
  * Add --video for a full session WebM, then inspect screenshots and report.
+ * Add --buy-cannon to browse with E, buy the first upgrade and fire it.
  * --capture-warning and --capture-hit attempt synchronous stills during combat;
  * use the WebM frame fallback if they cost too much time at the chosen size.
  */
@@ -23,6 +24,7 @@ const option = (name, fallback) => {
 const width = Number(option('--width', '320'));
 const height = Number(option('--height', '180'));
 const maxSeconds = Number(option('--seconds', '600'));
+const buyCannon = args.includes('--buy-cannon');
 if (!Number.isInteger(width) || !Number.isInteger(height) || width < 320 || height < 180
   || !Number.isFinite(maxSeconds) || maxSeconds < 30 || maxSeconds > 600)
   throw new Error('Use a viewport of at least 320x180 and --seconds from 30 to 600.');
@@ -44,6 +46,7 @@ const errors = [], warnings = [], timeline = [], beats = {
   dock: false, warning: false, hit: false, continuedAfterHit: false,
   mimicDefeated: false, physicalPrize: false, carriedPrize: false,
   reachedRealPad: false, soldWithE: false,
+  ...(buyCannon ? { browsedWithE: false, boughtCannon: false, firedCannon: false } : {}),
 };
 page.on('pageerror', e => errors.push(e.message));
 page.on('console', m => {
@@ -84,6 +87,8 @@ async function read() {
       carriedSpecies: i.carried?.fruit.species ?? null,
       targetKind: i.targetKind, targetId: i.target?.id ?? null, prompt: i.promptText,
       nearSellPad: i.nearSellPad, sellPad: w.sellPad.toArray(),
+      shopCounter: w.shopCounter.toArray(), shopOpen: g.get('shop').open,
+      cannonFires: t.all.get('aircannon')?.fires ?? 0,
       spawn: w.spawnPoint.toArray(),
       money: g.get('economy').money,
       prize: [...g.get('fruit').fruits.values()]
@@ -335,6 +340,34 @@ async function deliver() {
   return beats.soldWithE;
 }
 
+async function tryFirstUpgrade() {
+  let s = await read();
+  if (!await go(s.shopCounter, 2, 45)) return false;
+  stage = 'first-upgrade';
+  await aim([s.shopCounter[0], s.shopCounter[1] + 1.2, s.shopCounter[2]]);
+  s = await observe('at-supply-shed');
+  await press('e');
+  await page.locator('.shop-panel').waitFor({ state: 'visible', timeout: 5000 });
+  beats.browsedWithE = (await read()).shopOpen;
+  await shot('09-supply-shed');
+  const before = (await read()).money;
+  await page.locator('.shop-item[data-id="aircannon"]').click();
+  s = await waitFor(state => state.activeTool === 'aircannon', 5, 'cannon-equipped');
+  beats.boughtCannon = s.activeTool === 'aircannon' && before - s.money === 110;
+  await press('Escape');
+  await lock();
+  // Face the open route and fire with the newly taught hold/release control.
+  await aim([s.shopCounter[0] - 12, s.eye[1] + 1, s.shopCounter[2] - 12]);
+  const fires = (await read()).cannonFires;
+  await page.mouse.down(); await sleep(450); await page.mouse.up();
+  s = await waitFor(state => state.cannonFires > fires, 5, 'cannon-fired');
+  beats.firedCannon = s.cannonFires > fires;
+  await sleep(4600);
+  await observe('first-upgrade-in-use');
+  await shot('10-cannon-in-use');
+  return beats.browsedWithE && beats.boughtCannon && beats.firedCannon;
+}
+
 let failure = null;
 try {
   await page.goto(`${base}/?fresh=1&voxelPilot=1`, { waitUntil: 'domcontentloaded', timeout: 30000 });
@@ -347,7 +380,7 @@ try {
     const observer = window.__voxelLoop = { events: [] };
     for (const name of ['encounter:attack', 'encounter:defeated', 'fruit:grabbed',
       'fruit:sold', 'player:ragdoll', 'player:recovered', 'player:downed',
-      'player:revived', 'money:changed', 'tool:swing'])
+      'player:revived', 'money:changed', 'tool:swing', 'shop:purchased', 'ui:toast'])
       g.bus.on(name, payload => observer.events.push({ name, gameSeconds: g.clock.elapsed,
         payload: JSON.parse(JSON.stringify(payload)) }));
   });
@@ -361,6 +394,7 @@ try {
   if (!await fight()) throw new Error('Starter Picking Mallet did not defeat Mimic');
   if (!await recoverPrize()) throw new Error('Could not pick physical watermelon with E');
   if (!await deliver()) throw new Error('Could not walk to real sell pad and sell with E');
+  if (buyCannon && !await tryFirstUpgrade()) throw new Error('Could not buy and fire first upgrade using normal inputs');
 } catch (e) {
   failure = String(e.stack || e);
   log('runner-error', { failure });

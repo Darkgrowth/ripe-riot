@@ -40,6 +40,8 @@ export const STUNTS: Record<string, StuntDef> = {
     blurb: 'Landed straight in the drop-off. On purpose, obviously.' },
   launched: { id: 'launched', label: 'FRUIT FLIGHT', bonus: 0.50,
     blurb: 'That went further than most birds.' },
+  smartBait: { id: 'smartBait', label: 'SMART BAIT', bonus: 0.50,
+    blurb: 'Drew Snapjaw off your trail. Recover the bait and sell it for more.' },
 };
 
 interface Record_ { stunts: Set<string>; multiplier: number; }
@@ -71,6 +73,14 @@ export class HarvestScoring implements System {
     this.fruitSys = g.get<FruitSystem>('fruit');
     this.ropes = g.get<RopeSystem>('ropes');
     this.world = g.get<Sunpatch>('world');
+
+    g.bus.on('encounter:baited', ({ fruitId }) => {
+      // The host confirms the flight. A relayed cue is presentation only;
+      // client replicas must not mint a second fruit multiplier.
+      if (!this.fruitSys.authoritative) return;
+      const f = this.fruitSys.get(fruitId);
+      if (f && f.state === 'free' && !f.destroyed) this.award(f, 'smartBait');
+    });
 
     g.bus.on('stunt:candidate', (p) => {
       const f = this.fruitSys.get(p.fruitId);
@@ -230,6 +240,38 @@ export class HarvestScoring implements System {
   stuntsFor(f: Fruit): string[] {
     const r = this.records.get(f.id);
     return r ? [...r.stunts] : [];
+  }
+
+  /** Bait cannot be reconstructed from flight stats. Preserve its earned IDs
+   * in host snapshots so a new host can bank them exactly once. */
+  baitState(): number[] {
+    const ids: number[] = [];
+    for (const [id, rec] of this.records) {
+      const f = this.fruitSys.get(id);
+      if (rec.stunts.has('smartBait') && f && f.state !== 'gone' && !f.destroyed) ids.push(id);
+    }
+    return ids;
+  }
+
+  /** Copy confirmed value silently; this does not award a stunt or pay money. */
+  applyBaitState(ids: unknown): void {
+    if (this.fruitSys.authoritative || !Array.isArray(ids)) return;
+    const earned = new Set<number>();
+    for (const id of ids) {
+      if (!Number.isSafeInteger(id)) continue;
+      const f = this.fruitSys.get(id);
+      if (f && f.state !== 'gone' && !f.destroyed) earned.add(id);
+    }
+    for (const [id, rec] of this.records) {
+      if (!earned.has(id) && rec.stunts.delete('smartBait'))
+        rec.multiplier = 1 + [...rec.stunts].reduce((sum, key) => sum + STUNTS[key].bonus, 0);
+    }
+    for (const id of earned) {
+      const rec = this.recordFor(id);
+      if (rec.stunts.has('smartBait')) continue;
+      rec.stunts.add('smartBait');
+      rec.multiplier += STUNTS.smartBait.bonus;
+    }
   }
 
   forget(id: number): void { this.records.delete(id); }

@@ -1,0 +1,111 @@
+{
+  "viewport": [
+    3440,
+    1440
+  ],
+  "frames": [
+    {
+      "name": "01-guarded",
+      "hidden": false,
+      "text": "SNAPJAWToss fruit to draw its bite",
+      "tone": "neutral",
+      "target": "snapjaw",
+      "rect": {
+        "x": 1579.6640625,
+        "y": 32.390625,
+        "width": 280.671875,
+        "height": 83.59375,
+        "top": 32.390625,
+        "right": 1860.3359375,
+        "bottom": 115.984375,
+        "left": 1579.6640625
+      }
+    },
+    {
+      "name": "02-baited",
+      "hidden": false,
+      "text": "SNAPJAWBait taken · move beside the jaws",
+      "tone": "bait",
+      "target": "snapjaw",
+      "rect": {
+        "x": 1538.6953125,
+        "y": 32.390625,
+        "width": 362.609375,
+        "height": 83.59375,
+        "top": 32.390625,
+        "right": 1901.3046875,
+        "bottom": 115.984375,
+        "left": 1538.6953125
+      }
+    },
+    {
+      "name": "03-opening",
+      "hidden": false,
+      "text": "SNAPJAWJaws open · strike now",
+      "tone": "opening",
+      "target": "snapjaw",
+      "rect": {
+        "x": 1590.3828125,
+        "y": 32.390625,
+        "width": 259.234375,
+        "height": 83.59375,
+        "top": 32.390625,
+        "right": 1849.6171875,
+        "bottom": 115.984375,
+        "left": 1590.3828125
+      }
+    },
+    {
+      "name": "04-look-away",
+      "hidden": true,
+      "text": "SNAPJAWJaws open · strike now",
+      "tone": "opening",
+      "target": "snapjaw",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0,
+        "left": 0
+      }
+    },
+    {
+      "name": "05-obstructed",
+      "hidden": true,
+      "text": "SNAPJAWJaws open · strike now",
+      "tone": "opening",
+      "target": "snapjaw",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0,
+        "left": 0
+      }
+    },
+    {
+      "name": "06-menu",
+      "hidden": true,
+      "text": "SNAPJAWJaws open · strike now",
+      "tone": "opening",
+      "target": "snapjaw",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0,
+        "left": 0
+      }
+    }
+  ],
+  "errors": []
+}

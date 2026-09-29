@@ -1,0 +1,98 @@
+
+> ripe-riot@0.1.0 test
+> node tools/harness/run-tests.mjs
+
+
+[PASS] action-boss  (524ms, 3 checks)
+
+[PASS] action-capture  (397ms, 5 checks)
+
+[PASS] action-combat  (432ms, 5 checks)
+
+[PASS] action-health  (615ms, 7 checks)
+
+[PASS] action-quest  (170ms, 5 checks)
+
+[PASS] backcountry  (3055ms, 40 checks)
+    · attached: 9 boulder plums, 22 gluefruit, 24 spikefruit
+    · rare variants: ridge 2/24, orchard 7/213
+    · boulder plum rolled 31.7 m, peak 16.49 m/s, quality Perfect
+
+[PASS] carry  (1380ms, 43 checks)
+
+[PASS] harvest-loop  (2241ms, 28 checks)
+    · carried 6 apples, basket holds 5
+    · sell pad at 40.77, 2.48, 55.36 radius 3.2
+    · sold for $111 (basket was worth ~$101)
+    · auto-delivery paid $31
+
+[PASS] island-events  (9207ms, 53 checks)
+
+[PASS] legendary-no-rope-extraction  (496ms, 12 checks)
+    · no-rope landing 5.2 m from extraction, phase recover
+
+[PASS] legendary-king-melon  (2367ms, 60 checks)
+    · melon at 8, 39, -62, pad at 10, 5, -57
+    · melon mass 2600 kg, fixed=true
+    · idle drift 0.00 m at 0 m/s
+    · tethers 2/2
+    · after first cut: [8,39,-62] 33.3/33.3 22.0/22.0 29.5/29.5 33.5/35.3 33.4/35.1  [8,39,-62] 33.3/33.3 22.0/22.0 29.5/29.5 33.5/35.3 33.4/35.1  [8,39,-62] 33.3/33.3 22.0/22.0 29.5/29.5 33.6/35.3 33.4/35.1  [8,39,-62] 33.3/33.3 22.0/22.0 29.5/29.5 33.6/35.3 33.4/35.1  [8,39,-62] 33.3/33.3 22.0/22.0 29.5/29.5 33.6/35.3 33.4/35.1  [8,39,-62] 33.3/33.3 22.0/22.0 29.5/29.5 33.6/35.3 33.4/35.1  [8,39,-62] 33.3/33.3 22.0/22.0 29.5/29.5 33.6/35.3 33.4/35.1  [8,39,-62] 33.3/33.3 22.0/22.0 29.5/29.5 33.5/35.3 33.4/35.1
+    · drop trace y/speed/phase: 33.4/5.7d 33.2/6.2d 32.9/6.7d 32.7/7.2d 32.4/7.7d 32.1/8.4d 31.8/9.1d 31.4/9.9d 30.9/10.8d 30.5/10.9d 30.0/11.2d 29.5/11.8d 28.9/12.7d 28.4/13.6d 27.7/14.5d 27.0/15.5d 26.3/16.4d 25.5/17.3d 24.6/18.3d 23.8/17.8d 22.9/18.7d 22.0/19.6d 21.1/20.5d 20.1/21.4d 19.0/22.4d 17.9/23.3d 16.8/24.2d 15.6/25.1d 14.3/26.0d 13.6/19.1d 13.3/1.6d 13.4/1.1d 13.5/1.2d 13.5/1.4d 13.6/1.1d 13.6/0.7d 13.6/0.0d 13.6/0.3d 13.6/0.1d 13.6/0.3d 13.6/0.1d 13.6/0.3d 13.6/0.6d 13.6/0.5d 13.6/0.1d 13.6/0.2d 13.5/0.1d 13.5/0.2d 13.5/0.0d 13.5/0.2d 13.5/0.4d 13.5/0.3d 13.5/0.1d 13.5/0.1d 13.5/0.2r
+    · fell 20.1 m, peak 26.0 m/s, now recover
+    · landed at 15.4, 13.5, -54.9, 5.2 m from the pad
+    · after guiding: phase complete, 5.2 m from the pad
+    · payout $11780
+
+[PASS] mimic-orchard  (262ms, 4 checks)
+
+[PASS] movement  (3364ms, 17 checks)
+    · climbed 12.3 m in 3 s
+
+[PASS] net-feedback  (761ms, 18 checks)
+
+[PASS] fruit-physics  (2884ms, 27 checks)
+    · 34 m apple: damage 0.313 -> Bruised, value 8
+    · 42 impact particles from the burst
+    · ragdoll source: Coconut (head) at 22.99 m/s
+    · bodies after recovery: 688
+    · short-drop setup: player active, ragdoll false
+    · 5 m coconut: 1 hit event(s), peak momentum 38
+    · orange rolled 26.94 m
+
+[PASS] progression  (1161ms, 31 checks)
+    · book starts with 0/10 discovered
+    · discovery points now 34, tier 0
+    · huge coconut: 83.43 kg, worth $405
+    · sold for $668; heaviest coconut 83.43 kg
+    · puff melon drifted 21.7 m and inflated to x3.1
+    · vinebomb peaked at 16.18 m/s
+    · vinebomb travelled 10.37 m, peak 11.30 m; sank
+
+[PASS] rope-ux  (256ms, 17 checks)
+
+[PASS] ropes  (676ms, 18 checks)
+    · hung 4.02 m below a 4 m rope, 16.0 m above ground
+    · tension 484 N holding 22 kg
+    · winched from 23.5 to 25.8 m
+    · paid out to 21.9 m
+    · apple hangs 2.42 m below a 2.4 m rope
+
+[PASS] startup  (1953ms, 35 checks)
+    · opening frame: 23% sky, 0.0% clear colour
+    · pitch clamps to -1.535 .. 1.535 rad
+
+[PASS] tools  (1943ms, 37 checks)
+    · shaker dropped 4 fruit
+    · swung with the apple 3.15 m above the hoop; swings 1, caught 1
+    · early swing with the apple 5.89 m up: swings 2, misses 1
+    · rope: {"id":866,"len":2.5,"dist":1.37,"tension":0,"a":1,"b":-1,"ak":"player","bk":"world","held":true,"owner":null,"cid":null,"mirror":false,"acked":null}
+    · walked 1.2 m against a 2.5 m rope
+    · active tool before firing: aircannon (100%)
+    · cannon after fire: {"id":"aircannon","cooldown":0,"charge":0,"equipped":true,"charging":false,"recharge":0.518,"fires":3,"lastPushed":1,"lastPower":0.52,"lastBlocked":"","lastRecoil":[0,1.94,4.33],"lastCentre":[-24,8.06,16.72],"lastRadius":3.64,"lastVelAfter":[0,1.94,4.33]}
+    · direct explode pushed 1; 1 colliders overlap that sphere
+    · target body: {"hasBody":true,"sleeping":false,"colliders":1,"enabled":[true],"groups":["801ff"],"mass":1.1,"translation":[-24,7.67,15],"bodyType":0}
+    · apple left at 4.35 m/s
+    · recoil applied: [0,1.04,4.42] -> player vel [0,1.04,4.42]
+    · self-launch reached 4.0 m
+
+20/20 scenarios passed

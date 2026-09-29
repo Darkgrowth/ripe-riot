@@ -7,6 +7,11 @@ import type { AudioManager } from '@/audio/AudioManager';
 import type { ToolInventory } from '@/tools/ToolInventory';
 import type { RopeGun } from '@/tools/Tools';
 import type { PlayerVitals } from '@/player/PlayerVitals';
+import * as THREE from 'three';
+import type { EncounterSystem } from '@/enemies/EncounterSystem';
+import type { EncounterState } from '@/enemies/EncounterModel';
+import { QueryMask } from '@/physics/Layers';
+import { encounterAdvice } from './EncounterAdvice';
 
 /**
  * All HUD rendering. Kept as plain DOM: it composites over the canvas for free,
@@ -28,6 +33,7 @@ export class UIManager implements System {
     ropeGuide: HTMLElement; ropeCount: HTMLElement;
     objective: HTMLElement; health: HTMLElement; healthFill: HTMLElement;
     entryHint: HTMLElement; entryTitle: HTMLElement;
+    encounterCue: HTMLElement; encounterName: HTMLElement; encounterHint: HTMLElement;
   };
   private debugVisible = false;
   private debugTimer = 0;
@@ -38,6 +44,9 @@ export class UIManager implements System {
   private promptCandidate: { text: string; priority: number } | null = null;
   private hasControlled = false;
   private audioSettings: ReturnType<typeof createAudioSettings> | null = null;
+  private nextEncounterCueAt = 0;
+  private cueRay = new THREE.Vector3();
+  private cueForward = new THREE.Vector3();
 
   constructor(private readonly mimicComparison: 'A' | 'B' | null = null) {}
 
@@ -56,6 +65,7 @@ export class UIManager implements System {
         <div class="money"><small>$</small><span>0</span></div>
         <div class="money-delta"></div>
         <div class="objective" aria-live="polite"></div>
+        <div class="encounter-cue" hidden><strong></strong><span></span></div>
         <div class="health"><span>HEALTH</span><strong>100</strong><i><b></b></i></div>
         <div class="prompt"></div>
         <div class="carry"></div>
@@ -115,6 +125,9 @@ export class UIManager implements System {
       healthFill: q('.health i b'),
       entryHint: q('.entry-hint'),
       entryTitle: q('.entry-hint strong'),
+      encounterCue: q('.encounter-cue'),
+      encounterName: q('.encounter-cue strong'),
+      encounterHint: q('.encounter-cue span'),
     };
 
     g.bus.on('money:changed', (p) => this.onMoney(p.money, p.delta));
@@ -227,6 +240,7 @@ export class UIManager implements System {
     }
     const blocked = !this.g.input.enabled || this.modalOpen();
     const state = this.g.player.state;
+    this.updateEncounterCue(blocked || state !== 'active');
     const v = this.g.has('vitals') ? this.g.get<PlayerVitals>('vitals') : null;
     const statePrompt = state === 'downed' && v
       ? v.mode === 'solo' ? v.soloRecoveries > 0
@@ -245,6 +259,44 @@ export class UIManager implements System {
       if (this.els.ropeCount.textContent !== label) this.els.ropeCount.textContent = label;
     }
     this.promptCandidate = null;
+  }
+
+  /** Nearby, visible threats only: no markers through hills or across the island. */
+  private updateEncounterCue(blocked: boolean): void {
+    const el = this.els.encounterCue;
+    if (blocked || !this.g.has('encounters') || (!this.g.input.pointerLocked && !this.g.input.synthetic)) {
+      el.hidden = true;
+      this.nextEncounterCueAt = 0;
+      return;
+    }
+    const now = performance.now();
+    if (now < this.nextEncounterCueAt) return;
+    this.nextEncounterCueAt = now + 80;
+    const eye = this.g.playerCamera.camera.position;
+    this.g.playerCamera.camera.getWorldDirection(this.cueForward);
+    const states = this.g.get<EncounterSystem>('encounters').snapshot().encounters;
+    let nearest: EncounterState | null = null, best = 14;
+    for (const state of states) {
+      if (state.health <= 0 || state.phase === 'defeated') continue;
+      this.cueRay.set(state.position[0], state.position[1] + 1.3, state.position[2]).sub(eye);
+      const distance = this.cueRay.length();
+      if (distance > best || distance < .01) continue;
+      this.cueRay.multiplyScalar(1 / distance);
+      if (this.cueRay.dot(this.cueForward) < .78) continue;
+      const wall = this.g.physics.raycast(eye, this.cueRay, Math.max(0, distance - .7),
+        QueryMask.solid, this.g.player.body);
+      if (wall) continue;
+      nearest = state; best = distance;
+    }
+    const hint = nearest && encounterAdvice(nearest,
+      !!this.g.get<InteractionSystem>('interaction').carried,
+      this.g.get<ToolInventory>('tools').owned.has('aircannon'));
+    el.hidden = !hint;
+    if (!hint) return;
+    el.dataset.tone = hint.tone;
+    el.dataset.target = nearest!.kind;
+    this.els.encounterName.textContent = hint.name;
+    this.els.encounterHint.textContent = hint.text;
   }
 
   /** Rebuilt whenever the tool inventory changes. */

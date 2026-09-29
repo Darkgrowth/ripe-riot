@@ -23,8 +23,8 @@ const TRY_THIS: Record<string, { text: string; sub: string }> = {
     sub: 'Rope it, pin the rope to rock (right-click), then cut it loose. Then look at the ravine.',
   },
   aircannon: {
-    text: 'TRY THIS: fire fruit at the sell pad from the hill',
-    sub: 'Anything that lands there sells itself. Right-click fires you.',
+    text: 'TRY THIS: take a ranged shot at the Spitter',
+    sub: 'LMB fires on release; hold for power. RMB launches you. Hit Spitter or King Vine, deflect seeds, or shoot fruit to the sell pad.',
   },
   bigBasket: { text: 'Sixteen apples.', sub: 'And a watermelon, if you must.' },
   boots: { text: 'The ridge is yours now.', sub: 'Slopes that stopped you do not.' },
@@ -66,7 +66,10 @@ export class Progression implements System {
   milestones = new Map<string, number>();
   /** Encounter victories count even if the crew discovers them out of order. */
   threatsCleared = new Set<'mimic' | 'snapjaw' | 'spitter'>();
-  private pendingHint: { at: number; text: string; sub: string } | null = null;
+  private pendingHints: Array<{ at: number; text: string; sub: string; key: string }> = [];
+  /** The first picture from each host is a join baseline, not a fresh victory. */
+  private hostThreatsSource: string | null = null;
+  private hostThreatsSeen = false;
   private unlockAt = -1;
   private sightTimer = 0;
 
@@ -87,6 +90,7 @@ export class Progression implements System {
       this.g.bus.emit('ui:toast', {
         text: 'Objective updated', sub: this.objective, kind: 'gold', ms: 3800,
       });
+      if (kind === 'mimic') this.queueMimicSupply();
     });
     g.bus.on('fruit:sold', () => this.mark('firstSale'));
     g.bus.on('money:changed', (p) => { if (p.reason === 'sale') this.onSale(p.delta); });
@@ -116,6 +120,9 @@ export class Progression implements System {
       this.shown.clear();
       this.milestones.clear();
       this.threatsCleared.clear();
+      this.pendingHints = [];
+      this.hostThreatsSource = null;
+      this.hostThreatsSeen = false;
       this.world.setNextIslandOpen(false);
       return true;
     });
@@ -126,13 +133,23 @@ export class Progression implements System {
   /** The session host owns shared encounter milestones while playing together. */
   applyHostThreats(value: unknown): void {
     if (!Array.isArray(value)) return;
+    const source = this.g.has('net') ? this.g.get<{ hostId: string }>('net').hostId : '';
+    if (source !== this.hostThreatsSource) {
+      this.hostThreatsSource = source;
+      this.hostThreatsSeen = false;
+      this.pendingHints = this.pendingHints.filter(h => h.key !== 'mimic:supply');
+    }
+    const live = this.hostThreatsSeen;
+    this.hostThreatsSeen = true;
     const next = new Set<'mimic' | 'snapjaw' | 'spitter'>(value.filter(
       (x): x is 'mimic' | 'snapjaw' | 'spitter' => x === 'mimic' || x === 'snapjaw' || x === 'spitter'));
     if (next.size === this.threatsCleared.size && [...next].every(x => this.threatsCleared.has(x))) return;
+    const newMimic = !this.threatsCleared.has('mimic') && next.has('mimic');
     this.threatsCleared = next;
     this.g.bus.emit('ui:toast', {
       text: 'Objective updated', sub: this.objective, kind: 'gold', ms: 3800,
     });
+    if (live && newMimic) this.queueMimicSupply();
   }
 
   get objective(): string {
@@ -168,13 +185,39 @@ export class Progression implements System {
     return true;
   }
 
+  private ownsAirCannon(): boolean {
+    return this.g.has('tools') && this.g.get<{ owned: Set<string> }>('tools').owned.has('aircannon');
+  }
+
+  private queueMimicSupply(): void {
+    if (this.ownsAirCannon() || this.threatsCleared.has('spitter') || !this.once('mimic:supply')) return;
+    this.queueHint('mimic:supply', 4.1, 'OPTIONAL: cash in the Mimic prize',
+      'Sell the prize or nearby fruit at the dock pad toward the $110 Air Cannon. Snapjaw is still ahead.');
+  }
+
+  private queueHint(key: string, delay: number, text: string, sub: string): void {
+    const last = this.pendingHints.at(-1);
+    // Each hint stays readable for seven seconds. Purchases made during a
+    // victory toast must not replace or overlap the earlier route cue.
+    const at = Math.max(this.g.clock.elapsed + delay, last ? last.at + 7.3 : 0);
+    this.pendingHints.push({ at, text, sub, key });
+  }
+
   private onPurchase(itemId: string): void {
     this.mark('firstPurchase');
     this.mark(`bought:${itemId}`);
+    if (itemId === 'aircannon') this.pendingHints = this.pendingHints.filter(h => h.key !== 'mimic:supply');
+    // A purchase can happen after a victory cue was queued. The equipped
+    // toast gets its own four-second window before any older hint appears.
+    let nextAt = this.g.clock.elapsed + 4.4;
+    for (const pending of this.pendingHints) {
+      pending.at = Math.max(pending.at, nextAt);
+      nextAt = pending.at + 7.3;
+    }
     const hint = TRY_THIS[itemId];
     if (!hint || !this.once(`try:${itemId}`)) return;
-    // After the "equipped" toast has had its moment, not on top of it.
-    this.pendingHint = { at: this.g.clock.elapsed + 2.6, ...hint };
+    // The equipped toast lasts 4.2 seconds; keep the follow-up clear of it.
+    this.queueHint(`try:${itemId}`, 4.4, hint.text, hint.sub);
   }
 
   private onSale(delta: number): void {
@@ -246,11 +289,21 @@ export class Progression implements System {
   fixedStep(dt: number): void {
     if (!this.mimicComparison) this.checkFirstSight(dt);
     const now = this.g.clock.elapsed;
-    if (this.pendingHint && now >= this.pendingHint.at) {
-      this.g.bus.emit('ui:toast', {
-        text: this.pendingHint.text, sub: this.pendingHint.sub, kind: 'gold', ms: 7000,
-      });
-      this.pendingHint = null;
+    if (this.pendingHints.length && now >= this.pendingHints[0].at) {
+      const hint = this.pendingHints.shift()!;
+      const supply = hint.key === 'mimic:supply';
+      if (!supply || (!this.ownsAirCannon() && !this.threatsCleared.has('spitter')
+        && !this.nextIslandUnlocked)) {
+        const next = this.threatsCleared.has('snapjaw') ? 'The Spitter is ahead.' : 'Snapjaw is still ahead.';
+        const affordable = supply && this.economy.money >= 110;
+        this.g.bus.emit('ui:toast', {
+          text: affordable ? 'OPTIONAL: the Air Cannon is affordable' : hint.text,
+          sub: affordable ? `Buy the $110 Air Cannon at the dock shed if you want ranged attacks. ${next}`
+            : supply ? `Sell the prize or nearby fruit at the dock pad toward the $110 Air Cannon. ${next}`
+              : hint.sub,
+          kind: 'gold', ms: 7000,
+        });
+      }
     }
     if (this.unlockAt >= 0 && now >= this.unlockAt) {
       this.unlockAt = -1;
@@ -269,6 +322,9 @@ export class Progression implements System {
 
   deserialize(d: { islands?: string[]; shown?: string[]; milestones?: Record<string, number>;
     threatsCleared?: Array<'mimic' | 'snapjaw' | 'spitter'> }): void {
+    this.pendingHints = [];
+    this.hostThreatsSource = null;
+    this.hostThreatsSeen = false;
     this.islands = new Set(d.islands?.length ? d.islands : ['sunpatch']);
     this.shown = new Set(d.shown ?? []);
     this.milestones = new Map(Object.entries(d.milestones ?? {}));

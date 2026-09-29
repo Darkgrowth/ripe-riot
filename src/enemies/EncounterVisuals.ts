@@ -101,6 +101,10 @@ export class EncounterVisual {
     const warning = state.phase === 'warn';
     const attacking = state.phase === 'attack';
     const recovering = state.phase === 'recover';
+    if (this.kind === 'snapjaw') {
+      (this.danger.material as THREE.MeshBasicMaterial).color.setHex(
+        state.baited ? 0xffbe47 : 0xff4f28);
+    }
     (this.danger.material as THREE.MeshBasicMaterial).opacity = this.kind === 'mimic'
       ? warning ? 0.14 + 0.08 * pulse : attacking ? 0.12 : 0
       : warning ? 0.36 + 0.36 * pulse

@@ -1,0 +1,19 @@
+PASS fixture fruit held 686
+PASS throw used real mouse without synthetic input
+PASS real solo throw triggers exactly one bait event [{"fruitId":686,"actorId":"solo","at":2.2833333333333306}]
+PASS jaws enter baited state
+PASS snap follows the real fruit away from its thrower
+PASS host awards SMART BAIT to the retrievable fruit {"stunts":["smartBait"],"multiplier":1.5}
+PASS fixture fruit held 687
+PASS real throw then normal forward movement reaches the existing counterattack window {"player":{"pos":[-24.694,7.52,11],"vel":[0,0,0],"yaw":1.5708,"pitch":0,"grounded":true,"speed":0,"state":"active","height":1.82},"jaw":{"phase":"recover","health":2,"timeLeft":1.6,"pos":[-28,7.5,11],"heading":-1.613,"baited":true,"capturedVictimId":null,"captureTimeLeft":0}}
+PASS bait fruit survives the distraction and counterattack
+PASS fixture fruit held 688
+PASS client mouse throw produces one host-confirmed bait [{"fruitId":688,"actorId":"b6tw6q8w","at":14.71666666666695}]
+PASS client receives one confirmed cue [{"fruitId":688,"actorId":"b6tw6q8w","at":5.53333333333332}]
+PASS host scores client bait
+PASS client cue does not award independent scoring
+PASS promoted host retains earned SMART BAIT multiplier {"record":{"stunts":["smartBait"],"multiplier":1.5},"total":0}
+PASS same bait fruit remains retrievable after host migration
+PASS promoted host accepts a new real throw of the same fruit
+PASS same fruit rethrow after migration cannot award SMART BAIT twice {"stunts":["smartBait"],"multiplier":1.5}
+PASS no runtime exceptions []

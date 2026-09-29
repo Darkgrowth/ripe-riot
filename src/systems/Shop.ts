@@ -266,8 +266,7 @@ export class Shop implements System {
   unlockText(tier: number): string {
     const need = tier * 100 - this.economy.discoveryPoints;
     if (need <= 0) return 'UNLOCKED';
-    const kinds = Math.max(1, Math.ceil(need / 34));
-    return `FIND ${kinds} MORE KIND${kinds > 1 ? 'S' : ''} OF FRUIT`;
+    return `${need} DISCOVERY POINTS TO GO — FIND NEW FRUIT OR RARE VARIANTS`;
   }
 
   /** The one line at the top of the shed: what to save for, and what it takes. */

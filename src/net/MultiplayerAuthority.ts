@@ -310,6 +310,9 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   lastDeny = '';
   stats = { sent: 0, received: 0, intents: 0, denied: 0, snapshotBytes: 0, manifests: 0 };
   meleeStats = { accepted: 0, rejected: 0, lastReason: '' };
+  private baitCue = 0;
+  private baitCueHost = '';
+  private lastBaitCue = 0;
 
   init(g: Game): void {
     this.g = g;
@@ -354,6 +357,11 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     // from a snapshot takes a frame, and an intent naming it can arrive first.
     g.bus.on('fruit:destroyed', (p) => {
       if (this.connected && this.isHost) this.authority.destroyed(p.fruitId);
+    });
+    g.bus.on('encounter:baited', p => {
+      if (!this.connected || !this.isHost) return;
+      this.transport?.send({ t: 'baitConfirmed', cue: ++this.baitCue,
+        fruitId: p.fruitId, actorId: p.actorId, position: p.position.toArray() });
     });
 
     g.debug?.addProbe('net', () => ({
@@ -483,6 +491,8 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   }
 
   disconnect(): void {
+    this.encounters?.clearBaitFlights();
+    this.baitCueHost = ''; this.lastBaitCue = 0;
     this.meleeGuard.clear();
     this.pendingMelee.clear();
     // Say goodbye explicitly. Waiting for the liveness timeout leaves a ghost
@@ -587,6 +597,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     this.isHost = this.hostId === this.me;
     this.kingVine?.setAuthority(this.isHost);
     if (wasHost === this.isHost) return;
+    this.encounters?.clearBaitFlights();
     this.meleeGuard.clear();
     this.pendingMelee.clear();
     // The ledger belongs to whoever is host.
@@ -850,6 +861,28 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       case 'snapshot':
         if (!this.isHost && m.from === this.hostId) this.applySnapshot(m);
         break;
+      case 'baitConfirmed': {
+        if (this.isHost || m.from !== this.hostId) break;
+        const cue = Number(m.cue), id = Number(m.fruitId);
+        const position = m.position;
+        if (!Number.isSafeInteger(cue) || cue < 1 || !Number.isSafeInteger(id)
+          || typeof m.actorId !== 'string' || !m.actorId
+          || !Array.isArray(position) || position.length !== 3 || !position.every(Number.isFinite)) break;
+        if (this.baitCueHost !== this.hostId) {
+          this.baitCueHost = this.hostId; this.lastBaitCue = 0;
+        }
+        if (cue <= this.lastBaitCue) break;
+        this.lastBaitCue = cue;
+        // Confirmation is presentation on clients; scoring remains host-only.
+        this.g.bus.emit('encounter:baited', { kind: 'snapjaw', fruitId: id,
+          actorId: m.actorId, position: new THREE.Vector3(position[0], position[1], position[2]) });
+        if (m.actorId === this.me) {
+          this.g.bus.emit('ui:toast', { text: 'Snapjaw took the bait',
+            sub: 'Strike when its jaws open. Retrieve your SMART BAIT fruit.', kind: 'good', ms: 3000 });
+          this.g.bus.emit('audio:sfx', { name: 'stunt', volume: .55 });
+        }
+        break;
+      }
       case 'manifest':
         if (!this.isHost && m.from === this.hostId) {
           this.fruitSys.applyNodeManifest(Number(m.nseq ?? 0), (m.changes ?? []) as NodeChange[]);
@@ -988,11 +1021,11 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   }
 
   /** The local player let this fruit go, at a position and a velocity. */
-  noteRelease(fruitId: number, at: THREE.Vector3, vel: THREE.Vector3): void {
+  noteRelease(fruitId: number, at: THREE.Vector3, vel: THREE.Vector3, thrown = false): void {
     if (!this.connected) return;
     if (this.isHost) { this.authority.noteLocalRelease(this.me, fruitId); return; }
     this.send({
-      kind: 'drop', fruitId,
+      kind: thrown ? 'throw' : 'drop', fruitId,
       at: [+at.x.toFixed(2), +at.y.toFixed(2), +at.z.toFixed(2)],
       vel: [+vel.x.toFixed(2), +vel.y.toFixed(2), +vel.z.toFixed(2)],
     }, { kind: 'drop', fruitId, ids: [fruitId], plantId: -1, nodeIndex: -1 });
@@ -1439,12 +1472,16 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
         break;
       case 'pick':
         deny = this.authority.claim(from, fid, intent.cause ?? 'hand');
+        if (!deny) this.encounters?.cancelThrownFruit(fid);
         break;
       case 'stow':
         deny = this.authority.stow(from, fid);
+        if (!deny) this.encounters?.cancelThrownFruit(fid);
         break;
       case 'drop':
       case 'throw': {
+        const fruit = this.fruitSys.get(fid);
+        const newRelease = fruit?.state === 'carried' && this.authority.ownerOf(fid) === from;
         const h = this.authority.holdingFor(from);
         _v.copy(h.pos);
         // Where they say they let go has to be within arm's reach of where
@@ -1462,6 +1499,10 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
         if (!Number.isFinite(_v2.lengthSq())) _v2.set(0, 0, 0);
         if (_v2.length() > MAX_RELEASE_SPEED) _v2.setLength(MAX_RELEASE_SPEED);
         deny = this.authority.release(from, fid, _v, _v2);
+        if (!deny && newRelease) {
+          this.encounters?.cancelThrownFruit(fid);
+          if (intent.kind === 'throw') this.encounters?.trackThrownFruit(fid, from);
+        }
         break;
       }
       case 'sell': {
@@ -1526,9 +1567,9 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
           this.encounters.tryHit(new THREE.Vector3(...o), new THREE.Vector3(...d),
             req.strike, from);
         } else if (req.kind === 'bait') {
-          const p = req.position;
-          if (!p?.every(Number.isFinite) || !near(p[0], p[1], p[2], 7)) break;
-          this.encounters.offerBait(new THREE.Vector3(...p), from);
+          // Coordinates are not a thrown fruit. Only accepted releases and
+          // subsequent host-observed motion can distract the jaws.
+          break;
         } else if (req.kind === 'escape' && req.victimId === from) {
           this.encounters.tryEscape(from);
         } else if (req.kind === 'rescue' && req.rescuerId === from) {
@@ -1864,6 +1905,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       encounters: this.encounters?.snapshot() ?? null,
       kingVine: this.kingVine?.snapshot() ?? null,
       threatsCleared: this.progress ? [...this.progress.threatsCleared] : null,
+      baitStunts: this.g.has('scoring') ? this.g.get<{ baitState(): number[] }>('scoring').baitState() : [],
     };
     this.transport.send(msg, to);
     this.stats.sent++;
@@ -1970,6 +2012,8 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     }
     this.fruitSys.freedByLog.clear();
     this.knownRemoteFruit = seen;
+    if (this.g.has('scoring')) this.g.get<{ applyBaitState(ids: unknown): void }>('scoring')
+      .applyBaitState(m.baitStunts);
     this.syncEconomy(Number(m.money ?? this.economy.money),
       typeof m.tier === 'number' ? m.tier : undefined,
       typeof m.pts === 'number' ? m.pts : undefined);
