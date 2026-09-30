@@ -19,7 +19,8 @@ function fixture() {
   net.remotes.set('rescuer', { targetPos: new THREE.Vector3(0, 0, 0), height: 1.7,
     state: 'active', busy: false, carrying: null, toolId: 'net', hasPlayerPacket: true });
   net.remotes.set('victim', { targetPos: new THREE.Vector3(0, .8, 2.8), height: 1.7,
-    state: 'active', busy: false, carrying: null, toolId: 'hand', hasPlayerPacket: true });
+    state: 'active', busy: false, carrying: null, toolId: 'hand', hasPlayerPacket: true,
+    flingId: 2 });
   net.authority = { holdingFor: () => ({ carried: -1, bought: new Set(['net']) }) };
   net.encounters = { flyingVictim: (victim, flingId) => victim === 'victim' && flingId === 2,
     tryNetCatch: (...args) => { caught.push(args); return true; } };
@@ -58,6 +59,7 @@ test('a real numbered encounter flight passes through host validation and stops 
   encounter.net = { authoritative: true };
   const { net, sent } = fixture();
   net.encounters = encounter;
+  net.remotes.get('victim').flingId = fling.flingId;
   net.applyIntent(swing, 'rescuer');
   net.g.clock.elapsed = 10.13;
   net.applyIntent({ ...catchIntent, catch: {
@@ -94,6 +96,16 @@ test('host rejects stale flight, wrong swing, spoofed origin, distance, tool, an
   }
 });
 
+test('host rejects a catch after the victim has landed but the encounter flight is still live', () => {
+  const { net, caught, sent } = fixture();
+  net.remotes.get('victim').flingId = 0;
+  net.applyIntent(swing, 'rescuer');
+  net.g.clock.elapsed = 10.13;
+  net.applyIntent(catchIntent, 'rescuer');
+  assert.equal(caught.length, 0);
+  assert.equal(sent.some(message => message.packet.t === 'netCaught'), false);
+});
+
 test('host refuses a self catch, late swing, and an unowned net', () => {
   const cases = [
     { setup: net => {}, intent: { ...catchIntent, catch: { ...catchIntent.catch, victimId: 'rescuer' } } },
@@ -128,6 +140,41 @@ test('the replicated flight and avatar position expose a nearby catch candidate'
     { id: 'victim', flingId: 2 });
   net.remotes.get('victim').state = 'captured';
   assert.equal(net.flyingPeerAtHoop(new THREE.Vector3(0, 1.7, 2.8), 1.1), null);
+  net.remotes.get('victim').state = 'active';
+  net.remotes.get('victim').flingId = 0;
+  assert.equal(net.flyingPeerAtHoop(new THREE.Vector3(0, 1.7, 2.8), 1.1), null,
+    'a landed player should not be shown as catchable');
+});
+
+test('player packets update the victim flight identity and clear it after landing', () => {
+  const { net } = fixture();
+  const remote = net.remotes.get('victim');
+  net.isHost = false;
+  net.ensureRemote = () => remote;
+  const packet = { from: 'victim', x: 0, y: .8, z: 2.8, yaw: 0,
+    h: 1.7, s: 'active', tool: 'hand', fi: 2 };
+  net.applyPlayerPacket(packet);
+  assert.equal(remote.flingId, 2);
+  net.applyPlayerPacket({ ...packet, fi: 0 });
+  assert.equal(remote.flingId, 0);
+  net.applyPlayerPacket({ ...packet, fi: 2, s: 'downed' });
+  assert.equal(remote.flingId, 0);
+});
+
+test('player packets send the local catchable flight identity', () => {
+  const sent = [];
+  const net = new MultiplayerAuthority();
+  net.transport = { send: packet => sent.push(packet) };
+  net.g = { player: { position: new THREE.Vector3(), yaw: 0,
+    height: 1.82, state: 'active', catchableFlingId: 2 },
+    get: () => ({ open: false }) };
+  net.interaction = { carried: null };
+  net.tools = { activeId: 'hand', owned: new Set() };
+  net.fruitSys = { nodeSeq: 0 };
+  net.purchasedList = () => '';
+  net.shellOpen = () => false;
+  net.sendPlayerPacket();
+  assert.equal(sent[0].fi, 2);
 });
 
 test('Catch Net hoop warns when a flying teammate approaches its catch lane', () => {

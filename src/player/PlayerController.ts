@@ -62,6 +62,10 @@ export class PlayerController implements PhysicsOwner {
   state: PlayerState = 'active';
   private catchableFling = false;
   private activeFlingId = 0;
+  /** Numbered Snapjaw flight while this capsule can still be caught. */
+  get catchableFlingId(): number {
+    return this.catchableFling ? this.activeFlingId : 0;
+  }
 
   grounded = false;
   groundNormal = new THREE.Vector3(0, 1, 0);

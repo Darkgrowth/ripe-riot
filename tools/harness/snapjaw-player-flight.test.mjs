@@ -47,6 +47,7 @@ test('Snapjaw’s new arc carries an actual player capsule clear of a flat jaw s
   const player = new PlayerController(physics, 1, new THREE.Vector3(0, .1, 0));
   assert.equal(player.applyChaosLaunch(new THREE.Vector3(8, 8.6, 0),
     'snapjaw-fling', 1), true);
+  assert.equal(player.catchableFlingId, 1);
   const idle = { moveX: 0, moveZ: 0, sprint: false, crouch: false,
     jump: false, jumpPressed: false };
   let peak = player.position.y;
@@ -57,6 +58,8 @@ test('Snapjaw’s new arc carries an actual player capsule clear of a flat jaw s
   assert.ok(peak > 1.4, `throw should have a visible apex (peak ${peak})`);
   assert.ok(player.position.x > 5, `throw should travel at least 5 m (x ${player.position.x})`);
   assert.equal(player.state, 'active');
+  assert.equal(player.catchableFlingId, 0,
+    'the local flight identity must clear once the capsule lands');
   t.diagnostic(`flat-ground flight: peak ${peak.toFixed(2)} m, travel ${player.position.x.toFixed(2)} m`);
   player.dispose();
 });

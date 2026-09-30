@@ -140,6 +140,7 @@ interface RemoteState {
   targetYaw: number;
   height: number;
   state: string;
+  flingId: number;
   busy: boolean;
   recoveryUntil: number;
   hasNet: boolean;
@@ -1375,7 +1376,8 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       if (!flight || flight.victimId === this.me || !(flight.remaining > 0)
         || !Number.isSafeInteger(flight.flingId) || flight.flingId < 1) continue;
       const avatar = this.remotes.get(flight.victimId);
-      if (!avatar?.hasPlayerPacket || avatar.state !== 'active') continue;
+      if (!avatar?.hasPlayerPacket || avatar.state !== 'active'
+        || avatar.flingId !== flight.flingId) continue;
       if (Math.hypot(avatar.targetPos.x - hoop.x,
         avatar.targetPos.y + .9 - hoop.y, avatar.targetPos.z - hoop.z) <= radius + .35)
         return { id: flight.victimId, flingId: flight.flingId };
@@ -1402,7 +1404,10 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       || (from === this.me && (this.g.player.state !== 'active'
         || this.tools?.activeId !== 'net' || !this.tools.owned.has('net')
         || !!this.interaction?.carried))
-      || (request.victimId !== this.me && !victim?.hasPlayerPacket)) return false;
+      || (request.victimId !== this.me && (!victim?.hasPlayerPacket
+        || victim.state !== 'active' || victim.flingId !== request.flingId))
+      || (request.victimId === this.me
+        && this.g.player.catchableFlingId !== request.flingId)) return false;
 
     const actorPos = actor?.targetPos ?? this.g.player.position;
     const victimPos = victim?.targetPos ?? this.g.player.position;
@@ -1999,6 +2004,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       yaw: +p.yaw.toFixed(3),
       h: +p.height.toFixed(2),
       s: p.state,
+      fi: p.catchableFlingId,
       ...(ragdollPose ? { rp: ragdollPose } : {}),
       busy: !!this.shop?.open || this.g.get<{ open: boolean }>('book').open || this.shellOpen(),
       tool: this.tools?.activeId ?? null,
@@ -2041,6 +2047,9 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     const nextState = String(m.s ?? 'active');
     if (r.state === 'downed' && nextState === 'active') r.recoveryUntil = this.g.clock.elapsed + 2;
     r.state = nextState;
+    const flingId = Number(m.fi);
+    r.flingId = nextState === 'active' && Number.isSafeInteger(flingId)
+      && flingId > 0 ? flingId : 0;
     if (r.state !== 'active' || m.tool !== 'net') this.netCatchGuard.cancel(from);
     if (this.isHost && nextState === 'downed') {
       (this.encounters as (EncounterSystem & {
@@ -2299,6 +2308,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       id, name, suit,
       pos: new THREE.Vector3(), targetPos: new THREE.Vector3(),
       yaw: 0, targetYaw: 0, height: 1.82, state: 'active', carrying: null,
+      flingId: 0,
       busy: false, recoveryUntil: 0, hasNet: false, toolId: null,
       rig, lastSeen: performance.now(), lastMoveAt: -Infinity, hasPlayerPacket: false,
       ragdollPose: null,
