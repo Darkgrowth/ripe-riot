@@ -8,6 +8,11 @@ import type { RopeSystem } from './RopeSystem';
 
 export type IslandEventKind = 'windfall' | 'coconuts' | 'order';
 export type IslandEventPhase = 'idle' | 'warning' | 'active' | 'result';
+export type HarvestAgitationKind = 'site-disturbance' | 'rare-fruit' | 'tree-shaker'
+  | 'air-cannon' | 'vine-release';
+export interface HarvestAgitationState {
+  pressure: number; warning: boolean; at: [number, number, number]; acceptedIds: string[];
+}
 export interface IslandEventState {
   id: number; kind: IslandEventKind | null; phase: IslandEventPhase;
   remaining: number; targets: number[]; plants: number[]; released: number;
@@ -17,12 +22,23 @@ export interface IslandEventState {
 export interface IslandDirectorState {
   event: IslandEventState; sequence: number; cooldown: number; last: IslandEventKind | null;
   firstPick: boolean; firstSale: boolean; introDone: boolean; introDelay: number; orders: number;
+  agitation: HarvestAgitationState;
 }
 export interface IslandCrew { position: THREE.Vector3; busy: boolean; hasNet: boolean; }
 
 const blank = (): IslandEventState => ({ id: 0, kind: null, phase: 'idle', remaining: 0,
   targets: [], plants: [], released: 0, at: [0, 0, 0], progress: 0, goal: 0,
   reward: 0, species: [], counted: [], paid: false, result: '' });
+const calm = (): HarvestAgitationState => ({ pressure: 0, warning: false,
+  at: [0, 0, 0], acceptedIds: [] });
+const AGITATION_WARNING = 3;
+const AGITATION_BURST = 6;
+const AGITATION_MAX = 9;
+const AGITATION_DECAY = 0.08;
+const AGITATION_WEIGHTS: Record<HarvestAgitationKind, number> = {
+  'site-disturbance': 3, 'rare-fruit': 2, 'tree-shaker': 3,
+  'air-cannon': 2, 'vine-release': 2,
+};
 
 /** The host schedules trouble; ordinary fruit physics determines what happens. */
 export class IslandDirector implements System {
@@ -31,7 +47,8 @@ export class IslandDirector implements System {
   private fruit!: FruitSystem;
   private world!: Sunpatch;
   private state: IslandDirectorState = { event: blank(), sequence: 0, cooldown: 0, last: null,
-    firstPick: false, firstSale: false, introDone: false, introDelay: 12, orders: 0 };
+    firstPick: false, firstSale: false, introDone: false, introDelay: 12, orders: 0,
+    agitation: calm() };
   automatic = true;
   private cue = '';
   private tickCue = -1;
@@ -74,7 +91,7 @@ export class IslandDirector implements System {
     g.debug?.addAction('director.start', (kind: IslandEventKind) => this.start(kind, true));
     g.debug?.addAction('director.reset', (automatic = false) => {
       this.state = { event: blank(), sequence: 0, cooldown: 0, last: null, firstPick: false,
-        firstSale: false, introDone: false, introDelay: 12, orders: 0 };
+        firstSale: false, introDone: false, introDelay: 12, orders: 0, agitation: calm() };
       this.automatic = automatic; this.cue = ''; return true;
     });
     g.debug?.addAction('director.enable', (on = true) => { this.automatic = on; return on; });
@@ -82,6 +99,29 @@ export class IslandDirector implements System {
 
   get authoritative(): boolean { return this.fruit.authoritative; }
   getPresentation(): IslandEventState { return this.state.event; }
+  getAgitationPresentation(): HarvestAgitationState { return this.state.agitation; }
+  /** Called only after the host has accepted a valuable or violent harvest action. */
+  acceptAgitation(actionId: string, kind: HarvestAgitationKind, at: THREE.Vector3): boolean {
+    if (!this.authoritative || !this.automatic || this.finalBeat() || this.protectedSequence()
+      || this.state.cooldown > 0 || (this.state.event.phase !== 'idle'
+        && this.state.event.kind !== 'order') || !Object.hasOwn(AGITATION_WEIGHTS, kind)
+      || typeof actionId !== 'string' || !actionId || actionId.length > 128
+      || !at || !Number.isFinite(at.x) || !Number.isFinite(at.y) || !Number.isFinite(at.z)) return false;
+    const a = this.state.agitation;
+    if (a.acceptedIds.includes(actionId)) return false;
+    const orchard = this.world.at('orchard').position;
+    const hill = this.world.at('hillFarm').position;
+    const dx = hill.x - orchard.x, dz = hill.z - orchard.z;
+    const t = THREE.MathUtils.clamp(((at.x - orchard.x) * dx + (at.z - orchard.z) * dz)
+      / (dx * dx + dz * dz), 0, 1);
+    if (Math.hypot(at.x - orchard.x - dx * t, at.z - orchard.z - dz * t) > 34) return false;
+    a.acceptedIds.push(actionId);
+    if (a.acceptedIds.length > 64) a.acceptedIds.shift();
+    a.pressure = Math.min(AGITATION_MAX, a.pressure + AGITATION_WEIGHTS[kind]);
+    a.at = [at.x, at.y, at.z];
+    a.warning = a.pressure >= AGITATION_WARNING && this.state.event.phase === 'idle';
+    return true;
+  }
   private chapterState(): string {
     return this.g.has('progress')
       ? this.g.get<{ chapterState: string }>('progress').chapterState : 'active';
@@ -114,7 +154,7 @@ export class IslandDirector implements System {
     e.counted.push(id); e.progress++;
   }
 
-  start(kind: IslandEventKind, force = false): boolean {
+  start(kind: IslandEventKind, force = false, focus?: THREE.Vector3): boolean {
     if (!this.authoritative || !['windfall', 'coconuts', 'order'].includes(kind)
       || this.state.event.phase !== 'idle' || this.protectedSequence() || this.finalBeat()) return false;
     const crew = this.crew().filter(c => !c.busy);
@@ -137,13 +177,15 @@ export class IslandDirector implements System {
     } else {
       const orchard = this.world.at('orchard').position;
       const eligible = crew.filter(c => kind === 'windfall'
-        ? Math.hypot(c.position.x - orchard.x, c.position.z - orchard.z) < 33
+        ? Math.hypot(c.position.x - (focus ?? orchard).x,
+          c.position.z - (focus ?? orchard).z) < 33
         : (force || c.hasNet));
       let selected: typeof e.targets = [];
       for (const c of eligible) {
         const candidates = [...this.fruit.fruits.values()].filter(f => f.state === 'attached'
           && (kind === 'windfall' ? ['apple', 'orange'].includes(f.species) : f.species === 'coconut')
           && Math.hypot(f.position.x - c.position.x, f.position.z - c.position.z) < 15
+          && (!focus || Math.hypot(f.position.x - focus.x, f.position.z - focus.z) < 20)
           && !this.tied(f.id))
           .sort((a, b) => a.position.distanceToSquared(c.position) - b.position.distanceToSquared(c.position)
             || a.id - b.id);
@@ -165,6 +207,10 @@ export class IslandDirector implements System {
       if (kind === 'windfall') this.state.introDone = true;
     }
     this.state.sequence = e.id; this.state.event = e; this.state.last = kind;
+    if (kind === 'windfall') {
+      this.state.agitation.pressure = 0;
+      this.state.agitation.warning = false;
+    } else if (kind === 'order') this.state.agitation.warning = false;
     this.present(); return true;
   }
 
@@ -177,6 +223,7 @@ export class IslandDirector implements System {
     const finalBeat = this.finalBeat();
     this.returning = this.chapterState() === 'return';
     if (finalBeat) {
+      this.state.agitation = calm();
       if (this.state.event.phase !== 'idle') {
         this.state.event = blank();
         this.present();
@@ -190,18 +237,26 @@ export class IslandDirector implements System {
       // host still runs events for players active elsewhere in the session.
       const net = this.g.get<{ connected: boolean }>('net');
       if (!this.automatic || (!net.connected && !this.g.input.pointerLocked && !this.g.input.synthetic)) return;
-      if (this.state.firstPick && !this.state.introDone) {
-        this.state.introDelay = Math.max(0, this.state.introDelay - dt);
-        if (this.state.introDelay === 0 && this.state.cooldown === 0) this.start('windfall');
+      const agitation = this.state.agitation;
+      if (agitation.pressure >= AGITATION_BURST && this.state.cooldown === 0) {
+        if (this.protectedSequence() || !this.crew().some(c => !c.busy)) return;
+        if (this.start('windfall', false, new THREE.Vector3(...agitation.at))) return;
+        // The players moved away or no eligible tree remains. Drop pressure
+        // rather than keep a warning for a hazard that cannot happen.
+        agitation.pressure = 0;
+        agitation.warning = false;
+        this.state.cooldown = 5;
         return;
       }
-      if (!this.state.introDone || this.state.cooldown > 0) return;
-      const rng = new Rng(`${this.g.seed}:event:${this.state.sequence}`);
-      const options: IslandEventKind[] = this.state.orders === 0 && this.state.firstSale
-        ? ['order', 'coconuts', 'windfall'] : rng.next() > 0.5
-          ? ['coconuts', 'order', 'windfall'] : ['windfall', 'order', 'coconuts'];
-      for (const k of options) if (k !== this.state.last && this.start(k)) return;
-      this.state.cooldown = 5; // No eligible fruit/player: retry without busy scanning.
+      agitation.pressure = Math.max(0, agitation.pressure - AGITATION_DECAY * dt);
+      agitation.warning = agitation.pressure >= AGITATION_WARNING && this.state.cooldown === 0;
+      // Rush orders remain optional after a real sale. Ordinary fruit and idle
+      // time no longer schedule a physical hazard.
+      if (!this.state.firstSale || this.state.cooldown > 0 || agitation.warning) return;
+      if (this.state.orders === 0 || new Rng(`${this.g.seed}:order:${this.state.sequence}`).next() > 0.5) {
+        if (this.start('order')) return;
+      }
+      this.state.cooldown = 5;
       return;
     }
     e.remaining = Math.max(0, e.remaining - dt);
@@ -227,8 +282,11 @@ export class IslandDirector implements System {
     if (e.remaining === 0) {
       if (e.phase === 'active') this.finish(e.kind === 'order' ? 'missed' : 'over');
       else if (e.phase === 'result') {
+        const pending = e.kind === 'order' && this.state.agitation.pressure >= AGITATION_WARNING;
         this.state.event = blank();
-        this.state.cooldown = new Rng(`${this.g.seed}:quiet:${this.state.sequence}`).range(120, 180);
+        this.state.cooldown = pending ? 0
+          : new Rng(`${this.g.seed}:quiet:${this.state.sequence}`).range(120, 180);
+        this.state.agitation.warning = pending;
         this.present();
       }
     }
@@ -237,6 +295,19 @@ export class IslandDirector implements System {
   frameUpdate(dt: number): void {
     if (this.chapterState() === 'return') return;
     const e = this.state.event;
+    const agitation = this.state.agitation;
+    if (e.phase === 'idle' && agitation.warning) {
+      for (const plant of this.fruit.plants.all()) {
+        if (Math.hypot(plant.position.x - agitation.at[0],
+          plant.position.z - agitation.at[2]) < 16) plant.shake = Math.max(plant.shake, 0.24);
+      }
+      this.rustleTimer -= dt;
+      if (this.rustleTimer <= 0) {
+        this.rustleTimer = 1.6;
+        this.g.bus.emit('audio:sfx', { name: 'rustle',
+          position: new THREE.Vector3(...agitation.at), volume: 0.55 });
+      }
+    }
     if (e.phase === 'warning' || (e.phase === 'active' && e.kind !== 'order' && e.remaining > 12)) {
       for (const id of e.plants) {
         const p = this.fruit.plants.get(id);
@@ -268,16 +339,28 @@ export class IslandDirector implements System {
   applyNet(state: IslandDirectorState): void {
     if (!state?.event || !Number.isFinite(state.sequence)) return;
     this.state = JSON.parse(JSON.stringify(state)) as IslandDirectorState;
+    this.state.agitation = this.normalizedAgitation(state.agitation);
     this.present();
+  }
+  private normalizedAgitation(s?: Partial<HarvestAgitationState>): HarvestAgitationState {
+    const pressure = Number.isFinite(s?.pressure) ? THREE.MathUtils.clamp(s!.pressure!, 0, AGITATION_MAX) : 0;
+    const at = Array.isArray(s?.at) && s.at.length === 3 && s.at.every(Number.isFinite)
+      ? [...s.at] as [number, number, number] : [0, 0, 0] as [number, number, number];
+    return { pressure, warning: pressure >= AGITATION_WARNING && s?.warning === true,
+      at, acceptedIds: Array.isArray(s?.acceptedIds)
+        ? s.acceptedIds.filter(id => typeof id === 'string' && id.length > 0 && id.length <= 128).slice(-64)
+        : [] };
   }
   serialize(): Omit<IslandDirectorState, 'event'> {
     const { event: _event, ...s } = this.state;
-    return { ...s, cooldown: Math.max(30, s.cooldown) };
+    return { ...s, cooldown: Math.max(30, s.cooldown),
+      agitation: this.normalizedAgitation(s.agitation) };
   }
   deserialize(s: Partial<IslandDirectorState>): void {
     this.state = { event: blank(), sequence: s.sequence ?? 0, cooldown: Math.max(30, s.cooldown ?? 30),
       last: s.last ?? null, firstPick: s.firstPick ?? false, firstSale: s.firstSale ?? false,
-      introDone: s.introDone ?? false, introDelay: 12, orders: s.orders ?? 0 };
+      introDone: s.introDone ?? false, introDelay: 12, orders: s.orders ?? 0,
+      agitation: this.normalizedAgitation(s.agitation) };
     this.cue = ''; this.automatic = true;
   }
 }

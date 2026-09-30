@@ -41,7 +41,9 @@ export class IslandEventView implements System {
   }
   frameUpdate(dt: number): void {
     this.time += dt;
-    const e = this.g.get<IslandDirector>('director').getPresentation();
+    const director = this.g.get<IslandDirector>('director');
+    const e = director.getPresentation();
+    const agitation = director.getAgitationPresentation?.();
     const shellOpen = this.g.has('expeditionShell')
       && this.g.get<{ open: boolean }>('expeditionShell').open;
     const menu = this.g.get<{ open: boolean }>('shop').open
@@ -56,13 +58,16 @@ export class IslandEventView implements System {
     const harvest = this.g.has('legendary') ? this.g.get<LegendaryHarvest>('legendary') : null;
     const kingVineFocus = nearBoss && ((boss.phase !== 'idle' && !boss.subdued) || (harvest !== null
       && ['tether', 'detach', 'drop', 'recover'].includes(harvest.phase)));
-    this.hud.hidden = e.phase === 'idle' || menu || finalBeat
+    const stirring = e.phase === 'idle' && agitation?.warning === true;
+    this.hud.hidden = (e.phase === 'idle' && !stirring) || menu || finalBeat
       || (!urgentOrder && (kingVineFocus || this.g.get<UIManager>('ui').celebrating));
     this.hud.classList.toggle('urgent', e.kind === 'order' && e.phase === 'active' && e.remaining <= 10);
-    this.title.textContent = e.kind === 'windfall' ? 'WINDFALL' : e.kind === 'coconuts' ? 'COCONUT FORECAST' : "MERV’S RUSH ORDER";
-    this.timer.textContent = e.phase === 'result' ? '' : `${Math.ceil(e.remaining)}s`;
+    this.title.textContent = stirring ? 'ROOTS STIRRING'
+      : e.kind === 'windfall' ? 'WINDFALL' : e.kind === 'coconuts' ? 'COCONUT FORECAST' : "MERV’S RUSH ORDER";
+    this.timer.textContent = stirring || e.phase === 'result' ? '' : `${Math.ceil(e.remaining)}s`;
     const fruit = e.species.includes('coconut') ? 'coconuts' : 'apples or oranges';
-    this.detail.textContent = e.phase === 'result'
+    this.detail.textContent = stirring ? 'The nearby branches are restless. Watch for a windfall.'
+      : e.phase === 'result'
       ? e.result === 'success' ? `Order filled! +$${e.reward} bonus.`
         : e.result === 'missed' ? 'Time’s up. Your fruit still sells normally.'
           : e.result === 'cancelled' ? 'The gust passed. Back to work.' : `Clear skies. ${e.progress} fruit gathered.`
