@@ -720,6 +720,18 @@ try {
   const bootError = await page.evaluate(() => window.__RIPE_ERROR ?? null);
   if (bootError) throw new Error(`Boot failed: ${bootError}`);
   const newExpedition = page.locator('[data-expedition-action="new-replay"]');
+  log('title-state', await page.evaluate(() => {
+    const shell = window.__GAME?.has('expeditionShell')
+      ? window.__GAME.get('expeditionShell') : null;
+    const root = document.querySelector('.expedition-shell');
+    const button = root?.querySelector('[data-expedition-action="new-replay"]');
+    return { url: location.href, shellOpen: shell?.open,
+      shellMode: shell?.mode, shellHidden: root?.hidden,
+      buttonPresent: !!button,
+      buttonDisplay: button ? getComputedStyle(button).display : null,
+      rootDisplay: root ? getComputedStyle(root).display : null,
+      clockPaused: window.__GAME?.clock.paused };
+  }));
   await newExpedition.waitFor({state:'visible',timeout:10000});
   beats.title = true; await shot('00-title');
   await newExpedition.click(); await sleep(1500);

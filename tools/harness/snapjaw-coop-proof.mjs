@@ -54,7 +54,7 @@ const read = g => g.page.evaluate(() => {
     pointerLocked: game.input.pointerLocked };
 });
 const shot = async (g, name) => {
-  await g.page.screenshot({ path: path.join(out, `${name}.png`) });
+  await g.page.screenshot({ path: path.join(out, `${name}.png`), timeout: 15000 });
 };
 try {
   // Both peers must advance at comparable rates. A render-suppressed victim
@@ -155,7 +155,9 @@ try {
   // opening swing has plenty of time to recover before the airborne catch.
   await host.page.mouse.click(850, 315);
   await sleep(350);
-  await shot(host, '01-host-setup');
+  // A synchronous GPU readback stalled the shared two-client Linux renderer
+  // before the jaw had even bitten. Preserve the timed input window first.
+  if (!args.includes('--no-setup-shot')) await shot(host, '01-host-setup');
   const holdUntil = Date.now() + 30000;
   let held = null;
   while (Date.now() < holdUntil) {
@@ -204,7 +206,8 @@ try {
   await sleep(300);
   const afterHost = await read(host), afterGuest = await read(guest);
   log('after-catch-window', { host: afterHost, victim: afterGuest });
-  await shot(host, '05-after-net-window');
+  try { await shot(host, '05-after-net-window'); }
+  catch (error) { log('capture-error', { error: String(error) }); }
   check(sawFlight, 'host observed a numbered teammate flight');
   check(startedSwing && afterHost.netSwings >= 2,
     'rescuer made a real timed Catch Net swing', { swings: afterHost.netSwings });

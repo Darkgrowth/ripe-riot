@@ -26,8 +26,8 @@ jobs:
     env:
       RIPE_URL: http://127.0.0.1:5278
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: npm
@@ -53,14 +53,18 @@ jobs:
               --video --out capture/ci/expedition
           else
             node tools/harness/snapjaw-coop-proof.mjs \
-              --allow-browser-input --video --out capture/ci/snapjaw-coop
+              --allow-browser-input --no-setup-shot --out capture/ci/snapjaw-coop
           fi
-      - uses: actions/upload-artifact@v4
+      - name: Keep server log with proof
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p 'capture/ci/${{ matrix.proof }}'
+          cp "$RUNNER_TEMP/ripe-preview.log" 'capture/ci/${{ matrix.proof }}/preview.log' || true
+      - uses: actions/upload-artifact@v5
         if: always()
         with:
           name: sunpatch-${{ matrix.proof }}
-          path: |
-            capture/ci/${{ matrix.proof }}/
-            ${{ runner.temp }}/ripe-preview.log
+          path: capture/ci/${{ matrix.proof }}/
           if-no-files-found: warn
           retention-days: 14
