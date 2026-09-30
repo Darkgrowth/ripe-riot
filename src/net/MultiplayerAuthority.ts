@@ -24,6 +24,7 @@ import type { PlayerVitals } from '@/player/PlayerVitals';
 import type { KingVine, KingVineNetState, KingVineStrike } from '@/boss/KingVine';
 import type { Progression } from '@/systems/Progression';
 import { MeleeIntentGuard, validMeleeOrigin } from './MeleeIntentGuard';
+import { NetCatchGuard } from './NetCatchGuard';
 import { probeMeleeSweep } from '@/enemies/MeleeSweep';
 import { QueryMask } from '@/physics/Layers';
 import { MALLET_TIMING } from '@/tools/MalletSwing';
@@ -34,7 +35,7 @@ export type IntentKind =
   | 'shove' | 'shake' | 'blast' | 'spawn'
   | 'buy' | 'settle'
   | 'lcut'
-  | 'encounter' | 'revive' | 'vineHit' | 'melee'
+  | 'encounter' | 'revive' | 'vineHit' | 'melee' | 'netSwingStart'
   | 'rope'
   | 'resync';
 
@@ -94,6 +95,7 @@ export interface Intent {
   holding?: boolean;
   vineHit?: { origin: [number, number, number]; direction: [number, number, number]; strike: KingVineStrike };
   melee?: { swingId: number; origin: [number, number, number]; direction: [number, number, number] };
+  swingId?: number;
 }
 
 /** What a client is waiting to hear back about, and how to undo it. */
@@ -316,6 +318,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   private lastBaitCue = 0;
   private nextChaosLaunchId = 1;
   private lastChaosLaunchByHost = new Map<PeerId, number>();
+  private readonly netCatchGuard = new NetCatchGuard();
 
   init(g: Game): void {
     this.g = g;
@@ -529,6 +532,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     this.pendingFruit.clear();
     this.pendingSell.clear();
     this.lastChaosLaunchByHost.clear();
+    this.netCatchGuard.clear();
     this.knownRemoteFruit.clear();
     this.nodeAck.clear();
     this.seenGone.clear();
@@ -640,6 +644,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
    *  8. our own requests to a host that has gone, which nobody will answer.
    */
   private promote(): void {
+    this.netCatchGuard.clear();
     this.authority.adoptTombstones(this.seenGone);
     // Everybody still here, at the last place we saw them. Every zone check
     // the ledger makes is measured from these, and a peer the new host thinks
@@ -736,6 +741,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
    */
   private dropPeer(id: PeerId, name: string): void {
     this.meleeGuard.clearPeer(id);
+    this.netCatchGuard.clearPeer(id);
     this.pendingMelee.delete(id);
     const r = this.remotes.get(id);
     if (r) {
@@ -1307,6 +1313,18 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     return true;
   }
 
+  /** Timestamp a real local net swing on the host; guests send its ID so the
+   * host can timestamp it upon receipt rather than trusting the guest clock. */
+  beginNetSwing(swingId: number): boolean {
+    if (!this.connected || !this.transport || !Number.isSafeInteger(swingId) || swingId < 1
+      || this.tools?.activeId !== 'net' || !this.tools.owned.has('net')
+      || this.g.player.state !== 'active' || !!this.interaction.carried) return false;
+    if (!this.isHost) { this.send({ kind: 'netSwingStart', swingId }); return true; }
+    return this.netCatchGuard.start(this.me, swingId, this.g.clock.elapsed, true);
+  }
+
+  cancelNetSwing(peer: PeerId): void { this.netCatchGuard.cancel(peer); }
+
   // ---- LegendaryNet, for the King Melon -----------------------------------
   anyoneHasRopeGun(): boolean { return this.isHost && this.authority.anyoneHasRopeGun(); }
 
@@ -1613,6 +1631,10 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
         // Residents react to accepted remote blasts as well as local tools.
         this.g.bus.emit('tool:blast', { toolId: 'remote', point: new THREE.Vector3(x, y, z),
           radius: clamp01(intent.radius ?? 4, 8), power: clamp01((intent.power ?? 1) / 22, 1) });
+        if (Number.isSafeInteger(rid) && rid >= 0 && this.g.has('director')) {
+          this.g.get<IslandDirector>('director').acceptAgitation(
+            `remote-air:${from}:${rid}`, 'air-cannon', new THREE.Vector3(x, y, z));
+        }
         break;
       }
       case 'encounter': {
@@ -1670,6 +1692,15 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
           new THREE.Vector3(...origin), new THREE.Vector3(...direction), rid);
         else this.transport?.send({ t: 'result', rid, kind: 'melee', ok: false,
           swingId: req.swingId, outcome: 'whoosh' }, from);
+        return;
+      }
+      case 'netSwingStart': {
+        const remote = this.remotes.get(from);
+        const owned = this.authority.holdingFor(from).bought.has('net');
+        const active = !!remote?.hasPlayerPacket && remote.state === 'active'
+          && !remote.busy && !remote.carrying && remote.toolId === 'net'
+          && this.authority.holdingFor(from).carried < 0 && owned;
+        this.netCatchGuard.start(from, intent.swingId ?? -1, this.g.clock.elapsed, active);
         return;
       }
       case 'revive':
@@ -1875,6 +1906,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     const nextState = String(m.s ?? 'active');
     if (r.state === 'downed' && nextState === 'active') r.recoveryUntil = this.g.clock.elapsed + 2;
     r.state = nextState;
+    if (r.state !== 'active' || m.tool !== 'net') this.netCatchGuard.cancel(from);
     r.ragdollPose = r.state === 'ragdoll' ? parseRagdollPose(m.rp) : null;
     r.busy = m.busy === true;
     r.toolId = typeof m.tool === 'string' ? m.tool : null;

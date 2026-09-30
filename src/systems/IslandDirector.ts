@@ -59,6 +59,11 @@ export class IslandDirector implements System {
     this.g = g; this.fruit = g.get('fruit'); this.world = g.get('world');
     g.bus.on('fruit:detached', p => {
       if (this.authoritative && p.cause === 'hand') this.state.firstPick = true;
+      if (!this.authoritative || !['hand', 'remote', 'shake', 'shove'].includes(p.cause)) return;
+      const fruit = this.fruit.get(p.fruitId);
+      if (fruit && (fruit.variant || ['puffmelon', 'watermelon'].includes(fruit.species))) {
+        this.acceptAgitation(`rare-fruit:${p.fruitId}`, 'rare-fruit', fruit.position);
+      }
     });
     g.bus.on('fruit:grabbed', p => {
       if (!this.authoritative) return;

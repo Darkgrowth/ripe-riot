@@ -296,6 +296,9 @@ export class CatchNet extends Tool {
     this.phaseT = 0;
     this.queued = false;
     this.swings++;
+    if (this.game.has('net')) {
+      this.game.get<{ beginNetSwing(swingId: number): boolean }>('net').beginNetSwing(this.swings);
+    }
     this.swingCaught = 0;
     this.missedThisSwing = false;
     this.earlyMissCandidate = false;
@@ -839,6 +842,17 @@ export class AirCannon extends Tool {
     cost: 110, tier: 0,
   };
 
+  private readonly agitationEpoch = Math.random().toString(36).slice(2);
+  private agitationShot = 0;
+
+  private recordAgitation(at: THREE.Vector3): void {
+    if (!this.game.has('director')) return;
+    this.game.get<{
+      acceptAgitation(id: string, kind: 'air-cannon', at: THREE.Vector3): boolean;
+    }>('director').acceptAgitation(
+      `air:${this.agitationEpoch}:${++this.agitationShot}`, 'air-cannon', at.clone());
+  }
+
   private charging = false;
   private recharge = 1;
   /** Seconds of FOV punch left, its full duration, and its peak offset. */
@@ -889,6 +903,7 @@ export class AirCannon extends Tool {
       toolId: this.def.id, point: p.position.clone(), power: 1, radius: 4.0,
     });
     this.ctx.fruit.blast(p.position.clone(), 4.0, 5.5, 0.2);
+    this.recordAgitation(p.position);
   }
 
   /**
@@ -985,6 +1000,7 @@ export class AirCannon extends Tool {
     this.game.bus.emit('tool:blast', {
       toolId: this.def.id, point: _v.clone(), power, radius,
     });
+    this.recordAgitation(_v);
     if (pushed > 2) {
       this.game.bus.emit('ui:toast', { text: `${pushed} objects airborne`, ms: 1500 });
     }
