@@ -1,0 +1,375 @@
+{
+  "stage": "finishing-pass",
+  "viewport": [
+    3424,
+    1268
+  ],
+  "mode": "voxel",
+  "frames": [
+    {
+      "name": "00-dock",
+      "player": {
+        "pos": [
+          71.5,
+          2.351,
+          71.5
+        ],
+        "vel": [
+          0,
+          0,
+          0
+        ],
+        "yaw": 0.9273,
+        "pitch": -0.11,
+        "grounded": true,
+        "speed": 0,
+        "state": "active",
+        "height": 1.82
+      },
+      "render": {
+        "drawCalls": 177,
+        "triangles": 3271770,
+        "geometries": 146,
+        "textures": 25,
+        "programs": 35
+      }
+    },
+    {
+      "name": "01-orchard",
+      "player": {
+        "pos": [
+          -20,
+          7.642,
+          29
+        ],
+        "vel": [
+          0,
+          -0.495,
+          0
+        ],
+        "yaw": 0.2985,
+        "pitch": -0.0147,
+        "grounded": false,
+        "speed": 0,
+        "state": "active",
+        "height": 1.82
+      },
+      "render": {
+        "drawCalls": 175,
+        "triangles": 3384274,
+        "geometries": 147,
+        "textures": 25,
+        "programs": 35
+      }
+    },
+    {
+      "name": "02-palms",
+      "player": {
+        "pos": [
+          17,
+          3.597,
+          48
+        ],
+        "vel": [
+          0,
+          -0.99,
+          0
+        ],
+        "yaw": 1.0637,
+        "pitch": 0.6394,
+        "grounded": false,
+        "speed": 0,
+        "state": "active",
+        "height": 1.82
+      },
+      "render": {
+        "drawCalls": 174,
+        "triangles": 3298570,
+        "geometries": 147,
+        "textures": 25,
+        "programs": 35
+      }
+    },
+    {
+      "name": "03-shop",
+      "player": {
+        "pos": [
+          42,
+          2.606,
+          55
+        ],
+        "vel": [
+          0,
+          -0.99,
+          0
+        ],
+        "yaw": -0.7188,
+        "pitch": 0.0769,
+        "grounded": false,
+        "speed": 0,
+        "state": "active",
+        "height": 1.547
+      },
+      "render": {
+        "drawCalls": 120,
+        "triangles": 3224692,
+        "geometries": 148,
+        "textures": 25,
+        "programs": 35
+      }
+    },
+    {
+      "name": "04-hill",
+      "player": {
+        "pos": [
+          -30,
+          20.142,
+          -16
+        ],
+        "vel": [
+          0,
+          -0.495,
+          0
+        ],
+        "yaw": 0.4049,
+        "pitch": 0.1499,
+        "grounded": false,
+        "speed": 0,
+        "state": "active",
+        "height": 1.66
+      },
+      "render": {
+        "drawCalls": 137,
+        "triangles": 3399650,
+        "geometries": 150,
+        "textures": 25,
+        "programs": 35
+      }
+    },
+    {
+      "name": "05-ravine",
+      "player": {
+        "pos": [
+          -21,
+          21.125,
+          -34
+        ],
+        "vel": [
+          0,
+          -0.99,
+          0
+        ],
+        "yaw": -0.8029,
+        "pitch": 0.1791,
+        "grounded": false,
+        "speed": 0,
+        "state": "active",
+        "height": 1.726
+      },
+      "render": {
+        "drawCalls": 128,
+        "triangles": 3385836,
+        "geometries": 151,
+        "textures": 25,
+        "programs": 35
+      }
+    },
+    {
+      "name": "06-waterfall",
+      "player": {
+        "pos": [
+          35,
+          3.992,
+          20.004
+        ],
+        "vel": [
+          -0.005,
+          0,
+          0.237
+        ],
+        "yaw": 0.0454,
+        "pitch": 0.3256,
+        "grounded": true,
+        "speed": 0.237,
+        "state": "active",
+        "height": 1.765
+      },
+      "render": {
+        "drawCalls": 158,
+        "triangles": 3273346,
+        "geometries": 151,
+        "textures": 25,
+        "programs": 35
+      }
+    },
+    {
+      "name": "07-grove",
+      "player": {
+        "pos": [
+          57,
+          3.202,
+          3.002
+        ],
+        "vel": [
+          0,
+          -0.495,
+          0
+        ],
+        "yaw": -0.1489,
+        "pitch": 0.0608,
+        "grounded": false,
+        "speed": 0,
+        "state": "active",
+        "height": 1.788
+      },
+      "render": {
+        "drawCalls": 113,
+        "triangles": 3263734,
+        "geometries": 152,
+        "textures": 25,
+        "programs": 35
+      }
+    },
+    {
+      "name": "08-mallet-ready",
+      "player": {
+        "pos": [
+          -19.999,
+          7.52,
+          28.997
+        ],
+        "vel": [
+          0,
+          0,
+          -0.002
+        ],
+        "yaw": 0.2985,
+        "pitch": -0.0147,
+        "grounded": true,
+        "speed": 0.002,
+        "state": "active",
+        "height": 1.82
+      },
+      "render": {
+        "drawCalls": 177,
+        "triangles": 3384402,
+        "geometries": 152,
+        "textures": 25,
+        "programs": 35
+      }
+    },
+    {
+      "name": "09-mallet-windup",
+      "player": {
+        "pos": [
+          -19.999,
+          7.52,
+          28.997
+        ],
+        "vel": [
+          0,
+          0,
+          0
+        ],
+        "yaw": 0.2985,
+        "pitch": -0.0147,
+        "grounded": true,
+        "speed": 0,
+        "state": "active",
+        "height": 1.82
+      },
+      "render": {
+        "drawCalls": 177,
+        "triangles": 3384402,
+        "geometries": 152,
+        "textures": 25,
+        "programs": 35
+      }
+    },
+    {
+      "name": "10-mallet-contact",
+      "player": {
+        "pos": [
+          -19.998,
+          7.52,
+          28.996
+        ],
+        "vel": [
+          0,
+          0,
+          -0.012
+        ],
+        "yaw": 0.2985,
+        "pitch": -0.0147,
+        "grounded": true,
+        "speed": 0.012,
+        "state": "active",
+        "height": 1.82
+      },
+      "render": {
+        "drawCalls": 175,
+        "triangles": 3384274,
+        "geometries": 152,
+        "textures": 25,
+        "programs": 35
+      }
+    },
+    {
+      "name": "11-mallet-recovery",
+      "player": {
+        "pos": [
+          -19.998,
+          7.52,
+          28.996
+        ],
+        "vel": [
+          0,
+          0,
+          0
+        ],
+        "yaw": 0.2985,
+        "pitch": -0.0147,
+        "grounded": true,
+        "speed": 0,
+        "state": "active",
+        "height": 1.82
+      },
+      "render": {
+        "drawCalls": 175,
+        "triangles": 3384274,
+        "geometries": 152,
+        "textures": 25,
+        "programs": 35
+      }
+    },
+    {
+      "name": "12-basket-switch",
+      "player": {
+        "pos": [
+          -19.996,
+          7.52,
+          28.991
+        ],
+        "vel": [
+          0,
+          0,
+          0
+        ],
+        "yaw": 0.2985,
+        "pitch": -0.0147,
+        "grounded": true,
+        "speed": 0,
+        "state": "active",
+        "height": 1.82
+      },
+      "render": {
+        "drawCalls": 175,
+        "triangles": 3383670,
+        "geometries": 154,
+        "textures": 25,
+        "programs": 35
+      }
+    }
+  ],
+  "errors": []
+}

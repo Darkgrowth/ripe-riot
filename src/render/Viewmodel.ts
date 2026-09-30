@@ -319,42 +319,42 @@ export const VIEW_LATERAL = 0.37;
  * lower camera frame while the authored palm stays wrapped around the shaft. */
 function malletGrip(side: 'L' | 'R', x: number, y: number, z: number, roll: number,
   material: THREE.Material, voxel: boolean): THREE.Mesh {
-  const geo = toolHand(side, new THREE.Vector3(), roll);
-  let grip = geo;
+  let grip: THREE.BufferGeometry;
   if (voxel) {
-    const positions = geo.getAttribute('position') as THREE.BufferAttribute;
-    const colors = geo.getAttribute('color') as THREE.BufferAttribute;
     const outward = side === 'L' ? -1 : 1;
-    for (let i = 0; i < positions.count; i++) {
-      let x = positions.getX(i), y = positions.getY(i), z = positions.getZ(i);
-      // The ochre vertex color belongs to the sleeve alone. Its opening is at
-      // the low-Y end of the source GLB; the darker cuff and fingers stay put.
-      if (colors.getX(i) > .5) {
-        const towardElbow = THREE.MathUtils.clamp((-y - .048) / .12, 0, 1);
-        y -= .27 * towardElbow;
-        x += outward * .13 * towardElbow;
-      }
-      const rear = THREE.MathUtils.clamp((z - .015) / .16, 0, 1);
-      positions.setXYZ(i, x + outward * .09 * rear, y, z);
-    }
-    positions.needsUpdate = true;
-    geo.scale(.88, .92, .82);
-    geo.computeVertexNormals();
-    // Three short leather fingers bridge each palm onto the camera side of
-    // the same wooden shaft. They remain part of that hand's moving mesh.
-    const fingerParts: THREE.BufferGeometry[] = [geo];
     const shaftX = .16 - x;
     const shaftZ = -.24 - z;
-    for (const offset of [-.018, 0, .018])
-      fingerParts.push(padded(.039, .014, .078, .004, GLOVE,
-        [shaftX + (side === 'L' ? -.012 : .012), offset, shaftZ + .037]));
-    const merged = mergeGeometries(fingerParts, false);
+    const palmX = shaftX + outward * .043;
+    const palmZ = shaftZ + .015;
+    // A compact rounded glove wraps the shaft. A slim tapered sleeve starts
+    // under its cuff and exits the frame on its own side of the mallet.
+    const parts: THREE.BufferGeometry[] = [
+      cyl(.047, .064, .56, 8, SLEEVE,
+        [palmX + outward * .11, -.35, shaftZ + .08], [-.12, 0, outward * .34]),
+      padded(.08, .047, .09, .012, GLOVE_DARK,
+        [palmX + outward * .014, -.068, palmZ + .003]),
+      padded(.073, .104, .08, .016, GLOVE,
+        [palmX, 0, palmZ], [0, 0, -outward * .12]),
+      padded(.055, .057, .009, .004, GLOVE_PANEL,
+        [palmX, .004, palmZ + .045]),
+      padded(.035, .044, .043, .008, GLOVE_DARK,
+        [shaftX - outward * .008, -.045, shaftZ - .024]),
+    ];
+    for (const offset of [-.023, 0, .023]) {
+      parts.push(padded(.064, .017, .029, .006, GLOVE,
+        [shaftX + outward * .024, offset + .009, shaftZ + .052]));
+      parts.push(padded(.023, .017, .047, .006, GLOVE_DARK,
+        [shaftX - outward * .009, offset + .009, shaftZ + .019]));
+    }
+    const merged = mergeGeometries(parts, false);
     if (!merged) throw new Error(`mallet grip merge failed: ${side}`);
     merged.computeVertexNormals();
-    for (const part of fingerParts) part.dispose();
+    for (const part of parts) part.dispose();
     grip = merged;
   } else {
+    const geo = toolHand(side, new THREE.Vector3(), roll);
     geo.scale(1.10, 1.04, 1.04);
+    grip = geo;
   }
   grip.translate(x, y, z);
   grip.computeBoundingSphere();

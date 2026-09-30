@@ -50,6 +50,8 @@ export class UIManager implements System {
 
   constructor(private readonly mimicComparison: 'A' | 'B' | null = null) {}
 
+  get celebrating(): boolean { return this.celebrateTimer > 0; }
+
   private comparisonUrl(style: 'A' | 'B'): string {
     return `${window.location.pathname}?mimicCompare=${style}`;
   }
@@ -331,7 +333,7 @@ export class UIManager implements System {
     el.innerHTML = `${text}${sub ? `<small>${sub}</small>` : ''}`;
     this.els.toasts.appendChild(el);
     this.toastNodes.push({ el, until: performance.now() + ms });
-    while (this.toastNodes.length > 5) {
+    while (this.toastNodes.length > 2) {
       const old = this.toastNodes.shift()!;
       old.el.remove();
     }

@@ -87,19 +87,60 @@ test('mallet lead and support palms grip distinct shaft heights', async () => {
   vm.dispose(); material.dispose();
 });
 
+test('mallet gloves leave the shaft and world readable at the recorded ultrawide aspect', async () => {
+  await loadWorkerHands(url);
+  const material = new THREE.MeshStandardMaterial({ vertexColors: true });
+  const aspect = 3424 / 1268;
+  const camera = new THREE.PerspectiveCamera(52, aspect, .01, 6);
+  const halfWidth = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * aspect * VIEW_DEPTH;
+  const vm = buildViewModel('hand', material, 'voxel');
+  vm.root.position.x = VIEW_LATERAL * halfWidth;
+  vm.root.updateMatrixWorld(true);
+  const widths = {};
+  for (const side of ['leftGrip', 'rightGrip']) {
+    const mesh = vm.root.getObjectByName(`vm:hand:${side}`);
+    const positions = mesh.geometry.getAttribute('position');
+    const colors = mesh.geometry.getAttribute('color');
+    let minX = Infinity, maxX = -Infinity;
+    for (let i = 0; i < positions.count; i++) {
+      // Leather, including the palm and cuff. Fabric and steel are separate.
+      if (colors.getX(i) <= .1 || colors.getX(i) >= .5) continue;
+      const point = mesh.localToWorld(new THREE.Vector3(
+        positions.getX(i), positions.getY(i), positions.getZ(i))).project(camera);
+      minX = Math.min(minX, point.x); maxX = Math.max(maxX, point.x);
+    }
+    widths[side] = maxX - minX;
+  }
+  assert.ok(widths.leftGrip < .17 && widths.rightGrip < .17,
+    `gloves overwhelm the 3424x1268 view: NDC widths ${JSON.stringify(widths)}`);
+  vm.dispose(); material.dispose();
+});
+
 test('the two mallet grips read as separate hands at gameplay aspect ratios', async () => {
   await loadWorkerHands(url);
   const material = new THREE.MeshStandardMaterial({ vertexColors: true });
-  for (const aspect of [4 / 3, 16 / 9, 3440 / 1440, 32 / 9]) {
+  for (const aspect of [4 / 3, 16 / 9, 3440 / 1440, 3424 / 1268, 32 / 9]) {
     const camera = new THREE.PerspectiveCamera(52, aspect, .01, 6);
     const halfWidth = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * aspect * VIEW_DEPTH;
     const vm = buildViewModel('hand', material, 'voxel');
     vm.setFit(Math.min(1, aspect / (16 / 9)));
     vm.root.position.x = VIEW_LATERAL * halfWidth;
     vm.root.updateMatrixWorld(true);
-    const projectCentre = (name) => new THREE.Box3()
-      .setFromObject(vm.root.getObjectByName(name))
-      .getCenter(new THREE.Vector3()).project(camera);
+    const projectCentre = (name) => {
+      const mesh = vm.root.getObjectByName(name);
+      const positions = mesh.geometry.getAttribute('position');
+      const colors = mesh.geometry.getAttribute('color');
+      const centre = new THREE.Vector3();
+      let count = 0;
+      for (let i = 0; i < positions.count; i++) {
+        if (colors.getX(i) <= .1 || colors.getX(i) >= .5) continue;
+        centre.add(mesh.localToWorld(new THREE.Vector3(
+          positions.getX(i), positions.getY(i), positions.getZ(i))));
+        count++;
+      }
+      assert.ok(count > 0, 'the grip needs a visible glove');
+      return centre.divideScalar(count).project(camera);
+    };
     const lead = projectCentre('vm:hand:rightGrip');
     const support = projectCentre('vm:hand:leftGrip');
     assert.ok(support.y - lead.y > .10,

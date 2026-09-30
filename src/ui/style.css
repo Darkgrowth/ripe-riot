@@ -233,7 +233,8 @@ html, body {
 
 .toasts {
   position: absolute; left: calc(22 * var(--hud-u)); bottom: calc(170 * var(--hud-u)); display: flex;
-  flex-direction: column-reverse; gap: 8px; max-width: 380px;
+  flex-direction: column-reverse; gap: 8px;
+  width: min(380px, calc(100vw - 44 * var(--hud-u)));
 }
 .toast {
   background: rgba(12, 22, 32, 0.72); border-left: 4px solid var(--gold);

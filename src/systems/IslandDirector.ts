@@ -36,6 +36,7 @@ export class IslandDirector implements System {
   private cue = '';
   private tickCue = -1;
   private rustleTimer = 0;
+  private returning = false;
 
   init(g: Game): void {
     this.g = g; this.fruit = g.get('fruit'); this.world = g.get('world');
@@ -81,6 +82,14 @@ export class IslandDirector implements System {
 
   get authoritative(): boolean { return this.fruit.authoritative; }
   getPresentation(): IslandEventState { return this.state.event; }
+  private chapterState(): string {
+    return this.g.has('progress')
+      ? this.g.get<{ chapterState: string }>('progress').chapterState : 'active';
+  }
+  private finalBeat(): boolean {
+    const chapter = this.chapterState();
+    return chapter === 'return' || (chapter === 'settled' && this.returning);
+  }
   crew(): IslandCrew[] {
     if (this.g.has('net')) return this.g.get<{ activityCrew(): IslandCrew[] }>('net').activityCrew();
     return [{ position: this.g.player.position, busy: this.g.player.state !== 'active',
@@ -107,7 +116,7 @@ export class IslandDirector implements System {
 
   start(kind: IslandEventKind, force = false): boolean {
     if (!this.authoritative || !['windfall', 'coconuts', 'order'].includes(kind)
-      || this.state.event.phase !== 'idle' || this.protectedSequence()) return false;
+      || this.state.event.phase !== 'idle' || this.protectedSequence() || this.finalBeat()) return false;
     const crew = this.crew().filter(c => !c.busy);
     if (!crew.length) return false;
     if (kind === 'order' && !force && !this.state.firstSale) return false;
@@ -165,6 +174,15 @@ export class IslandDirector implements System {
   }
   fixedStep(dt: number): void {
     if (!this.authoritative) return;
+    const finalBeat = this.finalBeat();
+    this.returning = this.chapterState() === 'return';
+    if (finalBeat) {
+      if (this.state.event.phase !== 'idle') {
+        this.state.event = blank();
+        this.present();
+      }
+      return;
+    }
     const e = this.state.event;
     if (e.phase === 'idle') {
       this.state.cooldown = Math.max(0, this.state.cooldown - dt);
@@ -217,6 +235,7 @@ export class IslandDirector implements System {
   }
 
   frameUpdate(dt: number): void {
+    if (this.chapterState() === 'return') return;
     const e = this.state.event;
     if (e.phase === 'warning' || (e.phase === 'active' && e.kind !== 'order' && e.remaining > 12)) {
       for (const id of e.plants) {

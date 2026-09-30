@@ -1,5 +1,8 @@
 import * as THREE from 'three';
+import RAPIER from '@dimforge/rapier3d-compat';
 import type { Game, System } from '@/core/Game';
+import type { RBody } from '../physics/PhysicsWorld.ts';
+import { Groups } from '../physics/Layers.ts';
 import type { Sunpatch } from '@/world/Sunpatch';
 import { voxelKingVineArm, voxelKingVineBase, voxelKingVineConnector,
   voxelKingVineCore, voxelKingVineGuardLeaf, voxelKingVineSeed } from './VoxelKingVineGeometry.ts';
@@ -94,7 +97,10 @@ export class KingVine implements System {
   private lastApplied = -1;
   private g: Game | null = null;
   private root: THREE.Group | null = null;
+  private trunkBody: RBody | null = null;
+  private trunkColliderMode: 'standing' | 'subdued' | null = null;
   private arm: THREE.Group | null = null;
+  private armMaterial: THREE.MeshStandardMaterial | null = null;
   private warning: THREE.Mesh | null = null;
   private seedLane: THREE.Mesh | null = null;
   private core: THREE.Mesh | null = null;
@@ -125,6 +131,7 @@ export class KingVine implements System {
       this.center = [x, world.terrain.height(x, z), z];
     }
     this.buildVisuals();
+    this.syncTrunkCollider(this.subdued ? 'subdued' : 'standing');
     g.debug?.addProbe('kingVine', () => ({
       health: this.health, maxHealth: this.maxHealth, phase: this.phase,
       attack: this.attack, timeLeft: +this.timeLeft.toFixed(2),
@@ -333,6 +340,52 @@ export class KingVine implements System {
       }
     }
     this.root.scale.y = this.options.visualStyle === 'voxel' ? 1 : this.subdued ? 0.62 : 1;
+    // Keep the standing blocker only while the voxel body is visibly falling.
+    // The settled remnant is low; a permanent 3.2 m cylinder becomes an
+    // invisible wall after the crown has folded to the ground.
+    const settled = this.options.visualStyle !== 'voxel' || this.visualSubduedAge >= 0.72;
+    this.syncTrunkCollider(this.subdued && settled ? 'subdued' : 'standing');
+    if (this.options.visualStyle === 'voxel') this.updateArmCameraFade();
+  }
+
+  private syncTrunkCollider(mode: 'standing' | 'subdued'): void {
+    const physics = this.g?.physics;
+    if (!physics) return;
+    const height = mode === 'standing' ? 3.2
+      : this.options.visualStyle === 'voxel' ? 1.2 : 1.9;
+    const radius = mode === 'standing' ? 1.05 : 0.85;
+    const y = this.center[1] + height / 2;
+    const at = this.trunkBody?.translation();
+    if (this.trunkColliderMode === mode && at
+      && Math.abs(at.x - this.center[0]) < 0.001
+      && Math.abs(at.y - y) < 0.001
+      && Math.abs(at.z - this.center[2]) < 0.001) return;
+    if (this.trunkBody) physics.removeBody(this.trunkBody);
+    // This remains a movement/camera boundary, never an attack authority.
+    this.trunkBody = physics.createFixed(new THREE.Vector3(this.center[0], y, this.center[2]));
+    physics.attach(this.trunkBody,
+      RAPIER.ColliderDesc.cylinder(height / 2, radius).setFriction(0.85), Groups.plant);
+    this.trunkColliderMode = mode;
+  }
+
+  private updateArmCameraFade(): void {
+    if (!this.arm || !this.armMaterial) return;
+    const camera = this.g?.renderer.camera;
+    let opacity = 1;
+    if (camera && !this.subdued) {
+      // A sweep is allowed to cross the first-person view, but its visual mesh
+      // cannot become an opaque wall around the lens. Measure the actual
+      // camera-to-paddle distance rather than distance to the rooted boss.
+      this.arm.updateWorldMatrix(true, false);
+      const start = this.arm.localToWorld(new THREE.Vector3(0, 0, 0));
+      const span = this.arm.localToWorld(new THREE.Vector3(0, -0.28, 9.27)).sub(start);
+      const t = THREE.MathUtils.clamp(camera.position.clone().sub(start).dot(span) / span.lengthSq(), 0, 1);
+      const distance = camera.position.distanceTo(start.addScaledVector(span, t));
+      opacity = 0.24 + 0.76 * THREE.MathUtils.smoothstep(distance, 0.6, 1.9);
+    }
+    this.armMaterial.opacity = opacity;
+    this.armMaterial.transparent = opacity < 0.99;
+    this.armMaterial.depthWrite = opacity >= 0.99;
   }
 
   private updateVoxelPose(dt: number): void {
@@ -365,7 +418,11 @@ export class KingVine implements System {
         : this.phase === 'sweep' ? -0.75 + sweepProgress * 1.5
           : this.phase === 'telegraph' && this.attack === 'sweep' ? -0.75
             : 0);
-      this.arm.rotation.x = this.phase === 'telegraph' && this.attack === 'seed' ? -0.14
+      // The arm runs along local +Z. Rotating Z only rolls its wide paddle;
+      // pitch it down immediately on subdue, then let the falling body take
+      // over that angle during the short collapse animation.
+      this.arm.rotation.x = this.subdued ? 0.8 - fall * 0.72
+        : this.phase === 'telegraph' && this.attack === 'seed' ? -0.14
         : this.phase === 'seed' ? 0.22 : 0;
       this.arm.rotation.z = fall * -0.82 + hit * 0.12;
     }
@@ -382,6 +439,9 @@ export class KingVine implements System {
   }
 
   dispose(): void {
+    if (this.trunkBody) this.g?.physics.removeBody(this.trunkBody);
+    this.trunkBody = null;
+    this.trunkColliderMode = null;
     if (!this.root) return;
     this.root.parent?.remove(this.root);
     const geometries = new Set<THREE.BufferGeometry>();
@@ -393,6 +453,7 @@ export class KingVine implements System {
     });
     for (const geometry of geometries) geometry.dispose();
     for (const material of materials) material.dispose();
+    this.armMaterial = null;
     this.root = null;
   }
 
@@ -609,7 +670,8 @@ export class KingVine implements System {
     arm.position.y = 2.2;
     body.add(arm);
     this.arm = arm;
-    mesh(arm, voxelKingVineArm(), shell, 0, 0, 0);
+    this.armMaterial = shell.clone();
+    mesh(arm, voxelKingVineArm(), this.armMaterial, 0, 0, 0);
 
     const warningMat = new THREE.MeshBasicMaterial({
       color: new THREE.Color().setHex(0xff713e, THREE.SRGBColorSpace),

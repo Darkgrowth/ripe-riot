@@ -3,6 +3,9 @@ import type { Game, System } from '@/core/Game';
 import type { IslandDirector } from '@/systems/IslandDirector';
 import type { FruitSystem } from '@/fruit/FruitSystem';
 import type { Sunpatch } from '@/world/Sunpatch';
+import type { KingVine } from '@/boss/KingVine';
+import type { LegendaryHarvest } from '@/systems/LegendaryHarvest';
+import type { UIManager } from './UIManager';
 
 /** A compact objective and world-space warnings, never a screen-covering announcement. */
 export class IslandEventView implements System {
@@ -39,8 +42,22 @@ export class IslandEventView implements System {
   frameUpdate(dt: number): void {
     this.time += dt;
     const e = this.g.get<IslandDirector>('director').getPresentation();
-    const menu = this.g.get<{ open: boolean }>('shop').open || this.g.get<{ open: boolean }>('book').open;
-    this.hud.hidden = e.phase === 'idle' || menu;
+    const shellOpen = this.g.has('expeditionShell')
+      && this.g.get<{ open: boolean }>('expeditionShell').open;
+    const menu = this.g.get<{ open: boolean }>('shop').open
+      || this.g.get<{ open: boolean }>('book').open || shellOpen;
+    const chapter = this.g.has('progress')
+      ? this.g.get<{ chapterState: string }>('progress').chapterState : 'active';
+    const finalBeat = chapter === 'return' || (chapter === 'settled' && shellOpen);
+    const urgentOrder = e.kind === 'order' && e.phase === 'active' && e.remaining <= 10;
+    const boss = this.g.has('kingVine') ? this.g.get<KingVine>('kingVine') : null;
+    const nearBoss = boss && Math.hypot(this.g.player.position.x - boss.center[0],
+      this.g.player.position.z - boss.center[2]) < 38;
+    const harvest = this.g.has('legendary') ? this.g.get<LegendaryHarvest>('legendary') : null;
+    const kingVineFocus = nearBoss && ((boss.phase !== 'idle' && !boss.subdued) || (harvest !== null
+      && ['tether', 'detach', 'drop', 'recover'].includes(harvest.phase)));
+    this.hud.hidden = e.phase === 'idle' || menu || finalBeat
+      || (!urgentOrder && (kingVineFocus || this.g.get<UIManager>('ui').celebrating));
     this.hud.classList.toggle('urgent', e.kind === 'order' && e.phase === 'active' && e.remaining <= 10);
     this.title.textContent = e.kind === 'windfall' ? 'WINDFALL' : e.kind === 'coconuts' ? 'COCONUT FORECAST' : "MERV’S RUSH ORDER";
     this.timer.textContent = e.phase === 'result' ? '' : `${Math.ceil(e.remaining)}s`;
@@ -52,7 +69,8 @@ export class IslandEventView implements System {
       : e.kind === 'order' ? `Sell ${e.goal} ${fruit} · ${e.progress}/${e.goal} · +$${e.reward} bonus`
         : e.phase === 'warning' ? e.kind === 'windfall' ? 'Those trees are about to let go. Get underneath!'
           : 'Watch the marked palms. Catch them—or duck.' : `Gather the fall · ${e.progress}/${e.goal} collected`;
-    const show = e.phase === 'warning' || (e.phase === 'active' && e.kind !== 'order' && e.remaining > 12);
+    const show = !finalBeat && (e.phase === 'warning'
+      || (e.phase === 'active' && e.kind !== 'order' && e.remaining > 12));
     this.marks.visible = show;
     if (!show) return;
     if (this.key !== `${e.id}`) {

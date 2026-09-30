@@ -952,7 +952,7 @@ export class LegendaryHarvest implements System, PhysicsOwner {
   private celebrate(payout: number, _from: LegendaryPhase): void {
     this.g.bus.emit('legendary:complete', { id: 'kingMelon', payout });
     this.g.bus.emit('ui:celebrate', {
-      title: 'LEGENDARY COMPLETE', sub: `THE KING MELON — $${payout.toLocaleString('en-US')}`, kind: 'legendary',
+      title: 'KING MELON DELIVERED', sub: `EXTRACTION PAD — $${payout.toLocaleString('en-US')}`, kind: 'legendary',
     });
     this.g.bus.emit('audio:sfx', { name: 'discovery', volume: 1 });
     this.g.bus.emit('ui:toast', {

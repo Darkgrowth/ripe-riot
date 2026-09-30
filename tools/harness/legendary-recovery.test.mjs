@@ -34,6 +34,19 @@ test('extraction requires continuous settled contact rather than accumulated vis
   tick(9.5);assert.equal(harvest.phase,'complete');
 });
 
+test('the pad pays the legendary reward while its message leaves dock settlement ahead',()=>{
+  const {harvest,events,tick}=fixture();
+  const payments=[];
+  harvest.economy.add=(amount,reason)=>payments.push({amount,reason});
+  tick(1);tick(2.5);
+  assert.equal(harvest.phase,'complete');
+  assert.deepEqual(payments,[{amount:9500,reason:'legendary'}]);
+  assert.equal(events.filter(e=>e.name==='legendary:complete').length,1);
+  const title=events.find(e=>e.name==='ui:celebrate')?.payload.title ?? '';
+  assert.match(title,/melon/i);
+  assert.doesNotMatch(title,/complete|finished/i);
+});
+
 test('drop still settles outside the extraction area while payout uses its own dwell',()=>{
   const{harvest,body,tick}=fixture();
   harvest.phase='drop';harvest.dropStart=0;harvest.ropes={remove:()=>{}};

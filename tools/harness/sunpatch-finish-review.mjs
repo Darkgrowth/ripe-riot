@@ -7,7 +7,10 @@ import { withGame, ROOT } from './driver.mjs';
 const stage = process.argv[2] || 'candidate';
 const out = path.join(ROOT, 'docs/evidence/sunpatch-finish', stage);
 mkdirSync(out, { recursive: true });
-const manifest = { stage, viewport: [3440, 1440], mode: null, frames: [], errors: [] };
+const width = Number(process.env.RIPE_VIEW_WIDTH || 3440);
+const height = Number(process.env.RIPE_VIEW_HEIGHT || 1440);
+if (!(width > 0 && height > 0)) throw new Error('RIPE_VIEW_WIDTH/HEIGHT must be positive');
+const manifest = { stage, viewport: [width, height], mode: null, frames: [], errors: [] };
 await withGame(async g => {
   await g.pause(true);
   await g.call('encounters.suspend', true);
@@ -51,6 +54,6 @@ await withGame(async g => {
   await g.advance(40); await capture('12-basket-switch');
   await g.clearInput();
   manifest.errors = g.consoleErrors;
-}, { width: 3440, height: 1440, headless: true, quiet: true });
+}, { width, height, headless: true, quiet: true });
 writeFileSync(path.join(out, 'manifest.json'), JSON.stringify(manifest,null,2));
 console.log(JSON.stringify({out, frames:manifest.frames.length,errors:manifest.errors}));

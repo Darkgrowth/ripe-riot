@@ -100,3 +100,55 @@ test('voxel King Vine persists subdued and a client snapshot starts settled', ()
   boss.dispose();
   client.dispose();
 });
+
+test('subduing King Vine folds the long paddle below eye level on the first frame', () => {
+  const { game, scene } = fixture();
+  const boss = new KingVine({ center: [0, 0, 0], visualStyle: 'voxel' });
+  boss.init(game);
+  boss.frameUpdate(0.016);
+  const arm = scene.getObjectByName('King Vine sweeping arm');
+  boss.phase = 'subdued';
+  boss.health = 0;
+  boss.frameUpdate(0.016);
+  const paddleMid = arm.localToWorld(new THREE.Vector3(0, -0.12, 4.7));
+  assert.ok(paddleMid.y < 1.2,
+    `the 4.7 m paddle midpoint clears a standing eye immediately (y=${paddleMid.y})`);
+  boss.dispose();
+});
+
+test('only the nearby sweep paddle fades, and its own material is disposed', () => {
+  const { game, scene } = fixture();
+  const camera = new THREE.PerspectiveCamera();
+  game.renderer.camera = camera;
+  const boss = new KingVine({ center: [0, 0, 0], visualStyle: 'voxel' });
+  boss.init(game);
+  const root = scene.getObjectByName('King Vine');
+  const body = root.getObjectByName('King Vine rooted body');
+  const arm = root.getObjectByName('King Vine sweeping arm');
+  const bodyMaterial = body.children.find(child => child.isMesh).material;
+  const armMaterial = arm.children.find(child => child.isMesh).material;
+  assert.notEqual(armMaterial, bodyMaterial, 'the arm fade cannot dim the body or guard leaves');
+
+  boss.phase = 'telegraph';
+  boss.attack = 'sweep';
+  boss.heading = 0;
+  boss.timeLeft = 0.5;
+  camera.position.set(0, 2.1, 4.7);
+  boss.frameUpdate(0.016);
+  camera.position.copy(arm.localToWorld(new THREE.Vector3(0, -0.12, 4.7)));
+  boss.frameUpdate(0.016);
+  assert.ok(armMaterial.opacity >= 0.2 && armMaterial.opacity < 0.6,
+    'the paddle stays visible but cannot fill a nearby camera opaquely');
+  assert.equal(bodyMaterial.opacity, 1);
+  assert.equal(root.getObjectByName('King Vine sweep warning').visible, true);
+
+  camera.position.set(0, 2.1, 20);
+  boss.frameUpdate(0.016);
+  assert.equal(armMaterial.opacity, 1, 'normal-distance attack silhouette stays opaque');
+  const disposed = new Map([[armMaterial, 0], [bodyMaterial, 0]]);
+  for (const material of disposed.keys()) material.addEventListener('dispose', () => {
+    disposed.set(material, disposed.get(material) + 1);
+  });
+  boss.dispose();
+  assert.deepEqual([...disposed.values()], [1, 1]);
+});
