@@ -128,6 +128,14 @@ interface PendingMelee {
   rid: number | null;
 }
 
+interface PendingNetCatch {
+  catchId: number;
+  victimId: PeerId;
+  rescuerId: PeerId;
+  flingId: number;
+  expiresAt: number;
+}
+
 type MeleeResolution = { outcome: 'whoosh' | 'blocked' | 'protected' | 'hit';
   target?: 'mimic' | 'snapjaw' | 'spitter' | 'kingVine'; point?: THREE.Vector3;
   defeated?: boolean };
@@ -209,6 +217,7 @@ const MAX_RELEASE_OFFSET = 6;
 const MAX_BLAST_POWER = 1.6;
 /** A prediction the host never answers is given back after this long. */
 const PENDING_TIMEOUT = 4;
+const NET_CATCH_ACK_TIMEOUT = 1.2;
 /** Minimum gap between a client's requests for the full attached manifest. */
 const RESYNC_INTERVAL = 1.5;
 /** How many of the host's `gone` ids a client remembers, against a promotion. */
@@ -324,6 +333,10 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   private lastChaosLaunchByHost = new Map<PeerId, number>();
   private lastShakerAgitation = new Map<PeerId, number>();
   private readonly netCatchGuard = new NetCatchGuard();
+  private nextNetCatchId = 1;
+  private pendingNetCatches = new Map<PeerId, PendingNetCatch>();
+  private lastConfirmedNetCatchByHost = new Map<PeerId, number>();
+  private stoppedNetCatchByHost = new Map<PeerId, { catchId: number; flingId: number }>();
 
   init(g: Game): void {
     this.g = g;
@@ -538,6 +551,9 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     this.pendingSell.clear();
     this.lastChaosLaunchByHost.clear();
     this.netCatchGuard.clear();
+    this.pendingNetCatches.clear();
+    this.lastConfirmedNetCatchByHost.clear();
+    this.stoppedNetCatchByHost.clear();
     this.knownRemoteFruit.clear();
     this.nodeAck.clear();
     this.seenGone.clear();
@@ -614,6 +630,9 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     this.encounters?.clearBaitFlights();
     this.meleeGuard.clear();
     this.pendingMelee.clear();
+    this.pendingNetCatches.clear();
+    this.lastConfirmedNetCatchByHost.clear();
+    this.stoppedNetCatchByHost.clear();
     // The ledger belongs to whoever is host.
     this.authority.reset();
     if (this.isHost) { this.promote(); return; }
@@ -748,6 +767,9 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     this.meleeGuard.clearPeer(id);
     this.netCatchGuard.clearPeer(id);
     this.pendingMelee.delete(id);
+    for (const [victimId, pending] of this.pendingNetCatches)
+      if (pending.victimId === id || pending.rescuerId === id)
+        this.pendingNetCatches.delete(victimId);
     const r = this.remotes.get(id);
     if (r) {
       // Where they were standing, kept past the avatar. If we are promoted a
@@ -955,9 +977,38 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       }
       case 'netCaught': {
         if (this.isHost || m.from !== this.hostId) break;
+        const catchId = Number(m.catchId);
         const flingId = Number(m.flingId);
-        if (Number.isSafeInteger(flingId) && flingId > 0)
-          this.g.player.stopChaosFlight(flingId);
+        if (!Number.isSafeInteger(catchId) || catchId < 1
+          || !Number.isSafeInteger(flingId) || flingId < 1) break;
+        const previous = this.stoppedNetCatchByHost.get(m.from);
+        const stopped = previous?.catchId === catchId && previous.flingId === flingId
+          || this.g.player.stopChaosFlight(flingId);
+        if (stopped) this.stoppedNetCatchByHost.set(m.from, { catchId, flingId });
+        this.transport?.send({ t: 'netCatchAck', catchId, flingId, stopped }, m.from);
+        break;
+      }
+      case 'netCatchAck': {
+        if (!this.isHost) break;
+        const catchId = Number(m.catchId), flingId = Number(m.flingId);
+        const pending = this.pendingNetCatches.get(m.from!);
+        if (!pending || pending.victimId !== m.from
+          || pending.catchId !== catchId || pending.flingId !== flingId) break;
+        this.pendingNetCatches.delete(pending.victimId);
+        if (m.stopped !== true || this.g.clock.elapsed > pending.expiresAt) break;
+        this.encounters?.finishNetCatch(pending.victimId, pending.flingId);
+        this.confirmNetCatch(pending.rescuerId, pending.catchId, pending.flingId);
+        this.sendSnapshot();
+        break;
+      }
+      case 'netCatchConfirmed': {
+        if (this.isHost || m.from !== this.hostId) break;
+        const catchId = Number(m.catchId), flingId = Number(m.flingId);
+        if (!Number.isSafeInteger(catchId) || catchId < 1
+          || !Number.isSafeInteger(flingId) || flingId < 1
+          || catchId <= (this.lastConfirmedNetCatchByHost.get(m.from) ?? 0)) break;
+        this.lastConfirmedNetCatchByHost.set(m.from, catchId);
+        this.presentNetCatch();
         break;
       }
       case 'reviveAttempt':
@@ -1389,11 +1440,13 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     if (!this.isHost || !this.encounters || !request || request.victimId === from) return false;
     const encounter = this.encounters as EncounterSystem & {
       flyingVictim?: (victimId: string, flingId: number) => boolean;
-      tryNetCatch?: (victimId: string, flingId: number, rescuerId: string) => boolean;
+      canNetCatch?: (victimId: string, flingId: number, rescuerId: string) => boolean;
+      finishNetCatch?: (victimId: string, flingId: number) => boolean;
     };
     if (!Number.isSafeInteger(request.flingId) || request.flingId < 1
       || !Number.isSafeInteger(request.swingId) || request.swingId < 1
-      || !encounter.flyingVictim?.(request.victimId, request.flingId)) return false;
+      || !encounter.flyingVictim?.(request.victimId, request.flingId)
+      || this.pendingNetCatches.has(request.victimId)) return false;
 
     const actor = from === this.me ? null : this.remotes.get(from);
     const victim = request.victimId === this.me ? null : this.remotes.get(request.victimId);
@@ -1424,12 +1477,31 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       distance, QueryMask.solid, from === this.me ? this.g.player.body : undefined);
     if (obstruction && obstruction.distance < distance - .08) return false;
     if (!this.netCatchGuard.catch(from, request.swingId, this.g.clock.elapsed, true)) return false;
-    if (!encounter.tryNetCatch?.(request.victimId, request.flingId, from)) return false;
-    if (request.victimId === this.me) this.g.player.stopChaosFlight(request.flingId);
-    else this.transport?.send({ t: 'netCaught', flingId: request.flingId }, request.victimId);
-    if (from === this.me) this.presentNetCatch();
-    this.sendSnapshot();
+    if (!encounter.canNetCatch?.(request.victimId, request.flingId, from)) return false;
+    const catchId = this.nextNetCatchId++;
+    if (request.victimId === this.me) {
+      if (!this.g.player.stopChaosFlight(request.flingId)) return false;
+      encounter.finishNetCatch?.(request.victimId, request.flingId);
+      this.confirmNetCatch(from, catchId, request.flingId);
+      this.sendSnapshot();
+      return true;
+    }
+    this.pendingNetCatches.set(request.victimId, { catchId,
+      victimId: request.victimId, rescuerId: from, flingId: request.flingId,
+      expiresAt: this.g.clock.elapsed + NET_CATCH_ACK_TIMEOUT });
+    this.transport?.send({ t: 'netCaught', catchId, flingId: request.flingId }, request.victimId);
     return true;
+  }
+
+  private confirmNetCatch(rescuerId: PeerId, catchId: number, flingId: number): void {
+    if (rescuerId === this.me) this.presentNetCatch();
+    else this.transport?.send({ t: 'netCatchConfirmed', catchId, flingId }, rescuerId);
+  }
+
+  private expireNetCatchAcks(): void {
+    for (const [victimId, pending] of this.pendingNetCatches)
+      if (this.g.clock.elapsed > pending.expiresAt)
+        this.pendingNetCatches.delete(victimId);
   }
 
   private presentNetCatch(): void {
@@ -1904,7 +1976,8 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       return;
     }
     if (kind === 'netCatch') {
-      if (ok) this.presentNetCatch();
+      // Host acceptance is only a reservation. The success cue waits for the
+      // victim's numbered acknowledgement that their actual flight stopped.
       return;
     }
 
@@ -2347,6 +2420,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       this.kingVine?.setTargets(targets.filter(target => !target.protected));
     }
     if (this.isHost) this.advanceMelee(dt);
+    this.expireNetCatchAcks();
     this.expirePending();
     this.playerTimer += dt;
     if (this.playerTimer >= 1 / PLAYER_HZ) {

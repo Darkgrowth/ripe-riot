@@ -328,7 +328,7 @@ export class EncounterSystem implements System {
   }
 
   /** Swing, equipment, aim and line of sight are checked by the net guard. */
-  tryNetCatch(victimId: string, flingId: number, rescuerId: string): boolean {
+  canNetCatch(victimId: string, flingId: number, rescuerId: string): boolean {
     if (!this.authoritative || victimId === rescuerId
       || !this.model.isFlying(victimId, flingId)) return false;
     const rescuer = this.currentTargets.find(target => target.id === rescuerId);
@@ -336,7 +336,17 @@ export class EncounterSystem implements System {
     if (!rescuer || (victim && Math.hypot(
       rescuer.position[0] - victim.position[0],
       rescuer.position[2] - victim.position[2]) > 4.8)) return false;
-    return this.model.finishFlight(victimId, flingId);
+    return true;
+  }
+
+  /** Retire the marker only after the victim has actually stopped in flight. */
+  finishNetCatch(victimId: string, flingId: number): boolean {
+    return this.authoritative && this.model.finishFlight(victimId, flingId);
+  }
+
+  tryNetCatch(victimId: string, flingId: number, rescuerId: string): boolean {
+    return this.canNetCatch(victimId, flingId, rescuerId)
+      && this.finishNetCatch(victimId, flingId);
   }
 
   /** Client packet ordering: retire capture before PlayerController adds speed. */

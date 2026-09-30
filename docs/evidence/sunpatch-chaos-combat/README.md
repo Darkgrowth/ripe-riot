@@ -42,10 +42,13 @@ validation to the victim's stop packet, while normal-input co-op catch remains
 unverified. The net hoop now glows when a flying teammate approaches it. The
 host also requires the victim's current player packet to name that same live
 flight, preventing a catch confirmation after the victim reports landing.
+The host now reserves the flight until the victim acknowledges that its actual
+motion stopped. A failed or expired acknowledgement produces no success cue
+and leaves a still-live flight available for another swing.
 
 ## Verification at this checkpoint
 
-- `node --test` over all browser-free `*.test.mjs` files: 377 passed.
+- `node --test` over all browser-free `*.test.mjs` files: 384 passed.
 - `npm run build`: passed with the existing large-chunk warning.
 - `npm test`: 19/20 scenarios passed before the save assertion was corrected.
   The King Melon check compared the restored position against a point recorded
@@ -65,8 +68,9 @@ The [solo proof](../../../tools/harness/snapjaw-solo-proof.mjs) and
 [co-op proof](../../../tools/harness/snapjaw-coop-proof.mjs) scripts preserve
 those routes. Both require an explicit `--allow-browser-input` flag and an
 isolated `RIPE_URL` so they cannot be started accidentally during play.
-The co-op proof now records the catch request, host decision, current flight
-IDs, swing window and geometry if the timed interception misses again. Its
+The co-op proof now records the catch request, host decision, victim
+acknowledgement, current flight IDs, swing window and geometry if the timed
+interception misses again. Its
 updated diagnostics have passed syntax validation but have not been run while
 the user's play session is active.
 The [full ordinary-input route](../../../tools/harness/sunpatch-expedition-playthrough.mjs)

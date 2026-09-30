@@ -23,7 +23,8 @@ function fixture() {
     flingId: 2 });
   net.authority = { holdingFor: () => ({ carried: -1, bought: new Set(['net']) }) };
   net.encounters = { flyingVictim: (victim, flingId) => victim === 'victim' && flingId === 2,
-    tryNetCatch: (...args) => { caught.push(args); return true; } };
+    canNetCatch: (victim, flingId) => victim === 'victim' && flingId === 2,
+    finishNetCatch: (...args) => { caught.push(args); return true; } };
   net.sendSnapshot = () => {};
   return { net, sent, caught, cues };
 }
@@ -33,16 +34,162 @@ const catchIntent = { kind: 'netCatch', playerId: 'rescuer', rid: 2,
   catch: { victimId: 'victim', flingId: 2, swingId: 4,
     origin: [0, 1.7, 0], aim: [0, 0, 1] } };
 
-test('host confirms one equipped, aimed catch in the swing window and stops the victim', () => {
+test('host reserves one equipped, aimed catch and finishes it after victim acknowledgement', () => {
   const { net, sent, caught } = fixture();
   net.applyIntent(swing, 'rescuer');
   net.g.clock.elapsed = 10.13;
   net.applyIntent(catchIntent, 'rescuer');
   net.applyIntent({ ...catchIntent, rid: 3 }, 'rescuer');
-  assert.deepEqual(caught, [['victim', 2, 'rescuer']]);
+  assert.deepEqual(caught, []);
   assert.deepEqual(sent.filter(s => s.packet.t === 'netCaught').map(s => s.to), ['victim']);
-  assert.equal(sent.find(s => s.packet.t === 'netCaught').packet.flingId, 2);
+  const command = sent.find(s => s.packet.t === 'netCaught').packet;
+  assert.equal(command.flingId, 2);
+  assert.ok(Number.isSafeInteger(command.catchId) && command.catchId > 0);
   assert.equal(sent.find(s => s.packet.kind === 'netCatch' && s.packet.rid === 2).packet.ok, true);
+  net.onMessage({ t: 'netCatchAck', from: 'victim', catchId: command.catchId,
+    flingId: 2, stopped: true });
+  net.onMessage({ t: 'netCatchAck', from: 'victim', catchId: command.catchId,
+    flingId: 2, stopped: true });
+  assert.deepEqual(caught, [['victim', 2]]);
+});
+
+test('a host rescuer celebrates only after the victim confirms its flight actually stopped', () => {
+  for (const stopped of [false, true]) {
+    const { net, cues, sent, caught } = fixture();
+    net.remotes.get('rescuer').targetPos.set(10, 0, 0);
+    net.g.player.position.set(0, 0, 0);
+    net.tools = { activeId: 'net', owned: new Set(['net']) };
+    net.interaction = { carried: null };
+    assert.equal(net.beginNetSwing(4), true);
+    net.g.clock.elapsed = 10.13;
+    assert.equal(net.hostTryNetCatch('host', catchIntent.catch), true);
+    const catchId = sent.find(message => message.packet.t === 'netCaught').packet.catchId;
+    assert.deepEqual(caught, []);
+    assert.equal(cues.some(([name, cue]) => name === 'ui:toast'
+      && cue.text === 'Teammate caught!'), false);
+    net.onMessage({ t: 'netCatchAck', from: 'victim', catchId, flingId: 2, stopped });
+    assert.equal(cues.filter(([name, cue]) => name === 'ui:toast'
+      && cue.text === 'Teammate caught!').length, stopped ? 1 : 0);
+    assert.equal(caught.length, stopped ? 1 : 0);
+  }
+});
+
+test('a guest rescuer receives success only after the victim acknowledges its stop', () => {
+  const { net, sent } = fixture();
+  net.applyIntent(swing, 'rescuer');
+  net.g.clock.elapsed = 10.13;
+  net.applyIntent(catchIntent, 'rescuer');
+  const result = sent.find(message => message.packet.kind === 'netCatch')?.packet;
+  assert.equal(result?.ok, true);
+  const cues = [];
+  const rescuer = new MultiplayerAuthority();
+  rescuer.isHost = false; rescuer.hostId = 'host';
+  rescuer.transport = { id: 'rescuer' };
+  rescuer.g = { bus: { emit: (...args) => cues.push(args) } };
+  rescuer.onMessage({ ...result, from: 'host' });
+  assert.equal(cues.some(([name, cue]) => name === 'ui:toast'
+    && cue.text === 'Teammate caught!'), false);
+  const catchId = sent.find(message => message.packet.t === 'netCaught').packet.catchId;
+  net.onMessage({ t: 'netCatchAck', from: 'victim', catchId, flingId: 2, stopped: true });
+  const confirmation = sent.find(message => message.packet.t === 'netCatchConfirmed');
+  assert.equal(confirmation?.to, 'rescuer');
+  rescuer.onMessage({ ...confirmation.packet, from: 'host' });
+  rescuer.onMessage({ ...confirmation.packet, from: 'host' });
+  assert.equal(cues.filter(([name, cue]) => name === 'ui:toast'
+    && cue.text === 'Teammate caught!').length, 1);
+});
+
+test('a failed victim stop leaves the flight available for another swing', () => {
+  const { net, sent, caught } = fixture();
+  net.applyIntent(swing, 'rescuer');
+  net.g.clock.elapsed = 10.13;
+  net.applyIntent(catchIntent, 'rescuer');
+  const first = sent.find(message => message.packet.t === 'netCaught').packet;
+  net.onMessage({ t: 'netCatchAck', from: 'victim', catchId: first.catchId,
+    flingId: 2, stopped: false });
+  assert.deepEqual(caught, []);
+  net.g.clock.elapsed = 10.5;
+  net.applyIntent({ ...swing, rid: 3, swingId: 5 }, 'rescuer');
+  net.g.clock.elapsed = 10.63;
+  net.applyIntent({ ...catchIntent, rid: 4,
+    catch: { ...catchIntent.catch, swingId: 5 } }, 'rescuer');
+  const commands = sent.filter(message => message.packet.t === 'netCaught');
+  assert.equal(commands.length, 2);
+  assert.ok(commands[1].packet.catchId > first.catchId);
+});
+
+test('host ignores an acknowledgement from the wrong peer or for the wrong catch', () => {
+  const { net, sent, caught } = fixture();
+  net.applyIntent(swing, 'rescuer');
+  net.g.clock.elapsed = 10.13;
+  net.applyIntent(catchIntent, 'rescuer');
+  const catchId = sent.find(message => message.packet.t === 'netCaught').packet.catchId;
+  for (const packet of [
+    { from: 'rescuer', catchId, flingId: 2 },
+    { from: 'victim', catchId: catchId + 1, flingId: 2 },
+    { from: 'victim', catchId, flingId: 1 },
+  ]) net.onMessage({ t: 'netCatchAck', stopped: true, ...packet });
+  assert.deepEqual(caught, []);
+  net.onMessage({ t: 'netCatchAck', from: 'victim', catchId,
+    flingId: 2, stopped: true });
+  assert.deepEqual(caught, [['victim', 2]]);
+});
+
+test('an acknowledgement after timeout cannot claim success or prevent a retry', () => {
+  const { net, sent, caught, cues } = fixture();
+  net.applyIntent(swing, 'rescuer');
+  net.g.clock.elapsed = 10.13;
+  net.applyIntent(catchIntent, 'rescuer');
+  const first = sent.find(message => message.packet.t === 'netCaught').packet;
+  net.g.clock.elapsed = 11.5;
+  net.expireNetCatchAcks();
+  net.onMessage({ t: 'netCatchAck', from: 'victim', catchId: first.catchId,
+    flingId: 2, stopped: true });
+  assert.deepEqual(caught, []);
+  assert.equal(cues.some(([name, cue]) => name === 'ui:toast'
+    && cue.text === 'Teammate caught!'), false);
+  net.applyIntent({ ...swing, rid: 3, swingId: 5 }, 'rescuer');
+  net.g.clock.elapsed = 11.63;
+  net.applyIntent({ ...catchIntent, rid: 4,
+    catch: { ...catchIntent.catch, swingId: 5 } }, 'rescuer');
+  assert.equal(sent.filter(message => message.packet.t === 'netCaught').length, 2);
+});
+
+test('a host change discards an unacknowledged catch from the former authority', () => {
+  const { net, sent, caught } = fixture();
+  net.applyIntent(swing, 'rescuer');
+  net.g.clock.elapsed = 10.13;
+  net.applyIntent(catchIntent, 'rescuer');
+  const catchId = sent.find(message => message.packet.t === 'netCaught').packet.catchId;
+  assert.equal(net.pendingNetCatches.size, 1);
+  net.encounters.clearBaitFlights = () => {};
+  net.authority.reset = () => {};
+  net.hostId = 'new-host';
+  net.applyHost();
+  assert.equal(net.pendingNetCatches.size, 0);
+  net.onMessage({ t: 'netCatchAck', from: 'victim', catchId,
+    flingId: 2, stopped: true });
+  assert.deepEqual(caught, []);
+});
+
+test('a host victim confirms a guest rescue only if its own flight stops', () => {
+  for (const stopped of [false, true]) {
+    const { net, sent, caught } = fixture();
+    net.g.player.position.set(0, .8, 2.8);
+    net.g.player.catchableFlingId = 2;
+    net.g.player.stopChaosFlight = () => stopped;
+    net.encounters.flyingVictim = (victim, flingId) => victim === 'host' && flingId === 2;
+    net.encounters.canNetCatch = net.encounters.flyingVictim;
+    net.applyIntent(swing, 'rescuer');
+    net.g.clock.elapsed = 10.13;
+    net.applyIntent({ ...catchIntent,
+      catch: { ...catchIntent.catch, victimId: 'host' } }, 'rescuer');
+    assert.equal(sent.some(message => message.packet.t === 'netCaught'), false);
+    assert.equal(sent.filter(message => message.packet.t === 'netCatchConfirmed').length,
+      stopped ? 1 : 0);
+    assert.equal(caught.length, stopped ? 1 : 0);
+    assert.equal(sent.find(message => message.packet.kind === 'netCatch')?.packet.ok, stopped);
+  }
 });
 
 test('a real numbered encounter flight passes through host validation and stops the victim peer', () => {
@@ -64,17 +211,22 @@ test('a real numbered encounter flight passes through host validation and stops 
   net.g.clock.elapsed = 10.13;
   net.applyIntent({ ...catchIntent, catch: {
     ...catchIntent.catch, flingId: fling.flingId } }, 'rescuer');
-  assert.equal(model.isFlying('victim', fling.flingId), false);
+  assert.equal(model.isFlying('victim', fling.flingId), true);
   const confirmation = sent.find(message => message.to === 'victim'
     && message.packet.t === 'netCaught');
   assert.equal(confirmation?.packet.flingId, fling.flingId);
   const stopped = [];
   const guest = new MultiplayerAuthority();
-  guest.isHost = false; guest.hostId = 'host'; guest.transport = { id: 'victim' };
+  const acknowledgements = [];
+  guest.isHost = false; guest.hostId = 'host'; guest.transport = { id: 'victim',
+    send: (packet, to) => acknowledgements.push({ packet, to }) };
   guest.g = { player: { stopChaosFlight: id => { stopped.push(id); return true; } },
     bus: { emit() {} } };
   guest.onMessage({ ...confirmation.packet, from: 'host' });
   assert.deepEqual(stopped, [fling.flingId]);
+  assert.equal(acknowledgements[0]?.packet.stopped, true);
+  net.onMessage({ ...acknowledgements[0].packet, from: 'victim' });
+  assert.equal(model.isFlying('victim', fling.flingId), false);
 });
 
 test('host rejects stale flight, wrong swing, spoofed origin, distance, tool, and occlusion', () => {
@@ -123,14 +275,18 @@ test('host refuses a self catch, late swing, and an unowned net', () => {
 });
 
 test('only a current host confirmation damps the matching victim flight', () => {
-  const stops = [];
+  const stops = [], sent = [];
   const net = new MultiplayerAuthority();
-  net.isHost = false; net.hostId = 'host'; net.transport = { id: 'victim' };
+  net.isHost = false; net.hostId = 'host'; net.transport = { id: 'victim',
+    send: (packet, to) => sent.push({ packet, to }) };
   net.g = { player: { stopChaosFlight: id => { stops.push(id); return true; } },
     bus: { emit() {} } };
-  net.onMessage({ t: 'netCaught', from: 'old-host', flingId: 2 });
-  net.onMessage({ t: 'netCaught', from: 'host', flingId: 2 });
+  net.onMessage({ t: 'netCaught', from: 'old-host', catchId: 1, flingId: 2 });
+  net.onMessage({ t: 'netCaught', from: 'host', catchId: 1, flingId: 2 });
   assert.deepEqual(stops, [2]);
+  assert.deepEqual(sent, [{ packet: { t: 'netCatchAck', catchId: 1,
+    flingId: 2, stopped: true },
+    to: 'host' }]);
 });
 
 test('the replicated flight and avatar position expose a nearby catch candidate', () => {

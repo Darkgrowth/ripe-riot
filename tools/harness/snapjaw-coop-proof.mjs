@@ -46,6 +46,7 @@ const read = g => g.page.evaluate(() => {
       peer.targetPos.toArray()]),
     catchRequests: window.__coopProof?.requests ?? [],
     catchValidations: window.__coopProof?.validations ?? [],
+    catchAcks: window.__coopProof?.acks ?? [],
     toasts: window.__coopProof?.toasts ?? [],
     synthetic: game.input.synthetic !== null,
     pointerLocked: game.input.pointerLocked };
@@ -90,7 +91,9 @@ try {
   await host.page.evaluate(() => {
     const game = window.__GAME;
     const net = game.get('net');
-    const proof = window.__coopProof = { toasts: [], requests: [], validations: [] };
+    const proof = window.__coopProof = {
+      toasts: [], requests: [], validations: [], acks: [],
+    };
     game.bus.on('ui:toast', payload =>
       proof.toasts.push({ text: payload.text, at: game.clock.elapsed }));
     const requestCatch = net.requestNetCatch.bind(net);
@@ -115,6 +118,14 @@ try {
         victimPos: victimPos.toArray(), rescuerPos: rescuerPos.toArray(),
         swing: swing ? { ...swing } : null, ok });
       return ok;
+    };
+    const handleMessage = net.onMessage.bind(net);
+    net.onMessage = message => {
+      if (message.t === 'netCatchAck')
+        proof.acks.push({ at: game.clock.elapsed, from: message.from,
+          catchId: message.catchId, flingId: message.flingId,
+          stopped: message.stopped });
+      return handleMessage(message);
     };
   });
   const jaw = (await read(host)).jaw.position;
@@ -186,11 +197,13 @@ try {
     velocity: afterGuest.velocity });
   check(afterHost.catchRequests.length > 0,
     'net hoop nominated the flying teammate',
-    { requests: afterHost.catchRequests, validations: afterHost.catchValidations });
+    { requests: afterHost.catchRequests, validations: afterHost.catchValidations,
+      acknowledgements: afterHost.catchAcks });
   check(afterHost.toasts.some(toast => toast.text === 'Teammate caught!'),
     'host confirmed the timed Catch Net interception',
     { toasts: afterHost.toasts, caught: afterHost.netCaught,
       requests: afterHost.catchRequests, validations: afterHost.catchValidations,
+      acknowledgements: afterHost.catchAcks,
       victimVelocity: afterGuest.velocity });
 } catch (error) {
   failure = String(error.stack || error);
