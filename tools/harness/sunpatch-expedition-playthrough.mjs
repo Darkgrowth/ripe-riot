@@ -79,6 +79,18 @@ async function shot(name) {
   if (leanProof) return;
   await page.screenshot({ path: path.join(out, `${name}.png`), timeout: 20000 });
 }
+async function clickSelector(selector) {
+  const bounds = await page.evaluate((selector) => {
+    const button = document.querySelector(selector);
+    if (!(button instanceof HTMLElement)) throw new Error(`Missing ${selector}`);
+    const rect = button.getBoundingClientRect();
+    if (!rect.width || !rect.height || getComputedStyle(button).display === 'none')
+      throw new Error(`Invisible ${selector}`);
+    return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+  }, selector);
+  await page.mouse.click(bounds.x + bounds.width / 2,
+    bounds.y + bounds.height / 2);
+}
 async function read() {
   const s = await page.evaluate(() => {
     const g = window.__GAME, p = g.player, i = g.get('interaction');
@@ -694,14 +706,15 @@ async function returnAndSettle() {
   await page.setViewportSize({width:3440,height:1440});await sleep(250);
   await shot('20a-earned-results-native-ultrawide');
   const earnedMoney=s.money;
-  await page.locator('[data-expedition-action="continue-exploring"]').click();
+  await clickSelector('[data-expedition-action="continue-exploring"]');
   await sleep(300);await shot('20b-earned-dock-native-ultrawide');
   await page.setViewportSize({width,height});
   await sleep(1300);
   await page.reload({waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.__RIPE_READY||window.__RIPE_ERROR,null,{timeout:90000});
-  await page.locator('[data-expedition-action="continue"]').click();
-  await page.locator('.expedition-shell').waitFor({state:'hidden',timeout:5000});
+  await clickSelector('[data-expedition-action="continue"]');
+  await page.waitForFunction(() => document.querySelector('.expedition-shell')?.hidden,
+    null, { timeout: 5000 });
   await lock();
   s=await read();
   beats.reloadPreservedSettlement=s.chapter==='settled'&&s.legendary.phase==='complete'
@@ -721,7 +734,6 @@ try {
     null, { timeout: 90000 });
   const bootError = await page.evaluate(() => window.__RIPE_ERROR ?? null);
   if (bootError) throw new Error(`Boot failed: ${bootError}`);
-  const newExpedition = page.locator('[data-expedition-action="new-replay"]');
   log('title-state', await page.evaluate(() => {
     const shell = window.__GAME?.has('expeditionShell')
       ? window.__GAME.get('expeditionShell') : null;
@@ -734,21 +746,18 @@ try {
       rootDisplay: root ? getComputedStyle(root).display : null,
       clockPaused: window.__GAME?.clock.paused };
   }));
-  await newExpedition.waitFor({state:'visible',timeout:10000});
   beats.title = true; await shot('00-title');
   // The title button navigates to a new save slot. On software WebGL CI,
   // locator actionability and screenshot readback can monopolise the renderer.
   // A real mouse click on the already-visible button avoids that extra wait.
-  const titleButton = await newExpedition.boundingBox();
-  if (!titleButton) throw new Error('New expedition button has no visible bounds');
-  await page.mouse.click(titleButton.x + titleButton.width / 2,
-    titleButton.y + titleButton.height / 2);
+  await clickSelector('[data-expedition-action="new-replay"]');
   await page.waitForURL(url => new URL(url).searchParams.has('saveSlot'),
     { timeout: 90000 });
   await page.waitForFunction(() => window.__RIPE_READY || window.__RIPE_ERROR,
     null, { timeout: 90000 });
-  await page.locator('[data-expedition-action="continue"]').click();
-  await page.locator('.expedition-shell').waitFor({state:'hidden',timeout:5000});
+  await clickSelector('[data-expedition-action="continue"]');
+  await page.waitForFunction(() => document.querySelector('.expedition-shell')?.hidden,
+    null, { timeout: 5000 });
   await page.evaluate(() => {
     const g = window.__GAME;
     const observer = window.__expeditionLoop = { events: [] };

@@ -31,6 +31,7 @@ const read = g => g.page.evaluate(() => {
   const tool = game.get('tools').all.get('net');
   return { me: net.me, host: net.isHost,
     position: game.player.position.toArray(),
+    yaw: game.player.yaw, pitch: game.player.pitch,
     velocity: game.player.velocity.toArray(),
     playerState: game.player.state,
     health: game.get('vitals').health,
@@ -102,6 +103,7 @@ try {
         const target = eye.addScaledVector(aim, tool.catchDistance);
         proof.samples.push({ at: game.clock.elapsed,
           phaseT: tool.phaseT, hoop: tool.hoop.toArray(), target: target.toArray(),
+          yaw: game.player.yaw, pitch: game.player.pitch,
           victim: victim?.targetPos.toArray(), flingId: victim?.flingId,
           flightRemaining: flight?.remaining,
           distance: victim ? Math.hypot(victim.targetPos.x - target.x,
@@ -189,6 +191,11 @@ try {
     await sleep(20);
   }
   await host.page.mouse.down();
+  // Pointer-lock mouse-down can apply a virtual recenter movement on Linux,
+  // shifting the proof fixture's yaw and pitch before the active net slice.
+  // Restore the staged view after that real press; the net swing itself is
+  // still caused by the browser input and must pass host validation.
+  await host.look(Math.atan2(-(vx - hx), -(vz - hz)), 0);
   let startedSwing = true, sawFlight = false, firstFlight = null;
   const flightUntil = Date.now() + 60000;
   while (Date.now() < flightUntil) {
