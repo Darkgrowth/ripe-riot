@@ -19,19 +19,33 @@ These frames were captured before the later Snapjaw camera, throw-arc, held
 avatar, Catch Net, and HUD changes. They verify the orchard shift, not those
 later changes.
 
+## 1 October normal-input continuation
+
+On the frozen isolated build, the 1712 × 634 normal-input run passed Mimic,
+Snapjaw, Spitter, and King Vine. It cut all four vines with E, physically
+pushed King Melon down the ridge into the receiver, and awarded the $9,500
+extraction payout. The user reported Windows cursor interference during the
+return walk, so the local Playwright process was stopped before dock settlement
+and reload. The run has no final report and must not count as a complete loop.
+
+| Beat | Gameplay-camera capture |
+| --- | --- |
+| Snapjaw guarding the Puff Melon cache | [Hill encounter](2026-10-01-snapjaw-hill.png) |
+| King Vine subdued with ordinary mallet input | [Subdued boss](2026-10-01-king-vine-subdued.png) |
+| Physical King Melon extraction and payout | [Delivered melon](2026-10-01-king-melon-extracted.png) |
+
+The subdued-boss frame contains a black rectangular shape in the sky that
+deserves a later visual inspection. The extraction frame proves payout but
+not dock settlement or save/reload in this run.
+
 ## Snapjaw status and limits
 
-A separate normal-input solo run on an isolated static build proved a 38-damage
-bite, 2.4-second hold, one numbered fling, active recovery without a downed
-state, and no page errors. Gameplay-scale inspection found that the victim's
-view filled with teeth and the throw traveled only about 3 m. The camera now
-faces the aimed lane and the launch has a higher arc; these fixes have passed
-browser-free tests and build but have **not** received a new gameplay-camera
-capture because browser automation was stopped during the user's active play
-session.
-An actual Rapier player capsule on flat ground now reaches a 1.71 m apex and
-travels 5.79 m with the new launch. The authored hill-farm terrain and camera
-still need normal-play inspection.
+A fresh normal-input solo run on the frozen build proved a 38-damage bite,
+2.4-second hold, one numbered fling, active recovery without a downed state,
+and no page errors. The player traveled roughly 5.7 m on the hill terrain.
+The corrected victim camera faces the throw lane without filling the view with
+teeth. In still captures Snapjaw itself is hard to see during the hold; that
+readability remains a visual concern.
 
 A two-client run showed the host the held and flying teammate, but did **not**
 confirm a timed Catch Net interception. Its first report's generic
@@ -60,35 +74,36 @@ These changes have browser-free test and build proof only.
 
 - `node --test` over all browser-free `*.test.mjs` files: 393 passed.
 - `npm run build`: passed with the existing large-chunk warning.
-- `npm test`: 19/20 scenarios passed before the save assertion was corrected.
-  The King Melon check compared the restored position against a point recorded
-  four simulated seconds before saving, so normal pad settling counted as a
-  load error. It now compares against the position at save time; this corrected
-  browser scenario still needs a rerun after active play.
-- Browser input and pointer-lock checks are paused during active play under
-  [the project desktop rule](../../../AGENTS.md). An isolated port and
-  headless mode did not establish safe physical-cursor isolation here.
+- `npm test`: 20/20 browser scenarios passed on the isolated build before the
+  user reported cursor interference. Its last King Melon haul uses a placed
+  fruit fixture, so it is not full ordinary-input route proof.
+- Local browser input and pointer-lock checks are stopped during active play
+  under [the project desktop rule](../../../AGENTS.md). The user directly
+  confirmed that stopping local Playwright restored normal mouse behavior.
 - The host's purchase ledger still imports client-reported saved equipment
   during co-op handoff. The tool checks above are gameplay authority checks;
   they do not prove resistance to a locally modified client claiming a saved
   purchase. A host-authenticated purchase handoff remains separate work.
 
-Before calling the whole pass visually verified, capture the updated Snapjaw
-hold and throw at gameplay scale, demonstrate a host-confirmed two-client
-Catch Net catch, and complete the expedition through King Melon with normal
-input when the user's play session is over.
+Before calling the whole pass visually verified, demonstrate a host-confirmed
+two-client Catch Net catch and finish dock settlement and reload with normal
+input on an isolated remote runner. Review its gameplay-scale screenshots and
+video as well as its counters.
 
 The [solo proof](../../../tools/harness/snapjaw-solo-proof.mjs) and
 [co-op proof](../../../tools/harness/snapjaw-coop-proof.mjs) scripts preserve
 those routes. Both require an explicit `--allow-browser-input` flag and an
-isolated `RIPE_URL` so they cannot be started accidentally during play.
-The co-op proof now records the catch request, host decision, victim
-acknowledgement, current flight IDs, swing window and geometry if the timed
-interception misses again. Its
-updated diagnostics have passed syntax validation but have not been run while
-the user's play session is active.
-The [full ordinary-input route](../../../tools/harness/sunpatch-expedition-playthrough.mjs)
-also requires explicit browser-input opt-in. Its earlier chaos run lost the
-page's execution context while approaching King Vine; the report does not
-establish why it navigated. Run it against a frozen isolated build for the
-remaining finale evidence after active play ends.
+isolated `RIPE_URL`; neither flag makes local Windows browser input safe while
+the user is playing.
+The later two-client diagnostics found an actual hoop miss in the first setup.
+With the rescuer moved into the throw lane, the observed victim had already
+reported landing by the next swing, while the host's encounter flight window
+was still open. A live teammate catch remains **unverified**. The updated
+[co-op proof](../../../tools/harness/snapjaw-coop-proof.mjs) records flight IDs,
+hoop distance, catch requests, host decisions, and acknowledgements.
+
+The user confirmed that stopping local Playwright stopped its interference
+with the physical mouse. The new [remote gameplay workflow](../../../.github/workflows/sunpatch-gameplay-proof.yml)
+runs the same proof scripts on an isolated Linux runner and saves videos and
+reports as artifacts. Its first run is pending; remote screenshots and video
+need inspection before any visual completion claim.

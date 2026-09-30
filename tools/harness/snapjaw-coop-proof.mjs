@@ -40,6 +40,8 @@ const read = g => g.page.evaluate(() => {
     netMisses: tool?.misses ?? 0,
     netPhase: tool?.phase ?? null,
     netPhaseT: tool?.phaseT ?? 0,
+    netHoop: tool?.hoop?.toArray() ?? null,
+    samples: window.__coopProof?.samples ?? [],
     localFlingId: game.player.catchableFlingId,
     peerFlingIds: [...net.remotes.values()].map(peer => [peer.id, peer.flingId]),
     peerPositions: [...net.remotes.values()].map(peer => [peer.id,
@@ -55,13 +57,13 @@ const shot = async (g, name) => {
   await g.page.screenshot({ path: path.join(out, `${name}.png`) });
 };
 try {
-  // One full-size rendered rescuer is enough for gameplay-camera evidence.
-  // Rendering and recording two WebGL pages made screenshot readback stall the
-  // 1.8-second catch window by many seconds in the first attempt.
+  // Both peers must advance at comparable rates. A render-suppressed victim
+  // can finish the whole flight while the rendered host is still on its first
+  // swing, leaving a stale host encounter window and an already-landed peer.
   first = await openGame({ width: 1712, height: 634, headless: true,
     quiet: true, islandActivities: false, drawFrames: true,
     recordVideoDir: args.includes('--video') ? out : null });
-  second = await openSecondClient(first, { drawFrames: false });
+  second = await openSecondClient(first, { drawFrames: true });
   const room = `snapjaw-proof-${Math.floor(Math.random() * 1e9)}`;
   const idA = await first.call('net.connect', room, 0);
   const idB = await second.call('net.connect', room, 0);
@@ -69,13 +71,6 @@ try {
   const aHost = (await first.state()).net.isHost;
   host = aHost ? first : second;
   guest = aHost ? second : first;
-  if (host === second) await host.page.evaluate(() => {
-    if (window.__RIPE_HARNESS_DRAW)
-      window.__GAME.renderer.render = window.__RIPE_HARNESS_DRAW;
-  });
-  if (guest === first) await guest.page.evaluate(() => {
-    window.__GAME.renderer.render = () => {};
-  });
   const hostId = aHost ? idA : idB;
   const guestId = aHost ? idB : idA;
   check(!!hostId && !!guestId && hostId !== guestId,
@@ -92,7 +87,26 @@ try {
     const game = window.__GAME;
     const net = game.get('net');
     const proof = window.__coopProof = {
-      toasts: [], requests: [], validations: [], acks: [],
+      toasts: [], requests: [], validations: [], acks: [], samples: [],
+    };
+    const tool = game.get('tools').all.get('net');
+    const originalSweep = tool.sweep.bind(tool);
+    tool.sweep = () => {
+      const flight = game.get('encounters').snapshot().flights?.[0];
+      if (flight && proof.samples.length < 80) {
+        const victim = flight && net.remotes.get(flight.victimId);
+        const eye = game.player.eyePosition.clone();
+        const aim = game.player.lookDir(new game.player.position.constructor()).clone();
+        const target = eye.addScaledVector(aim, tool.catchDistance);
+        proof.samples.push({ at: game.clock.elapsed,
+          phaseT: tool.phaseT, hoop: tool.hoop.toArray(), target: target.toArray(),
+          victim: victim?.targetPos.toArray(), flingId: victim?.flingId,
+          flightRemaining: flight?.remaining,
+          distance: victim ? Math.hypot(victim.targetPos.x - target.x,
+            victim.targetPos.y + .9 - target.y,
+            victim.targetPos.z - target.z) : null });
+      }
+      return originalSweep();
     };
     game.bus.on('ui:toast', payload =>
       proof.toasts.push({ text: payload.text, at: game.clock.elapsed }));
@@ -129,8 +143,8 @@ try {
     };
   });
   const jaw = (await read(host)).jaw.position;
-  const hx = jaw[0] + 4.5, hz = jaw[2] + 3.5;
-  const vx = jaw[0] + 1.2, vz = jaw[2] + 1.2;
+  const hx = jaw[0] + 8, hz = jaw[2] + 7;
+  const vx = jaw[0] + 1.0, vz = jaw[2] + 1.0;
   const hy = await host.terrainHeight(hx, hz);
   const vy = await guest.terrainHeight(vx, vz);
   await host.tp(hx, hy + .15, hz);
@@ -142,7 +156,7 @@ try {
   await host.page.mouse.click(850, 315);
   await sleep(350);
   await shot(host, '01-host-setup');
-  const holdUntil = Date.now() + 12000;
+  const holdUntil = Date.now() + 30000;
   let held = null;
   while (Date.now() < holdUntil) {
     const s = await read(host);
@@ -158,7 +172,16 @@ try {
   // Face the expected flight from the actual rescuer view. This is fixture
   // positioning; the catch itself remains a normal mouse swing.
   await host.look(Math.atan2(-(vx - hx), -(vz - hz)), 0);
-  let startedSwing = false, sawFlight = false, firstFlight = null;
+  // Set the ordinary held input from the in-game countdown rather than a
+  // wall-clock delay; CI and desktop software WebGL advance at different rates.
+  const swingDeadline = Date.now() + 30000;
+  while (Date.now() < swingDeadline) {
+    const state = await read(host);
+    if (state.jaw.captureTimeLeft <= .52 || state.jaw.capturedVictimId !== guestId) break;
+    await sleep(20);
+  }
+  await host.page.mouse.down();
+  let startedSwing = true, sawFlight = false, firstFlight = null;
   const flightUntil = Date.now() + 60000;
   while (Date.now() < flightUntil) {
     const s = await read(host);
@@ -172,18 +195,12 @@ try {
         victim: s.peerPositions.find(([id]) => id === guestId)?.[1] ?? null,
         hostPeerFlingId: s.peerFlingIds.find(([id]) => id === guestId)?.[1] ?? 0 };
     }
-    if (flight && !startedSwing) {
-      startedSwing = true;
-      await host.page.mouse.down(); await sleep(80); await host.page.mouse.up();
+    if (flight && firstFlight && !timeline.some(row => row.kind === 'flight-visible'))
       log('flight-visible', firstFlight);
-      log('real-net-swing', { flightId: flight.flingId,
-        flightRemaining: flight.remaining, hostPeerFlingId:
-          s.peerFlingIds.find(([id]) => id === guestId)?.[1] ?? 0,
-        phaseBefore: s.netPhase, phaseTimeBefore: s.netPhaseT });
-    }
-    if (startedSwing && !s.flights.some(f => f.victimId === guestId)) break;
+    if (sawFlight && !s.flights.some(f => f.victimId === guestId)) break;
     await sleep(15);
   }
+  await host.page.mouse.up();
   await sleep(300);
   const afterHost = await read(host), afterGuest = await read(guest);
   log('after-catch-window', { host: afterHost, victim: afterGuest });

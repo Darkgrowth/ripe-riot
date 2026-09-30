@@ -42,7 +42,8 @@ const out = path.resolve(root, option('--out',
 mkdirSync(out, { recursive: true });
 
 const browser = await chromium.launch({ headless: true, args: ['--disable-dev-shm-usage',
-  '--mute-audio', '--use-gl=angle', '--use-angle=d3d11'] });
+  '--mute-audio', ...(process.platform === 'win32'
+    ? ['--use-gl=angle', '--use-angle=d3d11'] : [])] });
 const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1,
   ...(args.includes('--video') ? { recordVideo: { dir: out, size: { width, height } } } : {}) });
 const page = await context.newPage();
