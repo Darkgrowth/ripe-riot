@@ -314,6 +314,8 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   private baitCue = 0;
   private baitCueHost = '';
   private lastBaitCue = 0;
+  private nextChaosLaunchId = 1;
+  private lastChaosLaunchByHost = new Map<PeerId, number>();
 
   init(g: Game): void {
     this.g = g;
@@ -526,6 +528,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     this.pending.clear();
     this.pendingFruit.clear();
     this.pendingSell.clear();
+    this.lastChaosLaunchByHost.clear();
     this.knownRemoteFruit.clear();
     this.nodeAck.clear();
     this.seenGone.clear();
@@ -910,6 +913,22 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
           this.vitals?.damage(Number(m.amount ?? 0), String(m.source ?? 'harvest'));
         }
         break;
+      case 'chaosLaunch': {
+        if (this.isHost || m.from !== this.hostId) break;
+        const id = Number(m.impactId);
+        const velocity = m.velocity;
+        if (!Number.isSafeInteger(id) || id < 1
+          || (m.kind !== 'mimic-charge' && m.kind !== 'snapjaw-fling')
+          || !Array.isArray(velocity) || velocity.length !== 3
+          || !velocity.every(n => typeof n === 'number' && Number.isFinite(n))) break;
+        const speedSq = velocity.reduce((sum, n) => sum + n * n, 0);
+        if (speedSq < .01 || speedSq > 400
+          || id <= (this.lastChaosLaunchByHost.get(m.from) ?? 0)) break;
+        const applied = this.g.player.applyChaosLaunch(
+          new THREE.Vector3(velocity[0], velocity[1], velocity[2]), m.kind);
+        if (applied) this.lastChaosLaunchByHost.set(m.from, id);
+        break;
+      }
       case 'reviveAttempt':
         if (m.from === this.hostId) this.vitals?.setReviveAttempt(m.by ? String(m.by) : null);
         break;
@@ -1273,6 +1292,19 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   damagePeer(peer: PeerId, amount: number, source: string): void {
     if (!this.isHost || !this.transport || !this.peers.includes(peer)) return;
     this.transport.send({ t: 'harvestAttack', amount, source }, peer);
+  }
+
+  /** Host-authored one-shot movement for a remote victim. The sender identity
+   * is the epoch; each host's sequence stays monotonic through promotion. */
+  launchPeer(peer: PeerId, velocity: THREE.Vector3,
+    kind: 'mimic-charge' | 'snapjaw-fling'): boolean {
+    if (!this.isHost || !this.connected || !this.transport || !this.peers.includes(peer)
+      || !['mimic-charge', 'snapjaw-fling'].includes(kind)
+      || ![velocity.x, velocity.y, velocity.z].every(Number.isFinite)
+      || velocity.lengthSq() < .01 || velocity.lengthSq() > 400) return false;
+    this.transport.send({ t: 'chaosLaunch', impactId: this.nextChaosLaunchId++,
+      kind, velocity: velocity.toArray() }, peer);
+    return true;
   }
 
   // ---- LegendaryNet, for the King Melon -----------------------------------

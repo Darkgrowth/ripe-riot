@@ -1,4 +1,5 @@
 import type { HarvestSiteDefinition } from '@/enemies/HarvestSites';
+import { impulseForChaosImpact, type ChaosImpact } from '@/enemies/ChaosImpact';
 import * as THREE from 'three';
 import type { Game, System } from '@/core/Game';
 import { Fruit } from './Fruit';
@@ -222,6 +223,7 @@ export class FruitSystem implements System {
   freedByLog = new Set<number>();
   /** Rare-variant multiplier of the habitat each plant was planted in. */
   private rareByPlant = new Map<number, number>();
+  private appliedChaosImpacts = new Set<string>();
   activationRadius = 42;
   wind = new THREE.Vector3(0.6, 0, 0.35).normalize().multiplyScalar(2.2);
 
@@ -685,6 +687,31 @@ export class FruitSystem implements System {
   // ---- actions ------------------------------------------------------------
   /** True when this peer owns shared state. Always true in single player. */
   get authoritative(): boolean { return !this.net || this.net.authoritative; }
+
+  /** Apply one host-owned swept encounter impact, including stems that are too
+   * far from any player to have an active collider. */
+  applyChaosImpact(impact: ChaosImpact, allowedAttachedIds: ReadonlySet<number> = new Set()): number[] {
+    if (!this.authoritative || !impact.epoch || !Number.isSafeInteger(impact.id) || impact.id < 1) return [];
+    const key = `${impact.epoch}:${impact.id}`;
+    if (this.appliedChaosImpacts.has(key)) return [];
+    this.appliedChaosImpacts.add(key);
+    if (this.appliedChaosImpacts.size > 128) {
+      const oldest = this.appliedChaosImpacts.values().next().value;
+      if (oldest) this.appliedChaosImpacts.delete(oldest);
+    }
+
+    const affected: number[] = [];
+    for (const f of this.fruits.values()) {
+      if (f.state !== 'free' && !(f.state === 'attached' && allowedAttachedIds.has(f.id))) continue;
+      const velocity = impulseForChaosImpact(impact, [f.position.x, f.position.y, f.position.z]);
+      if (!velocity) continue;
+      if (f.state === 'attached') this.detachAuthoritative(f, 'chaos-impact', -1, undefined, true);
+      if (f.state !== 'free') continue;
+      f.applyImpulse(new THREE.Vector3(...velocity).multiplyScalar(f.mass));
+      affected.push(f.id);
+    }
+    return affected;
+  }
 
   /**
    * Break a stem.

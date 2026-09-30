@@ -321,6 +321,16 @@ export class PlayerController implements PhysicsOwner {
   }
 
   // ---- external forces ----------------------------------------------------
+  /** Apply one host-approved chaos launch. Packet replay protection lives in
+   * MultiplayerAuthority; this guard keeps malformed speeds out of physics. */
+  applyChaosLaunch(velocity: THREE.Vector3, source: 'mimic-charge' | 'snapjaw-fling'): boolean {
+    if (this.state !== 'active' || !['mimic-charge', 'snapjaw-fling'].includes(source)
+      || ![velocity.x, velocity.y, velocity.z].every(Number.isFinite)
+      || velocity.lengthSq() < 0.01 || velocity.lengthSq() > 400) return false;
+    this.addImpulseVelocity(velocity, false, source);
+    return true;
+  }
+
   /** Push the player around. `speed` is metres/second added to velocity. */
   addImpulseVelocity(v: THREE.Vector3, ragdollIfStrong = true, source = 'impulse'): void {
     this.velocity.add(v);
