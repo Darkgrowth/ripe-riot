@@ -52,3 +52,8 @@ Before calling the whole pass visually verified, capture the updated Snapjaw
 hold and throw at gameplay scale, demonstrate a host-confirmed two-client
 Catch Net catch, and complete the expedition through King Melon with normal
 input when the user's play session is over.
+
+The [solo proof](../../../tools/harness/snapjaw-solo-proof.mjs) and
+[co-op proof](../../../tools/harness/snapjaw-coop-proof.mjs) scripts preserve
+those routes. Both require an explicit `--allow-browser-input` flag and an
+isolated `RIPE_URL` so they cannot be started accidentally during play.
