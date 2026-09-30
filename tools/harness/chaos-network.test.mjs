@@ -38,9 +38,9 @@ test('a promoted host has a new launch epoch and old-host packets stay stale', (
   net.onMessage({ t: 'chaosLaunch', from: 'host-a', impactId: 12,
     kind: 'mimic-charge', velocity: [5, 1, 0] });
   net.onMessage({ t: 'chaosLaunch', from: 'host-b', impactId: 1,
-    kind: 'snapjaw-fling', velocity: [4, 2, 0] });
+    kind: 'mimic-charge', velocity: [4, 2, 0] });
   assert.equal(launches.length, 2);
-  assert.equal(launches[1].source, 'snapjaw-fling');
+  assert.equal(launches[1].source, 'mimic-charge');
 });
 
 test('invalid launch packets never add player velocity', () => {
@@ -77,4 +77,33 @@ test('player applies a launch without an immediate high-speed ragdoll', () => {
   assert.equal(calls.length, 1);
   assert.equal(calls[0][1], false);
   assert.equal(calls[0][2], 'mimic-charge');
+});
+
+test('a Snapjaw packet releases the local capture revision before adding velocity', () => {
+  const { net, launches } = guestFixture();
+  const order = [];
+  net.encounters = { releaseFromFling: (victim, flingId, revision) => {
+    order.push(['release', victim, flingId, revision]); return true;
+  } };
+  net.g.player.applyChaosLaunch = (velocity, source) => {
+    order.push(['launch', source]); launches.push({ velocity, source }); return true;
+  };
+  net.onMessage({ t: 'chaosLaunch', from: 'host-a', impactId: 4,
+    kind: 'snapjaw-fling', velocity: [8, 5, 0], flingId: 2, encounterRevision: 50 });
+  assert.deepEqual(order, [['release', 'guest', 2, 50], ['launch', 'snapjaw-fling']]);
+  net.onMessage({ t: 'chaosLaunch', from: 'host-a', impactId: 5,
+    kind: 'snapjaw-fling', velocity: [8, 5, 0] });
+  assert.equal(launches.length, 1, 'unsequenced old packets cannot revive a hold');
+});
+
+test('host Snapjaw launches carry the same fling identity and revision as the model', () => {
+  const sent = [];
+  const net = new MultiplayerAuthority();
+  net.isHost = true; net.connected = true; net.peers = ['victim'];
+  net.transport = { id: 'host', send: (packet, to) => sent.push({ packet, to }) };
+  assert.equal(net.launchPeer('victim', new THREE.Vector3(8, 5, 0), 'snapjaw-fling'), false);
+  assert.equal(net.launchPeer('victim', new THREE.Vector3(8, 5, 0), 'snapjaw-fling', 3, 81), true);
+  assert.equal(sent[0].to, 'victim');
+  assert.equal(sent[0].packet.flingId, 3);
+  assert.equal(sent[0].packet.encounterRevision, 81);
 });

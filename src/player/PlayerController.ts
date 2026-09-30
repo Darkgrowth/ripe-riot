@@ -61,6 +61,7 @@ export class PlayerController implements PhysicsOwner {
   pitch = 0;
   state: PlayerState = 'active';
   private catchableFling = false;
+  private activeFlingId = 0;
 
   grounded = false;
   groundNormal = new THREE.Vector3(0, 1, 0);
@@ -295,6 +296,7 @@ export class PlayerController implements PhysicsOwner {
 
   private onLand(): void {
     this.catchableFling = false;
+    this.activeFlingId = 0;
     this.jumpCut = false;
     const impact = -this.lastFallSpeed;
     this.lastFallSpeed = 0;
@@ -325,21 +327,25 @@ export class PlayerController implements PhysicsOwner {
   // ---- external forces ----------------------------------------------------
   /** Apply one host-approved chaos launch. Packet replay protection lives in
    * MultiplayerAuthority; this guard keeps malformed speeds out of physics. */
-  applyChaosLaunch(velocity: THREE.Vector3, source: 'mimic-charge' | 'snapjaw-fling'): boolean {
+  applyChaosLaunch(velocity: THREE.Vector3, source: 'mimic-charge' | 'snapjaw-fling',
+    flingId = 0): boolean {
     if ((this.state !== 'active' && !(this.state === 'captured' && source === 'snapjaw-fling'))
       || !['mimic-charge', 'snapjaw-fling'].includes(source)
       || ![velocity.x, velocity.y, velocity.z].every(Number.isFinite)
       || velocity.lengthSq() < 0.01 || velocity.lengthSq() > 400) return false;
     if (this.state === 'captured') this.state = 'active';
     this.catchableFling = source === 'snapjaw-fling';
+    this.activeFlingId = this.catchableFling ? flingId : 0;
     this.addImpulseVelocity(velocity, false, source);
     return true;
   }
 
   /** Host-confirmed Catch Net interception of a currently flying teammate. */
-  stopChaosFlight(): boolean {
-    if (this.state !== 'active' || !this.catchableFling) return false;
+  stopChaosFlight(flingId = 0): boolean {
+    if (this.state !== 'active' || !this.catchableFling
+      || (flingId > 0 && flingId !== this.activeFlingId)) return false;
     this.catchableFling = false;
+    this.activeFlingId = 0;
     this.velocity.x *= .12;
     this.velocity.z *= .12;
     this.velocity.y = Math.min(this.velocity.y, 1.2);
@@ -360,6 +366,7 @@ export class PlayerController implements PhysicsOwner {
 
   teleport(p: THREE.Vector3): void {
     this.catchableFling = false;
+    this.activeFlingId = 0;
     this.position.copy(p);
     this.velocity.set(0, 0, 0);
     this.body.setTranslation({ x: p.x, y: p.y, z: p.z }, true);

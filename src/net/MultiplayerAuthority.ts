@@ -930,9 +930,22 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
         const speedSq = velocity.reduce((sum, n) => sum + n * n, 0);
         if (speedSq < .01 || speedSq > 400
           || id <= (this.lastChaosLaunchByHost.get(m.from) ?? 0)) break;
-        const applied = this.g.player.applyChaosLaunch(
-          new THREE.Vector3(velocity[0], velocity[1], velocity[2]), m.kind);
-        if (applied) this.lastChaosLaunchByHost.set(m.from, id);
+        let flingId = 0;
+        if (m.kind === 'snapjaw-fling') {
+          flingId = Number(m.flingId);
+          const revision = Number(m.encounterRevision);
+          if (!Number.isSafeInteger(flingId) || flingId < 1
+            || !Number.isSafeInteger(revision) || revision < 0) break;
+          const release = this.encounters as (EncounterSystem & {
+            releaseFromFling?: (victimId: string, flingId: number, revision: number) => boolean;
+          }) | null;
+          if (!release?.releaseFromFling?.(this.me, flingId, revision)) break;
+        }
+        // A downed victim may reject the actual velocity, but this packet must
+        // still be consumed so it cannot launch them after a later revival.
+        this.lastChaosLaunchByHost.set(m.from, id);
+        this.g.player.applyChaosLaunch(
+          new THREE.Vector3(velocity[0], velocity[1], velocity[2]), m.kind, flingId);
         break;
       }
       case 'reviveAttempt':
@@ -1303,13 +1316,17 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   /** Host-authored one-shot movement for a remote victim. The sender identity
    * is the epoch; each host's sequence stays monotonic through promotion. */
   launchPeer(peer: PeerId, velocity: THREE.Vector3,
-    kind: 'mimic-charge' | 'snapjaw-fling'): boolean {
+    kind: 'mimic-charge' | 'snapjaw-fling',
+    flingId = 0, encounterRevision = -1): boolean {
     if (!this.isHost || !this.connected || !this.transport || !this.peers.includes(peer)
       || !['mimic-charge', 'snapjaw-fling'].includes(kind)
       || ![velocity.x, velocity.y, velocity.z].every(Number.isFinite)
-      || velocity.lengthSq() < .01 || velocity.lengthSq() > 400) return false;
+      || velocity.lengthSq() < .01 || velocity.lengthSq() > 400
+      || (kind === 'snapjaw-fling' && (!Number.isSafeInteger(flingId) || flingId < 1
+        || !Number.isSafeInteger(encounterRevision) || encounterRevision < 0))) return false;
     this.transport.send({ t: 'chaosLaunch', impactId: this.nextChaosLaunchId++,
-      kind, velocity: velocity.toArray() }, peer);
+      kind, velocity: velocity.toArray(),
+      ...(kind === 'snapjaw-fling' ? { flingId, encounterRevision } : {}) }, peer);
     return true;
   }
 
