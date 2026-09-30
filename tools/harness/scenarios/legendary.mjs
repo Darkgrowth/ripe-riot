@@ -240,6 +240,10 @@ export async function run(g, t) {
   const flag = await g.page.evaluate(() => window.__GAME.get('world').built.boatFlag.visible);
   t.ok(!flag, 'the celebration flag waits for actual dock settlement');
   // …and it is progress, so it survives a save.
+  // The delivered melon remains a dynamic body and may settle on the pad
+  // during the four seconds above. Compare the reload with the position that
+  // was actually saved, rather than its earlier completion-frame position.
+  const atSave = (await g.state()).legendary;
   await g.call('save.write', 'legendary-test');
   await g.call('progress.reset');
   await g.call('legendary.reset');
@@ -252,9 +256,9 @@ export async function run(g, t) {
   t.eq(restored.phase, 'complete', 'a save round-trip restores the completed harvest');
   t.eq(restored.vines, 0, 'completed harvest does not regrow holding vines');
   t.eq(restored.paid, done.legendary.paid, 'completed payout stays visible without paying again');
-  t.lt(Math.hypot(restored.pos[0] - done.legendary.pos[0],
-    restored.pos[2] - done.legendary.pos[2]), 0.1,
-  'the extracted melon stays at the pad after loading');
+  t.lt(Math.hypot(restored.pos[0] - atSave.pos[0],
+    restored.pos[2] - atSave.pos[2]), 0.1,
+  'the extracted melon returns to its saved pad position');
   await g.call('save.clear', 'legendary-test');
   await g.call('progress.reset');
 

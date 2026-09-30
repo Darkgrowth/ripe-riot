@@ -5,6 +5,8 @@ import { importBundled } from './import-bundled.mjs';
 
 const { MultiplayerAuthority } = await importBundled('src/net/MultiplayerAuthority.ts', 'snapjaw-net-catch');
 const { CatchNet } = await importBundled('src/tools/Tools.ts', 'snapjaw-net-tool');
+const { EncounterModel } = await importBundled('src/enemies/EncounterModel.ts', 'snapjaw-net-model');
+const { EncounterSystem } = await importBundled('src/enemies/EncounterSystem.ts', 'snapjaw-net-system');
 
 function fixture() {
   const sent = [], caught = [], cues = [];
@@ -40,6 +42,37 @@ test('host confirms one equipped, aimed catch in the swing window and stops the 
   assert.deepEqual(sent.filter(s => s.packet.t === 'netCaught').map(s => s.to), ['victim']);
   assert.equal(sent.find(s => s.packet.t === 'netCaught').packet.flingId, 2);
   assert.equal(sent.find(s => s.packet.kind === 'netCatch' && s.packet.rid === 2).packet.ok, true);
+});
+
+test('a real numbered encounter flight passes through host validation and stops the victim peer', () => {
+  const model = new EncounterModel([{ kind: 'snapjaw', position: [0, 0, 0] }], () => 0);
+  model.setTargets([{ id: 'victim', position: [0, 0, 1.6] }]);
+  let fling = null;
+  for (let i = 0; i < 100 && !fling; i++)
+    fling = model.step(.05).find(event => event.type === 'fling') ?? null;
+  assert.ok(fling, 'the actual jaw model must create the catchable flight');
+  const encounter = Object.create(EncounterSystem.prototype);
+  encounter.model = model;
+  encounter.currentTargets = [{ id: 'rescuer', position: [0, 0, 0] },
+    { id: 'victim', position: [0, .8, 2.8] }];
+  encounter.net = { authoritative: true };
+  const { net, sent } = fixture();
+  net.encounters = encounter;
+  net.applyIntent(swing, 'rescuer');
+  net.g.clock.elapsed = 10.13;
+  net.applyIntent({ ...catchIntent, catch: {
+    ...catchIntent.catch, flingId: fling.flingId } }, 'rescuer');
+  assert.equal(model.isFlying('victim', fling.flingId), false);
+  const confirmation = sent.find(message => message.to === 'victim'
+    && message.packet.t === 'netCaught');
+  assert.equal(confirmation?.packet.flingId, fling.flingId);
+  const stopped = [];
+  const guest = new MultiplayerAuthority();
+  guest.isHost = false; guest.hostId = 'host'; guest.transport = { id: 'victim' };
+  guest.g = { player: { stopChaosFlight: id => { stopped.push(id); return true; } },
+    bus: { emit() {} } };
+  guest.onMessage({ ...confirmation.packet, from: 'host' });
+  assert.deepEqual(stopped, [fling.flingId]);
 });
 
 test('host rejects stale flight, wrong swing, spoofed origin, distance, tool, and occlusion', () => {
@@ -95,6 +128,22 @@ test('the replicated flight and avatar position expose a nearby catch candidate'
     { id: 'victim', flingId: 2 });
   net.remotes.get('victim').state = 'captured';
   assert.equal(net.flyingPeerAtHoop(new THREE.Vector3(0, 1.7, 2.8), 1.1), null);
+});
+
+test('Catch Net hoop warns when a flying teammate approaches its catch lane', () => {
+  const { net } = fixture();
+  net.encounters.snapshot = () => ({ flights: [
+    { victimId: 'victim', flingId: 2, remaining: 1.2 }] });
+  const tool = new CatchNet();
+  tool.ctx = { game: { has: name => name === 'net', get: () => net },
+    fruit: { fruits: new Map() }, interaction: {} };
+  const hoop = new THREE.Vector3(0, 1.7, 2.8);
+  net.remotes.get('victim').targetPos.z = 1.3;
+  assert.equal(net.flyingPeerAtHoop(hoop, tool.catchRadius), null,
+    'the warning should appear before the victim reaches the catch volume');
+  assert.ok(tool.threat(hoop) > .5);
+  net.remotes.get('victim').state = 'captured';
+  assert.equal(tool.threat(hoop), 0);
 });
 
 test('one real swing requests a teammate catch when the aim hoop crosses their flight', () => {

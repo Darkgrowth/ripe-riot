@@ -488,7 +488,7 @@ export class CatchNet extends Tool {
     else if (this.phase !== 'ready') this.checkMiss();
   }
 
-  /** How close the nearest catchable fruit is to the hoop, as 0..1. */
+  /** How close a catchable fruit or flying teammate is to the hoop, as 0..1. */
   private seenSpeed(f: Fruit): number {
     // A client draws the host's free fruit without a body. Its replicated
     // velocity still drives the net's timing cue and catch window.
@@ -510,6 +510,12 @@ export class CatchNet extends Tool {
       const v = Math.pow(near, 1.5) * (0.35 + moving * 0.65);
       if (v > best) best = v;
     }
+    // Light the same readable swing cue for a teammate approaching the hoop.
+    // At roughly two metres this gives the rescuer time to commit a swing;
+    // host timing and geometry still decide whether it catches.
+    if (this.game.has('net') && this.game.get<{
+      flyingPeerAtHoop(hoop: THREE.Vector3, radius: number): unknown;
+    }>('net').flyingPeerAtHoop(hoop, this.catchRadius * 1.8)) best = Math.max(best, .8);
     return best;
   }
 

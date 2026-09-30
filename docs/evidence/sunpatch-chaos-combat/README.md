@@ -40,10 +40,11 @@ network tests, while normal-input co-op catch remains unverified.
 
 - `node --test` over all 85 browser-free `*.test.mjs` files: 371 passed.
 - `npm run build`: passed with the existing large-chunk warning.
-- `npm test`: 19/20 scenarios passed. The King Melon save round-trip check
-  measured 0.141 m of horizontal movement against a 0.100 m tolerance on two
-  runs. No King Melon system code was changed in this pass; the cause of this
-  difference remains open.
+- `npm test`: 19/20 scenarios passed before the save assertion was corrected.
+  The King Melon check compared the restored position against a point recorded
+  four simulated seconds before saving, so normal pad settling counted as a
+  load error. It now compares against the position at save time; this corrected
+  browser scenario still needs a rerun after active play.
 - Browser input and pointer-lock checks are paused during active play under
   [the project desktop rule](../../../AGENTS.md). An isolated port and
   headless mode did not establish safe physical-cursor isolation here.

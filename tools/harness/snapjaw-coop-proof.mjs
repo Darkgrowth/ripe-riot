@@ -46,9 +46,13 @@ const shot = async (g, name) => {
   await g.page.screenshot({ path: path.join(out, `${name}.png`) });
 };
 try {
+  // One full-size rendered rescuer is enough for gameplay-camera evidence.
+  // Rendering and recording two WebGL pages made screenshot readback stall the
+  // 1.8-second catch window by many seconds in the first attempt.
   first = await openGame({ width: 1712, height: 634, headless: true,
-    quiet: true, islandActivities: false, drawFrames: true, recordVideoDir: out });
-  second = await openSecondClient(first);
+    quiet: true, islandActivities: false, drawFrames: true,
+    recordVideoDir: args.includes('--video') ? out : null });
+  second = await openSecondClient(first, { drawFrames: false });
   const room = `snapjaw-proof-${Math.floor(Math.random() * 1e9)}`;
   const idA = await first.call('net.connect', room, 0);
   const idB = await second.call('net.connect', room, 0);
@@ -56,6 +60,13 @@ try {
   const aHost = (await first.state()).net.isHost;
   host = aHost ? first : second;
   guest = aHost ? second : first;
+  if (host === second) await host.page.evaluate(() => {
+    if (window.__RIPE_HARNESS_DRAW)
+      window.__GAME.renderer.render = window.__RIPE_HARNESS_DRAW;
+  });
+  if (guest === first) await guest.page.evaluate(() => {
+    window.__GAME.renderer.render = () => {};
+  });
   const hostId = aHost ? idA : idB;
   const guestId = aHost ? idB : idA;
   check(!!hostId && !!guestId && hostId !== guestId,
@@ -125,7 +136,6 @@ try {
   const afterHost = await read(host), afterGuest = await read(guest);
   log('after-catch-window', { host: afterHost, victim: afterGuest });
   await shot(host, '05-after-net-window');
-  await shot(guest, '06-victim-after-net-window');
   check(sawFlight, 'host observed a numbered teammate flight');
   check(startedSwing && afterHost.netSwings >= 2,
     'rescuer made a real timed Catch Net swing', { swings: afterHost.netSwings });
