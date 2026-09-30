@@ -43,7 +43,7 @@ const out = path.resolve(root, option('--out',
   `capture/sunpatch-expedition/normal-loop/${width}x${height}`));
 mkdirSync(out, { recursive: true });
 
-const browser = await chromium.launch({ headless: true, args: ['--disable-dev-shm-usage',
+const browser = await chromium.launch({ headless: !args.includes('--headed'), args: ['--disable-dev-shm-usage',
   '--mute-audio', ...(process.platform === 'win32'
     ? ['--use-gl=angle', '--use-angle=d3d11'] : [])] });
 const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1,
