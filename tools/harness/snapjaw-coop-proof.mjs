@@ -42,6 +42,8 @@ const read = g => g.page.evaluate(() => {
     netPhaseT: tool?.phaseT ?? 0,
     localFlingId: game.player.catchableFlingId,
     peerFlingIds: [...net.remotes.values()].map(peer => [peer.id, peer.flingId]),
+    peerPositions: [...net.remotes.values()].map(peer => [peer.id,
+      peer.targetPos.toArray()]),
     catchRequests: window.__coopProof?.requests ?? [],
     catchValidations: window.__coopProof?.validations ?? [],
     toasts: window.__coopProof?.toasts ?? [],
@@ -145,21 +147,24 @@ try {
   // Face the expected flight from the actual rescuer view. This is fixture
   // positioning; the catch itself remains a normal mouse swing.
   await host.look(Math.atan2(-(vx - hx), -(vz - hz)), 0);
-  let startedSwing = false, sawFlight = false;
+  let startedSwing = false, sawFlight = false, firstFlight = null;
   const flightUntil = Date.now() + 60000;
   while (Date.now() < flightUntil) {
     const s = await read(host);
     const flight = s.flights.find(f => f.victimId === guestId);
+    // Snapshot the host's last peer packet now. Reading the guest page before
+    // mouse-down can spend the entire short interception window on IPC.
     if (flight && !sawFlight) {
       sawFlight = true;
-      const victim = await read(guest);
-      log('flight-visible', { flight, rescuer: s.position,
-        victim: victim.position, victimFlingId: victim.localFlingId,
-        hostPeerFlingId: s.peerFlingIds.find(([id]) => id === guestId)?.[1] ?? 0 });
+      firstFlight = { observedAtWallSeconds: +((Date.now() - started) / 1000).toFixed(2),
+        flight, rescuer: s.position,
+        victim: s.peerPositions.find(([id]) => id === guestId)?.[1] ?? null,
+        hostPeerFlingId: s.peerFlingIds.find(([id]) => id === guestId)?.[1] ?? 0 };
     }
     if (flight && !startedSwing) {
       startedSwing = true;
       await host.page.mouse.down(); await sleep(80); await host.page.mouse.up();
+      log('flight-visible', firstFlight);
       log('real-net-swing', { flightId: flight.flingId,
         flightRemaining: flight.remaining, hostPeerFlingId:
           s.peerFlingIds.find(([id]) => id === guestId)?.[1] ?? 0,
