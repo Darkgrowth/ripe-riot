@@ -50,7 +50,7 @@ jobs:
           if [ '${{ matrix.proof }}' = expedition ]; then
             node tools/harness/sunpatch-expedition-playthrough.mjs \
               --allow-browser-input --width 1712 --height 634 --seconds 1800 \
-              --lean-proof --out capture/ci/expedition
+              --lean-proof --logic-only --out capture/ci/expedition
           else
             node tools/harness/snapjaw-coop-proof.mjs \
               --allow-browser-input --logic-only --no-setup-shot \

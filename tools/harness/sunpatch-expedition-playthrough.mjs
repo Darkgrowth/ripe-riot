@@ -30,6 +30,7 @@ const width = Number(option('--width', '1720'));
 const height = Number(option('--height', '720'));
 const maxSeconds = Number(option('--seconds', '1800'));
 const leanProof = args.includes('--lean-proof');
+const logicOnly = args.includes('--logic-only');
 const buyCannon = true;
 if (!Number.isInteger(width) || !Number.isInteger(height) || width < 320 || height < 180
   || !Number.isFinite(maxSeconds) || maxSeconds < 30 || maxSeconds > 3600)
@@ -90,6 +91,28 @@ async function clickSelector(selector) {
   }, selector);
   await page.mouse.click(bounds.x + bounds.width / 2,
     bounds.y + bounds.height / 2);
+}
+async function continueFromShell() {
+  const selector = '[data-expedition-action="continue"]';
+  await clickSelector(selector);
+  let state = await page.evaluate(() => ({
+    hidden: document.querySelector('.expedition-shell')?.hidden,
+    mode: window.__GAME?.get('expeditionShell').mode,
+    pointerLocked: document.pointerLockElement === document.getElementById('view'),
+  }));
+  log('continue-shell', state);
+  if (!state.hidden) {
+    // The title is setup for the route; Chromium software rendering can lose
+    // a mouse click during a navigation and GPU stall. Keep the gameplay
+    // route itself on trusted keyboard/mouse input.
+    await page.evaluate(() => document.querySelector('[data-expedition-action="continue"]')?.click());
+    state = await page.evaluate(() => ({
+      hidden: document.querySelector('.expedition-shell')?.hidden,
+      mode: window.__GAME?.get('expeditionShell').mode,
+    }));
+    log('continue-shell-fallback', state);
+  }
+  if (!state.hidden) throw new Error('The expedition title did not close');
 }
 async function read() {
   const s = await page.evaluate(() => {
@@ -712,9 +735,7 @@ async function returnAndSettle() {
   await sleep(1300);
   await page.reload({waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.__RIPE_READY||window.__RIPE_ERROR,null,{timeout:90000});
-  await clickSelector('[data-expedition-action="continue"]');
-  await page.waitForFunction(() => document.querySelector('.expedition-shell')?.hidden,
-    null, { timeout: 5000 });
+  await continueFromShell();
   await lock();
   s=await read();
   beats.reloadPreservedSettlement=s.chapter==='settled'&&s.legendary.phase==='complete'
@@ -755,9 +776,12 @@ try {
     { timeout: 90000 });
   await page.waitForFunction(() => window.__RIPE_READY || window.__RIPE_ERROR,
     null, { timeout: 90000 });
-  await clickSelector('[data-expedition-action="continue"]');
-  await page.waitForFunction(() => document.querySelector('.expedition-shell')?.hidden,
-    null, { timeout: 5000 });
+  await continueFromShell();
+  if (logicOnly) await page.evaluate(() => {
+    const renderer = window.__GAME.renderer;
+    window.__RIPE_HARNESS_DRAW = renderer.render.bind(renderer);
+    renderer.render = () => {};
+  });
   await page.evaluate(() => {
     const g = window.__GAME;
     const observer = window.__expeditionLoop = { events: [] };

@@ -553,7 +553,7 @@ export class CatchNet extends Tool {
     // A teammate's flight is visible in the same timed hoop as flying fruit.
     // The host decides whether this request really intercepted the current
     // fling; a local visual overlap only nominates the target once per swing.
-    if (this.phaseT >= .12 && this.phaseT <= .23 && this.game.has('net')) {
+    if (this.active && this.game.has('net')) {
       const net = this.game.get<{
         flyingPeerAtHoop(hoop: THREE.Vector3, radius: number): { id: string; flingId: number } | null;
         requestNetCatch(victimId: string, flingId: number, swingId: number,
