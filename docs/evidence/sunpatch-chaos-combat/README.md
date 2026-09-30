@@ -29,12 +29,17 @@ faces the aimed lane and the launch has a higher arc; these fixes have passed
 browser-free tests and build but have **not** received a new gameplay-camera
 capture because browser automation was stopped during the user's active play
 session.
+An actual Rapier player capsule on flat ground now reaches a 1.71 m apex and
+travels 5.79 m with the new launch. The authored hill-farm terrain and camera
+still need normal-play inspection.
 
 A two-client run showed the host the held and flying teammate, but did **not**
 confirm a timed Catch Net interception. Its first report's generic
 "flight ended" result was insufficient; the actual `Teammate caught!` host
 confirmation did not occur. The authoritative catch path passes focused
-network tests, while normal-input co-op catch remains unverified.
+network tests, including a real numbered encounter flight through host swing
+validation to the victim's stop packet, while normal-input co-op catch remains
+unverified. The net hoop now glows when a flying teammate approaches it.
 
 ## Verification at this checkpoint
 
