@@ -24,12 +24,26 @@ export interface EncounterState {
   captureTimeLeft: number;
   dormant?: boolean;
   returning?: boolean;
+  /** A mallet-controlled heading for the next warning only. */
+  pendingHeading?: number | null;
+  /** Start of a charge still in progress, needed after host promotion. */
+  chargeStart?: Point3 | null;
 }
 
 export interface EncounterNetState {
   revision: number;
   encounters: EncounterState[];
   projectiles: EncounterProjectile[];
+  nextMimicImpactId?: number;
+  mimicGrace?: Array<{ victimId: string; remaining: number }>;
+}
+
+export interface MimicImpact {
+  type: 'mimic-impact';
+  id: number;
+  from: Point3;
+  to: Point3;
+  treePlantId: number | null;
 }
 
 export interface EncounterProjectile {
@@ -47,6 +61,7 @@ export interface EncounterHit {
   attackerId?: string;
   releasedVictimId?: string;
   deflectedProjectileId?: number;
+  mimicImpact?: MimicImpact;
 }
 
 export interface EncounterMeleeResult {
@@ -77,7 +92,7 @@ export interface EncounterRelease {
 }
 
 export type EncounterEvent = EncounterDamage | EncounterCapture | EncounterRelease
-  | { type: 'reflected-hit'; hit: EncounterHit };
+  | MimicImpact | { type: 'reflected-hit'; hit: EncounterHit };
 
 interface InternalState extends EncounterState {
   aim: Point3;
@@ -88,7 +103,7 @@ interface InternalState extends EncounterState {
 
 const WARN = { mimic: 0.8, snapjaw: 0.72, spitter: 0.9 };
 const ATTACK = { mimic: 1.05, snapjaw: 0.32, spitter: 0.2 };
-const RECOVER = { mimic: 1.3, snapjaw: 1.6, spitter: 1.5 };
+const RECOVER = { mimic: 2.15, snapjaw: 1.6, spitter: 1.5 };
 const HEALTH = { mimic: 3, snapjaw: 2, spitter: 2 };
 const PROJECTILE_GRAVITY = 7.5;
 const MIMIC_RADIUS = 0.85;
@@ -96,10 +111,13 @@ const MIMIC_RADIUS = 0.85;
 // reaches its surface from here, so the counterattack window remains fair.
 const MIMIC_RECOVER_DISTANCE = 2.45;
 const MIMIC_STAGGER = 0.48;
+const MIMIC_TREE_STAGGER = 1.05;
+const MIMIC_HIT_GRACE = 5.2;
 
 /** A world collision query shared by charge, knockback and bite checks. */
 export type ProjectileBlocked = (from: Point3, to: Point3) => number | null;
-export type MimicBlocked = (from: Point3, to: Point3, radius: number) => boolean;
+export interface MimicCollision { point: Point3; treePlantId: number | null }
+export type MimicBlocked = (from: Point3, to: Point3, radius: number) => boolean | MimicCollision | null;
 
 const distanceXZ = (a: Point3, b: Point3): number => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const headingTo = (a: Point3, b: Point3): number => Math.atan2(b[0] - a[0], b[2] - a[2]);
@@ -114,6 +132,8 @@ export class EncounterModel {
   private lastStrikeAt = new Map<string, number>();
   private projectiles: EncounterProjectile[] = [];
   private nextProjectileId = 1;
+  private nextMimicImpactId = 1;
+  private mimicGrace = new Map<string, number>();
   private mimicBlocked: MimicBlocked | null;
   private projectileBlocked: ProjectileBlocked | null;
 
@@ -132,7 +152,8 @@ export class EncounterModel {
         capturedVictimId: null, captureTimeLeft: 0,
         dormant: !!spawn.dormant, returning: false, home: [...spawn.position],
         leashRadius: spawn.leashRadius ?? Infinity,
-        aim: [...spawn.position], alreadyHit: new Set(),
+        aim: [...spawn.position], alreadyHit: new Set(), pendingHeading: null,
+        chargeStart: null,
       });
     }
   }
@@ -163,7 +184,9 @@ export class EncounterModel {
       state.phase = 'defeated'; state.health = 0; state.timeLeft = 0;
       state.dormant = false; state.returning = false; state.baited = false;
       state.capturedVictimId = null; state.captureTimeLeft = 0;
+      state.pendingHeading = null; state.chargeStart = null;
       if (kind === 'spitter') this.projectiles = [];
+      if (kind === 'mimic') this.mimicGrace.clear();
     }
     this.revision++;
   }
@@ -178,6 +201,7 @@ export class EncounterModel {
       return !nearby;
     }
     state.returning = true; state.phase = 'idle'; state.timeLeft = 0;
+    state.pendingHeading = null; state.chargeStart = null;
     const heading = headingTo(state.position, state.home);
     const stride = Math.min(homeDistance, dt * 3.5);
     for (const offset of [0, .65, -.65, 1.2, -1.2]) {
@@ -208,6 +232,7 @@ export class EncounterModel {
       if (state.phase === 'idle') {
         const radius = state.kind === 'mimic' ? 13 : state.kind === 'spitter' ? 18 : 4.8;
         const nearest = this.targets.filter(t => distanceXZ(t.position, state.position) <= radius
+          && (state.kind !== 'mimic' || this.elapsed >= (this.mimicGrace.get(t.id) ?? 0))
           && (state.kind !== 'mimic' || distanceXZ(t.position, state.home) <= state.leashRadius)
           && (state.kind !== 'spitter' || (distanceXZ(t.position, state.position) >= 3.5
             && this.projectileBlocked?.([state.position[0], state.position[1] + 2.1, state.position[2]],
@@ -221,12 +246,19 @@ export class EncounterModel {
       state.timeLeft = Math.max(0, state.timeLeft - dt);
       if (state.phase === 'attack' && state.kind !== 'spitter') {
         if (state.kind === 'mimic') {
+          const from: Point3 = [...state.position];
           const next: Point3 = [state.position[0] + Math.sin(state.heading) * 10 * elapsed,
             state.position[1], state.position[2] + Math.cos(state.heading) * 10 * elapsed];
           if (this.groundHeight) next[1] = this.groundHeight(next[0], next[2]);
-          if (this.mimicBlocked?.(state.position, next, MIMIC_RADIUS)) {
-            state.phase = 'recover';
-            state.timeLeft = RECOVER.mimic;
+          const collision = this.mimicBlocked?.(from, next, MIMIC_RADIUS);
+          if (collision) {
+            const contact = typeof collision === 'object' && collision.point?.every(Number.isFinite)
+              ? collision.point : next;
+            const treePlantId = typeof collision === 'object' && Number.isSafeInteger(collision.treePlantId)
+              ? collision.treePlantId : null;
+            events.push(this.finishMimicCharge(state, contact, treePlantId));
+            state.phase = treePlantId !== null ? 'stagger' : 'recover';
+            state.timeLeft = treePlantId !== null ? MIMIC_TREE_STAGGER : RECOVER.mimic;
           } else state.position = next;
         }
         for (const target of this.targets) {
@@ -241,9 +273,11 @@ export class EncounterModel {
             if (Math.cos(toward - state.heading) < 0.45) continue;
           }
           state.alreadyHit.add(target.id);
+          if (state.kind === 'mimic') this.mimicGrace.set(target.id, this.elapsed + MIMIC_HIT_GRACE);
           events.push({ type: 'damage', kind: state.kind, victimId: target.id,
             amount: state.kind === 'mimic' ? 28 : 38 });
           if (state.kind === 'mimic') {
+            events.push(this.finishMimicCharge(state, state.position, null));
             // A lunge has one committed impact. Halt it at body contact rather
             // than letting the whole shell travel through the player's view.
             const ax = state.position[0] - target.position[0];
@@ -271,8 +305,11 @@ export class EncounterModel {
         state.phase = 'attack';
         state.timeLeft = ATTACK[state.kind];
         state.alreadyHit.clear();
+        if (state.kind === 'mimic') state.chargeStart = [...state.position];
         if (state.kind === 'spitter') this.launchProjectile(state);
       } else if (state.phase === 'attack') {
+        if (state.kind === 'mimic')
+          events.push(this.finishMimicCharge(state, state.position, null));
         state.phase = 'recover';
         state.timeLeft = RECOVER[state.kind];
       } else if (state.phase === 'stagger') {
@@ -406,6 +443,8 @@ export class EncounterModel {
       this.lastStrikeAt.set(strikeKey, this.elapsed);
     }
     const damage = strike === 'air' ? 2 : 1;
+    const mimicImpact = state.kind === 'mimic' && state.phase === 'attack'
+      ? this.finishMimicCharge(state, state.position, null) : undefined;
     state.health = Math.max(0, state.health - damage);
     let releasedVictimId: string | undefined;
     if (state.health === 0) {
@@ -418,6 +457,7 @@ export class EncounterModel {
         state.captureTimeLeft = 0;
       }
     } else if (state.kind === 'mimic') {
+      state.pendingHeading = headingTo(origin, state.position);
       const dx = state.position[0] - origin[0], dz = state.position[2] - origin[2];
       const len = Math.hypot(dx, dz) || 1;
       const next: Point3 = [state.position[0] + dx / len * 0.55, state.position[1],
@@ -432,7 +472,8 @@ export class EncounterModel {
     }
     this.revision++;
     return { kind: state.kind, damage, defeated: state.health === 0,
-      attackerId, ...(releasedVictimId !== undefined ? { releasedVictimId } : {}) };
+      attackerId, ...(releasedVictimId !== undefined ? { releasedVictimId } : {}),
+      ...(mimicImpact ? { mimicImpact } : {}) };
   }
 
   snapshot(): EncounterNetState {
@@ -443,10 +484,15 @@ export class EncounterModel {
         timeLeft: s.timeLeft, health: s.health, baited: s.baited,
         capturedVictimId: s.capturedVictimId, captureTimeLeft: s.captureTimeLeft,
         dormant: !!s.dormant, returning: !!s.returning,
+        pendingHeading: s.pendingHeading ?? null,
+        chargeStart: s.chargeStart ? [...s.chargeStart] : null,
       })),
       projectiles: this.projectiles.map(p => ({ id: p.id, position: [...p.position],
         velocity: [...p.velocity], timeLeft: p.timeLeft,
         ...(p.reflectedBy ? { reflectedBy: p.reflectedBy } : {}) })),
+      nextMimicImpactId: this.nextMimicImpactId,
+      mimicGrace: [...this.mimicGrace].filter(([, until]) => until > this.elapsed)
+        .map(([victimId, until]) => ({ victimId, remaining: until - this.elapsed })),
     };
   }
 
@@ -469,6 +515,10 @@ export class EncounterModel {
       state.capturedVictimId = typeof incoming.capturedVictimId === 'string'
         ? incoming.capturedVictimId : null;
       state.captureTimeLeft = Math.max(0, incoming.captureTimeLeft || 0);
+      state.pendingHeading = typeof incoming.pendingHeading === 'number'
+        && Number.isFinite(incoming.pendingHeading) ? incoming.pendingHeading : null;
+      state.chargeStart = incoming.chargeStart?.length === 3
+        && incoming.chargeStart.every(Number.isFinite) ? [...incoming.chargeStart] : null;
     }
     this.projectiles = Array.isArray(snapshot.projectiles)
       ? snapshot.projectiles.filter(p => Number.isFinite(p.id)
@@ -478,6 +528,15 @@ export class EncounterModel {
           timeLeft: p.timeLeft, ...(typeof p.reflectedBy === 'string' ? { reflectedBy: p.reflectedBy } : {}) }))
       : [];
     this.lastApplied = snapshot.revision;
+    this.nextMimicImpactId = Number.isSafeInteger(snapshot.nextMimicImpactId)
+      && snapshot.nextMimicImpactId! > 0 ? snapshot.nextMimicImpactId! : this.nextMimicImpactId;
+    this.mimicGrace.clear();
+    if (Array.isArray(snapshot.mimicGrace)) for (const entry of snapshot.mimicGrace) {
+      if (typeof entry?.victimId === 'string' && entry.victimId.length > 0
+        && entry.victimId.length <= 80 && Number.isFinite(entry.remaining)
+        && entry.remaining > 0 && this.mimicGrace.size < 8)
+        this.mimicGrace.set(entry.victimId, this.elapsed + Math.min(MIMIC_HIT_GRACE, entry.remaining));
+    }
     this.revision = snapshot.revision;
     return true;
   }
@@ -486,8 +545,18 @@ export class EncounterModel {
     state.phase = 'warn';
     state.timeLeft = WARN[state.kind];
     state.aim = [...aim];
-    state.heading = headingTo(state.position, aim);
+    state.heading = state.kind === 'mimic' && typeof state.pendingHeading === 'number'
+      && Number.isFinite(state.pendingHeading) ? state.pendingHeading : headingTo(state.position, aim);
+    if (state.kind === 'mimic') state.pendingHeading = null;
     state.baited = baited;
+  }
+
+  private finishMimicCharge(state: InternalState, to: Point3,
+    treePlantId: number | null): MimicImpact {
+    const from: Point3 = state.chargeStart ? [...state.chargeStart] : [...state.position];
+    state.chargeStart = null;
+    return { type: 'mimic-impact', id: this.nextMimicImpactId++, from,
+      to: [...to], treePlantId };
   }
 
   private launchProjectile(state: InternalState): void {

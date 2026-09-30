@@ -106,13 +106,13 @@ export class EncounterVisual {
         state.baited ? 0xffbe47 : 0xff4f28);
     }
     (this.danger.material as THREE.MeshBasicMaterial).opacity = this.kind === 'mimic'
-      ? warning ? 0.14 + 0.08 * pulse : attacking ? 0.12 : 0
+      ? warning ? 0.26 + 0.14 * pulse : attacking ? 0.18 : 0
       : warning ? 0.36 + 0.36 * pulse
         : attacking ? 0.32 : state.capturedVictimId !== null ? 0.28 + pulse * 0.22 : 0;
     this.danger.scale.setScalar(warning ? 0.87 + pulse * 0.15 : 1);
     if (this.lane) {
       (this.lane.material as THREE.MeshBasicMaterial).opacity = warning
-        ? this.kind === 'mimic' ? 0.07 + pulse * 0.04 : 0.14 + pulse * 0.17 : 0;
+        ? this.kind === 'mimic' ? 0.17 + pulse * 0.08 : 0.14 + pulse * 0.17 : 0;
     }
 
     if (this.kind === 'mimic') {

@@ -497,6 +497,22 @@ export class FruitSystem implements System {
         fruitIds: plant.nodes.filter(n => n.fruitId >= 0).map(n => n.fruitId),
         position: plant.position.toArray() as [number, number, number] });
     }
+    // Append the collateral fruit after every established authored identity.
+    // It can be picked normally, while the existing orchard site ledger tracks
+    // its detached/consumed state across old and new saves.
+    const puffX = -22.7, puffZ = 24.2;
+    const orchardPuff = this.plants.plant(this.g.newId(), 'puffBush',
+      new THREE.Vector3(puffX, this.world.terrain.height(puffX, puffZ), puffZ),
+      cropRng, { scale: 0.95 });
+    this.plants.updateNodes(orchardPuff, 0);
+    for (let i = 0; i < Math.min(2, orchardPuff.nodes.length); i++) {
+      orchardPuff.nodes[i].grip = 0.28;
+      this.growFruitAt(orchardPuff, i, 'puffmelon',
+        { id: this.g.newId(), variantId: null, sizeRoll: .5 });
+    }
+    this.oneTimePlants.add(orchardPuff.id);
+    this.harvestSites.find(site => site.id === 'orchard-mimic')?.fruitIds.push(
+      ...orchardPuff.nodes.filter(node => node.fruitId >= 0).map(node => node.fruitId));
   }
 
   private scatter(type: PlantType, center: THREE.Vector3, radius: number, count: number,

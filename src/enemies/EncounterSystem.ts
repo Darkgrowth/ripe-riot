@@ -3,12 +3,15 @@ import type { Game, System } from '@/core/Game';
 import type { Sunpatch } from '@/world/Sunpatch';
 import { EncounterModel, type EncounterHit, type EncounterKind,
   type EncounterMeleeResult, type EncounterNetState, type EncounterStrike, type EncounterTarget,
+  type MimicCollision, type MimicImpact,
   type Point3 } from './EncounterModel';
 import { EncounterProjectileVisual, EncounterVisual } from './EncounterVisuals';
 import { Layer, QueryMask, groups } from '@/physics/Layers';
 import type { FruitSystem } from '@/fruit/FruitSystem';
 import { ThrownFruitBait } from './ThrownFruitBait';
 import { HarvestSites, type HarvestSiteState } from './HarvestSites';
+import type { ChaosImpact } from './ChaosImpact';
+import type { IslandDirector } from '@/systems/IslandDirector';
 
 export type EncounterIntent =
   | { kind: 'hit'; origin: Point3; direction: Point3; strike: EncounterStrike; actorId: string }
@@ -18,7 +21,11 @@ export type EncounterIntent =
 
 export interface EncounterNet {
   readonly authoritative: boolean;
+  readonly connected?: boolean;
+  readonly me?: string;
   requestEncounter(intent: EncounterIntent): void;
+  launchPeer?(peer: string, velocity: THREE.Vector3,
+    kind: 'mimic-charge' | 'snapjaw-fling'): boolean;
 }
 
 const point = (v: THREE.Vector3): Point3 => [v.x, v.y, v.z];
@@ -45,6 +52,8 @@ export class EncounterSystem implements System {
   private baitCount = 0;
   private baitFocus: number | null = null;
   private sites!: HarvestSites;
+  private impactEpoch = '';
+  private siteActionCount = 0;
 
   constructor(private readonly comparisonStyle: 'polygon' | 'block' | null = null,
     private readonly detailedVoxelClearing = false) {}
@@ -113,6 +122,7 @@ export class EncounterSystem implements System {
     for (const event of this.model.step(dt)) {
       if (event.type === 'damage') {
         this.onPlayerDamaged?.(event.amount, event.kind, event.victimId);
+        if (event.kind === 'mimic') this.launchMimicVictim(event.victimId);
         this.emit('encounter:attack', {
           kind: event.kind, victimId: event.victimId, damage: event.amount,
         });
@@ -121,6 +131,8 @@ export class EncounterSystem implements System {
         this.emit('encounter:capture', { kind: 'snapjaw', victimId: event.victimId });
       } else if (event.type === 'reflected-hit') {
         this.publishHit(event.hit, event.hit.attackerId ?? 'solo');
+      } else if (event.type === 'mimic-impact') {
+        this.applyMimicImpact(event);
       } else {
         this.release(event.victimId, 'timeout');
       }
@@ -248,6 +260,7 @@ export class EncounterSystem implements System {
   }
 
   private publishHit(result: EncounterHit, attackerId: string): void {
+    if (result.mimicImpact) this.applyMimicImpact(result.mimicImpact);
     if (result?.releasedVictimId !== undefined) this.release(result.releasedVictimId, 'defeat');
     if (result?.defeated) {
       this.sites.clear(result.kind);
@@ -313,6 +326,9 @@ export class EncounterSystem implements System {
   harvestPrompt(fruitId: number): string | null {
     const site = this.sites.atFruit(fruitId);
     if (!site || site.kind !== 'mimic') return null;
+    // The nearby Puff Melon belongs to the save ledger, but picking it is not
+    // a deliberate action on the overloaded watermelon crop.
+    if (this.g.get<FruitSystem>('fruit').get(fruitId)?.attach?.plantId !== site.plantId) return null;
     return site.phase === 'quiet' ? 'Inspect the overloaded crop'
       : site.phase === 'warning' ? 'Harvest it anyway — something is stirring' : null;
   }
@@ -325,7 +341,15 @@ export class EncounterSystem implements System {
     if (cause === 'island-event' && (site.phase === 'quiet' || site.phase === 'warning')) return false;
     const action = this.sites.disturb(plantId, this.g.clock.elapsed);
     if (action.activate) this.model.activate('mimic');
-    if (action.changed) this.presentSite(site);
+    if (action.changed) {
+      this.presentSite(site);
+      if (this.g.has('director')) {
+        this.siteActionCount = (this.siteActionCount ?? 0) + 1;
+        const actionId = `site:${site.id}:${action.phase}:${this.model.snapshot().revision}:${this.siteActionCount}`;
+        this.g.get<IslandDirector>('director').acceptAgitation(actionId,
+          'site-disturbance', new THREE.Vector3(...site.position));
+      }
+    }
     return action.allow;
   }
 
@@ -412,6 +436,7 @@ export class EncounterSystem implements System {
 
   private resetModel(): void {
     this.clearBaitFlights();
+    this.impactEpoch = `mimic-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
     // Compact second route: orchard ambush, jaws on the hill approach, then
     // ranged pressure on the climb toward the King Melon.
     const mimic = this.world.groundAt(-23, 22, 0);
@@ -430,22 +455,75 @@ export class EncounterSystem implements System {
   }
 
   /** Sweep the root mass at rail and trunk height, excluding terrain and players. */
-  private mimicBlocked(from: Point3, to: Point3, radius: number): boolean {
+  private mimicBlocked(from: Point3, to: Point3, radius: number): MimicCollision | null {
     const dx = to[0] - from[0], dz = to[2] - from[2];
     const length = Math.hypot(dx, dz);
-    if (length < 1e-5) return false;
+    if (length < 1e-5) return null;
     const ux = dx / length, uz = dz / length;
     const dir = new THREE.Vector3(ux, 0, uz);
     // Orchard fences have two slender rails with an open gap at mid-height.
     // Sampling only the centre let the whole creature pass through both.
+    let nearest: { distance: number; collision: MimicCollision } | null = null;
     for (const height of [0.58, 1.02]) for (const side of [-0.72, 0, 0.72]) {
       const origin = new THREE.Vector3(from[0] - uz * radius * side,
         from[1] + height, from[2] + ux * radius * side);
       const hit = this.g.physics.raycast(origin, dir, length + radius,
         MIMIC_OBSTACLES);
-      if (hit && hit.distance <= length + radius) return true;
+      if (!hit || hit.distance > length + radius || (nearest && hit.distance >= nearest.distance)) continue;
+      const owner = hit.owner as ({ kind: string; id: number; type?: string }) | null;
+      const treePlantId = owner?.kind === 'plant'
+        && (owner.type === 'appleTree' || owner.type === 'orangeTree') ? owner.id : null;
+      nearest = { distance: hit.distance,
+        collision: { point: point(hit.point), treePlantId } };
     }
-    return false;
+    return nearest?.collision ?? null;
+  }
+
+  private applyMimicImpact(event: MimicImpact): void {
+    if (!this.authoritative || this.comparisonStyle) return;
+    const fruit = this.g.get<FruitSystem>('fruit');
+    const cropPlantId = this.sites.snapshot().find(site => site.id === 'orchard-mimic')?.plantId;
+    const allowedAttached = new Set<number>();
+    for (const f of fruit.fruits.values()) {
+      if (f.state === 'attached' && f.attach?.plantId !== cropPlantId)
+        allowedAttached.add(f.id);
+    }
+    const impact: ChaosImpact = { epoch: this.impactEpoch, id: event.id,
+      kind: 'mimic-charge', from: event.from, to: event.to,
+      radius: 1.2, horizontalSpeed: 8, lift: 2.2 };
+    const affected = fruit.applyChaosImpact(impact, allowedAttached);
+    if (event.treePlantId !== null) this.shakeMimicTree(event.treePlantId, event.id);
+    if (affected.length || event.treePlantId !== null) {
+      const at = new THREE.Vector3(...event.to);
+      this.g.bus.emit('audio:sfx', { name: 'thud', position: at, volume: .95 });
+      this.emit('encounter:impact', { kind: 'mimic', position: at,
+        fruitIds: affected, treePlantId: event.treePlantId });
+    }
+  }
+
+  private shakeMimicTree(plantId: number, impactId: number): void {
+    const fruit = this.g.get<FruitSystem>('fruit');
+    const tree = fruit.plants.get(plantId);
+    if (!tree || (tree.type !== 'appleTree' && tree.type !== 'orangeTree')) return;
+    fruit.plants.shakePlant(plantId, 1.5);
+    let dropped = 0;
+    for (const node of tree.nodes) {
+      if (dropped >= 3 || node.fruitId < 0) continue;
+      const f = fruit.get(node.fruitId);
+      if (!f || f.state !== 'attached' || (f.species !== 'apple' && f.species !== 'orange')) continue;
+      const direction = ((impactId + dropped) % 2 === 0 ? 1 : -1);
+      fruit.detachAuthoritative(f, 'mimic-tree', -1,
+        new THREE.Vector3(direction * (1.3 + dropped * .4), 1.7, 1.1), true);
+      dropped++;
+    }
+  }
+
+  private launchMimicVictim(victimId: string): void {
+    const heading = this.model.get('mimic').heading;
+    const velocity = new THREE.Vector3(Math.sin(heading) * 8, 2.4, Math.cos(heading) * 8);
+    if (!this.net?.connected || victimId === 'solo' || victimId === this.net.me)
+      this.g.player.applyChaosLaunch(velocity, 'mimic-charge');
+    else this.net.launchPeer?.(victimId, velocity, 'mimic-charge');
   }
 
   private info(): Record<string, unknown> {
