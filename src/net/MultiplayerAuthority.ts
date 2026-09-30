@@ -213,8 +213,9 @@ const PLAYER_HZ = 20;
 const MAX_RELEASE_SPEED = 45;
 /** How far from where they said they stand a client may claim to let go. */
 const MAX_RELEASE_OFFSET = 6;
-/** Hardest blast a client may ask for: a full-charge cannon is 1.0. */
-const MAX_BLAST_POWER = 1.6;
+/** The full-charge cannon's authored radial strength. */
+const MAX_BLAST_STRENGTH = 45;
+const REMOTE_BLAST_FOLLOWUP = .8;
 /** A prediction the host never answers is given back after this long. */
 const PENDING_TIMEOUT = 4;
 const NET_CATCH_ACK_TIMEOUT = 1.2;
@@ -227,6 +228,17 @@ const _v = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
 /** Stands in for a body's velocity on fruit that has no body. */
 const ZERO3 = { x: 0, y: 0, z: 0 };
+
+function matchesBlastRay(origin: number[], direction: number[], center: THREE.Vector3): boolean {
+  if (origin.length !== 3 || direction.length !== 3
+    || !origin.every(Number.isFinite) || !direction.every(Number.isFinite)) return false;
+  const length = Math.hypot(...direction);
+  if (length < .8 || length > 1.2) return false;
+  const dx = center.x - origin[0], dy = center.y - origin[1], dz = center.z - origin[2];
+  const along = (dx * direction[0] + dy * direction[1] + dz * direction[2]) / length;
+  const lateralSq = dx * dx + dy * dy + dz * dz - along * along;
+  return along >= -.5 && along <= 16 && lateralSq <= 4;
+}
 
 /**
  * Host-authoritative co-op.
@@ -332,6 +344,14 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   private nextChaosLaunchId = 1;
   private lastChaosLaunchByHost = new Map<PeerId, number>();
   private lastShakerAgitation = new Map<PeerId, number>();
+  private remoteShakerAction = new Map<PeerId, {
+    time: number; mode: 'single' | 'area'; plants: Set<number>;
+  }>();
+  private lastRemoteBlast = new Map<PeerId, {
+    rid: number; time: number; at: THREE.Vector3; radius: number;
+    recharge: number; chargePower: number; shakenPlants: Set<number>;
+    encounterUsed: boolean; vineUsed: boolean;
+  }>();
   private readonly netCatchGuard = new NetCatchGuard();
   private nextNetCatchId = 1;
   private pendingNetCatches = new Map<PeerId, PendingNetCatch>();
@@ -550,6 +570,9 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     this.pendingFruit.clear();
     this.pendingSell.clear();
     this.lastChaosLaunchByHost.clear();
+    this.lastShakerAgitation.clear();
+    this.remoteShakerAction.clear();
+    this.lastRemoteBlast.clear();
     this.netCatchGuard.clear();
     this.pendingNetCatches.clear();
     this.lastConfirmedNetCatchByHost.clear();
@@ -630,6 +653,9 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     this.encounters?.clearBaitFlights();
     this.meleeGuard.clear();
     this.pendingMelee.clear();
+    this.lastShakerAgitation.clear();
+    this.remoteShakerAction.clear();
+    this.lastRemoteBlast.clear();
     this.pendingNetCatches.clear();
     this.lastConfirmedNetCatchByHost.clear();
     this.stoppedNetCatchByHost.clear();
@@ -767,6 +793,9 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     this.meleeGuard.clearPeer(id);
     this.netCatchGuard.clearPeer(id);
     this.pendingMelee.delete(id);
+    this.lastShakerAgitation.delete(id);
+    this.remoteShakerAction.delete(id);
+    this.lastRemoteBlast.delete(id);
     for (const [victimId, pending] of this.pendingNetCatches)
       if (pending.victimId === id || pending.rescuerId === id)
         this.pendingNetCatches.delete(victimId);
@@ -1792,16 +1821,46 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       case 'shake': {
         const plantId = intent.plantId ?? -1;
         const strength = intent.strength ?? 1.6;
-        this.authority.shake(from, plantId, strength);
         const remote = this.remotes.get(from);
         const plant = this.fruitSys.plants.get(plantId);
         const holding = this.authority.holdingFor(from);
+        const active = !!remote?.hasPlayerPacket && remote.state === 'active'
+          && !remote.busy && !remote.carrying && holding.carried < 0;
+        const shaker = active && remote.toolId === 'shaker'
+          && holding.bought.has('shaker') && !!plant
+          && holding.pos.distanceTo(plant.position) <= 9.5
+          && Number.isFinite(strength) && strength > 0 && strength <= 1.75;
+        const blast = this.lastRemoteBlast.get(from);
+        const blastDistance = plant && blast ? plant.position.distanceTo(blast.at) : Infinity;
+        const cannon = active && remote.toolId === 'aircannon'
+          && holding.bought.has('aircannon') && !!plant && !!blast
+          && this.g.clock.elapsed - blast.time <= REMOTE_BLAST_FOLLOWUP
+          && blast.chargePower > 0 && !blast.shakenPlants.has(plantId)
+          && blastDistance <= blast.radius + 2.5
+          && Number.isFinite(strength) && strength > 0
+          && strength <= 2.1 * blast.chargePower
+            * (1 - blastDistance / (blast.radius + 3)) + .03;
+        if (!shaker && !cannon) { deny = 'needs-tool'; break; }
+        if (shaker) {
+          const mode = strength > 1.4 ? 'single' : 'area';
+          const prior = this.remoteShakerAction.get(from);
+          const elapsed = this.g.clock.elapsed - (prior?.time ?? -Infinity);
+          if (prior?.mode === 'area' && mode === 'area' && elapsed <= .8) {
+            if (prior.plants.has(plantId)) { deny = 'wrong-phase'; break; }
+            prior.plants.add(plantId);
+          } else {
+            if (prior && elapsed + 1e-6 < (prior.mode === 'single' ? .85 : 2.4)) {
+              deny = 'wrong-phase'; break;
+            }
+            this.remoteShakerAction.set(from, { time: this.g.clock.elapsed,
+              mode, plants: new Set([plantId]) });
+          }
+        }
+        if (cannon) blast!.shakenPlants.add(plantId);
+        this.authority.shake(from, plantId, strength);
         const last = this.lastShakerAgitation.get(from) ?? -Infinity;
         const recovery = strength > 1.5 ? 0.8 : 2.3;
-        if (remote?.state === 'active' && remote.toolId === 'shaker'
-          && holding.bought.has('shaker') && holding.carried < 0
-          && plant && holding.pos.distanceTo(plant.position) <= 9.5
-          && Number.isFinite(strength) && strength > 0 && strength <= 1.75
+        if (shaker && plant
           && Number.isSafeInteger(rid) && rid >= 0
           && this.g.clock.elapsed - last >= recovery && this.g.has('director')) {
           this.lastShakerAgitation.set(from, this.g.clock.elapsed);
@@ -1826,17 +1885,40 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       case 'blast': {
         if (!intent.at) break;
         const [x, y, z] = intent.at;
-        // A cannon reaches 13 m; anything further is not a shot from here.
-        if (!near(x, y, z, 20)) { deny = 'out-of-reach'; break; }
-        this.g.physics.explode(new THREE.Vector3(x, y, z),
-          clamp01(intent.radius ?? 4, 8), clamp01(intent.power ?? 1, 22 * MAX_BLAST_POWER),
-          clamp01(intent.upBias ?? 0.3, 1));
+        const remote = this.remotes.get(from);
+        const holding = this.authority.holdingFor(from);
+        if (!remote?.hasPlayerPacket || remote.state !== 'active' || remote.busy
+          || remote.carrying || remote.toolId !== 'aircannon'
+          || !holding.bought.has('aircannon') || holding.carried >= 0) {
+          deny = 'needs-tool'; break;
+        }
+        const previous = this.lastRemoteBlast.get(from);
+        if (!Number.isSafeInteger(rid) || rid < 0 || (previous && rid <= previous.rid)) {
+          deny = 'wrong-phase'; break;
+        }
+        if (![x, y, z, intent.radius, intent.power, intent.upBias].every(Number.isFinite)
+          || !(intent.radius! > 0 && intent.radius! <= 5)
+          || !(intent.power! > 0 && intent.power! <= MAX_BLAST_STRENGTH)
+          || !(intent.upBias! >= 0 && intent.upBias! <= 1)
+          || !near(x, y, z, 17)) { deny = 'out-of-reach'; break; }
+        const secondary = Math.abs(intent.power! - 5.5) <= .02;
+        const chargePower = secondary ? 0 : intent.power! / MAX_BLAST_STRENGTH;
+        const required = secondary ? .55 : .3;
+        const recharge = Math.min(1, (previous?.recharge ?? 1)
+          + Math.max(0, this.g.clock.elapsed - (previous?.time ?? this.g.clock.elapsed)) * .42);
+        if (recharge + 1e-6 < required) { deny = 'wrong-phase'; break; }
+        const center = new THREE.Vector3(x, y, z);
+        this.lastRemoteBlast.set(from, { rid, time: this.g.clock.elapsed,
+          at: center, radius: intent.radius!, recharge: Math.max(0, recharge
+            - (secondary ? .55 : .3 + chargePower * .35)), chargePower,
+          shakenPlants: new Set(), encounterUsed: false, vineUsed: false });
+        this.g.physics.explode(center, intent.radius!, intent.power!, intent.upBias!);
         // Residents react to accepted remote blasts as well as local tools.
-        this.g.bus.emit('tool:blast', { toolId: 'remote', point: new THREE.Vector3(x, y, z),
-          radius: clamp01(intent.radius ?? 4, 8), power: clamp01((intent.power ?? 1) / 22, 1) });
-        if (Number.isSafeInteger(rid) && rid >= 0 && this.g.has('director')) {
+        this.g.bus.emit('tool:blast', { toolId: 'remote', point: center,
+          radius: intent.radius!, power: clamp01(intent.power! / MAX_BLAST_STRENGTH, 1) });
+        if (this.g.has('director')) {
           this.g.get<IslandDirector>('director').acceptAgitation(
-            `remote-air:${from}:${rid}`, 'air-cannon', new THREE.Vector3(x, y, z));
+            `remote-air:${from}:${rid}`, 'air-cannon', center);
         }
         break;
       }
@@ -1846,10 +1928,17 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
         if (req.kind === 'hit') {
           // The legacy hit route remains for the Air Cannon only. Mallet
           // damage must carry a host-checked swing identity.
-          if (req.strike === 'melee') break;
+          if (req.strike !== 'air') break;
           const o = req.origin, d = req.direction;
-          if (!o?.every(Number.isFinite) || !d?.every(Number.isFinite)) break;
+          const blast = this.lastRemoteBlast.get(from);
+          const remote = this.remotes.get(from);
+          if (!blast || blast.encounterUsed || blast.chargePower <= 0
+            || this.g.clock.elapsed - blast.time > REMOTE_BLAST_FOLLOWUP
+            || remote?.toolId !== 'aircannon' || remote.state !== 'active'
+            || !Array.isArray(o) || !Array.isArray(d)
+            || !matchesBlastRay(o, d, blast.at)) break;
           if (!near(o[0], o[1], o[2], 4.5)) break;
+          blast.encounterUsed = true;
           this.encounters.tryHit(new THREE.Vector3(...o), new THREE.Vector3(...d),
             req.strike, from);
         } else if (req.kind === 'bait') {
@@ -1865,9 +1954,16 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       }
       case 'vineHit': {
         const hit = intent.vineHit;
-        if (hit?.strike === 'melee') break;
-        if (!hit || !hit.origin?.every(Number.isFinite) || !hit.direction?.every(Number.isFinite)
+        if (hit?.strike !== 'air') break;
+        const blast = this.lastRemoteBlast.get(from);
+        const remote = this.remotes.get(from);
+        if (!blast || blast.vineUsed || blast.chargePower <= 0
+          || this.g.clock.elapsed - blast.time > REMOTE_BLAST_FOLLOWUP
+          || remote?.toolId !== 'aircannon' || remote.state !== 'active') break;
+        if (!hit || !Array.isArray(hit.origin) || !Array.isArray(hit.direction)
+          || !matchesBlastRay(hit.origin, hit.direction, blast.at)
           || !near(hit.origin[0], hit.origin[1], hit.origin[2], 4.5)) break;
+        blast.vineUsed = true;
         this.kingVine?.tryHit(hit.origin, hit.direction, hit.strike, from);
         break;
       }

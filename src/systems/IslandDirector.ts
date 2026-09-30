@@ -116,6 +116,9 @@ export class IslandDirector implements System {
       || !at || !Number.isFinite(at.x) || !Number.isFinite(at.y) || !Number.isFinite(at.z)) return false;
     const a = this.state.agitation;
     if (a.acceptedIds.includes(actionId)) return false;
+    if (kind === 'air-cannon' && ![...this.fruit.fruits.values()].some(f =>
+      (f.state === 'attached' || f.state === 'free')
+      && f.position.distanceToSquared(at) <= 7 * 7)) return false;
     const orchard = this.world.at('orchard').position;
     const hill = this.world.at('hillFarm').position;
     const dx = hill.x - orchard.x, dz = hill.z - orchard.z;

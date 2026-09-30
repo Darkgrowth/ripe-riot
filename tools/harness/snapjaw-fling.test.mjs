@@ -150,3 +150,24 @@ test('the host aims one finite peer launch at checked dry ground', () => {
   assert.ok(velocity.lengthSq() <= 400 && velocity.x > 0 && velocity.y >= 8.4,
     'the launch needs a visible arc that can travel toward the checked landing');
 });
+
+test('no safe landing releases the victim visibly instead of silently ending the flight', () => {
+  const { model } = capturedModel();
+  let fling;
+  for (let i = 0; i < 70; i++) fling ??= model.step(.05).find(e => e.type === 'fling');
+  const events = [];
+  const launches = [];
+  const system = Object.create(EncounterSystem.prototype);
+  system.model = model;
+  system.currentTargets = [{ id: 'victim', position: [0, 0, 1.6] }];
+  system.world = { terrain: { height: () => -1 } };
+  system.g = { physics: {}, player: { body: {}, collider: {} },
+    bus: { emit: (...args) => events.push(args) } };
+  system.net = { authoritative: true, connected: true, me: 'host',
+    launchPeer: (...args) => launches.push(args) };
+  system.launchSnapjawVictim(fling);
+  assert.equal(model.isFlying('victim', fling.flingId), false);
+  assert.deepEqual(launches, []);
+  assert.ok(events.some(([name, payload]) => name === 'encounter:release'
+    && payload.victimId === 'victim' && payload.reason === 'timeout'));
+});

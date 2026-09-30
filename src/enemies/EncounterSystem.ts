@@ -592,7 +592,11 @@ export class EncounterSystem implements System {
       center: { x: jaw.position[0], z: jaw.position[2] },
       maxRadius: 10, fallback,
     });
-    if (!landing) { this.model.finishFlight(event.victimId, event.flingId); return; }
+    if (!landing) {
+      this.model.finishFlight(event.victimId, event.flingId);
+      this.release(event.victimId, 'timeout');
+      return;
+    }
     const origin = this.currentTargets.find(t => t.id === event.victimId)?.position
       ?? [jaw.position[0], jaw.position[1], jaw.position[2]];
     const dx = landing.x - origin[0], dz = landing.z - origin[2];
@@ -603,6 +607,7 @@ export class EncounterSystem implements System {
       dz / duration);
     if (!Number.isFinite(velocity.lengthSq()) || velocity.lengthSq() > 400) {
       this.model.finishFlight(event.victimId, event.flingId);
+      this.release(event.victimId, 'timeout');
       return;
     }
     const revision = this.model.snapshot().revision;

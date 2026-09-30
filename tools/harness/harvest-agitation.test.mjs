@@ -79,6 +79,17 @@ test('remote, dock, invalid and duplicate actions cannot raise pressure', () => 
   assert.equal(director.getAgitationPresentation().pressure, 0);
 });
 
+test('an Air Cannon shot adds pressure only when it lands near harvestable fruit', () => {
+  const { director, fruit } = fixture();
+  const emptyLane = orchard.clone().add(new THREE.Vector3(0, 0, 12));
+  assert.equal(director.acceptAgitation('air:empty', 'air-cannon', emptyLane), false);
+  assert.equal(director.getAgitationPresentation().pressure, 0);
+  assert.equal(director.acceptAgitation('air:fruit', 'air-cannon', orchard), true);
+  assert.equal(director.getAgitationPresentation().pressure, 2);
+  for (const node of fruit.fruits.values()) node.state = 'stowed';
+  assert.equal(director.acceptAgitation('air:stowed', 'air-cannon', orchard), false);
+});
+
 test('hill farm pressure selects nearby hill fruit rather than a distant orchard group', () => {
   const { director, fruit } = fixture();
   director.g.player.position.copy(hill);

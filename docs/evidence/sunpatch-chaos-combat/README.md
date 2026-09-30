@@ -46,9 +46,19 @@ The host now reserves the flight until the victim acknowledges that its actual
 motion stopped. A failed or expired acknowledgement produces no success cue
 and leaves a still-live flight available for another swing.
 
+The host now checks a remote Tree Shaker or Air Cannon request against the
+peer's active state, equipped tool, ledger ownership, range and authored tool
+cadence before changing fruit physics. One cannon blast can shake each nearby
+plant once at the strength that shot earned, and its enemy or King Vine hit
+must align with that blast. Two immediate full-charge shots remain valid when
+the cannon still has enough recharge. Air Cannon shots add harvest pressure
+only near attached or free fruit. If Snapjaw finds no dry, clear landing at
+all, it now emits a release event rather than silently retiring the flight.
+These changes have browser-free test and build proof only.
+
 ## Verification at this checkpoint
 
-- `node --test` over all browser-free `*.test.mjs` files: 384 passed.
+- `node --test` over all browser-free `*.test.mjs` files: 393 passed.
 - `npm run build`: passed with the existing large-chunk warning.
 - `npm test`: 19/20 scenarios passed before the save assertion was corrected.
   The King Melon check compared the restored position against a point recorded
@@ -58,6 +68,10 @@ and leaves a still-live flight available for another swing.
 - Browser input and pointer-lock checks are paused during active play under
   [the project desktop rule](../../../AGENTS.md). An isolated port and
   headless mode did not establish safe physical-cursor isolation here.
+- The host's purchase ledger still imports client-reported saved equipment
+  during co-op handoff. The tool checks above are gameplay authority checks;
+  they do not prove resistance to a locally modified client claiming a saved
+  purchase. A host-authenticated purchase handoff remains separate work.
 
 Before calling the whole pass visually verified, capture the updated Snapjaw
 hold and throw at gameplay scale, demonstrate a host-confirmed two-client
