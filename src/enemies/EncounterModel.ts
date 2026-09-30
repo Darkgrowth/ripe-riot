@@ -22,6 +22,8 @@ export interface EncounterState {
   baited: boolean;
   capturedVictimId: string | null;
   captureTimeLeft: number;
+  /** Committed throw direction while the victim is held. */
+  captureAim?: Point3 | null;
   dormant?: boolean;
   returning?: boolean;
   /** A mallet-controlled heading for the next warning only. */
@@ -36,6 +38,15 @@ export interface EncounterNetState {
   projectiles: EncounterProjectile[];
   nextMimicImpactId?: number;
   mimicGrace?: Array<{ victimId: string; remaining: number }>;
+  nextFlingId?: number;
+  flights?: EncounterFlight[];
+  snapjawGrace?: Array<{ victimId: string; remaining: number }>;
+}
+
+export interface EncounterFlight {
+  victimId: string;
+  flingId: number;
+  remaining: number;
 }
 
 export interface MimicImpact {
@@ -91,8 +102,16 @@ export interface EncounterRelease {
   reason: 'timeout';
 }
 
+export interface EncounterFling {
+  type: 'fling';
+  kind: 'snapjaw';
+  victimId: string;
+  flingId: number;
+  aim: Point3;
+}
+
 export type EncounterEvent = EncounterDamage | EncounterCapture | EncounterRelease
-  | MimicImpact | { type: 'reflected-hit'; hit: EncounterHit };
+  | EncounterFling | MimicImpact | { type: 'reflected-hit'; hit: EncounterHit };
 
 interface InternalState extends EncounterState {
   aim: Point3;
@@ -113,6 +132,8 @@ const MIMIC_RECOVER_DISTANCE = 2.45;
 const MIMIC_STAGGER = 0.48;
 const MIMIC_TREE_STAGGER = 1.05;
 const MIMIC_HIT_GRACE = 5.2;
+const SNAPJAW_HIT_GRACE = 3.2;
+const SNAPJAW_FLIGHT_WINDOW = 1.8;
 
 /** A world collision query shared by charge, knockback and bite checks. */
 export type ProjectileBlocked = (from: Point3, to: Point3) => number | null;
@@ -134,6 +155,10 @@ export class EncounterModel {
   private nextProjectileId = 1;
   private nextMimicImpactId = 1;
   private mimicGrace = new Map<string, number>();
+  private snapjawGrace = new Map<string, number>();
+  private flights = new Map<string, EncounterFlight>();
+  private nextFlingId = 1;
+  private lastReleasedFlingId = 0;
   private mimicBlocked: MimicBlocked | null;
   private projectileBlocked: ProjectileBlocked | null;
 
@@ -149,7 +174,7 @@ export class EncounterModel {
       this.encounters.set(spawn.kind, {
         kind: spawn.kind, position: [...spawn.position], heading: 0,
         phase: 'idle', timeLeft: 0, health: HEALTH[spawn.kind], baited: false,
-        capturedVictimId: null, captureTimeLeft: 0,
+        capturedVictimId: null, captureTimeLeft: 0, captureAim: null,
         dormant: !!spawn.dormant, returning: false, home: [...spawn.position],
         leashRadius: spawn.leashRadius ?? Infinity,
         aim: [...spawn.position], alreadyHit: new Set(), pendingHeading: null,
@@ -183,10 +208,11 @@ export class EncounterModel {
       if (!state) continue;
       state.phase = 'defeated'; state.health = 0; state.timeLeft = 0;
       state.dormant = false; state.returning = false; state.baited = false;
-      state.capturedVictimId = null; state.captureTimeLeft = 0;
+      state.capturedVictimId = null; state.captureTimeLeft = 0; state.captureAim = null;
       state.pendingHeading = null; state.chargeStart = null;
       if (kind === 'spitter') this.projectiles = [];
       if (kind === 'mimic') this.mimicGrace.clear();
+      if (kind === 'snapjaw') { this.snapjawGrace.clear(); this.flights.clear(); }
     }
     this.revision++;
   }
@@ -218,21 +244,34 @@ export class EncounterModel {
     if (!(dt > 0) || !Number.isFinite(dt)) return [];
     this.elapsed += dt;
     const events: EncounterEvent[] = [];
+    for (const [victimId, flight] of this.flights) {
+      flight.remaining = Math.max(0, flight.remaining - dt);
+      if (flight.remaining === 0) this.flights.delete(victimId);
+    }
     this.stepProjectiles(dt, events);
     for (const state of this.encounters.values()) {
       if (state.kind === 'snapjaw' && state.capturedVictimId !== null) {
         state.captureTimeLeft = Math.max(0, state.captureTimeLeft - dt);
         if (state.captureTimeLeft === 0) {
-          events.push({ type: 'release', kind: 'snapjaw',
-            victimId: state.capturedVictimId, reason: 'timeout' });
-          state.capturedVictimId = null;
+          const victimId = state.capturedVictimId;
+          const flingId = this.nextFlingId++;
+          const aim: Point3 = state.captureAim ? [...state.captureAim]
+            : this.soloFlingAim(state);
+          events.push({ type: 'fling', kind: 'snapjaw', victimId, flingId, aim });
+          this.flights.set(victimId, { victimId, flingId,
+            remaining: SNAPJAW_FLIGHT_WINDOW });
+          this.clearCapture(state);
+          state.phase = 'recover';
+          state.timeLeft = RECOVER.snapjaw;
         }
+        else continue;
       }
       if (state.phase === 'defeated' || state.dormant || this.returnHome(state, dt)) continue;
       if (state.phase === 'idle') {
         const radius = state.kind === 'mimic' ? 13 : state.kind === 'spitter' ? 18 : 4.8;
         const nearest = this.targets.filter(t => distanceXZ(t.position, state.position) <= radius
           && (state.kind !== 'mimic' || this.elapsed >= (this.mimicGrace.get(t.id) ?? 0))
+          && (state.kind !== 'snapjaw' || this.elapsed >= (this.snapjawGrace.get(t.id) ?? 0))
           && (state.kind !== 'mimic' || distanceXZ(t.position, state.home) <= state.leashRadius)
           && (state.kind !== 'spitter' || (distanceXZ(t.position, state.position) >= 3.5
             && this.projectileBlocked?.([state.position[0], state.position[1] + 2.1, state.position[2]],
@@ -265,6 +304,8 @@ export class EncounterModel {
           if (state.kind === 'mimic' && state.phase !== 'attack') break;
           if (state.alreadyHit.has(target.id)) continue;
           if (state.kind === 'snapjaw' && state.capturedVictimId !== null) break;
+          if (state.kind === 'snapjaw'
+            && this.elapsed < (this.snapjawGrace.get(target.id) ?? 0)) continue;
           const reach = state.kind === 'mimic' ? 1.5 : 2.25;
           if (distanceXZ(state.position, target.position) > reach) continue;
           if (state.kind === 'mimic' && this.mimicBlocked?.(state.position, target.position, 0.1)) continue;
@@ -296,6 +337,12 @@ export class EncounterModel {
           if (state.kind === 'snapjaw') {
             state.capturedVictimId = target.id;
             state.captureTimeLeft = 2.4;
+            const ally = this.targets.filter(t => t.id !== target.id
+              && distanceXZ(t.position, state.position) <= 11)
+              .sort((a, b) => distanceXZ(a.position, state.position)
+                - distanceXZ(b.position, state.position))[0];
+            state.captureAim = ally ? [...ally.position] : this.soloFlingAim(state);
+            state.heading = headingTo(state.position, state.captureAim);
             events.push({ type: 'capture', kind: 'snapjaw', victimId: target.id });
           }
         }
@@ -351,8 +398,7 @@ export class EncounterModel {
   tryEscape(victimId: string): boolean {
     const state = this.encounters.get('snapjaw');
     if (!state || state.capturedVictimId !== victimId || state.captureTimeLeft > 2.05) return false;
-    state.capturedVictimId = null;
-    state.captureTimeLeft = 0;
+    this.clearCapture(state);
     this.revision++;
     return true;
   }
@@ -364,14 +410,49 @@ export class EncounterModel {
     if (!state || !rescuer || rescuerId === victimId
       || state.capturedVictimId !== victimId
       || distanceXZ(rescuer.position, state.position) > 3.4) return false;
-    state.capturedVictimId = null;
-    state.captureTimeLeft = 0;
+    this.clearCapture(state);
     this.revision++;
     return true;
   }
 
   isCaptured(victimId: string): boolean {
     return this.encounters.get('snapjaw')?.capturedVictimId === victimId;
+  }
+
+  isFlying(victimId: string, flingId: number): boolean {
+    const flight = this.flights.get(victimId);
+    return !!flight && flight.flingId === flingId && flight.remaining > 0;
+  }
+
+  finishFlight(victimId: string, flingId: number): boolean {
+    if (!this.isFlying(victimId, flingId)) return false;
+    this.flights.delete(victimId);
+    this.revision++;
+    return true;
+  }
+
+  /** An authenticated launch packet can arrive before its matching snapshot. */
+  releaseFromFling(victimId: string, flingId: number, revision: number): boolean {
+    if (!victimId || !Number.isSafeInteger(flingId) || flingId < 1
+      || flingId <= this.lastReleasedFlingId || !Number.isSafeInteger(revision)
+      || revision < this.lastApplied) return false;
+    const state = this.encounters.get('snapjaw');
+    if (!state || (state.capturedVictimId && state.capturedVictimId !== victimId)) return false;
+    this.clearCapture(state);
+    this.lastReleasedFlingId = flingId;
+    this.nextFlingId = Math.max(this.nextFlingId, flingId + 1);
+    this.lastApplied = Math.max(this.lastApplied, revision);
+    this.revision = Math.max(this.revision, revision);
+    return true;
+  }
+
+  /** A lethal bite follows the normal downed path instead of a later throw. */
+  abortCapture(victimId: string): boolean {
+    const state = this.encounters.get('snapjaw');
+    if (!state || state.capturedVictimId !== victimId) return false;
+    this.clearCapture(state);
+    this.revision++;
+    return true;
   }
 
   /** Input routing on clients: this never mutates health or projectile state. */
@@ -402,7 +483,8 @@ export class EncounterModel {
     if (!contact) return { outcome: 'whoosh' };
     const state = this.encounters.get(contact.id as EncounterKind)!;
     if (blocked(contact)) return { outcome: 'blocked', target: state.kind, contact };
-    if (state.kind === 'snapjaw' && state.phase !== 'recover')
+    if (state.kind === 'snapjaw' && state.phase !== 'recover'
+      && state.capturedVictimId === null)
       return { outcome: 'protected', target: state.kind, contact };
     const hit = this.applyHit(state, 'melee', attackerId, origin, false);
     return hit ? { outcome: 'hit', target: state.kind, contact, hit }
@@ -453,8 +535,7 @@ export class EncounterModel {
       if (state.kind === 'spitter') this.projectiles = [];
       if (state.capturedVictimId !== null) {
         releasedVictimId = state.capturedVictimId;
-        state.capturedVictimId = null;
-        state.captureTimeLeft = 0;
+        this.clearCapture(state);
       }
     } else if (state.kind === 'mimic') {
       state.pendingHeading = headingTo(origin, state.position);
@@ -466,6 +547,13 @@ export class EncounterModel {
       if (!this.mimicBlocked?.(state.position, next, MIMIC_RADIUS)) state.position = next;
       state.phase = 'stagger';
       state.timeLeft = MIMIC_STAGGER;
+    } else if (state.kind === 'snapjaw') {
+      if (state.capturedVictimId !== null) {
+        releasedVictimId = state.capturedVictimId;
+        this.clearCapture(state);
+      }
+      state.phase = 'recover';
+      state.timeLeft = RECOVER.snapjaw;
     } else if (state.kind === 'spitter') {
       state.phase = 'recover';
       state.timeLeft = RECOVER.spitter;
@@ -483,6 +571,7 @@ export class EncounterModel {
         kind: s.kind, position: [...s.position], heading: s.heading, phase: s.phase,
         timeLeft: s.timeLeft, health: s.health, baited: s.baited,
         capturedVictimId: s.capturedVictimId, captureTimeLeft: s.captureTimeLeft,
+        captureAim: s.captureAim ? [...s.captureAim] : null,
         dormant: !!s.dormant, returning: !!s.returning,
         pendingHeading: s.pendingHeading ?? null,
         chargeStart: s.chargeStart ? [...s.chargeStart] : null,
@@ -492,6 +581,10 @@ export class EncounterModel {
         ...(p.reflectedBy ? { reflectedBy: p.reflectedBy } : {}) })),
       nextMimicImpactId: this.nextMimicImpactId,
       mimicGrace: [...this.mimicGrace].filter(([, until]) => until > this.elapsed)
+        .map(([victimId, until]) => ({ victimId, remaining: until - this.elapsed })),
+      nextFlingId: this.nextFlingId,
+      flights: [...this.flights.values()].map(f => ({ ...f })),
+      snapjawGrace: [...this.snapjawGrace].filter(([, until]) => until > this.elapsed)
         .map(([victimId, until]) => ({ victimId, remaining: until - this.elapsed })),
     };
   }
@@ -515,6 +608,8 @@ export class EncounterModel {
       state.capturedVictimId = typeof incoming.capturedVictimId === 'string'
         ? incoming.capturedVictimId : null;
       state.captureTimeLeft = Math.max(0, incoming.captureTimeLeft || 0);
+      state.captureAim = incoming.captureAim?.length === 3
+        && incoming.captureAim.every(Number.isFinite) ? [...incoming.captureAim] : null;
       state.pendingHeading = typeof incoming.pendingHeading === 'number'
         && Number.isFinite(incoming.pendingHeading) ? incoming.pendingHeading : null;
       state.chargeStart = incoming.chargeStart?.length === 3
@@ -537,6 +632,25 @@ export class EncounterModel {
         && entry.remaining > 0 && this.mimicGrace.size < 8)
         this.mimicGrace.set(entry.victimId, this.elapsed + Math.min(MIMIC_HIT_GRACE, entry.remaining));
     }
+    this.nextFlingId = Number.isSafeInteger(snapshot.nextFlingId)
+      && snapshot.nextFlingId! > 0 ? snapshot.nextFlingId! : this.nextFlingId;
+    this.flights.clear();
+    if (Array.isArray(snapshot.flights)) for (const flight of snapshot.flights) {
+      if (typeof flight?.victimId === 'string' && flight.victimId.length > 0
+        && flight.victimId.length <= 80 && Number.isSafeInteger(flight.flingId)
+        && flight.flingId > 0 && Number.isFinite(flight.remaining)
+        && flight.remaining > 0 && this.flights.size < 8)
+        this.flights.set(flight.victimId, { victimId: flight.victimId,
+          flingId: flight.flingId, remaining: Math.min(SNAPJAW_FLIGHT_WINDOW, flight.remaining) });
+    }
+    this.snapjawGrace.clear();
+    if (Array.isArray(snapshot.snapjawGrace)) for (const entry of snapshot.snapjawGrace) {
+      if (typeof entry?.victimId === 'string' && entry.victimId.length > 0
+        && entry.victimId.length <= 80 && Number.isFinite(entry.remaining)
+        && entry.remaining > 0 && this.snapjawGrace.size < 8)
+        this.snapjawGrace.set(entry.victimId,
+          this.elapsed + Math.min(SNAPJAW_HIT_GRACE, entry.remaining));
+    }
     this.revision = snapshot.revision;
     return true;
   }
@@ -549,6 +663,19 @@ export class EncounterModel {
       && Number.isFinite(state.pendingHeading) ? state.pendingHeading : headingTo(state.position, aim);
     if (state.kind === 'mimic') state.pendingHeading = null;
     state.baited = baited;
+  }
+
+  private soloFlingAim(state: InternalState): Point3 {
+    return [state.position[0] + Math.sin(state.heading) * 7,
+      state.position[1], state.position[2] + Math.cos(state.heading) * 7];
+  }
+
+  private clearCapture(state: InternalState): void {
+    if (state.capturedVictimId !== null)
+      this.snapjawGrace.set(state.capturedVictimId, this.elapsed + SNAPJAW_HIT_GRACE);
+    state.capturedVictimId = null;
+    state.captureTimeLeft = 0;
+    state.captureAim = null;
   }
 
   private finishMimicCharge(state: InternalState, to: Point3,
@@ -619,7 +746,7 @@ export class EncounterModel {
     let candidate: { state: InternalState; along: number } | null = null;
     for (const state of this.encounters.values()) {
       if (state.phase === 'defeated' || state.dormant || (vulnerable && state.kind === 'snapjaw'
-        && state.phase !== 'recover')) continue;
+        && state.phase !== 'recover' && state.capturedVictimId === null)) continue;
       const centre: Point3 = [state.position[0], state.position[1] + 1.15, state.position[2]];
       const relative: Point3 = [centre[0] - origin[0], centre[1] - origin[1], centre[2] - origin[2]];
       const along = (relative[0] * direction[0] + relative[1] * direction[1]

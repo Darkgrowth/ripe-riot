@@ -79,6 +79,14 @@ export class EncounterVisual {
       this.lane.rotation.x = -Math.PI / 2;
       this.lane.castShadow = false;
       this.lane.receiveShadow = false;
+    } else if (kind === 'snapjaw') {
+      const laneMat = new THREE.MeshBasicMaterial({ color: color(0xff9b3d),
+        transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false });
+      this.lane = mesh(new THREE.PlaneGeometry(0.9, 8), laneMat,
+        this.root, 0, 0.075, 4);
+      this.lane.rotation.x = -Math.PI / 2;
+      this.lane.castShadow = false;
+      this.lane.receiveShadow = false;
     } else if (kind === 'spitter') {
       const laneMat = new THREE.MeshBasicMaterial({ color: color(0xf0ec69),
         transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false });
@@ -111,8 +119,18 @@ export class EncounterVisual {
         : attacking ? 0.32 : state.capturedVictimId !== null ? 0.28 + pulse * 0.22 : 0;
     this.danger.scale.setScalar(warning ? 0.87 + pulse * 0.15 : 1);
     if (this.lane) {
-      (this.lane.material as THREE.MeshBasicMaterial).opacity = warning
-        ? this.kind === 'mimic' ? 0.17 + pulse * 0.08 : 0.14 + pulse * 0.17 : 0;
+      (this.lane.material as THREE.MeshBasicMaterial).opacity =
+        this.kind === 'snapjaw' ? state.capturedVictimId !== null
+          ? 0.20 + pulse * 0.12 : 0
+          : warning ? this.kind === 'mimic' ? 0.17 + pulse * 0.08
+            : 0.14 + pulse * 0.17 : 0;
+      if (this.kind === 'snapjaw' && state.captureAim) {
+        const distance = Math.min(10, Math.max(2,
+          Math.hypot(state.captureAim[0] - state.position[0],
+            state.captureAim[2] - state.position[2])));
+        this.lane.position.z = distance * .5;
+        this.lane.scale.y = distance / 8;
+      }
     }
 
     if (this.kind === 'mimic') {
@@ -134,7 +152,7 @@ export class EncounterVisual {
         this.root.visible = true;
       }
       const open = this.voxelSnapjaw && state.phase === 'defeated' ? 0.02
-        : state.capturedVictimId !== null ? 0.13
+        : state.capturedVictimId !== null ? 0.48 + pulse * 0.13
         : warning ? 0.43 + pulse * 0.22
           : attacking && this.voxelSnapjaw
             ? Math.max(0.02, Math.min(0.74, (state.timeLeft / 0.32) ** 2 * 0.74))

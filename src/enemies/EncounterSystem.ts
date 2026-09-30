@@ -4,7 +4,7 @@ import type { Sunpatch } from '@/world/Sunpatch';
 import { EncounterModel, type EncounterHit, type EncounterKind,
   type EncounterMeleeResult, type EncounterNetState, type EncounterStrike, type EncounterTarget,
   type MimicCollision, type MimicImpact,
-  type Point3 } from './EncounterModel';
+  type Point3, type EncounterFling } from './EncounterModel';
 import { EncounterProjectileVisual, EncounterVisual } from './EncounterVisuals';
 import { Layer, QueryMask, groups } from '@/physics/Layers';
 import type { FruitSystem } from '@/fruit/FruitSystem';
@@ -12,6 +12,7 @@ import { ThrownFruitBait } from './ThrownFruitBait';
 import { HarvestSites, type HarvestSiteState } from './HarvestSites';
 import type { ChaosImpact } from './ChaosImpact';
 import type { IslandDirector } from '@/systems/IslandDirector';
+import { findSafeLanding } from '@/player/SafeLanding';
 
 export type EncounterIntent =
   | { kind: 'hit'; origin: Point3; direction: Point3; strike: EncounterStrike; actorId: string }
@@ -25,7 +26,9 @@ export interface EncounterNet {
   readonly me?: string;
   requestEncounter(intent: EncounterIntent): void;
   launchPeer?(peer: string, velocity: THREE.Vector3,
-    kind: 'mimic-charge' | 'snapjaw-fling'): boolean;
+    kind: 'mimic-charge' | 'snapjaw-fling', flingId?: number,
+    encounterRevision?: number): boolean;
+  cancelNetSwing?(peer: string): void;
 }
 
 const point = (v: THREE.Vector3): Point3 => [v.x, v.y, v.z];
@@ -127,8 +130,17 @@ export class EncounterSystem implements System {
           kind: event.kind, victimId: event.victimId, damage: event.amount,
         });
       } else if (event.type === 'capture') {
-        this.onCaptured?.(event.victimId);
-        this.emit('encounter:capture', { kind: 'snapjaw', victimId: event.victimId });
+        const localId = this.net?.connected ? this.net.me : 'solo';
+        const downed = event.victimId === localId && this.g.has('vitals')
+          && this.g.get<{ downed: boolean }>('vitals').downed;
+        if (downed) this.model.abortCapture(event.victimId);
+        else {
+          this.net?.cancelNetSwing?.(event.victimId);
+          this.onCaptured?.(event.victimId);
+          this.emit('encounter:capture', { kind: 'snapjaw', victimId: event.victimId });
+        }
+      } else if (event.type === 'fling') {
+        this.launchSnapjawVictim(event);
       } else if (event.type === 'reflected-hit') {
         this.publishHit(event.hit, event.hit.attackerId ?? 'solo');
       } else if (event.type === 'mimic-impact') {
@@ -261,7 +273,8 @@ export class EncounterSystem implements System {
 
   private publishHit(result: EncounterHit, attackerId: string): void {
     if (result.mimicImpact) this.applyMimicImpact(result.mimicImpact);
-    if (result?.releasedVictimId !== undefined) this.release(result.releasedVictimId, 'defeat');
+    if (result?.releasedVictimId !== undefined)
+      this.release(result.releasedVictimId, result.defeated ? 'defeat' : 'rescue');
     if (result?.defeated) {
       this.sites.clear(result.kind);
       const site = this.sites.snapshot().find(s => s.kind === result.kind);
@@ -304,6 +317,36 @@ export class EncounterSystem implements System {
   }
 
   isCaptured(victimId: string): boolean { return this.model.isCaptured(victimId); }
+
+  /** A dying remote victim exits the hold when its downed state reaches host. */
+  abortCapture(victimId: string): boolean {
+    return this.authoritative && this.model.abortCapture(victimId);
+  }
+
+  flyingVictim(victimId: string, flingId: number): boolean {
+    return this.model.isFlying(victimId, flingId);
+  }
+
+  /** Swing, equipment, aim and line of sight are checked by the net guard. */
+  tryNetCatch(victimId: string, flingId: number, rescuerId: string): boolean {
+    if (!this.authoritative || victimId === rescuerId
+      || !this.model.isFlying(victimId, flingId)) return false;
+    const rescuer = this.currentTargets.find(target => target.id === rescuerId);
+    const victim = this.currentTargets.find(target => target.id === victimId);
+    if (!rescuer || (victim && Math.hypot(
+      rescuer.position[0] - victim.position[0],
+      rescuer.position[2] - victim.position[2]) > 4.8)) return false;
+    return this.model.finishFlight(victimId, flingId);
+  }
+
+  /** Client packet ordering: retire capture before PlayerController adds speed. */
+  releaseFromFling(victimId: string, flingId: number, revision: number): boolean {
+    if (this.authoritative || !this.model.releaseFromFling(victimId, flingId, revision))
+      return false;
+    if (victimId === this.net?.me && this.g.player.state === 'captured')
+      this.g.player.state = 'active';
+    return true;
+  }
 
   snapshot(): EncounterNetState { return this.model.snapshot(); }
 
@@ -524,6 +567,41 @@ export class EncounterSystem implements System {
     if (!this.net?.connected || victimId === 'solo' || victimId === this.net.me)
       this.g.player.applyChaosLaunch(velocity, 'mimic-charge');
     else this.net.launchPeer?.(victimId, velocity, 'mimic-charge');
+  }
+
+  private launchSnapjawVictim(event: EncounterFling): void {
+    const jaw = this.model.get('snapjaw');
+    const fallback = {
+      x: jaw.position[0] + Math.sin(jaw.heading) * 5,
+      z: jaw.position[2] + Math.cos(jaw.heading) * 5,
+    };
+    const landing = findSafeLanding({ physics: this.g.physics,
+      terrain: this.world.terrain, playerBody: this.g.player.body,
+      playerCollider: this.g.player.collider }, {
+      desired: { x: event.aim[0], z: event.aim[2] },
+      center: { x: jaw.position[0], z: jaw.position[2] },
+      maxRadius: 10, fallback,
+    });
+    if (!landing) { this.model.finishFlight(event.victimId, event.flingId); return; }
+    const origin = this.currentTargets.find(t => t.id === event.victimId)?.position
+      ?? [jaw.position[0], jaw.position[1], jaw.position[2]];
+    const dx = landing.x - origin[0], dz = landing.z - origin[2];
+    const distance = Math.hypot(dx, dz);
+    const duration = Math.min(1.05, Math.max(.65, distance / 8));
+    const velocity = new THREE.Vector3(dx / duration,
+      Math.max(3.5, Math.min(6.5, 4.6 + (landing.y - origin[1]) * .45)),
+      dz / duration);
+    if (!Number.isFinite(velocity.lengthSq()) || velocity.lengthSq() > 400) {
+      this.model.finishFlight(event.victimId, event.flingId);
+      return;
+    }
+    const revision = this.model.snapshot().revision;
+    if (!this.net?.connected || event.victimId === 'solo' || event.victimId === this.net.me)
+      this.g.player.applyChaosLaunch(velocity, 'snapjaw-fling', event.flingId);
+    else this.net.launchPeer?.(event.victimId, velocity, 'snapjaw-fling',
+      event.flingId, revision);
+    this.emit('audio:sfx', { name: 'thud', position: new THREE.Vector3(...jaw.position),
+      volume: .9 });
   }
 
   private info(): Record<string, unknown> {

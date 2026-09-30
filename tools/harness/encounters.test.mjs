@@ -160,7 +160,7 @@ test('snapjaw capture deals a heavy hit and holds one victim briefly', () => {
   assert.equal(model.get('snapjaw').capturedVictimId, null);
 });
 
-test('nearby teammate can rescue a captured peer, and timeout releases them', () => {
+test('nearby teammate can rescue a captured peer, while an unrescued bite flings once', () => {
   const model = modelAt('snapjaw');
   model.setTargets([
     { id: 'victim', position: [0, 0, 2] },
@@ -180,9 +180,9 @@ test('nearby teammate can rescue a captured peer, and timeout releases them', ()
   other.step(0.8);
   other.step(0.05);
   const released = other.step(2.5);
-  assert.deepEqual(released.filter(e => e.type === 'release'), [
-    { type: 'release', kind: 'snapjaw', victimId: 'victim', reason: 'timeout' },
-  ]);
+  assert.deepEqual(released.filter(e => e.type === 'fling').map(e => ({
+    type: e.type, kind: e.kind, victimId: e.victimId, flingId: e.flingId,
+  })), [{ type: 'fling', kind: 'snapjaw', victimId: 'victim', flingId: 1 }]);
   assert.equal(other.get('snapjaw').capturedVictimId, null);
 });
 
