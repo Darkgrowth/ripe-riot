@@ -4,6 +4,7 @@ import path from 'node:path';
 import { startServer, openGame, openSecondClient, sleep } from './driver.mjs';
 
 const args = process.argv.slice(2);
+const logicOnly = args.includes('--logic-only');
 if (!args.includes('--allow-browser-input'))
   throw new Error('Browser pointer input is disabled during active play. Run only after the user says play is over, with --allow-browser-input.');
 if (!process.env.RIPE_URL || !/^http:\/\/127\.0\.0\.1:\d+$/.test(process.env.RIPE_URL))
@@ -61,9 +62,9 @@ try {
   // can finish the whole flight while the rendered host is still on its first
   // swing, leaving a stale host encounter window and an already-landed peer.
   first = await openGame({ width: 1712, height: 634, headless: true,
-    quiet: true, islandActivities: false, drawFrames: true,
+    quiet: true, islandActivities: false, drawFrames: !logicOnly,
     recordVideoDir: args.includes('--video') ? out : null });
-  second = await openSecondClient(first, { drawFrames: true });
+  second = await openSecondClient(first, { drawFrames: !logicOnly });
   const room = `snapjaw-proof-${Math.floor(Math.random() * 1e9)}`;
   const idA = await first.call('net.connect', room, 0);
   const idB = await second.call('net.connect', room, 0);
@@ -71,6 +72,7 @@ try {
   const aHost = (await first.state()).net.isHost;
   host = aHost ? first : second;
   guest = aHost ? second : first;
+  await host.page.bringToFront();
   const hostId = aHost ? idA : idB;
   const guestId = aHost ? idB : idA;
   check(!!hostId && !!guestId && hostId !== guestId,
@@ -143,7 +145,7 @@ try {
     };
   });
   const jaw = (await read(host)).jaw.position;
-  const hx = jaw[0] + 8, hz = jaw[2] + 7;
+  const hx = jaw[0] + 4.8, hz = jaw[2] + 4.8;
   const vx = jaw[0] + 1.0, vz = jaw[2] + 1.0;
   const hy = await host.terrainHeight(hx, hz);
   const vy = await guest.terrainHeight(vx, vz);
@@ -155,6 +157,7 @@ try {
   // opening swing has plenty of time to recover before the airborne catch.
   await host.page.mouse.click(850, 315);
   await sleep(350);
+  log('capture-setup', { host: await read(host), victim: await read(guest) });
   // A synchronous GPU readback stalled the shared two-client Linux renderer
   // before the jaw had even bitten. Preserve the timed input window first.
   if (!args.includes('--no-setup-shot')) await shot(host, '01-host-setup');
@@ -165,7 +168,10 @@ try {
     if (s.jaw.capturedVictimId === guestId) { held = s; break; }
     await sleep(40);
   }
-  if (!held) throw new Error('The remote player was not captured by the live jaw');
+  if (!held) {
+    log('capture-timeout', { host: await read(host), victim: await read(guest) });
+    throw new Error('The remote player was not captured by the live jaw');
+  }
   check(held.jaw.captureAim?.[0] > jaw[0] + 2,
     'jaw targets the active teammate', { aim: held.jaw.captureAim, teammate: [hx, hy, hz] });
   log('held', { host: held, victim: await read(guest) });
@@ -206,7 +212,10 @@ try {
   await sleep(300);
   const afterHost = await read(host), afterGuest = await read(guest);
   log('after-catch-window', { host: afterHost, victim: afterGuest });
-  try { await shot(host, '05-after-net-window'); }
+  try {
+    if (logicOnly) await host.renderFrame();
+    await shot(host, '05-after-net-window');
+  }
   catch (error) { log('capture-error', { error: String(error) }); }
   check(sawFlight, 'host observed a numbered teammate flight');
   check(startedSwing && afterHost.netSwings >= 2,

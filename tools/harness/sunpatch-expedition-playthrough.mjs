@@ -29,6 +29,7 @@ const option = (name, fallback) => {
 const width = Number(option('--width', '1720'));
 const height = Number(option('--height', '720'));
 const maxSeconds = Number(option('--seconds', '1800'));
+const leanProof = args.includes('--lean-proof');
 const buyCannon = true;
 if (!Number.isInteger(width) || !Number.isInteger(height) || width < 320 || height < 180
   || !Number.isFinite(maxSeconds) || maxSeconds < 30 || maxSeconds > 3600)
@@ -75,6 +76,7 @@ function log(kind, data = {}) {
   timeline.push(row); console.log(JSON.stringify(row));
 }
 async function shot(name) {
+  if (leanProof) return;
   await page.screenshot({ path: path.join(out, `${name}.png`), timeout: 20000 });
 }
 async function read() {
@@ -734,7 +736,15 @@ try {
   }));
   await newExpedition.waitFor({state:'visible',timeout:10000});
   beats.title = true; await shot('00-title');
-  await newExpedition.click(); await sleep(1500);
+  // The title button navigates to a new save slot. On software WebGL CI,
+  // locator actionability and screenshot readback can monopolise the renderer.
+  // A real mouse click on the already-visible button avoids that extra wait.
+  const titleButton = await newExpedition.boundingBox();
+  if (!titleButton) throw new Error('New expedition button has no visible bounds');
+  await page.mouse.click(titleButton.x + titleButton.width / 2,
+    titleButton.y + titleButton.height / 2);
+  await page.waitForURL(url => new URL(url).searchParams.has('saveSlot'),
+    { timeout: 90000 });
   await page.waitForFunction(() => window.__RIPE_READY || window.__RIPE_ERROR,
     null, { timeout: 90000 });
   await page.locator('[data-expedition-action="continue"]').click();

@@ -86,6 +86,8 @@ export async function openGame({ width = 1280, height = 720, headless = true, qu
     // swiftshader) or renders black (gl-egl). Chromium's own default picks
     // SwANGLE and works. Leave the GL selection alone.
     args: ['--disable-dev-shm-usage', '--disable-frame-rate-limit',
+      '--disable-background-timer-throttling', '--disable-renderer-backgrounding',
+      '--disable-backgrounding-occluded-windows',
       ...(hardware ? ['--enable-gpu', '--ignore-gpu-blocklist',
         ...(process.platform === 'win32' ? ['--use-angle=d3d11'] : [])] : [])],
   });
