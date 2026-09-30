@@ -1,0 +1,8410 @@
+{
+  "url": "http://127.0.0.1:5277/?voxelPilot=1",
+  "viewport": [
+    1712,
+    634
+  ],
+  "maxSeconds": 600,
+  "durationSeconds": 142.19,
+  "videoPageCreatedOffsetSeconds": 0,
+  "gpu": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+  "beats": {
+    "title": true,
+    "dock": true,
+    "cropWarning": true,
+    "cropActivated": true,
+    "warning": true,
+    "mimicDefeated": true,
+    "physicalPrize": true,
+    "carriedPrize": true,
+    "reachedRealPad": true,
+    "soldWithE": true,
+    "browsedWithE": true,
+    "boughtCannon": true,
+    "firedCannon": true,
+    "snapjawDefeated": true,
+    "snapjawHarvested": true,
+    "spitterDefeated": true,
+    "plumReleased": true,
+    "kingVineSubdued": false,
+    "fourVinesCutWithE": false,
+    "physicalDrop": false,
+    "extracted": false,
+    "returnedToDock": false,
+    "settledWithE": false,
+    "resultsVisible": false,
+    "reloadPreservedSettlement": false,
+    "noRepeatPayout": false
+  },
+  "failure": "page.evaluate: Execution context was destroyed, most likely because of a navigation.\n    at read (C:\\Users\\benma\\.codex\\worktrees\\sunpatch-chaos-combat\\RIPE RIOT\\tools\\harness\\sunpatch-expedition-playthrough.mjs:76:24)\n    at go (C:\\Users\\benma\\.codex\\worktrees\\sunpatch-chaos-combat\\RIPE RIOT\\tools\\harness\\sunpatch-expedition-playthrough.mjs:188:21)\n    at async defeatKingVine (C:\\Users\\benma\\.codex\\worktrees\\sunpatch-chaos-combat\\RIPE RIOT\\tools\\harness\\sunpatch-expedition-playthrough.mjs:546:7)\n    at async file:///C:/Users/benma/.codex/worktrees/sunpatch-chaos-combat/RIPE%20RIOT/tools/harness/sunpatch-expedition-playthrough.mjs:749:8",
+  "errors": [
+    "Final observation: page.evaluate: Execution context was destroyed, most likely because of a navigation"
+  ],
+  "warnings": [],
+  "final": {
+    "gameSeconds": 135.56666666666672,
+    "visualMode": "voxel",
+    "pos": [
+      -25.06484071631826,
+      21.016138668131042,
+      -34.10755236214269
+    ],
+    "eye": [
+      -25.06484071631826,
+      22.64613866813104,
+      -34.10755236214269
+    ],
+    "yaw": -1.1230900891779751,
+    "pitch": -0.046200000000000074,
+    "playerState": "active",
+    "health": 70,
+    "downed": false,
+    "synthetic": false,
+    "locked": true,
+    "sensitivity": 0.0022,
+    "invertY": false,
+    "mimic": {
+      "pos": [
+        -22.7274666353012,
+        7.5,
+        22.781926120106647
+      ],
+      "phase": "defeated",
+      "health": 0,
+      "timeLeft": 0
+    },
+    "activeTool": "hand",
+    "slots": [
+      "hand",
+      "aircannon",
+      null,
+      "basket"
+    ],
+    "cooldown": 0,
+    "cannonCharge": 1,
+    "encounters": [
+      {
+        "kind": "mimic",
+        "position": [
+          -22.7274666353012,
+          7.5,
+          22.781926120106647
+        ],
+        "heading": 0.49393235105758293,
+        "phase": "defeated",
+        "timeLeft": 0,
+        "health": 0,
+        "baited": false,
+        "capturedVictimId": null,
+        "captureTimeLeft": 0,
+        "dormant": false,
+        "returning": false,
+        "pendingHeading": -2.536385658848018,
+        "chargeStart": null
+      },
+      {
+        "kind": "snapjaw",
+        "position": [
+          -28,
+          7.5,
+          11
+        ],
+        "heading": 0.9485778180412222,
+        "phase": "defeated",
+        "timeLeft": 0,
+        "health": 0,
+        "baited": false,
+        "capturedVictimId": null,
+        "captureTimeLeft": 0,
+        "dormant": false,
+        "returning": false,
+        "pendingHeading": null,
+        "chargeStart": null
+      },
+      {
+        "kind": "spitter",
+        "position": [
+          -31,
+          14.25,
+          -8
+        ],
+        "heading": 0.1967038302556043,
+        "phase": "defeated",
+        "timeLeft": 0,
+        "health": 0,
+        "baited": false,
+        "capturedVictimId": null,
+        "captureTimeLeft": 0,
+        "dormant": false,
+        "returning": false,
+        "pendingHeading": null,
+        "chargeStart": null
+      }
+    ],
+    "sites": [
+      {
+        "id": "orchard-mimic",
+        "kind": "mimic",
+        "plantId": 681,
+        "fruitIds": [
+          682,
+          683,
+          684,
+          689,
+          690
+        ],
+        "position": [
+          -23,
+          7.5,
+          25
+        ],
+        "phase": "cleared",
+        "released": [
+          682,
+          689
+        ],
+        "consumed": [
+          682
+        ]
+      },
+      {
+        "id": "snapjaw-cache",
+        "kind": "snapjaw",
+        "plantId": 685,
+        "fruitIds": [
+          686,
+          687
+        ],
+        "position": [
+          -26.8,
+          7.5,
+          9.1
+        ],
+        "phase": "cleared",
+        "released": [
+          687
+        ],
+        "consumed": []
+      },
+      {
+        "id": "spitter-slope",
+        "kind": "spitter",
+        "plantId": 679,
+        "fruitIds": [
+          680
+        ],
+        "position": [
+          -35,
+          17.119384765625,
+          -11.5
+        ],
+        "phase": "cleared",
+        "released": [
+          680
+        ],
+        "consumed": []
+      }
+    ],
+    "kingVine": {
+      "revision": 1206,
+      "generation": 0,
+      "center": [
+        -20,
+        20.946396047893884,
+        -35
+      ],
+      "phase": "recover",
+      "attack": "sweep",
+      "timeLeft": 1.7833333333333334,
+      "health": 6,
+      "heading": -1.2910266237446306,
+      "projectile": null
+    },
+    "legendary": {
+      "phase": "prepare",
+      "position": [
+        8,
+        38.8535041809082,
+        -62
+      ],
+      "speed": 0,
+      "cut": 0,
+      "cutPoints": [
+        {
+          "vine": 0,
+          "position": [
+            -10.2,
+            16.65830604068581,
+            -36
+          ],
+          "remaining": true
+        },
+        {
+          "vine": 1,
+          "position": [
+            -8.299999999999999,
+            15.069674084053313,
+            -36
+          ],
+          "remaining": true
+        },
+        {
+          "vine": 2,
+          "position": [
+            -6.3999999999999995,
+            13.852099519478971,
+            -36
+          ],
+          "remaining": true
+        },
+        {
+          "vine": 3,
+          "position": [
+            -4.5,
+            13.111814875797714,
+            -36
+          ],
+          "remaining": true
+        }
+      ],
+      "pad": [
+        10.427740380543167,
+        4.678916203405307,
+        -56.52040618089798
+      ],
+      "padRadius": 15,
+      "paid": 0,
+      "inPad": false
+    },
+    "chapter": "active",
+    "objective": "Confront King Vine at King Melon.",
+    "grounded": true,
+    "carried": null,
+    "carriedSpecies": null,
+    "basket": [],
+    "targetKind": null,
+    "targetId": null,
+    "prompt": null,
+    "nearSellPad": false,
+    "sellPad": [
+      40.77003468801159,
+      2.4811767578125,
+      55.35669382866159
+    ],
+    "shopCounter": [
+      42.33668850726656,
+      3.8811767578125,
+      54.11347389212026
+    ],
+    "shopOpen": false,
+    "cannonFires": 4,
+    "spawn": [
+      71.5,
+      2.450734972582344,
+      71.5
+    ],
+    "money": 383,
+    "prize": [],
+    "render": {
+      "drawCalls": 154,
+      "triangles": 3425548,
+      "geometries": 183,
+      "textures": 25,
+      "programs": 37
+    },
+    "gpu": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "fruit": [
+      {
+        "id": 3,
+        "species": "apple",
+        "pos": [
+          -25.214016785670577,
+          10.6957335523766,
+          38.3098692476861
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1494335368603468
+      },
+      {
+        "id": 4,
+        "species": "apple",
+        "pos": [
+          -26.054125615994657,
+          9.46873386051848,
+          40.694201565929426
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1456729251652956
+      },
+      {
+        "id": 5,
+        "species": "apple",
+        "pos": [
+          -24.197147056108687,
+          11.039643434780071,
+          38.2552573177357
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18995963140800595
+      },
+      {
+        "id": 6,
+        "species": "apple",
+        "pos": [
+          -25.671606392933835,
+          9.34491438755338,
+          41.82681376754238
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1716244769245386
+      },
+      {
+        "id": 7,
+        "species": "apple",
+        "pos": [
+          -22.7328910026205,
+          9.722575153092892,
+          38.80864821661808
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16216295194625854
+      },
+      {
+        "id": 8,
+        "species": "apple",
+        "pos": [
+          -24.2651146614981,
+          9.479642257739094,
+          38.580422999714486
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1903704196512699
+      },
+      {
+        "id": 9,
+        "species": "apple",
+        "pos": [
+          -25.063701721819623,
+          10.018676818403947,
+          41.056882476199135
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17066646470576527
+      },
+      {
+        "id": 11,
+        "species": "apple",
+        "pos": [
+          -38.7777735681082,
+          10.783816443730025,
+          24.336703996935416
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18680583590343594
+      },
+      {
+        "id": 12,
+        "species": "apple",
+        "pos": [
+          -38.08739698028658,
+          9.705509504477694,
+          22.454417685196287
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18034894757419828
+      },
+      {
+        "id": 13,
+        "species": "apple",
+        "pos": [
+          -38.18903245644145,
+          9.781908406221028,
+          25.340769278791203
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14438393301144242
+      },
+      {
+        "id": 14,
+        "species": "apple",
+        "pos": [
+          -36.88690413996583,
+          9.976174059671147,
+          21.214255817963906
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16976905020400884
+      },
+      {
+        "id": 15,
+        "species": "apple",
+        "pos": [
+          -39.12424830062243,
+          10.268462095115032,
+          22.5071424205003
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1930031282424927
+      },
+      {
+        "id": 17,
+        "species": "apple",
+        "pos": [
+          -9.559568424978531,
+          9.612089168502656,
+          9.160715946512584
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19029820158779623
+      },
+      {
+        "id": 18,
+        "species": "apple",
+        "pos": [
+          -9.798535411338227,
+          8.967591591275506,
+          9.871874571007723
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18865897662863138
+      },
+      {
+        "id": 19,
+        "species": "apple",
+        "pos": [
+          -7.346554151588924,
+          9.151825994110913,
+          10.586226704558088
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17863440233469008
+      },
+      {
+        "id": 20,
+        "species": "apple",
+        "pos": [
+          -10.27897128252778,
+          9.317280800233705,
+          8.919514575838756
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17740481857433918
+      },
+      {
+        "id": 21,
+        "species": "apple",
+        "pos": [
+          -8.515130668157598,
+          9.315225493515017,
+          8.057691472190017
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1818962594807148
+      },
+      {
+        "id": 22,
+        "species": "apple",
+        "pos": [
+          -9.049901092993661,
+          9.79004701884638,
+          8.566870148346812
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17138326712176205
+      },
+      {
+        "id": 23,
+        "species": "apple",
+        "pos": [
+          -9.487566419408855,
+          8.910631525170123,
+          10.329967086324675
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1967196230635047
+      },
+      {
+        "id": 25,
+        "species": "apple",
+        "pos": [
+          -4.843260997656276,
+          9.4664319011027,
+          17.122827342019644
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15137317539677025
+      },
+      {
+        "id": 26,
+        "species": "apple",
+        "pos": [
+          -6.738984196516591,
+          10.225886770646252,
+          19.63013741924178
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15344295910298825
+      },
+      {
+        "id": 27,
+        "species": "apple",
+        "pos": [
+          -7.204486432662153,
+          9.619642390766638,
+          19.460811803631458
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15693650181218982
+      },
+      {
+        "id": 28,
+        "species": "apple",
+        "pos": [
+          -7.468942342324083,
+          9.169613305041434,
+          18.953399421939352
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17905400169715285
+      },
+      {
+        "id": 29,
+        "species": "apple",
+        "pos": [
+          -3.762793609454343,
+          9.073771354006928,
+          19.06499452356517
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17455445189923052
+      },
+      {
+        "id": 30,
+        "species": "apple",
+        "pos": [
+          -4.167661230118849,
+          9.126991465785126,
+          19.562787243058132
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17003072116151452
+      },
+      {
+        "id": 31,
+        "species": "apple",
+        "pos": [
+          -7.058164016257485,
+          10.519189820178134,
+          18.818505708822713
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17325617346167563
+      },
+      {
+        "id": 33,
+        "species": "apple",
+        "pos": [
+          -31.058813503840952,
+          9.765605321381257,
+          37.49697278679744
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16724643251001836
+      },
+      {
+        "id": 34,
+        "species": "apple",
+        "pos": [
+          -28.423903631448614,
+          10.01181966286213,
+          37.11090064088764
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15138193314149978
+      },
+      {
+        "id": 35,
+        "species": "apple",
+        "pos": [
+          -30.54030347074909,
+          10.313486141860096,
+          36.343082308514376
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18937352324500684
+      },
+      {
+        "id": 36,
+        "species": "apple",
+        "pos": [
+          -30.546108605378073,
+          10.253883271757859,
+          36.42404432959545
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1849794075675309
+      },
+      {
+        "id": 37,
+        "species": "apple",
+        "pos": [
+          -32.315201016343366,
+          9.937360010393299,
+          37.84293234809107
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14459915988445285
+      },
+      {
+        "id": 39,
+        "species": "apple",
+        "pos": [
+          -49.53237559385725,
+          11.64564066558008,
+          14.035124884657526
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1486747561082244
+      },
+      {
+        "id": 40,
+        "species": "apple",
+        "pos": [
+          -45.787689787470235,
+          11.842342872617403,
+          16.01299708640654
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18206294010803104
+      },
+      {
+        "id": 41,
+        "species": "apple",
+        "pos": [
+          -45.33858802861862,
+          11.088053006027849,
+          17.44534324877444
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15290726848393682
+      },
+      {
+        "id": 42,
+        "species": "apple",
+        "pos": [
+          -48.558603407428016,
+          10.97163252998825,
+          14.811963945996617
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1559976223394275
+      },
+      {
+        "id": 43,
+        "species": "apple",
+        "pos": [
+          -48.696643494746205,
+          12.23680507434546,
+          14.223814101953403
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18012842083424332
+      },
+      {
+        "id": 44,
+        "species": "apple",
+        "pos": [
+          -45.8217810079044,
+          11.06910865489186,
+          14.206508602728888
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15898903222754598
+      },
+      {
+        "id": 45,
+        "species": "apple",
+        "pos": [
+          -46.019386487920585,
+          12.873611348631199,
+          13.977004254040331
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1784981198102236
+      },
+      {
+        "id": 47,
+        "species": "apple",
+        "pos": [
+          3.5487935692745824,
+          10.313991674464337,
+          25.367419204329416
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18937607599869372
+      },
+      {
+        "id": 48,
+        "species": "apple",
+        "pos": [
+          2.069592686032083,
+          10.868551856228754,
+          21.650047052634974
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14548844695165755
+      },
+      {
+        "id": 49,
+        "species": "apple",
+        "pos": [
+          1.721709235245324,
+          10.326351932946737,
+          25.92174374635443
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18374016153365377
+      },
+      {
+        "id": 50,
+        "species": "apple",
+        "pos": [
+          0.8502657441966431,
+          10.142275891123216,
+          25.400946871033018
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15110780769363047
+      },
+      {
+        "id": 51,
+        "species": "apple",
+        "pos": [
+          2.3546886825570517,
+          10.371966204842748,
+          25.222768635949972
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16745911687612536
+      },
+      {
+        "id": 52,
+        "species": "apple",
+        "pos": [
+          1.5965490647925715,
+          10.539235755991898,
+          21.365619552839746
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1512305425770581
+      },
+      {
+        "id": 53,
+        "species": "apple",
+        "pos": [
+          2.911941268508495,
+          11.553202830337906,
+          24.494780874834362
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16782455744072797
+      },
+      {
+        "id": 55,
+        "species": "apple",
+        "pos": [
+          -37.9035530090332,
+          7.6633501052856445,
+          15.462265014648438
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.16496512033566832
+      },
+      {
+        "id": 56,
+        "species": "apple",
+        "pos": [
+          -35.31410217285156,
+          7.651683330535889,
+          13.778923988342285
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.15329742194712162
+      },
+      {
+        "id": 57,
+        "species": "apple",
+        "pos": [
+          -38.66928482055664,
+          7.671303749084473,
+          15.532827377319336
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.1729194783166051
+      },
+      {
+        "id": 58,
+        "species": "apple",
+        "pos": [
+          -36.36924743652344,
+          7.655026435852051,
+          13.288297653198242
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.1566407915465534
+      },
+      {
+        "id": 59,
+        "species": "apple",
+        "pos": [
+          -44.227760314941406,
+          7.678998947143555,
+          12.330989837646484
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.18062337411791088
+      },
+      {
+        "id": 60,
+        "species": "apple",
+        "pos": [
+          -37.04325485229492,
+          7.66240119934082,
+          12.516279220581055
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.16402645581737163
+      },
+      {
+        "id": 61,
+        "species": "apple",
+        "pos": [
+          -38.82931900024414,
+          7.676560878753662,
+          14.37043285369873
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.1781750638432801
+      },
+      {
+        "id": 63,
+        "species": "apple",
+        "pos": [
+          -35.440749365516844,
+          11.259021897598572,
+          5.328690062167164
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17429616596475245
+      },
+      {
+        "id": 64,
+        "species": "apple",
+        "pos": [
+          -31.93371102212743,
+          12.444721085747316,
+          5.654858890236619
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16333512908369302
+      },
+      {
+        "id": 65,
+        "species": "apple",
+        "pos": [
+          -32.9868206281168,
+          10.868509049772028,
+          7.318539908013379
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16854727729186417
+      },
+      {
+        "id": 66,
+        "species": "apple",
+        "pos": [
+          -35.38135166361979,
+          11.945235906734617,
+          6.424528200152254
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19532590964362026
+      },
+      {
+        "id": 68,
+        "species": "apple",
+        "pos": [
+          -34.58660125732422,
+          7.64255428314209,
+          5.020392417907715
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.14417892779260874
+      },
+      {
+        "id": 69,
+        "species": "apple",
+        "pos": [
+          -38.52988815307617,
+          7.688364505767822,
+          3.5719406604766846
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.1899783576771617
+      },
+      {
+        "id": 70,
+        "species": "apple",
+        "pos": [
+          -45.0218391418457,
+          7.705173969268799,
+          7.082603454589844
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.2066396123407036
+      },
+      {
+        "id": 71,
+        "species": "apple",
+        "pos": [
+          -41.5389289855957,
+          7.6703410148620605,
+          12.377909660339355
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.17195512825325132
+      },
+      {
+        "id": 72,
+        "species": "apple",
+        "pos": [
+          -42.79350662231445,
+          7.6523919105529785,
+          10.619796752929688
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.15400742142349483
+      },
+      {
+        "id": 73,
+        "species": "apple",
+        "pos": [
+          -47.57967758178711,
+          7.674296855926514,
+          12.125940322875977
+        ],
+        "state": "free",
+        "speed": 0.4401675572596875,
+        "radius": 0.1744007537059486
+      },
+      {
+        "id": 75,
+        "species": "apple",
+        "pos": [
+          -9.944204327532296,
+          9.884210164392817,
+          36.722061401631606
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18141124946549536
+      },
+      {
+        "id": 76,
+        "species": "apple",
+        "pos": [
+          -11.363846764945576,
+          10.451873434821048,
+          35.73788492581639
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.3043524168507457
+      },
+      {
+        "id": 77,
+        "species": "apple",
+        "pos": [
+          -8.798423862257362,
+          9.80442448797515,
+          33.92779848593965
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16576849916800857
+      },
+      {
+        "id": 78,
+        "species": "apple",
+        "pos": [
+          -9.826876459831675,
+          10.39228443651976,
+          33.606078501030126
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15149065784737467
+      },
+      {
+        "id": 80,
+        "species": "apple",
+        "pos": [
+          0.24353727435860378,
+          10.79219160442367,
+          14.44732630232146
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14820843764469027
+      },
+      {
+        "id": 81,
+        "species": "apple",
+        "pos": [
+          -1.85452270064662,
+          11.495216216477251,
+          16.72672494525151
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1561380097076297
+      },
+      {
+        "id": 82,
+        "species": "apple",
+        "pos": [
+          -2.313621776981854,
+          10.70391751569488,
+          18.090392466922665
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15372943933457137
+      },
+      {
+        "id": 83,
+        "species": "apple",
+        "pos": [
+          0.34823802637032375,
+          10.609581635181371,
+          15.51496533850899
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17179982470944527
+      },
+      {
+        "id": 85,
+        "species": "apple",
+        "pos": [
+          -40.566307737917725,
+          10.788672696810941,
+          31.610971570861935
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14336076826006175
+      },
+      {
+        "id": 86,
+        "species": "apple",
+        "pos": [
+          -40.888647439438465,
+          9.910511167319717,
+          31.332379927646517
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14826055291220547
+      },
+      {
+        "id": 87,
+        "species": "apple",
+        "pos": [
+          -40.7457682335696,
+          11.29551283544325,
+          32.36700552111319
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1949693568274379
+      },
+      {
+        "id": 88,
+        "species": "apple",
+        "pos": [
+          -41.509058318339875,
+          10.531666629993781,
+          33.17763483518413
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18540463080555203
+      },
+      {
+        "id": 89,
+        "species": "apple",
+        "pos": [
+          -42.841679840949965,
+          10.456471431232336,
+          32.1960769757145
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15710981968268753
+      },
+      {
+        "id": 90,
+        "species": "apple",
+        "pos": [
+          -40.02021004354814,
+          10.378359212057635,
+          31.38581734076703
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17325597235113382
+      },
+      {
+        "id": 91,
+        "species": "apple",
+        "pos": [
+          -42.203949034948295,
+          9.978174467328689,
+          32.767412086463224
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1824067858487368
+      },
+      {
+        "id": 93,
+        "species": "apple",
+        "pos": [
+          -21.819401845283227,
+          9.292405866575953,
+          3.111168767174085
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16244424588680267
+      },
+      {
+        "id": 94,
+        "species": "apple",
+        "pos": [
+          -20.05210387874406,
+          9.581192935254535,
+          3.2760654254875883
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1694776667661965
+      },
+      {
+        "id": 95,
+        "species": "apple",
+        "pos": [
+          -20.32750779647473,
+          9.599550406342956,
+          2.1235466437683472
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17117177101522688
+      },
+      {
+        "id": 96,
+        "species": "apple",
+        "pos": [
+          -21.286512806601593,
+          10.010182720651578,
+          2.011097934726895
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16055102527961135
+      },
+      {
+        "id": 97,
+        "species": "apple",
+        "pos": [
+          -21.84630209273979,
+          9.565237261801787,
+          2.9378346089899305
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17174612097516656
+      },
+      {
+        "id": 98,
+        "species": "apple",
+        "pos": [
+          -19.745694810211404,
+          9.56622428353446,
+          2.4942881469864937
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14879353996366262
+      },
+      {
+        "id": 100,
+        "species": "apple",
+        "pos": [
+          -12.913782249878066,
+          10.07788181418032,
+          9.528206915864946
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16998817575648428
+      },
+      {
+        "id": 101,
+        "species": "apple",
+        "pos": [
+          -12.121144541274184,
+          10.553013182327144,
+          12.8602813731871
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17764596350193024
+      },
+      {
+        "id": 102,
+        "species": "apple",
+        "pos": [
+          -15.060495927108336,
+          10.5827198714206,
+          10.852951094300048
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17578380574658511
+      },
+      {
+        "id": 103,
+        "species": "apple",
+        "pos": [
+          -14.123414212258533,
+          10.100871764567204,
+          10.879897326254982
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14478225991204383
+      },
+      {
+        "id": 104,
+        "species": "apple",
+        "pos": [
+          -14.568711551408347,
+          10.326825266649891,
+          12.305458961780754
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17540193487629296
+      },
+      {
+        "id": 105,
+        "species": "apple",
+        "pos": [
+          -14.127953817013125,
+          11.488581339362867,
+          13.109206355613072
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17488021088913083
+      },
+      {
+        "id": 106,
+        "species": "apple",
+        "pos": [
+          -13.640824203697413,
+          10.95283278463097,
+          13.229785187881038
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1772501409456134
+      },
+      {
+        "id": 108,
+        "species": "apple",
+        "pos": [
+          -18.531326804526746,
+          10.115146891550104,
+          10.395117015656577
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18155309623405338
+      },
+      {
+        "id": 109,
+        "species": "apple",
+        "pos": [
+          -21.254275772711015,
+          10.130292777966105,
+          8.065103676274935
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1541957644224167
+      },
+      {
+        "id": 110,
+        "species": "apple",
+        "pos": [
+          -18.930555827049663,
+          9.480500390510223,
+          11.37851362379039
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1658517105355859
+      },
+      {
+        "id": 111,
+        "species": "apple",
+        "pos": [
+          -17.280956417614348,
+          9.893632899672046,
+          8.777818115726566
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19115453114882114
+      },
+      {
+        "id": 112,
+        "species": "apple",
+        "pos": [
+          -21.086538170400846,
+          10.81790720055915,
+          9.132463705535637
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19049640931338074
+      },
+      {
+        "id": 113,
+        "species": "apple",
+        "pos": [
+          -21.081834994470498,
+          9.532376305669354,
+          7.903880022738559
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15992146136909724
+      },
+      {
+        "id": 114,
+        "species": "apple",
+        "pos": [
+          -21.697846800650495,
+          10.1332694751668,
+          10.877321003486458
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17542318337410692
+      },
+      {
+        "id": 116,
+        "species": "apple",
+        "pos": [
+          -17.855424880981445,
+          7.687811851501465,
+          0.9136302471160889
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.18943667206913234
+      },
+      {
+        "id": 117,
+        "species": "apple",
+        "pos": [
+          -23.54861068725586,
+          7.6712646484375,
+          20.158445358276367
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.172883885525167
+      },
+      {
+        "id": 118,
+        "species": "apple",
+        "pos": [
+          -32.103505440563765,
+          9.77132224739781,
+          21.652909993079927
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17354983302801846
+      },
+      {
+        "id": 119,
+        "species": "apple",
+        "pos": [
+          -31.13710216297303,
+          10.627210459623656,
+          24.37934525544654
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15727009624764324
+      },
+      {
+        "id": 120,
+        "species": "apple",
+        "pos": [
+          -31.935704915728966,
+          10.70090718556763,
+          21.26633268098815
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17990664554461838
+      },
+      {
+        "id": 121,
+        "species": "apple",
+        "pos": [
+          -32.42255975584563,
+          9.571634030793948,
+          23.530036390505757
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1439752119459212
+      },
+      {
+        "id": 123,
+        "species": "apple",
+        "pos": [
+          -33.55017951447127,
+          11.685175144258293,
+          42.60104070819128
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16356047139391305
+      },
+      {
+        "id": 124,
+        "species": "apple",
+        "pos": [
+          -33.35664135999733,
+          11.8942537277751,
+          45.439110640826506
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15763398377224805
+      },
+      {
+        "id": 125,
+        "species": "apple",
+        "pos": [
+          -35.1260160157023,
+          11.112510813046333,
+          43.08562724519995
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16678567651733758
+      },
+      {
+        "id": 126,
+        "species": "apple",
+        "pos": [
+          -39.344943267769935,
+          11.260324985028344,
+          45.30727925282151
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.09341462664571405
+      },
+      {
+        "id": 128,
+        "species": "apple",
+        "pos": [
+          -11.230957364164022,
+          10.584854582515405,
+          45.25568306896482
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14494369226098064
+      },
+      {
+        "id": 129,
+        "species": "apple",
+        "pos": [
+          -10.083574374649451,
+          10.150937103473009,
+          44.91920770138356
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1769893048539758
+      },
+      {
+        "id": 130,
+        "species": "apple",
+        "pos": [
+          -10.622922140070278,
+          10.283875993641344,
+          45.184477136352946
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.190571718865633
+      },
+      {
+        "id": 131,
+        "species": "apple",
+        "pos": [
+          -9.85995815071139,
+          10.033767369951454,
+          41.20793749733671
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1918931654959917
+      },
+      {
+        "id": 132,
+        "species": "apple",
+        "pos": [
+          -10.148716634625321,
+          11.687340341473574,
+          44.99580773044401
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1482209715254605
+      },
+      {
+        "id": 133,
+        "species": "apple",
+        "pos": [
+          -9.742585926535826,
+          10.328778527235158,
+          44.884047785698904
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15535339059531691
+      },
+      {
+        "id": 135,
+        "species": "apple",
+        "pos": [
+          -37.579963618108856,
+          11.592251389022485,
+          35.41708675787905
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17631686904728414
+      },
+      {
+        "id": 136,
+        "species": "apple",
+        "pos": [
+          -39.63410206921868,
+          10.431895510345626,
+          37.92222237034201
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1731680119097233
+      },
+      {
+        "id": 137,
+        "species": "apple",
+        "pos": [
+          -38.22561500905163,
+          10.134497278720803,
+          38.81628764783585
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1864598972603679
+      },
+      {
+        "id": 138,
+        "species": "apple",
+        "pos": [
+          -38.08742272017701,
+          9.867754908456906,
+          38.67502827451571
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14944673678204418
+      },
+      {
+        "id": 140,
+        "species": "apple",
+        "pos": [
+          -43.83841550104897,
+          9.858246400776027,
+          25.415747340588972
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1609986522294581
+      },
+      {
+        "id": 141,
+        "species": "apple",
+        "pos": [
+          -45.28936721470736,
+          10.12427949321374,
+          25.06985479559174
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1786058736935258
+      },
+      {
+        "id": 142,
+        "species": "apple",
+        "pos": [
+          -41.745330888184604,
+          9.409309046737885,
+          25.452088419347874
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16506128159835934
+      },
+      {
+        "id": 143,
+        "species": "apple",
+        "pos": [
+          -44.01961705980121,
+          9.548679010136395,
+          22.58058083417708
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18464748201519252
+      },
+      {
+        "id": 144,
+        "species": "apple",
+        "pos": [
+          -42.521498133826846,
+          9.473855451318098,
+          25.511501138013188
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14883406842425467
+      },
+      {
+        "id": 146,
+        "species": "apple",
+        "pos": [
+          -14.637559011828188,
+          10.886747352820565,
+          36.469332826043704
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18223750894740226
+      },
+      {
+        "id": 147,
+        "species": "apple",
+        "pos": [
+          -10.85215905824718,
+          10.482854797339197,
+          38.88523256110804
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16949149801135063
+      },
+      {
+        "id": 148,
+        "species": "apple",
+        "pos": [
+          -12.76913705015474,
+          9.81554956686991,
+          37.04999008850726
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18543859092593196
+      },
+      {
+        "id": 149,
+        "species": "apple",
+        "pos": [
+          -13.76530849022974,
+          9.828378800949816,
+          40.15131800874576
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19030826823562386
+      },
+      {
+        "id": 150,
+        "species": "apple",
+        "pos": [
+          -11.87878271497969,
+          10.180354069536065,
+          37.53387694686344
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17412767159342768
+      },
+      {
+        "id": 151,
+        "species": "apple",
+        "pos": [
+          -12.613639212790439,
+          11.258567535005469,
+          40.017873480451534
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1887482527114451
+      },
+      {
+        "id": 153,
+        "species": "apple",
+        "pos": [
+          -15.200043526233497,
+          13.040780957775548,
+          0.6972988335732871
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16985516013205051
+      },
+      {
+        "id": 154,
+        "species": "apple",
+        "pos": [
+          -16.76821076897888,
+          12.25790446912964,
+          0.9892779076557133
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.173772628005594
+      },
+      {
+        "id": 155,
+        "species": "apple",
+        "pos": [
+          -13.720458653641984,
+          11.018928341641137,
+          0.3190695079423177
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17914709776565435
+      },
+      {
+        "id": 156,
+        "species": "apple",
+        "pos": [
+          -16.06290091009464,
+          11.11770468978939,
+          -1.2922463010718774
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15473386556878688
+      },
+      {
+        "id": 157,
+        "species": "apple",
+        "pos": [
+          -14.065481914573311,
+          12.3008864260674,
+          0.8183756329059287
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.166501346539706
+      },
+      {
+        "id": 158,
+        "species": "apple",
+        "pos": [
+          -14.329131718921632,
+          11.149681609000178,
+          -2.568886364463237
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18240215887501834
+      },
+      {
+        "id": 160,
+        "species": "apple",
+        "pos": [
+          -7.497651612142414,
+          9.98364805261553,
+          22.798340899998838
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15198832598403098
+      },
+      {
+        "id": 161,
+        "species": "apple",
+        "pos": [
+          -9.138586199899981,
+          9.62797267744839,
+          24.940105538792995
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16829368719607593
+      },
+      {
+        "id": 162,
+        "species": "apple",
+        "pos": [
+          -8.966148753808877,
+          9.488282950188893,
+          22.884085675884357
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15111109000816944
+      },
+      {
+        "id": 163,
+        "species": "apple",
+        "pos": [
+          -7.680564810919983,
+          10.256370468018062,
+          25.786835779268156
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19606530141681436
+      },
+      {
+        "id": 164,
+        "species": "apple",
+        "pos": [
+          -6.141469517144277,
+          9.687410512304522,
+          25.800145822596697
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16639338086843491
+      },
+      {
+        "id": 165,
+        "species": "apple",
+        "pos": [
+          -6.720814465546077,
+          9.09119458529993,
+          22.8858690275402
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14749314462170005
+      },
+      {
+        "id": 167,
+        "species": "apple",
+        "pos": [
+          -31.633278662153145,
+          10.502278127425763,
+          0.20877308511744527
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18979172709435224
+      },
+      {
+        "id": 168,
+        "species": "apple",
+        "pos": [
+          -33.8777788373697,
+          10.542946877676593,
+          -1.6693321764148825
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16379500542357564
+      },
+      {
+        "id": 169,
+        "species": "apple",
+        "pos": [
+          -34.61785075229384,
+          10.229674176432038,
+          -0.4074324890194245
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18846435074284676
+      },
+      {
+        "id": 170,
+        "species": "apple",
+        "pos": [
+          -31.970830527804726,
+          10.678856191655,
+          -0.11383655889100722
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1820595407217741
+      },
+      {
+        "id": 172,
+        "species": "apple",
+        "pos": [
+          -43.286672841116776,
+          9.912913107627077,
+          15.844110710432354
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14466212629303338
+      },
+      {
+        "id": 173,
+        "species": "apple",
+        "pos": [
+          -42.66141531490136,
+          9.977475294244606,
+          17.33674298311117
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1485216601572931
+      },
+      {
+        "id": 174,
+        "species": "apple",
+        "pos": [
+          -42.190041274048774,
+          9.93020323536592,
+          17.286345051195774
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18549033463671807
+      },
+      {
+        "id": 175,
+        "species": "apple",
+        "pos": [
+          -43.92292047411316,
+          9.673727061742548,
+          15.817594945019637
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1540446751691401
+      },
+      {
+        "id": 176,
+        "species": "apple",
+        "pos": [
+          -41.71963912575833,
+          10.625060588833456,
+          16.96069766527933
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16524989414215088
+      },
+      {
+        "id": 178,
+        "species": "orange",
+        "pos": [
+          -49.42613693937144,
+          10.922791722499444,
+          18.961137788546853
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14172542156577111
+      },
+      {
+        "id": 179,
+        "species": "orange",
+        "pos": [
+          -49.20446111539814,
+          10.917688024063349,
+          15.968088097565943
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15585039403140546
+      },
+      {
+        "id": 180,
+        "species": "orange",
+        "pos": [
+          -45.77641754790609,
+          10.792227700980927,
+          18.78900421879321
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1475667074203491
+      },
+      {
+        "id": 181,
+        "species": "orange",
+        "pos": [
+          -48.73615807134035,
+          11.321039098282085,
+          19.892086446677457
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15022260458320377
+      },
+      {
+        "id": 183,
+        "species": "orange",
+        "pos": [
+          -18.018808825409305,
+          10.37963534504257,
+          41.93353381525796
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17979764142483473
+      },
+      {
+        "id": 184,
+        "species": "orange",
+        "pos": [
+          -18.351433314663904,
+          10.893706663722508,
+          41.839830187098414
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1490484843879938
+      },
+      {
+        "id": 185,
+        "species": "orange",
+        "pos": [
+          -19.122407703171042,
+          10.832235915293603,
+          44.459969484999185
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1553176755324006
+      },
+      {
+        "id": 186,
+        "species": "orange",
+        "pos": [
+          -18.785136549288392,
+          10.965368544934748,
+          43.36555698956969
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16282352626025678
+      },
+      {
+        "id": 187,
+        "species": "orange",
+        "pos": [
+          -18.164602160299353,
+          10.203863386418995,
+          46.12984983474136
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1817177459001541
+      },
+      {
+        "id": 188,
+        "species": "orange",
+        "pos": [
+          -17.825418936478375,
+          10.490555896713737,
+          41.94478514413326
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15398450300693511
+      },
+      {
+        "id": 190,
+        "species": "orange",
+        "pos": [
+          -28.397080742398497,
+          10.097252936146054,
+          41.273959393966884
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.13977439869046213
+      },
+      {
+        "id": 191,
+        "species": "orange",
+        "pos": [
+          -29.923446061081783,
+          9.334724647838305,
+          41.97117262814379
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14838922335654497
+      },
+      {
+        "id": 192,
+        "species": "orange",
+        "pos": [
+          -30.82612457962141,
+          10.307870867572102,
+          41.18287962837242
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18209086845666173
+      },
+      {
+        "id": 193,
+        "species": "orange",
+        "pos": [
+          -28.428993081167736,
+          10.357682827774463,
+          37.75867949643754
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1762288246691227
+      },
+      {
+        "id": 194,
+        "species": "orange",
+        "pos": [
+          -27.688972009287813,
+          9.80472313222552,
+          39.08899911076816
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1783586265861988
+      },
+      {
+        "id": 195,
+        "species": "orange",
+        "pos": [
+          -29.822672526158534,
+          9.410745811855085,
+          41.962853760831834
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.28386085555869345
+      },
+      {
+        "id": 197,
+        "species": "orange",
+        "pos": [
+          -25.04593849182129,
+          7.6468505859375,
+          26.018224716186523
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.14847588556408883
+      },
+      {
+        "id": 198,
+        "species": "orange",
+        "pos": [
+          -23.827293395996094,
+          7.662740230560303,
+          23.836017608642578
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.16436507096141575
+      },
+      {
+        "id": 199,
+        "species": "orange",
+        "pos": [
+          -30.699048509101765,
+          9.221711203730472,
+          27.45569087626537
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18020952713489533
+      },
+      {
+        "id": 200,
+        "species": "orange",
+        "pos": [
+          -22.046157836914062,
+          7.640292644500732,
+          26.017852783203125
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.14190640859156847
+      },
+      {
+        "id": 201,
+        "species": "orange",
+        "pos": [
+          -24.555767059326172,
+          7.667455673217773,
+          19.22540855407715
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.16907354893982413
+      },
+      {
+        "id": 202,
+        "species": "orange",
+        "pos": [
+          -17.726526260375977,
+          7.645803928375244,
+          26.117353439331055
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.14742340589910746
+      },
+      {
+        "id": 203,
+        "species": "orange",
+        "pos": [
+          -23.851356506347656,
+          7.639564514160156,
+          24.521024703979492
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.14118914769291876
+      },
+      {
+        "id": 205,
+        "species": "orange",
+        "pos": [
+          -5.296118277837852,
+          10.382286257966266,
+          23.964027395276545
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16571017698347568
+      },
+      {
+        "id": 206,
+        "species": "orange",
+        "pos": [
+          -6.642516334050051,
+          9.480279200932765,
+          23.15057749152215
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1495728629410267
+      },
+      {
+        "id": 207,
+        "species": "orange",
+        "pos": [
+          -6.610211727621474,
+          9.751032636439188,
+          25.19559838780842
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16827100532948971
+      },
+      {
+        "id": 208,
+        "species": "orange",
+        "pos": [
+          -6.065603016321435,
+          9.3984393053306,
+          23.09477254987029
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14272058750241995
+      },
+      {
+        "id": 209,
+        "species": "orange",
+        "pos": [
+          -5.844145814381239,
+          10.447347337478382,
+          24.91096641680304
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14366526547819378
+      },
+      {
+        "id": 210,
+        "species": "orange",
+        "pos": [
+          -5.241117305863997,
+          9.340439801623527,
+          22.99514566377578
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1753162247911096
+      },
+      {
+        "id": 211,
+        "species": "orange",
+        "pos": [
+          -5.319519563509038,
+          9.710258939299573,
+          23.9249918131751
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16332987913787364
+      },
+      {
+        "id": 213,
+        "species": "orange",
+        "pos": [
+          -41.96942992273786,
+          9.33877662555461,
+          32.35081331519476
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.13776661977022886
+      },
+      {
+        "id": 214,
+        "species": "orange",
+        "pos": [
+          -40.24701142879654,
+          8.9404061597212,
+          34.11591709934546
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.175679648193717
+      },
+      {
+        "id": 215,
+        "species": "orange",
+        "pos": [
+          -41.47373522026914,
+          9.498638922848365,
+          33.536967801141664
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17828652695119382
+      },
+      {
+        "id": 216,
+        "species": "orange",
+        "pos": [
+          -40.636150330816214,
+          9.48782739153962,
+          31.260195472088824
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15566218795478345
+      },
+      {
+        "id": 218,
+        "species": "orange",
+        "pos": [
+          -43.985183574328815,
+          10.189045333746469,
+          14.480859592806706
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.143606161634624
+      },
+      {
+        "id": 219,
+        "species": "orange",
+        "pos": [
+          -43.3958329067757,
+          10.422860187256028,
+          12.69247264736529
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15692092088013887
+      },
+      {
+        "id": 220,
+        "species": "orange",
+        "pos": [
+          -43.070076615803224,
+          9.575194915915848,
+          11.640411821951822
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17078106005638838
+      },
+      {
+        "id": 221,
+        "species": "orange",
+        "pos": [
+          -44.18719926191432,
+          9.606405754608572,
+          10.890339685219192
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18037057800889017
+      },
+      {
+        "id": 222,
+        "species": "orange",
+        "pos": [
+          -43.09102877268638,
+          9.57511812279168,
+          11.383661048306175
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1469739044249058
+      },
+      {
+        "id": 223,
+        "species": "orange",
+        "pos": [
+          -42.94158191923435,
+          10.899017397088173,
+          13.760482471460696
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14834966725260018
+      },
+      {
+        "id": 224,
+        "species": "orange",
+        "pos": [
+          -44.65557734134529,
+          9.314613894208206,
+          14.341749456024427
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1786823619246483
+      },
+      {
+        "id": 226,
+        "species": "orange",
+        "pos": [
+          -13.593933498895236,
+          9.206558210550378,
+          0.5452791986506639
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17259697341620922
+      },
+      {
+        "id": 227,
+        "species": "orange",
+        "pos": [
+          -14.637241819676358,
+          9.232224848308222,
+          0.17610072721076783
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14968563524633646
+      },
+      {
+        "id": 228,
+        "species": "orange",
+        "pos": [
+          -13.641467022511538,
+          9.90364736626293,
+          1.4446123572440588
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14664152601063252
+      },
+      {
+        "id": 229,
+        "species": "orange",
+        "pos": [
+          -14.303563593480199,
+          8.992266103849628,
+          3.02258518716249
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1379968507990241
+      },
+      {
+        "id": 231,
+        "species": "orange",
+        "pos": [
+          -5.80144103007345,
+          11.130899972943439,
+          14.935704937935295
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1723975453183055
+      },
+      {
+        "id": 232,
+        "species": "orange",
+        "pos": [
+          -5.614518909454999,
+          9.816317861872362,
+          13.349188875779475
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.08217646680903436
+      },
+      {
+        "id": 233,
+        "species": "orange",
+        "pos": [
+          -4.609832023733076,
+          10.62842004305098,
+          12.185732656560054
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15097845438867807
+      },
+      {
+        "id": 234,
+        "species": "orange",
+        "pos": [
+          -8.832489810226752,
+          9.791203207083056,
+          12.476253127720195
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17427914420813323
+      },
+      {
+        "id": 235,
+        "species": "orange",
+        "pos": [
+          -8.79900430569314,
+          10.747633637874719,
+          12.659624798899683
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17564368911838532
+      },
+      {
+        "id": 236,
+        "species": "orange",
+        "pos": [
+          -7.751735738683007,
+          10.957073370557481,
+          12.59134649717695
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15273720626831053
+      },
+      {
+        "id": 238,
+        "species": "orange",
+        "pos": [
+          -32.78620363604435,
+          9.335199311802844,
+          19.496738185653673
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17592460652887823
+      },
+      {
+        "id": 239,
+        "species": "orange",
+        "pos": [
+          -31.044765378380944,
+          9.413367914908669,
+          17.29154817077429
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14083076485544443
+      },
+      {
+        "id": 240,
+        "species": "orange",
+        "pos": [
+          -33.033943088459516,
+          10.41263117296232,
+          17.891714589848515
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1655374682888389
+      },
+      {
+        "id": 241,
+        "species": "orange",
+        "pos": [
+          -32.6043791895112,
+          9.610259998957854,
+          18.994528509686234
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16803795028328897
+      },
+      {
+        "id": 242,
+        "species": "orange",
+        "pos": [
+          -32.849622056227005,
+          10.50581496245849,
+          17.619249878779407
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15109955385178328
+      },
+      {
+        "id": 243,
+        "species": "orange",
+        "pos": [
+          -32.47291985056118,
+          10.084771350360764,
+          18.573672457079805
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16532107932418583
+      },
+      {
+        "id": 245,
+        "species": "watermelon",
+        "pos": [
+          -33.85531288623234,
+          7.768771458147132,
+          28.437038813913155
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.4506683028489351
+      },
+      {
+        "id": 247,
+        "species": "watermelon",
+        "pos": [
+          -17.60886468032969,
+          7.769319045231806,
+          19.097732360638883
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.3334374824166298
+      },
+      {
+        "id": 249,
+        "species": "watermelon",
+        "pos": [
+          -44.1028238932793,
+          7.75357068215299,
+          38.286432481841594
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.3916005386412144
+      },
+      {
+        "id": 251,
+        "species": "watermelon",
+        "pos": [
+          -46.11058782149105,
+          7.772587170679727,
+          8.745542362636371
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.3678813668712974
+      },
+      {
+        "id": 253,
+        "species": "watermelon",
+        "pos": [
+          -18.313239056392767,
+          7.854891651791824,
+          9.449941985729986
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.32419055365026
+      },
+      {
+        "id": 255,
+        "species": "apple",
+        "pos": [
+          -42.33404700612187,
+          23.475480412721677,
+          -35.36188718090722
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1850348859459162
+      },
+      {
+        "id": 256,
+        "species": "apple",
+        "pos": [
+          -40.24814239351506,
+          23.293631435413275,
+          -32.21306899442004
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1668191753551364
+      },
+      {
+        "id": 257,
+        "species": "apple",
+        "pos": [
+          -43.41404132611221,
+          23.35682062710701,
+          -31.85477373595863
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17364154322221878
+      },
+      {
+        "id": 258,
+        "species": "apple",
+        "pos": [
+          -41.46643788389926,
+          23.395179858166756,
+          -32.625513837761325
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1442216400846839
+      },
+      {
+        "id": 259,
+        "species": "apple",
+        "pos": [
+          -42.89278161045069,
+          23.22610280715251,
+          -32.41845645702755
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17470512090772392
+      },
+      {
+        "id": 260,
+        "species": "apple",
+        "pos": [
+          -41.59666411910468,
+          24.26777058926036,
+          -32.23075365557387
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17707831516638398
+      },
+      {
+        "id": 261,
+        "species": "apple",
+        "pos": [
+          -43.35525616151935,
+          24.23851392603706,
+          -31.67696975886502
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17610337372869253
+      },
+      {
+        "id": 263,
+        "species": "apple",
+        "pos": [
+          -48.31203736590166,
+          23.464644556993886,
+          -18.788094091659058
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14396935244500636
+      },
+      {
+        "id": 264,
+        "species": "apple",
+        "pos": [
+          -47.55855307856958,
+          23.14051675018939,
+          -21.111359971503507
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18837166896611454
+      },
+      {
+        "id": 265,
+        "species": "apple",
+        "pos": [
+          -47.44390541985789,
+          23.8966362824454,
+          -21.594830916890977
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.30026204554286606
+      },
+      {
+        "id": 266,
+        "species": "apple",
+        "pos": [
+          -47.391545256680885,
+          23.303103822866927,
+          -19.73663163196856
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14992485382780435
+      },
+      {
+        "id": 267,
+        "species": "apple",
+        "pos": [
+          -45.689322071290206,
+          23.880604252332287,
+          -20.797026931882037
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17059646930769087
+      },
+      {
+        "id": 268,
+        "species": "apple",
+        "pos": [
+          -44.89605164952831,
+          23.88016752584045,
+          -20.733027633201253
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18934699562713503
+      },
+      {
+        "id": 269,
+        "species": "apple",
+        "pos": [
+          -47.75962390373586,
+          24.142218283451758,
+          -19.877375783680282
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17112742626741528
+      },
+      {
+        "id": 271,
+        "species": "apple",
+        "pos": [
+          -48.25768280029297,
+          7.668435096740723,
+          17.577322006225586
+        ],
+        "state": "free",
+        "speed": 0.13220469822249367,
+        "radius": 0.1700597785316408
+      },
+      {
+        "id": 272,
+        "species": "apple",
+        "pos": [
+          -30.88861083984375,
+          7.6448655128479,
+          25.60057258605957
+        ],
+        "state": "free",
+        "speed": 0.06388459375365553,
+        "radius": 0.14648334710970523
+      },
+      {
+        "id": 273,
+        "species": "apple",
+        "pos": [
+          -46.419410705566406,
+          7.672130584716797,
+          11.203609466552734
+        ],
+        "state": "free",
+        "speed": 0.7278907233724868,
+        "radius": 0.1738643634431064
+      },
+      {
+        "id": 274,
+        "species": "apple",
+        "pos": [
+          -35.463348388671875,
+          7.663401126861572,
+          39.13861083984375
+        ],
+        "state": "free",
+        "speed": 0.23900858050707796,
+        "radius": 0.1649955660879612
+      },
+      {
+        "id": 276,
+        "species": "apple",
+        "pos": [
+          -24.97780858060864,
+          23.794630200411856,
+          -30.068980271239013
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17482990199401977
+      },
+      {
+        "id": 277,
+        "species": "apple",
+        "pos": [
+          -25.478868806756186,
+          23.35970674772245,
+          -33.165106460300656
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1546350661456585
+      },
+      {
+        "id": 278,
+        "species": "apple",
+        "pos": [
+          -24.342608260761807,
+          23.41099464642155,
+          -31.350482879238232
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19081524208560588
+      },
+      {
+        "id": 279,
+        "species": "apple",
+        "pos": [
+          -26.56754647394967,
+          23.564958155633157,
+          -32.067897365865605
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1620288320757449
+      },
+      {
+        "id": 280,
+        "species": "apple",
+        "pos": [
+          -25.083243322300888,
+          23.545293198618662,
+          -30.377290317497582
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.31073897137105466
+      },
+      {
+        "id": 281,
+        "species": "apple",
+        "pos": [
+          -27.52688749675329,
+          23.821822999249207,
+          -32.097996836628006
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14281086511164906
+      },
+      {
+        "id": 282,
+        "species": "apple",
+        "pos": [
+          -24.2139542540545,
+          24.034697177216177,
+          -29.42955895836762
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14450754531845453
+      },
+      {
+        "id": 284,
+        "species": "apple",
+        "pos": [
+          -45.69544857864526,
+          25.50742593601241,
+          -35.00165362802296
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15329116231501103
+      },
+      {
+        "id": 285,
+        "species": "apple",
+        "pos": [
+          -47.90542849110575,
+          25.15517599635058,
+          -36.172600649529116
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.190101331846416
+      },
+      {
+        "id": 286,
+        "species": "apple",
+        "pos": [
+          -45.24361493326284,
+          24.41458853616113,
+          -39.401807189954425
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18869974345043303
+      },
+      {
+        "id": 287,
+        "species": "apple",
+        "pos": [
+          -46.05750961283366,
+          25.132180347425226,
+          -38.22998630831134
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17549817342683674
+      },
+      {
+        "id": 288,
+        "species": "apple",
+        "pos": [
+          -48.179906975714246,
+          24.93498044679939,
+          -38.48352137203299
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19083923124969004
+      },
+      {
+        "id": 290,
+        "species": "apple",
+        "pos": [
+          -50.40636986646578,
+          23.67155368918085,
+          -29.90143380753474
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18880877540782093
+      },
+      {
+        "id": 291,
+        "species": "apple",
+        "pos": [
+          -49.43673221178544,
+          23.203077195735915,
+          -29.110593583300894
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.08986204884916545
+      },
+      {
+        "id": 292,
+        "species": "apple",
+        "pos": [
+          -49.74880520926606,
+          23.157790739395438,
+          -28.482968624721266
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16093557295426728
+      },
+      {
+        "id": 293,
+        "species": "apple",
+        "pos": [
+          -47.88094299470508,
+          24.033127857858837,
+          -26.761756353074613
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14512819744050504
+      },
+      {
+        "id": 295,
+        "species": "apple",
+        "pos": [
+          -41.09533443014124,
+          23.71633089409056,
+          -40.0571894379949
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14682313311025502
+      },
+      {
+        "id": 296,
+        "species": "apple",
+        "pos": [
+          -40.560137295797965,
+          23.940678043158837,
+          -36.03510397109523
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18857169389352202
+      },
+      {
+        "id": 297,
+        "species": "apple",
+        "pos": [
+          -38.93500561300746,
+          23.96174816934838,
+          -37.530016339909466
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1820990964598954
+      },
+      {
+        "id": 298,
+        "species": "apple",
+        "pos": [
+          -42.57462792750223,
+          23.27355911047516,
+          -39.70154778596982
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19317947919890285
+      },
+      {
+        "id": 300,
+        "species": "apple",
+        "pos": [
+          -41.39717615326931,
+          23.209689272359952,
+          -25.492142185951828
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1534652861095965
+      },
+      {
+        "id": 301,
+        "species": "apple",
+        "pos": [
+          -44.029336815837105,
+          22.69626266600444,
+          -27.244325600524462
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18479113429486752
+      },
+      {
+        "id": 302,
+        "species": "apple",
+        "pos": [
+          -42.939764530512115,
+          22.82151978260942,
+          -27.303048884289463
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16084465467557313
+      },
+      {
+        "id": 303,
+        "species": "apple",
+        "pos": [
+          -42.14233980512407,
+          22.760563521129253,
+          -25.137324423903696
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17532933229878547
+      },
+      {
+        "id": 305,
+        "species": "watermelon",
+        "pos": [
+          -44.40043732866107,
+          21.287115244277157,
+          -25.17627291845968
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.5500666634224356
+      },
+      {
+        "id": 307,
+        "species": "watermelon",
+        "pos": [
+          -40.805424103723865,
+          21.330005617366812,
+          -22.48906728259055
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.39367791019380094
+      },
+      {
+        "id": 309,
+        "species": "watermelon",
+        "pos": [
+          -37.35419652073781,
+          20.193930440950805,
+          -14.413573028538721
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.4022941851988435
+      },
+      {
+        "id": 311,
+        "species": "watermelon",
+        "pos": [
+          -42.377035900297166,
+          21.30488641701874,
+          -37.84728997958141
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.44163068894296886
+      },
+      {
+        "id": 313,
+        "species": "watermelon",
+        "pos": [
+          -39.61080010690831,
+          21.30671626036996,
+          -33.777579296715615
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.3806085264310241
+      },
+      {
+        "id": 315,
+        "species": "puffmelon",
+        "pos": [
+          -39.475943679017085,
+          21.88538273039816,
+          -31.92987671686231
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.24210605495981874
+      },
+      {
+        "id": 316,
+        "species": "puffmelon",
+        "pos": [
+          -39.0378717429354,
+          21.894621977350035,
+          -32.610688008055
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.3201967260772363
+      },
+      {
+        "id": 317,
+        "species": "puffmelon",
+        "pos": [
+          -39.781901746465344,
+          21.92280472821514,
+          -32.69875425276018
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2758762047309429
+      },
+      {
+        "id": 319,
+        "species": "puffmelon",
+        "pos": [
+          -40.477493207967136,
+          22.207671999873167,
+          -18.932840458459015
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.25136093849316243
+      },
+      {
+        "id": 320,
+        "species": "puffmelon",
+        "pos": [
+          -40.751136942132455,
+          22.29324477783615,
+          -19.8916789211564
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.12819436858281494
+      },
+      {
+        "id": 322,
+        "species": "puffmelon",
+        "pos": [
+          -21.49543028391247,
+          22.1358845503956,
+          -27.533585173829827
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.5197960307984055
+      },
+      {
+        "id": 323,
+        "species": "puffmelon",
+        "pos": [
+          -21.297472577067143,
+          22.113949710700926,
+          -28.333417128686868
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.26714039494562897
+      },
+      {
+        "id": 324,
+        "species": "puffmelon",
+        "pos": [
+          -22.21057272901485,
+          22.192852480313988,
+          -28.202850177247782
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2856820283150301
+      },
+      {
+        "id": 326,
+        "species": "puffmelon",
+        "pos": [
+          -27.176063464746363,
+          22.331948151162774,
+          -30.888753868844713
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2624464710047469
+      },
+      {
+        "id": 327,
+        "species": "puffmelon",
+        "pos": [
+          -27.77917158332458,
+          22.30618896728919,
+          -31.640655320443223
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2516480729803443
+      },
+      {
+        "id": 329,
+        "species": "boulderplum",
+        "pos": [
+          -42.01711743569577,
+          21.432319335033256,
+          -35.1069814236898
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.25180602739667524
+      },
+      {
+        "id": 330,
+        "species": "boulderplum",
+        "pos": [
+          -42.51840550186453,
+          21.77952027211873,
+          -35.94876614825343
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.24844959020614624
+      },
+      {
+        "id": 332,
+        "species": "boulderplum",
+        "pos": [
+          -26.915452616481424,
+          21.894128809658323,
+          -25.201193473520323
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.25128759979922327
+      },
+      {
+        "id": 333,
+        "species": "boulderplum",
+        "pos": [
+          -25.925559333912773,
+          21.495926963043907,
+          -24.666565479556205
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.22109948148019612
+      },
+      {
+        "id": 335,
+        "species": "boulderplum",
+        "pos": [
+          -26.60006303924326,
+          21.49458249958982,
+          -33.01673372384595
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.5425925118869636
+      },
+      {
+        "id": 337,
+        "species": "coconut",
+        "pos": [
+          -43.83578904339322,
+          9.996202225008979,
+          57.6352674225169
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2022575798770413
+      },
+      {
+        "id": 338,
+        "species": "coconut",
+        "pos": [
+          -44.037763534571845,
+          10.01648481394951,
+          58.44155373227698
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.22245252283010633
+      },
+      {
+        "id": 339,
+        "species": "coconut",
+        "pos": [
+          -43.683860633351195,
+          9.762858766097896,
+          57.88683724541621
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.21622562811058016
+      },
+      {
+        "id": 340,
+        "species": "coconut",
+        "pos": [
+          -44.21733938121706,
+          9.884936736366447,
+          57.74472811645039
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1968058581594378
+      },
+      {
+        "id": 341,
+        "species": "coconut",
+        "pos": [
+          -43.68845178187001,
+          9.761707617681743,
+          58.160139405299496
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19087511958181858
+      },
+      {
+        "id": 342,
+        "species": "coconut",
+        "pos": [
+          -44.3618817627622,
+          9.99867458448242,
+          58.139453794257555
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19510658030956984
+      },
+      {
+        "id": 344,
+        "species": "coconut",
+        "pos": [
+          -57.9309368881419,
+          9.535833924808882,
+          51.430237404280575
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.10930051699347797
+      },
+      {
+        "id": 345,
+        "species": "coconut",
+        "pos": [
+          -57.4141650016105,
+          9.760632611063873,
+          52.340695411738764
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.22295923587586733
+      },
+      {
+        "id": 346,
+        "species": "coconut",
+        "pos": [
+          -57.41575565200611,
+          9.753161281203864,
+          51.58559663306221
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.22425025406479837
+      },
+      {
+        "id": 348,
+        "species": "coconut",
+        "pos": [
+          -66.01608028267044,
+          10.25249938090177,
+          42.31351494982405
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.23391950811430817
+      },
+      {
+        "id": 349,
+        "species": "coconut",
+        "pos": [
+          -66.6890812006453,
+          10.098701632155409,
+          42.48910413920064
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17602490331232548
+      },
+      {
+        "id": 350,
+        "species": "coconut",
+        "pos": [
+          -66.64512342850921,
+          10.418229523132087,
+          41.663694492112384
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1893014525808394
+      },
+      {
+        "id": 351,
+        "species": "coconut",
+        "pos": [
+          -66.10267195656061,
+          10.395791301130453,
+          41.792470371331426
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2184997057821602
+      },
+      {
+        "id": 353,
+        "species": "coconut",
+        "pos": [
+          -47.65805711653269,
+          15.426655012031288,
+          40.85071288734426
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19630793704278768
+      },
+      {
+        "id": 354,
+        "species": "coconut",
+        "pos": [
+          -47.382064272512864,
+          15.283076867899856,
+          41.59589865133037
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.21819274515658615
+      },
+      {
+        "id": 355,
+        "species": "coconut",
+        "pos": [
+          -47.21003669311581,
+          15.332567919639931,
+          41.10552146828351
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2899324373491109
+      },
+      {
+        "id": 356,
+        "species": "coconut",
+        "pos": [
+          -48.05164570644728,
+          15.614805421365425,
+          41.50827708658104
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2020066779786721
+      },
+      {
+        "id": 357,
+        "species": "coconut",
+        "pos": [
+          -48.01565483283644,
+          15.58804337218935,
+          41.04345077312125
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.21555568304937334
+      },
+      {
+        "id": 359,
+        "species": "coconut",
+        "pos": [
+          -59.95879314262739,
+          8.668923573191831,
+          43.69185662590509
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18956455690786245
+      },
+      {
+        "id": 360,
+        "species": "coconut",
+        "pos": [
+          -60.28391275192905,
+          8.710146341871658,
+          43.976771840572106
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.22531904934253544
+      },
+      {
+        "id": 361,
+        "species": "coconut",
+        "pos": [
+          -59.72548450387471,
+          8.922944074915781,
+          44.35291061125868
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1836946154618636
+      },
+      {
+        "id": 363,
+        "species": "coconut",
+        "pos": [
+          -46.05955261771514,
+          13.50092901188825,
+          48.162567790057274
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.22165702496189624
+      },
+      {
+        "id": 364,
+        "species": "coconut",
+        "pos": [
+          -46.87583589101438,
+          13.435956513474869,
+          48.36356462532986
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1957365802526474
+      },
+      {
+        "id": 365,
+        "species": "coconut",
+        "pos": [
+          -46.596185236482356,
+          13.493981723816978,
+          47.70950935881078
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18175417197961363
+      },
+      {
+        "id": 366,
+        "species": "coconut",
+        "pos": [
+          -47.02099559983546,
+          13.291897737256749,
+          47.980412324074656
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1922670122794807
+      },
+      {
+        "id": 367,
+        "species": "coconut",
+        "pos": [
+          -46.21466926991875,
+          13.505766671245404,
+          47.785338296557846
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1982151282997802
+      },
+      {
+        "id": 369,
+        "species": "coconut",
+        "pos": [
+          -55.41218729360623,
+          16.664754683838396,
+          34.51436342419493
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1743170498404652
+      },
+      {
+        "id": 370,
+        "species": "coconut",
+        "pos": [
+          -55.907890696924696,
+          16.464329964528766,
+          34.62015567403942
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1991223190352321
+      },
+      {
+        "id": 371,
+        "species": "coconut",
+        "pos": [
+          -55.98588199461047,
+          16.28602378331818,
+          33.634334069516875
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1882991464501247
+      },
+      {
+        "id": 372,
+        "species": "coconut",
+        "pos": [
+          -55.21016018105497,
+          16.69798994231215,
+          33.97210156629658
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18592814241349698
+      },
+      {
+        "id": 373,
+        "species": "coconut",
+        "pos": [
+          -55.477828340398034,
+          16.287696237153693,
+          33.54111894561563
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.21870909139979633
+      },
+      {
+        "id": 374,
+        "species": "coconut",
+        "pos": [
+          -56.357600232415514,
+          16.347485464166375,
+          34.1617909306989
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.20088421961199493
+      },
+      {
+        "id": 376,
+        "species": "coconut",
+        "pos": [
+          -52.54919894024442,
+          15.019017170500769,
+          48.607972166545515
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19531768064480276
+      },
+      {
+        "id": 377,
+        "species": "coconut",
+        "pos": [
+          -52.16210560894224,
+          15.015103522323784,
+          49.693702397531084
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18909834701288492
+      },
+      {
+        "id": 378,
+        "species": "coconut",
+        "pos": [
+          -52.07555716552657,
+          14.83897519474656,
+          49.07330544139547
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19177506121993065
+      },
+      {
+        "id": 379,
+        "species": "coconut",
+        "pos": [
+          -53.02019428389815,
+          14.643910305569948,
+          49.569030641765835
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1792222125278786
+      },
+      {
+        "id": 380,
+        "species": "coconut",
+        "pos": [
+          -52.62867595248565,
+          14.645732503423906,
+          49.752563978245675
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2012448123320937
+      },
+      {
+        "id": 381,
+        "species": "coconut",
+        "pos": [
+          -53.19464755606319,
+          15.047210082482593,
+          48.88003394504514
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18932351134251804
+      },
+      {
+        "id": 383,
+        "species": "coconut",
+        "pos": [
+          -60.39126540175177,
+          13.92692769198178,
+          36.50158107529713
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2109381499402225
+      },
+      {
+        "id": 384,
+        "species": "coconut",
+        "pos": [
+          -60.16408279809255,
+          13.744933202088273,
+          35.52210304585602
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1909735761024058
+      },
+      {
+        "id": 385,
+        "species": "coconut",
+        "pos": [
+          -59.51474411224027,
+          14.165424620971452,
+          36.0820925309045
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19351842960622162
+      },
+      {
+        "id": 387,
+        "species": "coconut",
+        "pos": [
+          -40.989502393118336,
+          13.584389899539852,
+          63.72847087232777
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19313984757009894
+      },
+      {
+        "id": 388,
+        "species": "coconut",
+        "pos": [
+          -40.33836436502949,
+          13.182371866746351,
+          62.919110773441695
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19412232983019204
+      },
+      {
+        "id": 389,
+        "species": "coconut",
+        "pos": [
+          -40.391187344244294,
+          13.180547218816452,
+          63.34880043697681
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19458111331798136
+      },
+      {
+        "id": 390,
+        "species": "coconut",
+        "pos": [
+          -41.15542958227784,
+          13.375874535711468,
+          62.60378715638383
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19845324860978875
+      },
+      {
+        "id": 392,
+        "species": "coconut",
+        "pos": [
+          -67.93735808137629,
+          9.627115470579099,
+          36.21245858429886
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.20773524705599994
+      },
+      {
+        "id": 393,
+        "species": "coconut",
+        "pos": [
+          -67.66508308769515,
+          9.9228596225238,
+          36.9846516726895
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19149965950753542
+      },
+      {
+        "id": 394,
+        "species": "coconut",
+        "pos": [
+          -67.41078535921287,
+          9.948812322954359,
+          36.61066282334007
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.20584991027601066
+      },
+      {
+        "id": 395,
+        "species": "coconut",
+        "pos": [
+          -68.061310331188,
+          9.766351864394396,
+          36.97383363073179
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.21075748546700926
+      },
+      {
+        "id": 397,
+        "species": "coconut",
+        "pos": [
+          -41.66274898018367,
+          14.2605305072664,
+          47.469995038208864
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.20840218048915268
+      },
+      {
+        "id": 398,
+        "species": "coconut",
+        "pos": [
+          -40.90616839509446,
+          14.474060550089964,
+          47.8087659511238
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.23631836015313867
+      },
+      {
+        "id": 399,
+        "species": "coconut",
+        "pos": [
+          -41.41853174738948,
+          14.155266424158453,
+          48.197249258565925
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.21198497348278764
+      },
+      {
+        "id": 400,
+        "species": "coconut",
+        "pos": [
+          -41.78194717404804,
+          14.404361005392815,
+          47.86060034633334
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1915625109029934
+      },
+      {
+        "id": 401,
+        "species": "coconut",
+        "pos": [
+          -41.01464971834819,
+          14.4692305557304,
+          48.20129806912009
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1956590717677027
+      },
+      {
+        "id": 402,
+        "species": "coconut",
+        "pos": [
+          -41.160809595318845,
+          14.462294275295063,
+          47.51553281494807
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.20586624628212302
+      },
+      {
+        "id": 404,
+        "species": "coconut",
+        "pos": [
+          -55.77513905840673,
+          11.54252573504323,
+          39.319648436034534
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2080658199293539
+      },
+      {
+        "id": 405,
+        "species": "coconut",
+        "pos": [
+          -55.24678791937744,
+          11.504517635664689,
+          38.884823695692845
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1753483313061297
+      },
+      {
+        "id": 406,
+        "species": "coconut",
+        "pos": [
+          -55.16258912296577,
+          11.74421553180505,
+          39.49590649096323
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.21648853651899846
+      },
+      {
+        "id": 407,
+        "species": "coconut",
+        "pos": [
+          -55.5641929213516,
+          11.503454455418526,
+          38.968131693400004
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18499398163333536
+      },
+      {
+        "id": 408,
+        "species": "coconut",
+        "pos": [
+          -55.060814049324264,
+          11.76534349412114,
+          39.14251337826188
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2234675903664902
+      },
+      {
+        "id": 409,
+        "species": "coconut",
+        "pos": [
+          -55.4695419582118,
+          11.616804178229753,
+          39.58784861427472
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2088121006395668
+      },
+      {
+        "id": 411,
+        "species": "coconut",
+        "pos": [
+          -44.48087232547693,
+          11.117072269398815,
+          60.72865106532198
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.23454681063525384
+      },
+      {
+        "id": 412,
+        "species": "coconut",
+        "pos": [
+          -43.97301825665722,
+          11.1081364244007,
+          61.47331821328527
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19640220913570375
+      },
+      {
+        "id": 413,
+        "species": "coconut",
+        "pos": [
+          -44.00332567030587,
+          10.712609495480544,
+          60.53311709942156
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17829920641984792
+      },
+      {
+        "id": 414,
+        "species": "coconut",
+        "pos": [
+          -44.41865399978586,
+          11.123294641889423,
+          61.24860043137312
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17980477113556118
+      },
+      {
+        "id": 415,
+        "species": "coconut",
+        "pos": [
+          -43.356822274179144,
+          10.84821321288748,
+          61.280662127783714
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17525156542193146
+      },
+      {
+        "id": 417,
+        "species": "coconut",
+        "pos": [
+          -39.835869063857054,
+          13.225683768652564,
+          54.59919767794706
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19835073610674592
+      },
+      {
+        "id": 418,
+        "species": "coconut",
+        "pos": [
+          -40.03376217412355,
+          13.527326798174803,
+          54.02937856575688
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1905808147992939
+      },
+      {
+        "id": 419,
+        "species": "coconut",
+        "pos": [
+          -39.06852018616182,
+          13.611731160127624,
+          54.469108634586405
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18206524139922112
+      },
+      {
+        "id": 420,
+        "species": "coconut",
+        "pos": [
+          -39.174472987470786,
+          13.597482467762003,
+          54.011625327860116
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1990025873305276
+      },
+      {
+        "id": 421,
+        "species": "coconut",
+        "pos": [
+          -39.684862167845566,
+          13.353153343583314,
+          53.68186196587333
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18871464469935748
+      },
+      {
+        "id": 423,
+        "species": "coconut",
+        "pos": [
+          -39.36995763797412,
+          16.168827971036357,
+          50.92022209866397
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.22523857993446292
+      },
+      {
+        "id": 424,
+        "species": "coconut",
+        "pos": [
+          -38.78482008747019,
+          16.548121840069065,
+          51.93235112803768
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2253279709396884
+      },
+      {
+        "id": 425,
+        "species": "coconut",
+        "pos": [
+          -39.450439145637304,
+          16.365182668250775,
+          51.80762444225231
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.20779247269872575
+      },
+      {
+        "id": 426,
+        "species": "coconut",
+        "pos": [
+          -38.39343984155285,
+          16.57676823287388,
+          51.33668430649784
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17856356524582953
+      },
+      {
+        "id": 427,
+        "species": "coconut",
+        "pos": [
+          -39.72725396527834,
+          16.54414523703204,
+          51.234467825483605
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1999488607645035
+      },
+      {
+        "id": 428,
+        "species": "coconut",
+        "pos": [
+          -38.935180137275964,
+          16.1669764164538,
+          50.853377722019005
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2042716829190031
+      },
+      {
+        "id": 430,
+        "species": "coconut",
+        "pos": [
+          -40.55098535559577,
+          12.655335377012728,
+          60.84569377636802
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1927195308757946
+      },
+      {
+        "id": 431,
+        "species": "coconut",
+        "pos": [
+          -39.49736911993875,
+          12.44819107999478,
+          61.25244169034247
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.21110506131965667
+      },
+      {
+        "id": 432,
+        "species": "coconut",
+        "pos": [
+          -39.70308823713012,
+          12.62339713780942,
+          61.84282302570162
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17880339906271547
+      },
+      {
+        "id": 433,
+        "species": "coconut",
+        "pos": [
+          -39.86746081958787,
+          12.627290271693225,
+          60.70674379550264
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18592116634547712
+      },
+      {
+        "id": 434,
+        "species": "coconut",
+        "pos": [
+          -40.517967138449634,
+          12.254145445736464,
+          61.548756745353785
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17546069414913656
+      },
+      {
+        "id": 435,
+        "species": "coconut",
+        "pos": [
+          -40.1718176747538,
+          12.255958132840073,
+          61.80495452216259
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17892343471851202
+      },
+      {
+        "id": 437,
+        "species": "banana",
+        "pos": [
+          -43.200953741894416,
+          9.39143831424997,
+          43.58865938105775
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.30618227534610776
+      },
+      {
+        "id": 438,
+        "species": "banana",
+        "pos": [
+          -42.930182548876054,
+          9.703627061882381,
+          43.37825534996988
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.3528153293697164
+      },
+      {
+        "id": 440,
+        "species": "banana",
+        "pos": [
+          -43.02738046567915,
+          3.6880873699360963,
+          61.23375611552805
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.273746926749032
+      },
+      {
+        "id": 441,
+        "species": "banana",
+        "pos": [
+          -42.8499007734335,
+          3.3760220829492713,
+          61.5336209087862
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.31941345151839773
+      },
+      {
+        "id": 443,
+        "species": "banana",
+        "pos": [
+          -56.494753561812196,
+          6.061736121391977,
+          43.0943097960891
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2545762066984549
+      },
+      {
+        "id": 444,
+        "species": "banana",
+        "pos": [
+          -56.21799131649958,
+          5.740043438001721,
+          42.863685244158155
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.26899870952181515
+      },
+      {
+        "id": 446,
+        "species": "banana",
+        "pos": [
+          -38.988532284312896,
+          6.135264755618514,
+          55.82646461828207
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.28662368858186527
+      },
+      {
+        "id": 447,
+        "species": "banana",
+        "pos": [
+          -39.031515164497115,
+          6.510505994326191,
+          56.23946944664495
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.3494715357442386
+      },
+      {
+        "id": 449,
+        "species": "banana",
+        "pos": [
+          -62.19222117375987,
+          3.887696173890587,
+          46.877064730539665
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2815446331948973
+      },
+      {
+        "id": 450,
+        "species": "banana",
+        "pos": [
+          -62.2643219760107,
+          4.264989985501715,
+          47.29587280380989
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.29870247165104374
+      },
+      {
+        "id": 452,
+        "species": "banana",
+        "pos": [
+          -49.80375880761296,
+          8.982703939622574,
+          41.381749928559636
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.26977369928993283
+      },
+      {
+        "id": 453,
+        "species": "banana",
+        "pos": [
+          -50.04032668513418,
+          8.648968459046253,
+          41.66943904452813
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.4545123922365625
+      },
+      {
+        "id": 455,
+        "species": "coconut",
+        "pos": [
+          58.75526187545654,
+          11.47134781117163,
+          2.985066000324501
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19549752346333116
+      },
+      {
+        "id": 456,
+        "species": "coconut",
+        "pos": [
+          58.62173279049963,
+          11.338944263245384,
+          2.5140657131147655
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.20061638887878508
+      },
+      {
+        "id": 457,
+        "species": "coconut",
+        "pos": [
+          59.40479822096679,
+          11.195491086002054,
+          2.5436844351061247
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19351400435436517
+      },
+      {
+        "id": 459,
+        "species": "coconut",
+        "pos": [
+          64.74417960641395,
+          9.455271372806024,
+          0.7210964462305652
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.20714199669472874
+      },
+      {
+        "id": 460,
+        "species": "coconut",
+        "pos": [
+          63.99336110079717,
+          9.340729955016847,
+          0.7600331698436961
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.20930755964946002
+      },
+      {
+        "id": 461,
+        "species": "coconut",
+        "pos": [
+          64.17352395941755,
+          9.60679509672495,
+          0.4874635111087533
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18945239274390044
+      },
+      {
+        "id": 462,
+        "species": "coconut",
+        "pos": [
+          64.59676651848454,
+          9.37950120006102,
+          1.1093416042246413
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1954751668283716
+      },
+      {
+        "id": 463,
+        "species": "coconut",
+        "pos": [
+          64.54722864969877,
+          9.585242532176762,
+          0.45910781501598374
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2133900184305385
+      },
+      {
+        "id": 465,
+        "species": "coconut",
+        "pos": [
+          67.50117606087238,
+          12.007112954419423,
+          -6.478636912476514
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.09161792572572829
+      },
+      {
+        "id": 466,
+        "species": "coconut",
+        "pos": [
+          66.90879584583202,
+          12.167925698599571,
+          -6.477967227040074
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18596144341863693
+      },
+      {
+        "id": 467,
+        "species": "coconut",
+        "pos": [
+          66.6664469874237,
+          12.193107436060998,
+          -5.900631137455748
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.09561637956917286
+      },
+      {
+        "id": 469,
+        "species": "coconut",
+        "pos": [
+          57.31061838758027,
+          11.245428344775844,
+          -18.088908717707234
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.20271308714617042
+      },
+      {
+        "id": 470,
+        "species": "coconut",
+        "pos": [
+          57.41202608021045,
+          10.931818001438527,
+          -18.72156958797399
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.22372198230866347
+      },
+      {
+        "id": 471,
+        "species": "coconut",
+        "pos": [
+          57.57492232088386,
+          10.933091164960477,
+          -18.363585508850544
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2139970403369516
+      },
+      {
+        "id": 472,
+        "species": "coconut",
+        "pos": [
+          56.95431478170689,
+          10.978605982317232,
+          -18.898912534918114
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.21910316182952375
+      },
+      {
+        "id": 473,
+        "species": "coconut",
+        "pos": [
+          56.87234729566817,
+          11.22012798002627,
+          -18.137536388074164
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.20648255847394467
+      },
+      {
+        "id": 475,
+        "species": "coconut",
+        "pos": [
+          59.53685578814185,
+          10.552923398945117,
+          -17.918096800902358
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.20945217815041542
+      },
+      {
+        "id": 476,
+        "species": "coconut",
+        "pos": [
+          60.39292905872203,
+          10.531671579092816,
+          -17.75989580949799
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1752261966383085
+      },
+      {
+        "id": 477,
+        "species": "coconut",
+        "pos": [
+          59.850603076969996,
+          10.285971652043377,
+          -17.568886015903264
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19601675549242648
+      },
+      {
+        "id": 478,
+        "species": "coconut",
+        "pos": [
+          60.13668035436825,
+          10.287177806607707,
+          -17.582124189771783
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.20003239486645907
+      },
+      {
+        "id": 480,
+        "species": "coconut",
+        "pos": [
+          69.65726357471846,
+          10.364670530994147,
+          -2.5472962556100898
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18598720879759642
+      },
+      {
+        "id": 481,
+        "species": "coconut",
+        "pos": [
+          69.68313644068611,
+          10.313658248066732,
+          -3.0818712681621303
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2050155718289316
+      },
+      {
+        "id": 482,
+        "species": "coconut",
+        "pos": [
+          70.47095115974842,
+          10.627998079751785,
+          -2.7258394422549923
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2051090995837003
+      },
+      {
+        "id": 483,
+        "species": "coconut",
+        "pos": [
+          70.36974141489387,
+          10.655582610622377,
+          -3.1960318020365466
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.21992048698198052
+      },
+      {
+        "id": 485,
+        "species": "coconut",
+        "pos": [
+          68.2473615575022,
+          10.090674810583678,
+          -14.139777780658834
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.20348363447375598
+      },
+      {
+        "id": 486,
+        "species": "coconut",
+        "pos": [
+          67.84100808319327,
+          10.349655587062085,
+          -13.525343413363272
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.185644773949869
+      },
+      {
+        "id": 487,
+        "species": "coconut",
+        "pos": [
+          67.55722375953512,
+          10.225351458592815,
+          -13.88560190979603
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.194044151538983
+      },
+      {
+        "id": 488,
+        "species": "coconut",
+        "pos": [
+          67.99566227890973,
+          10.091932894047236,
+          -14.30048886420262
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2120420329300687
+      },
+      {
+        "id": 489,
+        "species": "coconut",
+        "pos": [
+          68.30752462087382,
+          10.369120431575782,
+          -13.654057505118846
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2031837546313182
+      },
+      {
+        "id": 491,
+        "species": "orange",
+        "pos": [
+          58.09857444531547,
+          5.441550766172248,
+          -1.4391290676416293
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14623696795701982
+      },
+      {
+        "id": 492,
+        "species": "orange",
+        "pos": [
+          57.39071270364766,
+          5.858882968100664,
+          -0.13469944889948654
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1642328799664974
+      },
+      {
+        "id": 493,
+        "species": "orange",
+        "pos": [
+          56.48480211012031,
+          5.977086519303714,
+          -0.5895001189507972
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14156871205866337
+      },
+      {
+        "id": 494,
+        "species": "orange",
+        "pos": [
+          58.59367059517314,
+          5.363935081824484,
+          -0.4457297107569483
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18002502330839634
+      },
+      {
+        "id": 495,
+        "species": "orange",
+        "pos": [
+          55.35319471490665,
+          5.49173516601655,
+          -1.3843696420259057
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1589351928666234
+      },
+      {
+        "id": 497,
+        "species": "orange",
+        "pos": [
+          72.69289042589031,
+          4.016666466374401,
+          -6.884963939622801
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14425129280537366
+      },
+      {
+        "id": 498,
+        "species": "orange",
+        "pos": [
+          72.18325749983357,
+          4.625273218433231,
+          -3.041473253062148
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18068906583487987
+      },
+      {
+        "id": 499,
+        "species": "orange",
+        "pos": [
+          74.51457736260696,
+          4.575646208274303,
+          -3.8569341568995057
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.22534932687637213
+      },
+      {
+        "id": 500,
+        "species": "orange",
+        "pos": [
+          73.83230691766624,
+          5.435063431178047,
+          -6.197832987203955
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.24930153279179337
+      },
+      {
+        "id": 501,
+        "species": "orange",
+        "pos": [
+          73.77152655082602,
+          4.520136301203181,
+          -6.20819805620962
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15001715307682753
+      },
+      {
+        "id": 502,
+        "species": "orange",
+        "pos": [
+          74.2662441778293,
+          4.146677492057357,
+          -3.825967048663361
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1792627228587866
+      },
+      {
+        "id": 503,
+        "species": "orange",
+        "pos": [
+          74.0699823237731,
+          4.640359226998016,
+          -5.217866622853367
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14505552938878535
+      },
+      {
+        "id": 504,
+        "species": "orange",
+        "pos": [
+          72.30406678265992,
+          4.095625791907235,
+          -5.822527733729442
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1524501443117857
+      },
+      {
+        "id": 506,
+        "species": "orange",
+        "pos": [
+          66.75213968242437,
+          5.697330183055017,
+          -0.9527689884126135
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15600322451740503
+      },
+      {
+        "id": 507,
+        "species": "orange",
+        "pos": [
+          68.21513574704525,
+          5.164653884936029,
+          -0.7585049691389425
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15124932964295149
+      },
+      {
+        "id": 508,
+        "species": "orange",
+        "pos": [
+          68.2664672644283,
+          5.265519419508197,
+          -0.589598866099751
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17884906650781632
+      },
+      {
+        "id": 509,
+        "species": "orange",
+        "pos": [
+          65.7312276740594,
+          6.4978121160371085,
+          -0.9489896735451435
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18229117543399334
+      },
+      {
+        "id": 511,
+        "species": "orange",
+        "pos": [
+          67.94354424306367,
+          4.8650145312738236,
+          -10.303271240568602
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18069642899781468
+      },
+      {
+        "id": 512,
+        "species": "orange",
+        "pos": [
+          68.95281664022127,
+          4.612244141165806,
+          -7.043624134646957
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.07481931988227368
+      },
+      {
+        "id": 513,
+        "species": "orange",
+        "pos": [
+          67.8236731608784,
+          3.9459270270841738,
+          -6.007533559214909
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1790911208420992
+      },
+      {
+        "id": 514,
+        "species": "orange",
+        "pos": [
+          68.93907280636205,
+          4.036592547802832,
+          -10.062415684254654
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15846544560194015
+      },
+      {
+        "id": 516,
+        "species": "spikefruit",
+        "pos": [
+          65.56904595422266,
+          3.3638248627647975,
+          -12.59661835509026
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.23049401854374443
+      },
+      {
+        "id": 517,
+        "species": "spikefruit",
+        "pos": [
+          66.27385966572923,
+          3.2843882578313277,
+          -12.252128221825416
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.23712098772428
+      },
+      {
+        "id": 518,
+        "species": "spikefruit",
+        "pos": [
+          66.51932245081092,
+          3.2915515648761695,
+          -12.961577725346336
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17959355392190626
+      },
+      {
+        "id": 519,
+        "species": "spikefruit",
+        "pos": [
+          66.01196327429477,
+          3.089677669441755,
+          -13.228374409053318
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19529132712562566
+      },
+      {
+        "id": 521,
+        "species": "spikefruit",
+        "pos": [
+          58.5007158691994,
+          3.9032103706795165,
+          -11.169747881560893
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1786409463013988
+      },
+      {
+        "id": 522,
+        "species": "spikefruit",
+        "pos": [
+          59.475902703944186,
+          3.8282578793774578,
+          -11.568156564778326
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2004597138497047
+      },
+      {
+        "id": 524,
+        "species": "spikefruit",
+        "pos": [
+          67.63743112403999,
+          3.3087841353844367,
+          -6.488918569766583
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.23170355375250798
+      },
+      {
+        "id": 525,
+        "species": "spikefruit",
+        "pos": [
+          68.77920373763524,
+          3.1930034673902887,
+          -6.520932714692797
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.22420848711510188
+      },
+      {
+        "id": 526,
+        "species": "spikefruit",
+        "pos": [
+          68.73403642465064,
+          2.984538302955049,
+          -5.914991080583642
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19032064972445367
+      },
+      {
+        "id": 527,
+        "species": "spikefruit",
+        "pos": [
+          67.65943804263495,
+          3.2742525695468125,
+          -5.971750805692069
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19197034361539408
+      },
+      {
+        "id": 529,
+        "species": "spikefruit",
+        "pos": [
+          71.87248518139673,
+          2.7238783109199565,
+          -2.0558489457482847
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.23688436948112213
+      },
+      {
+        "id": 530,
+        "species": "spikefruit",
+        "pos": [
+          71.1320761494567,
+          2.814269640009597,
+          -2.545780176432617
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.22905205737403594
+      },
+      {
+        "id": 531,
+        "species": "spikefruit",
+        "pos": [
+          72.25474975187295,
+          2.732029740693449,
+          -2.8210298583378677
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.219323019556934
+      },
+      {
+        "id": 532,
+        "species": "spikefruit",
+        "pos": [
+          71.70872474047539,
+          2.502287902164441,
+          -3.20429001428841
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18335008645942433
+      },
+      {
+        "id": 534,
+        "species": "gluefruit",
+        "pos": [
+          59.198211777708934,
+          3.755646414882617,
+          -16.329332331362576
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17067443704814647
+      },
+      {
+        "id": 535,
+        "species": "gluefruit",
+        "pos": [
+          58.51959939966777,
+          3.713954556008036,
+          -15.472601082034927
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16573184201493857
+      },
+      {
+        "id": 536,
+        "species": "gluefruit",
+        "pos": [
+          59.26746666006618,
+          3.7069802819013398,
+          -15.76889685219706
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15352855081669983
+      },
+      {
+        "id": 538,
+        "species": "gluefruit",
+        "pos": [
+          73.81487918486671,
+          2.356805104840298,
+          -9.708889657169042
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16337380765238776
+      },
+      {
+        "id": 539,
+        "species": "gluefruit",
+        "pos": [
+          73.47105430371296,
+          2.2150656502143824,
+          -10.235173478813453
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1277539159997832
+      },
+      {
+        "id": 540,
+        "species": "gluefruit",
+        "pos": [
+          73.20364933307813,
+          2.2345061785591254,
+          -9.059388997603884
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14718039910309016
+      },
+      {
+        "id": 541,
+        "species": "gluefruit",
+        "pos": [
+          72.5887885068654,
+          2.2478947444233532,
+          -9.53938366548941
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16443472434184514
+      },
+      {
+        "id": 543,
+        "species": "banana",
+        "pos": [
+          49.881029836584624,
+          4.383070407209828,
+          -18.802570891599785
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.30303117052661255
+      },
+      {
+        "id": 544,
+        "species": "banana",
+        "pos": [
+          50.220136603152774,
+          4.687438370921716,
+          -18.76476392480426
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2698082349069416
+      },
+      {
+        "id": 546,
+        "species": "banana",
+        "pos": [
+          21.90250727315257,
+          3.6355297648724028,
+          -15.604235165471119
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.3515396661253646
+      },
+      {
+        "id": 547,
+        "species": "banana",
+        "pos": [
+          22.23263311372068,
+          3.966883797139487,
+          -15.44087295650875
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.29602075405539946
+      },
+      {
+        "id": 549,
+        "species": "banana",
+        "pos": [
+          20.662024712715944,
+          7.756259641452865,
+          -23.804397812794
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.3548303980809636
+      },
+      {
+        "id": 550,
+        "species": "banana",
+        "pos": [
+          20.31248028358628,
+          7.42096004318003,
+          -23.663533320375866
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2756471999939531
+      },
+      {
+        "id": 552,
+        "species": "banana",
+        "pos": [
+          18.551404686168915,
+          6.910623659950045,
+          -19.591632928652434
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2883339730078354
+      },
+      {
+        "id": 553,
+        "species": "banana",
+        "pos": [
+          18.216017603593794,
+          6.60038717465774,
+          -19.651611026898674
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.26056990362238136
+      },
+      {
+        "id": 555,
+        "species": "banana",
+        "pos": [
+          21.806094982904433,
+          4.460919911870268,
+          -5.066756442841359
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15508057721932605
+      },
+      {
+        "id": 556,
+        "species": "banana",
+        "pos": [
+          22.233014169163386,
+          4.840942396144562,
+          -5.102726816562555
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.3367895681148395
+      },
+      {
+        "id": 558,
+        "species": "banana",
+        "pos": [
+          17.56142750558138,
+          6.965766300293426,
+          -10.839878384836037
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.3456211317111738
+      },
+      {
+        "id": 559,
+        "species": "banana",
+        "pos": [
+          17.398765739824817,
+          6.61872814439453,
+          -10.49211446911756
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.3394526399497874
+      },
+      {
+        "id": 561,
+        "species": "banana",
+        "pos": [
+          24.552142816673197,
+          4.4545079626309105,
+          -21.801352592676214
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2722511425342411
+      },
+      {
+        "id": 562,
+        "species": "banana",
+        "pos": [
+          24.31098713442459,
+          4.74198059978227,
+          -22.020831511359304
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.3191877286270261
+      },
+      {
+        "id": 564,
+        "species": "puffmelon",
+        "pos": [
+          20.569120230774388,
+          3.6045211546743023,
+          -17.52757943556258
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.28789001006353654
+      },
+      {
+        "id": 565,
+        "species": "puffmelon",
+        "pos": [
+          21.16032159108842,
+          3.761438093604802,
+          -18.47083461242845
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.3131605853708461
+      },
+      {
+        "id": 566,
+        "species": "puffmelon",
+        "pos": [
+          21.525314759003233,
+          3.625454113195856,
+          -17.54308336831407
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.27665762829873713
+      },
+      {
+        "id": 568,
+        "species": "puffmelon",
+        "pos": [
+          24.28768601973204,
+          2.314587478028298,
+          -3.4245084976468396
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2482830368895084
+      },
+      {
+        "id": 569,
+        "species": "puffmelon",
+        "pos": [
+          24.08884119622349,
+          2.2653538935571835,
+          -4.246202088416168
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.6851114211160224
+      },
+      {
+        "id": 571,
+        "species": "puffmelon",
+        "pos": [
+          33.85877061816896,
+          21.18096240210655,
+          -30.42680604177041
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2434226530566812
+      },
+      {
+        "id": 572,
+        "species": "puffmelon",
+        "pos": [
+          33.56405245922773,
+          21.271777325987408,
+          -31.438786346071687
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.12554036736804994
+      },
+      {
+        "id": 574,
+        "species": "puffmelon",
+        "pos": [
+          19.153445653056494,
+          6.013426173315112,
+          -22.864726073426677
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2776380530195311
+      },
+      {
+        "id": 575,
+        "species": "puffmelon",
+        "pos": [
+          20.07108382937644,
+          5.976864684146146,
+          -22.53595184432748
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.30163317783083765
+      },
+      {
+        "id": 576,
+        "species": "puffmelon",
+        "pos": [
+          19.314591269496713,
+          5.964877991959546,
+          -21.8016520546239
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.12928497064538302
+      },
+      {
+        "id": 578,
+        "species": "puffmelon",
+        "pos": [
+          50.08505222510552,
+          4.004662582096676,
+          -20.353474032639117
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2385200259573758
+      },
+      {
+        "id": 579,
+        "species": "puffmelon",
+        "pos": [
+          49.23640899562462,
+          4.149186620557594,
+          -19.78817010669618
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.27253275603743277
+      },
+      {
+        "id": 580,
+        "species": "puffmelon",
+        "pos": [
+          49.28266922820967,
+          4.023938213355688,
+          -20.702497189925843
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2804547620760277
+      },
+      {
+        "id": 582,
+        "species": "gluefruit",
+        "pos": [
+          16.962404766386022,
+          5.274284508650738,
+          -13.347409876246983
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.12754343577660618
+      },
+      {
+        "id": 583,
+        "species": "gluefruit",
+        "pos": [
+          18.01922477036127,
+          5.176677861440267,
+          -13.685736255580979
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15936845635995267
+      },
+      {
+        "id": 584,
+        "species": "gluefruit",
+        "pos": [
+          17.40008574618228,
+          5.164677242243127,
+          -14.015644194701354
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1336029311211314
+      },
+      {
+        "id": 586,
+        "species": "gluefruit",
+        "pos": [
+          24.00398889106645,
+          3.108940593902555,
+          -2.061799013497408
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16497969388263298
+      },
+      {
+        "id": 587,
+        "species": "gluefruit",
+        "pos": [
+          22.912787392297737,
+          2.9919366205969102,
+          -2.026423795782037
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15936060087173246
+      },
+      {
+        "id": 588,
+        "species": "gluefruit",
+        "pos": [
+          22.819234335095146,
+          2.8670683563251664,
+          -1.4460372656062077
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1401265326642897
+      },
+      {
+        "id": 589,
+        "species": "gluefruit",
+        "pos": [
+          23.89938125810052,
+          3.0292634547866757,
+          -1.1038470114573298
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17199752949527464
+      },
+      {
+        "id": 591,
+        "species": "gluefruit",
+        "pos": [
+          21.29111866820431,
+          2.9481559873669942,
+          -8.746798067965956
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15081927155493757
+      },
+      {
+        "id": 592,
+        "species": "gluefruit",
+        "pos": [
+          20.246479556842957,
+          2.8507989590006395,
+          -8.566098494849879
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1435500156856142
+      },
+      {
+        "id": 593,
+        "species": "gluefruit",
+        "pos": [
+          20.883694466460227,
+          2.802910294155597,
+          -9.650715098084925
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1507076768868137
+      },
+      {
+        "id": 594,
+        "species": "gluefruit",
+        "pos": [
+          20.079297761604096,
+          2.7948991258398057,
+          -9.193043433098062
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1612802641291637
+      },
+      {
+        "id": 596,
+        "species": "gluefruit",
+        "pos": [
+          22.317098734467496,
+          4.047587276458783,
+          -21.45115417985579
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.14503405674593522
+      },
+      {
+        "id": 597,
+        "species": "gluefruit",
+        "pos": [
+          21.688192150048756,
+          4.111414040712965,
+          -21.840511666857637
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.12930038309656083
+      },
+      {
+        "id": 598,
+        "species": "gluefruit",
+        "pos": [
+          20.96259168483531,
+          4.22258442934196,
+          -20.87312650901198
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1414717105671298
+      },
+      {
+        "id": 599,
+        "species": "gluefruit",
+        "pos": [
+          22.00731743287272,
+          4.056734278083401,
+          -20.44223402921563
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16929708556621337
+      },
+      {
+        "id": 601,
+        "species": "puffmelon",
+        "pos": [
+          -1.9724710222292567,
+          31.16734820733346,
+          -89.87502423519449
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.29717524372227494
+      },
+      {
+        "id": 602,
+        "species": "puffmelon",
+        "pos": [
+          -0.9834273432357319,
+          31.305344228102516,
+          -90.0993369110479
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2972262906664983
+      },
+      {
+        "id": 603,
+        "species": "puffmelon",
+        "pos": [
+          -1.8371335574472791,
+          31.146108023651422,
+          -90.83203651058454
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2937252428326756
+      },
+      {
+        "id": 605,
+        "species": "puffmelon",
+        "pos": [
+          4.499086814873701,
+          31.120974285485143,
+          -84.82849561388994
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.30596063819527625
+      },
+      {
+        "id": 606,
+        "species": "puffmelon",
+        "pos": [
+          4.042856728209746,
+          31.067376823226013,
+          -84.03112093567086
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15610719952017071
+      },
+      {
+        "id": 608,
+        "species": "puffmelon",
+        "pos": [
+          4.593038606803659,
+          30.967876512259394,
+          -78.99805606535494
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.27496434815786785
+      },
+      {
+        "id": 609,
+        "species": "puffmelon",
+        "pos": [
+          5.384618040255808,
+          30.998393170992767,
+          -79.16674795005709
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.26966573594138027
+      },
+      {
+        "id": 611,
+        "species": "puffmelon",
+        "pos": [
+          -11.4702827825403,
+          31.125324117688724,
+          -72.83960101673502
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.283410198668018
+      },
+      {
+        "id": 612,
+        "species": "puffmelon",
+        "pos": [
+          -11.748277915852148,
+          31.281487586925778,
+          -71.77100885342406
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2910143389869482
+      },
+      {
+        "id": 614,
+        "species": "puffmelon",
+        "pos": [
+          -3.659059633266531,
+          31.23930534364124,
+          -66.22925412195048
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.26935002422146503
+      },
+      {
+        "id": 615,
+        "species": "puffmelon",
+        "pos": [
+          -3.702523380417122,
+          31.087914721427417,
+          -67.29726026244771
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.25753270258475097
+      },
+      {
+        "id": 617,
+        "species": "boulderplum",
+        "pos": [
+          -4.261057233202532,
+          30.402461478049336,
+          -83.32943836480341
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2451159110944718
+      },
+      {
+        "id": 618,
+        "species": "boulderplum",
+        "pos": [
+          -4.796209651559483,
+          30.726103710286335,
+          -83.9922402585903
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.25224652387667446
+      },
+      {
+        "id": 620,
+        "species": "boulderplum",
+        "pos": [
+          0.6673020160563825,
+          30.484093226551707,
+          -70.18113542038293
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.25165392498485745
+      },
+      {
+        "id": 621,
+        "species": "boulderplum",
+        "pos": [
+          1.2346563952696488,
+          30.872792591381376,
+          -69.25565649387487
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.23314990104176103
+      },
+      {
+        "id": 623,
+        "species": "spikefruit",
+        "pos": [
+          -2.964244270750082,
+          30.977000581110378,
+          -68.18114739111039
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2039173818512354
+      },
+      {
+        "id": 624,
+        "species": "spikefruit",
+        "pos": [
+          -3.2770926600822783,
+          30.752406913384185,
+          -68.7305386645267
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18583473210339435
+      },
+      {
+        "id": 625,
+        "species": "spikefruit",
+        "pos": [
+          -4.077531572938977,
+          31.057396592009997,
+          -68.40807300209828
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.20039297891571184
+      },
+      {
+        "id": 627,
+        "species": "spikefruit",
+        "pos": [
+          10.780662958607657,
+          30.90155740858629,
+          -82.46028536536402
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2232746492223814
+      },
+      {
+        "id": 628,
+        "species": "spikefruit",
+        "pos": [
+          10.744167887411896,
+          31.11142523520496,
+          -81.85445864467667
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2074633681643754
+      },
+      {
+        "id": 629,
+        "species": "spikefruit",
+        "pos": [
+          11.859854576900661,
+          31.193223461423337,
+          -82.4296461984503
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18733325814013368
+      },
+      {
+        "id": 630,
+        "species": "spikefruit",
+        "pos": [
+          11.89110641714083,
+          31.227988808123307,
+          -81.9105441375046
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.21484231029334477
+      },
+      {
+        "id": 632,
+        "species": "spikefruit",
+        "pos": [
+          2.3024206529059548,
+          31.030099114325665,
+          -64.56393346481744
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2003273383565247
+      },
+      {
+        "id": 633,
+        "species": "spikefruit",
+        "pos": [
+          2.3037387880248943,
+          30.73267910233742,
+          -65.39421365936236
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2120474971819203
+      },
+      {
+        "id": 634,
+        "species": "spikefruit",
+        "pos": [
+          2.928876365387027,
+          30.951679454439713,
+          -65.46719427856468
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.18449808561592362
+      },
+      {
+        "id": 635,
+        "species": "spikefruit",
+        "pos": [
+          3.1398479368332923,
+          30.943907370579833,
+          -64.68207558024876
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.24007571758632545
+      },
+      {
+        "id": 641,
+        "species": "coconut",
+        "pos": [
+          50.04431085828883,
+          11.46917224250817,
+          63.29336782069478
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.22133947582077235
+      },
+      {
+        "id": 642,
+        "species": "coconut",
+        "pos": [
+          50.03250303733337,
+          11.163284822545487,
+          64.30679914862928
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1972261966103688
+      },
+      {
+        "id": 643,
+        "species": "coconut",
+        "pos": [
+          49.63846539991895,
+          11.109646924421874,
+          63.905129230874124
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.21016810609027747
+      },
+      {
+        "id": 644,
+        "species": "coconut",
+        "pos": [
+          50.494735592979495,
+          11.265255642042339,
+          63.99268146458168
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.1775975681524724
+      },
+      {
+        "id": 645,
+        "species": "coconut",
+        "pos": [
+          49.637717648723566,
+          11.11110648239827,
+          63.45441731863181
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2235369091341272
+      },
+      {
+        "id": 646,
+        "species": "coconut",
+        "pos": [
+          50.47873886814585,
+          11.440167590208086,
+          63.551327461569514
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.22334857262298466
+      },
+      {
+        "id": 648,
+        "species": "coconut",
+        "pos": [
+          53.93244518820915,
+          12.393928983907216,
+          45.06402755775919
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.20625119606032968
+      },
+      {
+        "id": 649,
+        "species": "coconut",
+        "pos": [
+          53.41768761974818,
+          12.319254999499249,
+          44.308852407958746
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19573521967045965
+      },
+      {
+        "id": 650,
+        "species": "coconut",
+        "pos": [
+          53.93253702898139,
+          12.133864453937148,
+          44.41799432663873
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.19832924445811662
+      },
+      {
+        "id": 666,
+        "species": "vinebomb",
+        "pos": [
+          30,
+          10.691609214652104,
+          -26
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.22687824795171618
+      },
+      {
+        "id": 668,
+        "species": "vinebomb",
+        "pos": [
+          14,
+          6.511355296187101,
+          -50
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2129722143933177
+      },
+      {
+        "id": 670,
+        "species": "vinebomb",
+        "pos": [
+          -2,
+          16.541961185578426,
+          -54
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.12353597033813594
+      },
+      {
+        "id": 672,
+        "species": "vinebomb",
+        "pos": [
+          22,
+          4.405239903827898,
+          -56
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.24
+      },
+      {
+        "id": 674,
+        "species": "vinebomb",
+        "pos": [
+          -14,
+          18.48766887682393,
+          -46
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.24164255183190106
+      },
+      {
+        "id": 676,
+        "species": "vinebomb",
+        "pos": [
+          58,
+          4.430033995965067,
+          -16
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.2568234748363495
+      },
+      {
+        "id": 678,
+        "species": "vinebomb",
+        "pos": [
+          66,
+          3.3447208251435327,
+          -4
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.24022058180719613
+      },
+      {
+        "id": 680,
+        "species": "boulderplum",
+        "pos": [
+          -47.45479202270508,
+          7.7483744621276855,
+          11.725327491760254
+        ],
+        "state": "free",
+        "speed": 0.21090216945185133,
+        "radius": 0.25
+      },
+      {
+        "id": 683,
+        "species": "watermelon",
+        "pos": [
+          -23.466607312209135,
+          7.994106580128552,
+          24.114804265356113
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.4
+      },
+      {
+        "id": 684,
+        "species": "watermelon",
+        "pos": [
+          -22.13429140842028,
+          7.994106580128552,
+          25.363589908495594
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.4
+      },
+      {
+        "id": 686,
+        "species": "puffmelon",
+        "pos": [
+          -27.31142423304083,
+          8.751374012492786,
+          8.8397915813252
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.28
+      },
+      {
+        "id": 687,
+        "species": "puffmelon",
+        "pos": [
+          11.479684829711914,
+          5.755978107452393,
+          30.988677978515625
+        ],
+        "state": "free",
+        "speed": 1.6002374739140803,
+        "radius": 0.8680000000000001
+      },
+      {
+        "id": 689,
+        "species": "puffmelon",
+        "pos": [
+          32.73131561279297,
+          3.966649055480957,
+          55.589935302734375
+        ],
+        "state": "free",
+        "speed": 0.672183683245509,
+        "radius": 0.8680000000000001
+      },
+      {
+        "id": 690,
+        "species": "puffmelon",
+        "pos": [
+          -23.113513181037355,
+          8.446989727639938,
+          24.496832420474608
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.28
+      }
+    ],
+    "events": []
+  },
+  "timeline": [
+    {
+      "wallSeconds": 6.36,
+      "stage": "boot",
+      "kind": "fresh-dock",
+      "pos": [
+        71.49999981020659,
+        2.350725860545557,
+        71.50000055896021
+      ],
+      "health": 100,
+      "playerState": "active",
+      "mimic": {
+        "pos": [
+          -23,
+          7.5,
+          22
+        ],
+        "phase": "idle",
+        "health": 3,
+        "timeLeft": 0
+      },
+      "tool": "hand",
+      "carried": null,
+      "targetKind": null,
+      "targetId": null,
+      "money": 0,
+      "render": {
+        "drawCalls": 177,
+        "triangles": 3275858,
+        "geometries": 146,
+        "textures": 25,
+        "programs": 35
+      }
+    },
+    {
+      "wallSeconds": 6.58,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        60,
+        0,
+        65
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 9.6,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        55.5,
+        0,
+        61
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 11.34,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        50.5,
+        0,
+        61.5
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 12.46,
+      "stage": "walk",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 6.183333333333317,
+      "payload": {
+        "text": "Merv: The fruit is insured. You are not.",
+        "kind": "info",
+        "ms": 4200
+      }
+    },
+    {
+      "wallSeconds": 12.85,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        44,
+        0,
+        62.5
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 15.03,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        37.2,
+        0,
+        58.2
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 17.72,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        30,
+        0,
+        54
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 20.14,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        25,
+        0,
+        46
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 22.57,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        11,
+        0,
+        38.6
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 26.62,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -3.5,
+        0,
+        31.4
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 29.91,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -7.5,
+        0,
+        29.5
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 31.48,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -21.293589133808993,
+        0,
+        25.7920983467219
+      ],
+      "radius": 0.45
+    },
+    {
+      "wallSeconds": 37.35,
+      "stage": "walk",
+      "kind": "event",
+      "name": "harvest:site",
+      "gameSeconds": 31.033333333332852,
+      "payload": {
+        "siteId": "orchard-mimic",
+        "phase": "warning",
+        "position": {
+          "x": -23,
+          "y": 7.5,
+          "z": 25
+        }
+      }
+    },
+    {
+      "wallSeconds": 37.35,
+      "stage": "walk",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 31.033333333332852,
+      "payload": {
+        "text": "Something moved beneath the harvest",
+        "sub": "Step back, or press E again to risk the loaded crop.",
+        "ms": 3400
+      }
+    },
+    {
+      "wallSeconds": 38.4,
+      "stage": "walk",
+      "kind": "event",
+      "name": "harvest:site",
+      "gameSeconds": 32.049999999999464,
+      "payload": {
+        "siteId": "orchard-mimic",
+        "phase": "active",
+        "position": {
+          "x": -23,
+          "y": 7.5,
+          "z": 25
+        }
+      }
+    },
+    {
+      "wallSeconds": 38.4,
+      "stage": "walk",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 32.049999999999464,
+      "payload": {
+        "text": "The harvest woke a Mimic!",
+        "sub": "Drop your prize, dodge the rush, then strike its recovery.",
+        "ms": 3200
+      }
+    },
+    {
+      "wallSeconds": 38.4,
+      "stage": "walk",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 32.049999999999464,
+      "payload": {
+        "text": "Watermelon",
+        "sub": "Detaching it is the easy half.",
+        "kind": "gold",
+        "ms": 4000
+      }
+    },
+    {
+      "wallSeconds": 38.4,
+      "stage": "walk",
+      "kind": "event",
+      "name": "fruit:grabbed",
+      "gameSeconds": 32.049999999999464,
+      "payload": {
+        "fruitId": 682,
+        "species": "watermelon",
+        "mass": 22,
+        "heavy": true
+      }
+    },
+    {
+      "wallSeconds": 38.4,
+      "stage": "walk",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 32.049999999999464,
+      "payload": {
+        "text": "Watermelon — 22.0 kg",
+        "sub": "Too big for the basket. Both hands.",
+        "ms": 2400
+      }
+    },
+    {
+      "wallSeconds": 38.4,
+      "stage": "walk",
+      "kind": "warning-observed",
+      "pos": [
+        -20.93303511601019,
+        7.520099690321862,
+        25.83873196100888
+      ],
+      "mimic": {
+        "pos": [
+          -23,
+          7.5,
+          22
+        ],
+        "phase": "warn",
+        "health": 3,
+        "timeLeft": 0.7166666666666665
+      },
+      "health": 100
+    },
+    {
+      "wallSeconds": 39.8,
+      "stage": "mimic-fight",
+      "kind": "rapid-mallet-click",
+      "index": 2
+    },
+    {
+      "wallSeconds": 40.64,
+      "stage": "mimic-fight",
+      "kind": "rapid-mallet-click",
+      "index": 3
+    },
+    {
+      "wallSeconds": 40.68,
+      "stage": "mimic-fight",
+      "kind": "event",
+      "name": "encounter:attack",
+      "gameSeconds": 33.166666666666075,
+      "payload": {
+        "kind": "mimic",
+        "victimId": "solo",
+        "damage": 28
+      }
+    },
+    {
+      "wallSeconds": 40.68,
+      "stage": "mimic-fight",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 33.166666666666075,
+      "payload": {
+        "text": "Puff Melon",
+        "sub": "The only fruit that harvests YOU.",
+        "kind": "gold",
+        "ms": 4000
+      }
+    },
+    {
+      "wallSeconds": 40.68,
+      "stage": "mimic-fight",
+      "kind": "event",
+      "name": "tool:swing",
+      "gameSeconds": 33.516666666666055,
+      "payload": {
+        "toolId": "hand",
+        "duration": 0.44,
+        "swingId": 1
+      }
+    },
+    {
+      "wallSeconds": 40.68,
+      "stage": "mimic-fight",
+      "kind": "event",
+      "name": "tool:swing",
+      "gameSeconds": 34.34999999999935,
+      "payload": {
+        "toolId": "hand",
+        "duration": 0.44,
+        "swingId": 2
+      }
+    },
+    {
+      "wallSeconds": 40.68,
+      "stage": "mimic-fight",
+      "kind": "damage-observed",
+      "pos": [
+        -19.652846622748253,
+        7.520099880908296,
+        27.094924742050527
+      ],
+      "mimic": {
+        "pos": [
+          -22.41455386057601,
+          7.5,
+          23.234237512195968
+        ],
+        "phase": "recover",
+        "health": 2,
+        "timeLeft": 1.8666666666666676
+      },
+      "health": 72
+    },
+    {
+      "wallSeconds": 40.68,
+      "stage": "mimic-fight",
+      "kind": "rapid-mallet-result",
+      "pos": [
+        -19.652846622748253,
+        7.520099880908296,
+        27.094924742050527
+      ],
+      "health": 72,
+      "playerState": "active",
+      "mimic": {
+        "pos": [
+          -22.41455386057601,
+          7.5,
+          23.234237512195968
+        ],
+        "phase": "recover",
+        "health": 2,
+        "timeLeft": 1.8666666666666676
+      },
+      "tool": "hand",
+      "carried": null,
+      "targetKind": null,
+      "targetId": null,
+      "money": 0,
+      "render": {
+        "drawCalls": 221,
+        "triangles": 3451366,
+        "geometries": 175,
+        "textures": 25,
+        "programs": 37
+      }
+    },
+    {
+      "wallSeconds": 40.73,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -21.105489699769322,
+        0,
+        25.064224130423405
+      ],
+      "radius": 0.5
+    },
+    {
+      "wallSeconds": 42.33,
+      "stage": "walk",
+      "kind": "event",
+      "name": "tool:swing",
+      "gameSeconds": 35.999999999999254,
+      "payload": {
+        "toolId": "hand",
+        "duration": 0.44,
+        "swingId": 3
+      }
+    },
+    {
+      "wallSeconds": 42.33,
+      "stage": "walk",
+      "kind": "mallet-swing",
+      "pos": [
+        -21.00327143687739,
+        7.520096997551795,
+        25.274231886906414
+      ],
+      "health": 72,
+      "playerState": "active",
+      "mimic": {
+        "pos": [
+          -22.41455386057601,
+          7.5,
+          23.234237512195968
+        ],
+        "phase": "recover",
+        "health": 2,
+        "timeLeft": 0.21666666666666917
+      },
+      "tool": "hand",
+      "carried": null,
+      "targetKind": null,
+      "targetId": null,
+      "money": 0,
+      "render": {
+        "drawCalls": 219,
+        "triangles": 3444508,
+        "geometries": 175,
+        "textures": 25,
+        "programs": 37
+      }
+    },
+    {
+      "wallSeconds": 42.33,
+      "stage": "walk",
+      "kind": "strike-result",
+      "swings": 1,
+      "beforeHealth": 2,
+      "afterHealth": 2,
+      "distance": 2.480583626546566
+    },
+    {
+      "wallSeconds": 42.81,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -21.447368920516322,
+        0,
+        24.632290905926602
+      ],
+      "radius": 0.5
+    },
+    {
+      "wallSeconds": 43.6,
+      "stage": "walk",
+      "kind": "event",
+      "name": "tool:swing",
+      "gameSeconds": 37.26666666666585,
+      "payload": {
+        "toolId": "hand",
+        "duration": 0.44,
+        "swingId": 4
+      }
+    },
+    {
+      "wallSeconds": 43.6,
+      "stage": "walk",
+      "kind": "mallet-swing",
+      "pos": [
+        -21.243646122321444,
+        7.520099511096836,
+        24.954487506385274
+      ],
+      "health": 72,
+      "playerState": "active",
+      "mimic": {
+        "pos": [
+          -22.7274666353012,
+          7.5,
+          22.781926120106647
+        ],
+        "phase": "recover",
+        "health": 1,
+        "timeLeft": 1.4333333333333358
+      },
+      "tool": "hand",
+      "carried": null,
+      "targetKind": null,
+      "targetId": null,
+      "money": 0,
+      "render": {
+        "drawCalls": 219,
+        "triangles": 3450988,
+        "geometries": 175,
+        "textures": 25,
+        "programs": 37
+      }
+    },
+    {
+      "wallSeconds": 43.6,
+      "stage": "walk",
+      "kind": "strike-result",
+      "swings": 2,
+      "beforeHealth": 1,
+      "afterHealth": 1,
+      "distance": 2.6309211869397418
+    },
+    {
+      "wallSeconds": 44.08,
+      "stage": "walk",
+      "kind": "event",
+      "name": "harvest:site",
+      "gameSeconds": 37.433333333332506,
+      "payload": {
+        "siteId": "orchard-mimic",
+        "phase": "cleared",
+        "position": {
+          "x": -23,
+          "y": 7.5,
+          "z": 25
+        }
+      }
+    },
+    {
+      "wallSeconds": 44.08,
+      "stage": "walk",
+      "kind": "event",
+      "name": "money:changed",
+      "gameSeconds": 37.433333333332506,
+      "payload": {
+        "money": 80,
+        "delta": 80,
+        "reason": "defeat:mimic"
+      }
+    },
+    {
+      "wallSeconds": 44.08,
+      "stage": "walk",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 37.433333333332506,
+      "payload": {
+        "text": "Mimic Melon subdued",
+        "sub": "Base reward banked. Secure the prize for more.",
+        "kind": "good",
+        "ms": 3200
+      }
+    },
+    {
+      "wallSeconds": 44.08,
+      "stage": "walk",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 37.433333333332506,
+      "payload": {
+        "text": "Objective updated",
+        "sub": "Take the hill path. Free the harvest from Snapjaw.",
+        "kind": "gold",
+        "ms": 3800
+      }
+    },
+    {
+      "wallSeconds": 44.08,
+      "stage": "walk",
+      "kind": "event",
+      "name": "encounter:defeated",
+      "gameSeconds": 37.433333333332506,
+      "payload": {
+        "kind": "mimic",
+        "position": {
+          "x": -22.7274666353012,
+          "y": 7.5,
+          "z": 22.781926120106647
+        },
+        "actorId": "solo"
+      }
+    },
+    {
+      "wallSeconds": 44.13,
+      "stage": "walk",
+      "kind": "fight-end",
+      "pos": [
+        -21.243646809617182,
+        7.520099046221352,
+        24.954486735970956
+      ],
+      "health": 72,
+      "playerState": "active",
+      "mimic": {
+        "pos": [
+          -22.7274666353012,
+          7.5,
+          22.781926120106647
+        ],
+        "phase": "defeated",
+        "health": 0,
+        "timeLeft": 0
+      },
+      "tool": "hand",
+      "carried": null,
+      "targetKind": null,
+      "targetId": null,
+      "money": 80,
+      "render": {
+        "drawCalls": 216,
+        "triangles": 3450204,
+        "geometries": 175,
+        "textures": 25,
+        "programs": 37
+      }
+    },
+    {
+      "wallSeconds": 44.34,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -23.40669287268451,
+        0,
+        25.961536341586694
+      ],
+      "radius": 0.7
+    },
+    {
+      "wallSeconds": 46.37,
+      "stage": "walk",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 40.06666666666569,
+      "payload": {
+        "text": "Orange",
+        "sub": "Rolls with a determination that borders on malice.",
+        "kind": "gold",
+        "ms": 4000
+      }
+    },
+    {
+      "wallSeconds": 46.37,
+      "stage": "walk",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 40.06666666666569,
+      "payload": {
+        "text": "DISCOVERY TIER 1",
+        "sub": "New equipment available at the shed",
+        "kind": "gold",
+        "ms": 4200
+      }
+    },
+    {
+      "wallSeconds": 47.61,
+      "stage": "walk",
+      "kind": "prize-target",
+      "pos": [
+        -22.885071188803067,
+        7.5200007114791045,
+        26.01500140478457
+      ],
+      "health": 72,
+      "playerState": "active",
+      "mimic": {
+        "pos": [
+          -22.7274666353012,
+          7.5,
+          22.781926120106647
+        ],
+        "phase": "defeated",
+        "health": 0,
+        "timeLeft": 0
+      },
+      "tool": "hand",
+      "carried": null,
+      "targetKind": "fruit",
+      "targetId": 682,
+      "money": 80,
+      "render": {
+        "drawCalls": 125,
+        "triangles": 3375976,
+        "geometries": 175,
+        "textures": 25,
+        "programs": 37
+      }
+    },
+    {
+      "wallSeconds": 47.76,
+      "stage": "walk",
+      "kind": "event",
+      "name": "fruit:grabbed",
+      "gameSeconds": 41.449999999998944,
+      "payload": {
+        "fruitId": 682,
+        "species": "watermelon",
+        "mass": 22,
+        "heavy": true
+      }
+    },
+    {
+      "wallSeconds": 47.76,
+      "stage": "walk",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 41.449999999998944,
+      "payload": {
+        "text": "Watermelon — 22.0 kg",
+        "sub": "Too big for the basket. Both hands.",
+        "ms": 2400
+      }
+    },
+    {
+      "wallSeconds": 47.76,
+      "stage": "walk",
+      "kind": "prize-E",
+      "pos": [
+        -22.885071241343233,
+        7.519999334620541,
+        26.015001961391924
+      ],
+      "health": 72,
+      "playerState": "active",
+      "mimic": {
+        "pos": [
+          -22.7274666353012,
+          7.5,
+          22.781926120106647
+        ],
+        "phase": "defeated",
+        "health": 0,
+        "timeLeft": 0
+      },
+      "tool": "hand",
+      "carried": 682,
+      "targetKind": null,
+      "targetId": null,
+      "money": 80,
+      "render": {
+        "drawCalls": 125,
+        "triangles": 3373052,
+        "geometries": 175,
+        "textures": 25,
+        "programs": 37
+      }
+    },
+    {
+      "wallSeconds": 47.89,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -7.5,
+        0,
+        29.5
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 47.93,
+      "stage": "walk",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 41.54999999999894,
+      "payload": {
+        "text": "OPTIONAL: cash in the Mimic prize",
+        "sub": "Sell the prize or nearby fruit at the dock pad toward the $110 Air Cannon. Snapjaw is still ahead.",
+        "kind": "gold",
+        "ms": 7000
+      }
+    },
+    {
+      "wallSeconds": 48.68,
+      "stage": "walk",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 42.33333333333223,
+      "payload": {
+        "text": "Apple",
+        "sub": "The one everybody starts with. Nobody respects it.",
+        "kind": "gold",
+        "ms": 4000
+      }
+    },
+    {
+      "wallSeconds": 49.39,
+      "stage": "walk",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 43.083333333332185,
+      "payload": {
+        "text": "CHAIN REACTION",
+        "sub": "Five at once. Nobody meant that.",
+        "kind": "gold",
+        "ms": 3400
+      }
+    },
+    {
+      "wallSeconds": 52.9,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -3.5,
+        0,
+        31.4
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 54.18,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        11,
+        0,
+        38.6
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 58.86,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        25,
+        0,
+        46
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 63,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        30,
+        0,
+        54
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 65.6,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        37.2,
+        0,
+        58.2
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 66.31,
+      "stage": "walk",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 60.06666666666455,
+      "payload": {
+        "text": "Merv: That gull owes me rent.",
+        "kind": "info",
+        "ms": 4200
+      }
+    },
+    {
+      "wallSeconds": 67.94,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        44,
+        0,
+        62.5
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 70.25,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        40.77003468801159,
+        2.4811767578125,
+        55.35669382866159
+      ],
+      "radius": 2.2
+    },
+    {
+      "wallSeconds": 73.04,
+      "stage": "walk",
+      "kind": "real-sell-pad",
+      "pos": [
+        40.83826245346704,
+        2.6010179908344693,
+        55.856080142833974
+      ],
+      "health": 72,
+      "playerState": "active",
+      "mimic": {
+        "pos": [
+          -22.7274666353012,
+          7.5,
+          22.781926120106647
+        ],
+        "phase": "defeated",
+        "health": 0,
+        "timeLeft": 0
+      },
+      "tool": "hand",
+      "carried": 682,
+      "targetKind": "sell",
+      "targetId": null,
+      "money": 80,
+      "render": {
+        "drawCalls": 181,
+        "triangles": 3310812,
+        "geometries": 175,
+        "textures": 25,
+        "programs": 37
+      }
+    },
+    {
+      "wallSeconds": 73.3,
+      "stage": "walk",
+      "kind": "event",
+      "name": "fruit:sold",
+      "gameSeconds": 66.98333333333083,
+      "payload": {
+        "fruitId": 682,
+        "species": "watermelon",
+        "value": 163,
+        "quality": "Perfect",
+        "mass": 22
+      }
+    },
+    {
+      "wallSeconds": 73.3,
+      "stage": "walk",
+      "kind": "event",
+      "name": "money:changed",
+      "gameSeconds": 66.98333333333083,
+      "payload": {
+        "money": 243,
+        "delta": 163,
+        "reason": "sale"
+      }
+    },
+    {
+      "wallSeconds": 73.3,
+      "stage": "walk",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 66.98333333333083,
+      "payload": {
+        "text": "Sold 1 — $163",
+        "sub": "Perfect · 22 kg",
+        "kind": "gold",
+        "ms": 2600
+      }
+    },
+    {
+      "wallSeconds": 73.3,
+      "stage": "walk",
+      "kind": "sale-E",
+      "pos": [
+        40.83826449991319,
+        2.6012748162402826,
+        55.85608078910633
+      ],
+      "health": 72,
+      "playerState": "active",
+      "mimic": {
+        "pos": [
+          -22.7274666353012,
+          7.5,
+          22.781926120106647
+        ],
+        "phase": "defeated",
+        "health": 0,
+        "timeLeft": 0
+      },
+      "tool": "hand",
+      "carried": null,
+      "targetKind": null,
+      "targetId": null,
+      "money": 243,
+      "render": {
+        "drawCalls": 180,
+        "triangles": 3305928,
+        "geometries": 175,
+        "textures": 25,
+        "programs": 37
+      }
+    },
+    {
+      "wallSeconds": 73.45,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        42.33668850726656,
+        3.8811767578125,
+        54.11347389212026
+      ],
+      "radius": 2
+    },
+    {
+      "wallSeconds": 74.43,
+      "stage": "first-upgrade",
+      "kind": "at-supply-shed",
+      "pos": [
+        41.19376550235798,
+        2.601276665781432,
+        55.500581979130914
+      ],
+      "health": 72,
+      "playerState": "active",
+      "mimic": {
+        "pos": [
+          -22.7274666353012,
+          7.5,
+          22.781926120106647
+        ],
+        "phase": "defeated",
+        "health": 0,
+        "timeLeft": 0
+      },
+      "tool": "hand",
+      "carried": null,
+      "targetKind": null,
+      "targetId": null,
+      "money": 243,
+      "render": {
+        "drawCalls": 124,
+        "triangles": 3240336,
+        "geometries": 175,
+        "textures": 25,
+        "programs": 37
+      }
+    },
+    {
+      "wallSeconds": 74.94,
+      "stage": "first-upgrade",
+      "kind": "event",
+      "name": "money:changed",
+      "gameSeconds": 68.63333333333074,
+      "payload": {
+        "money": 133,
+        "delta": -110,
+        "reason": "buy:aircannon"
+      }
+    },
+    {
+      "wallSeconds": 74.94,
+      "stage": "first-upgrade",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 68.63333333333074,
+      "payload": {
+        "text": "Air Cannon equipped",
+        "sub": "Blast a threat away or knock fruit loose. Hold to charge a stronger shot.",
+        "kind": "good",
+        "ms": 4200
+      }
+    },
+    {
+      "wallSeconds": 74.94,
+      "stage": "first-upgrade",
+      "kind": "event",
+      "name": "shop:purchased",
+      "gameSeconds": 68.63333333333074,
+      "payload": {
+        "itemId": "aircannon",
+        "cost": 110
+      }
+    },
+    {
+      "wallSeconds": 75.64,
+      "stage": "first-upgrade",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 69.39999999999736,
+      "payload": {
+        "text": "Resting at the dock",
+        "sub": "Catch your breath here to recover health.",
+        "kind": "good",
+        "ms": 2600
+      }
+    },
+    {
+      "wallSeconds": 81.2,
+      "stage": "first-upgrade",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 71.79999999999723,
+      "payload": {
+        "text": "Resting at the dock",
+        "sub": "Catch your breath here to recover health.",
+        "kind": "good",
+        "ms": 2600
+      }
+    },
+    {
+      "wallSeconds": 81.2,
+      "stage": "first-upgrade",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 73.04999999999715,
+      "payload": {
+        "text": "TRY THIS: take a ranged shot at the Spitter",
+        "sub": "LMB fires on release; hold for power. RMB launches you. Hit Spitter or King Vine, deflect seeds, or shoot fruit to the sell pad.",
+        "kind": "gold",
+        "ms": 7000
+      }
+    },
+    {
+      "wallSeconds": 81.2,
+      "stage": "first-upgrade",
+      "kind": "first-upgrade-in-use",
+      "pos": [
+        41.70002974883691,
+        2.601276766553445,
+        56.14257569847018
+      ],
+      "health": 100,
+      "playerState": "active",
+      "mimic": {
+        "pos": [
+          -22.7274666353012,
+          7.5,
+          22.781926120106647
+        ],
+        "phase": "defeated",
+        "health": 0,
+        "timeLeft": 0
+      },
+      "tool": "aircannon",
+      "carried": null,
+      "targetKind": null,
+      "targetId": null,
+      "money": 133,
+      "render": {
+        "drawCalls": 180,
+        "triangles": 3312806,
+        "geometries": 177,
+        "textures": 25,
+        "programs": 37
+      }
+    },
+    {
+      "wallSeconds": 81.32,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        25,
+        0,
+        46
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 85.32,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        11,
+        0,
+        38.6
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 89.61,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -3.5,
+        0,
+        31.4
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 93.8,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -7.5,
+        0,
+        29.5
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 95.58,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -17,
+        0,
+        25
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 99.02,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -23,
+        0,
+        22
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 101.02,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -24.4,
+        0,
+        14.5
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 104.02,
+      "stage": "walk",
+      "kind": "obstacle-recovery",
+      "pos": [
+        -24.399304631189416,
+        7.519999856097138,
+        17.055364922840816
+      ]
+    },
+    {
+      "wallSeconds": 105.43,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -24.4,
+        0,
+        11
+      ],
+      "radius": 0.35
+    },
+    {
+      "wallSeconds": 108.71,
+      "stage": "walk",
+      "kind": "event",
+      "name": "harvest:site",
+      "gameSeconds": 102.39999999999549,
+      "payload": {
+        "siteId": "snapjaw-cache",
+        "phase": "cleared",
+        "position": {
+          "x": -26.8,
+          "y": 7.5,
+          "z": 9.1
+        }
+      }
+    },
+    {
+      "wallSeconds": 108.71,
+      "stage": "walk",
+      "kind": "event",
+      "name": "money:changed",
+      "gameSeconds": 102.39999999999549,
+      "payload": {
+        "money": 273,
+        "delta": 140,
+        "reason": "defeat:snapjaw"
+      }
+    },
+    {
+      "wallSeconds": 108.71,
+      "stage": "walk",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 102.39999999999549,
+      "payload": {
+        "text": "Snapjaw opened",
+        "sub": "Base reward banked. Secure the prize for more.",
+        "kind": "good",
+        "ms": 3200
+      }
+    },
+    {
+      "wallSeconds": 108.71,
+      "stage": "walk",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 102.39999999999549,
+      "payload": {
+        "text": "Objective updated",
+        "sub": "Climb toward the ridge. Silence the Spitter Plant.",
+        "kind": "gold",
+        "ms": 3800
+      }
+    },
+    {
+      "wallSeconds": 108.71,
+      "stage": "walk",
+      "kind": "event",
+      "name": "encounter:defeated",
+      "gameSeconds": 102.39999999999549,
+      "payload": {
+        "kind": "snapjaw",
+        "position": {
+          "x": -28,
+          "y": 7.5,
+          "z": 11
+        },
+        "actorId": "solo"
+      }
+    },
+    {
+      "wallSeconds": 109,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -24.4734569493182,
+        0,
+        10.799810140458906
+      ],
+      "radius": 0.45
+    },
+    {
+      "wallSeconds": 110.72,
+      "stage": "walk",
+      "kind": "event",
+      "name": "fruit:grabbed",
+      "gameSeconds": 104.38333333332871,
+      "payload": {
+        "fruitId": 687,
+        "species": "puffmelon",
+        "mass": 1.9,
+        "heavy": false
+      }
+    },
+    {
+      "wallSeconds": 110.72,
+      "stage": "walk",
+      "kind": "snapjaw-crop-picked",
+      "id": 687,
+      "before": {
+        "id": 687,
+        "species": "puffmelon",
+        "pos": [
+          -26.547443462060613,
+          8.594010820771457,
+          9.660406472626493
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.28
+      },
+      "carried": 687,
+      "basket": [],
+      "prompt": "<b>E</b> Pick Puff Melon — $202"
+    },
+    {
+      "wallSeconds": 111.01,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -27,
+        0,
+        12
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 111.06,
+      "stage": "walk",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 104.69999999999536,
+      "payload": {
+        "text": "Puff Melon got away from you",
+        "sub": "1.1 m across — rope it, net it, or shove it home",
+        "kind": "bad",
+        "ms": 2600
+      }
+    },
+    {
+      "wallSeconds": 112.13,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -29,
+        0,
+        2
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 116.76,
+      "stage": "spitter",
+      "kind": "event",
+      "name": "harvest:site",
+      "gameSeconds": 109.8833333333284,
+      "payload": {
+        "siteId": "spitter-slope",
+        "phase": "cleared",
+        "position": {
+          "x": -35,
+          "y": 17.119384765625,
+          "z": -11.5
+        }
+      }
+    },
+    {
+      "wallSeconds": 116.76,
+      "stage": "spitter",
+      "kind": "event",
+      "name": "money:changed",
+      "gameSeconds": 109.8833333333284,
+      "payload": {
+        "money": 383,
+        "delta": 110,
+        "reason": "defeat:spitter"
+      }
+    },
+    {
+      "wallSeconds": 116.76,
+      "stage": "spitter",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 109.8833333333284,
+      "payload": {
+        "text": "Spitter Plant silenced",
+        "sub": "Base reward banked. Secure the prize for more.",
+        "kind": "good",
+        "ms": 3200
+      }
+    },
+    {
+      "wallSeconds": 116.76,
+      "stage": "spitter",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 109.8833333333284,
+      "payload": {
+        "text": "Objective updated",
+        "sub": "Confront King Vine at King Melon.",
+        "kind": "gold",
+        "ms": 3800
+      }
+    },
+    {
+      "wallSeconds": 116.76,
+      "stage": "spitter",
+      "kind": "event",
+      "name": "encounter:defeated",
+      "gameSeconds": 109.8833333333284,
+      "payload": {
+        "kind": "spitter",
+        "position": {
+          "x": -31,
+          "y": 14.25,
+          "z": -8
+        },
+        "actorId": "solo"
+      }
+    },
+    {
+      "wallSeconds": 116.76,
+      "stage": "spitter",
+      "kind": "spitter-shot",
+      "pos": [
+        -25.907236957770518,
+        7.6323226997270925,
+        2.9325405357665524
+      ],
+      "health": 100,
+      "playerState": "active",
+      "mimic": {
+        "pos": [
+          -22.7274666353012,
+          7.5,
+          22.781926120106647
+        ],
+        "phase": "defeated",
+        "health": 0,
+        "timeLeft": 0
+      },
+      "tool": "aircannon",
+      "carried": null,
+      "targetKind": null,
+      "targetId": null,
+      "money": 383,
+      "render": {
+        "drawCalls": 161,
+        "triangles": 3511098,
+        "geometries": 178,
+        "textures": 25,
+        "programs": 37
+      }
+    },
+    {
+      "wallSeconds": 116.89,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -31,
+        0,
+        -8
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 118.46,
+      "stage": "walk",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 112.13333333332827,
+      "payload": {
+        "text": "The King Vine guards the prize",
+        "sub": "Dodge its attacks, hit the exposed stem, then cut the melon free. Ropes can steady the drop.",
+        "kind": "gold",
+        "ms": 6000
+      }
+    },
+    {
+      "wallSeconds": 119.99,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -32,
+        0,
+        -13
+      ],
+      "radius": 0.6
+    },
+    {
+      "wallSeconds": 123.38,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -33,
+        0,
+        -18
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 124.94,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -35.01509779755277,
+        0,
+        -16.982904857033184
+      ],
+      "radius": 0.6
+    },
+    {
+      "wallSeconds": 130.06,
+      "stage": "walk",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 123.08333333332764,
+      "payload": {
+        "text": "Boulder Plum",
+        "sub": "Dense enough to have its own weather.",
+        "kind": "gold",
+        "ms": 4000
+      }
+    },
+    {
+      "wallSeconds": 130.06,
+      "stage": "walk",
+      "kind": "event",
+      "name": "ui:toast",
+      "gameSeconds": 123.08333333332764,
+      "payload": {
+        "text": "DISCOVERY TIER 2",
+        "sub": "New equipment available at the shed",
+        "kind": "gold",
+        "ms": 4200
+      }
+    },
+    {
+      "wallSeconds": 130.09,
+      "stage": "walk",
+      "kind": "hillside-plum-physical-release",
+      "id": 680,
+      "before": {
+        "id": 680,
+        "species": "boulderplum",
+        "pos": [
+          -35.01509779755277,
+          17.94549369262995,
+          -11.482904857033182
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.25
+      },
+      "after": {
+        "id": 680,
+        "species": "boulderplum",
+        "pos": [
+          -34.804405212402344,
+          16.067949295043945,
+          -9.582366943359375
+        ],
+        "state": "free",
+        "speed": 6.805114258682431,
+        "radius": 0.25
+      },
+      "site": {
+        "id": "spitter-slope",
+        "kind": "spitter",
+        "plantId": 679,
+        "fruitIds": [
+          680
+        ],
+        "position": [
+          -35,
+          17.119384765625,
+          -11.5
+        ],
+        "phase": "cleared",
+        "released": [
+          680
+        ],
+        "consumed": []
+      }
+    },
+    {
+      "wallSeconds": 130.42,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -36,
+        0,
+        -30
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 133.75,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -27,
+        0,
+        -30
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 136.31,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -26,
+        0,
+        -35
+      ],
+      "radius": 1.4
+    },
+    {
+      "wallSeconds": 138.17,
+      "stage": "walk",
+      "kind": "obstacle-recovery",
+      "pos": [
+        -27.797206317110202,
+        21.02010010062977,
+        -31.08750202658962
+      ]
+    },
+    {
+      "wallSeconds": 141.31,
+      "stage": "walk",
+      "kind": "waypoint",
+      "point": [
+        -23.1,
+        0,
+        -35
+      ],
+      "radius": 0.4
+    },
+    {
+      "wallSeconds": 141.36,
+      "stage": "walk",
+      "kind": "damage-observed",
+      "pos": [
+        -25.804911670283445,
+        21.02010026008329,
+        -33.70471848810099
+      ],
+      "mimic": {
+        "pos": [
+          -22.7274666353012,
+          7.5,
+          22.781926120106647
+        ],
+        "phase": "defeated",
+        "health": 0,
+        "timeLeft": 0
+      },
+      "health": 70
+    },
+    {
+      "wallSeconds": 141.81,
+      "stage": "walk",
+      "kind": "runner-error",
+      "failure": "page.evaluate: Execution context was destroyed, most likely because of a navigation.\n    at read (C:\\Users\\benma\\.codex\\worktrees\\sunpatch-chaos-combat\\RIPE RIOT\\tools\\harness\\sunpatch-expedition-playthrough.mjs:76:24)\n    at go (C:\\Users\\benma\\.codex\\worktrees\\sunpatch-chaos-combat\\RIPE RIOT\\tools\\harness\\sunpatch-expedition-playthrough.mjs:188:21)\n    at async defeatKingVine (C:\\Users\\benma\\.codex\\worktrees\\sunpatch-chaos-combat\\RIPE RIOT\\tools\\harness\\sunpatch-expedition-playthrough.mjs:546:7)\n    at async file:///C:/Users/benma/.codex/worktrees/sunpatch-chaos-combat/RIPE%20RIOT/tools/harness/sunpatch-expedition-playthrough.mjs:749:8"
+    }
+  ]
+}
