@@ -205,6 +205,10 @@ async function aim(point, readState = read) {
     const yaw = Math.atan2(-dx, -dz);
     const pitch = Math.atan2(point[1] - s.eye[1], Math.hypot(dx, dz));
     const dyaw = angleDelta(yaw - s.yaw), dpitch = pitch - s.pitch;
+    if (stage === 'walk' && point[0] === 60 && point[2] === 65 && n % 3 === 0)
+      log('aim-step', { step: n, yaw: s.yaw, pitch: s.pitch,
+        targetYaw: yaw, targetPitch: pitch, dyaw, dpitch,
+        locked: s.locked, mouseX, mouseY });
     if (Math.abs(dyaw) < .018 && Math.abs(dpitch) < .018) return true;
     const sensitivity = s.sensitivity || .0022;
     mouseX += Math.max(-160, Math.min(160, -dyaw / sensitivity));
