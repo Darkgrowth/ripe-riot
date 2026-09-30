@@ -20,6 +20,8 @@ test('a host fling releases capture before velocity, and a confirmed net catch d
   assert.equal(player.applyChaosLaunch(new THREE.Vector3(8, 5, 0), 'snapjaw-fling'), true);
   assert.equal(player.state, 'active');
   assert.deepEqual(player.velocity.toArray(), [8, 5, 0]);
+  assert.ok(Math.abs(player.yaw + Math.PI / 2) < 1e-6,
+    'the launched player should face the flight lane');
   assert.equal(player.stopChaosFlight(), true);
   assert.ok(player.velocity.x < 2 && player.velocity.y <= 1.2);
   assert.equal(player.stopChaosFlight(), false);

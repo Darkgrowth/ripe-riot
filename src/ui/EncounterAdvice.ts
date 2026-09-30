@@ -13,7 +13,7 @@ export function encounterAdvice(state: EncounterState, carrying: boolean,
   const name = { mimic: 'MIMIC MELON', snapjaw: 'SNAPJAW', spitter: 'SPITTER PLANT' }[state.kind];
   const cue = (text: string, tone: EncounterAdvice['tone']): EncounterAdvice => ({ name, text, tone });
   if (state.kind === 'snapjaw') {
-    if (state.capturedVictimId !== null) return cue('Get close · E to pull them free', 'danger');
+    if (state.capturedVictimId !== null) return cue('E to pull free · Catch Net after throw', 'danger');
     if (state.phase === 'recover') return cue('Jaws open · strike now', 'opening');
     if (state.phase === 'attack') return cue('Keep clear of the jaws', 'danger');
     if (state.baited) return cue('Bait taken · move beside the jaws', 'bait');

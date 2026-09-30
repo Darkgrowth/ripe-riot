@@ -25,6 +25,7 @@ import type { KingVine, KingVineNetState, KingVineStrike } from '@/boss/KingVine
 import type { Progression } from '@/systems/Progression';
 import { MeleeIntentGuard, validMeleeOrigin } from './MeleeIntentGuard';
 import { NetCatchGuard } from './NetCatchGuard';
+import { validNetCatchGeometry } from './NetCatchGuard';
 import { probeMeleeSweep } from '@/enemies/MeleeSweep';
 import { QueryMask } from '@/physics/Layers';
 import { MALLET_TIMING } from '@/tools/MalletSwing';
@@ -35,7 +36,7 @@ export type IntentKind =
   | 'shove' | 'shake' | 'blast' | 'spawn'
   | 'buy' | 'settle'
   | 'lcut'
-  | 'encounter' | 'revive' | 'vineHit' | 'melee' | 'netSwingStart'
+  | 'encounter' | 'revive' | 'vineHit' | 'melee' | 'netSwingStart' | 'netCatch'
   | 'rope'
   | 'resync';
 
@@ -96,6 +97,8 @@ export interface Intent {
   vineHit?: { origin: [number, number, number]; direction: [number, number, number]; strike: KingVineStrike };
   melee?: { swingId: number; origin: [number, number, number]; direction: [number, number, number] };
   swingId?: number;
+  catch?: { victimId: PeerId; flingId: number; swingId: number;
+    origin: [number, number, number]; aim: [number, number, number] };
 }
 
 /** What a client is waiting to hear back about, and how to undo it. */
@@ -318,6 +321,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   private lastBaitCue = 0;
   private nextChaosLaunchId = 1;
   private lastChaosLaunchByHost = new Map<PeerId, number>();
+  private lastShakerAgitation = new Map<PeerId, number>();
   private readonly netCatchGuard = new NetCatchGuard();
 
   init(g: Game): void {
@@ -948,6 +952,13 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
           new THREE.Vector3(velocity[0], velocity[1], velocity[2]), m.kind, flingId);
         break;
       }
+      case 'netCaught': {
+        if (this.isHost || m.from !== this.hostId) break;
+        const flingId = Number(m.flingId);
+        if (Number.isSafeInteger(flingId) && flingId > 0)
+          this.g.player.stopChaosFlight(flingId);
+        break;
+      }
       case 'reviveAttempt':
         if (m.from === this.hostId) this.vitals?.setReviveAttempt(m.by ? String(m.by) : null);
         break;
@@ -1342,6 +1353,86 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
 
   cancelNetSwing(peer: PeerId): void { this.netCatchGuard.cancel(peer); }
 
+  /** Called once when a flying teammate enters the visible net hoop. */
+  requestNetCatch(victimId: PeerId, flingId: number, swingId: number,
+    origin: THREE.Vector3, aim: THREE.Vector3): boolean {
+    if (!this.connected || !this.transport || !victimId || victimId === this.me
+      || !Number.isSafeInteger(flingId) || flingId < 1
+      || !Number.isSafeInteger(swingId) || swingId < 1) return false;
+    const request = { victimId, flingId, swingId,
+      origin: origin.toArray() as [number, number, number],
+      aim: aim.toArray() as [number, number, number] };
+    if (!this.isHost) { this.send({ kind: 'netCatch', catch: request }); return true; }
+    return this.hostTryNetCatch(this.me, request);
+  }
+
+  flyingPeerAtHoop(hoop: THREE.Vector3, radius: number): { id: PeerId; flingId: number } | null {
+    const state = this.encounters?.snapshot() as (EncounterNetState & {
+      flights?: Array<{ victimId: string; flingId: number; remaining: number }>;
+    }) | undefined;
+    if (!state?.flights || !Number.isFinite(radius) || radius <= 0) return null;
+    for (const flight of state.flights) {
+      if (!flight || flight.victimId === this.me || !(flight.remaining > 0)
+        || !Number.isSafeInteger(flight.flingId) || flight.flingId < 1) continue;
+      const avatar = this.remotes.get(flight.victimId);
+      if (!avatar?.hasPlayerPacket || avatar.state !== 'active') continue;
+      if (Math.hypot(avatar.targetPos.x - hoop.x,
+        avatar.targetPos.y + .9 - hoop.y, avatar.targetPos.z - hoop.z) <= radius + .35)
+        return { id: flight.victimId, flingId: flight.flingId };
+    }
+    return null;
+  }
+
+  private hostTryNetCatch(from: PeerId, request: NonNullable<Intent['catch']>): boolean {
+    if (!this.isHost || !this.encounters || !request || request.victimId === from) return false;
+    const encounter = this.encounters as EncounterSystem & {
+      flyingVictim?: (victimId: string, flingId: number) => boolean;
+      tryNetCatch?: (victimId: string, flingId: number, rescuerId: string) => boolean;
+    };
+    if (!Number.isSafeInteger(request.flingId) || request.flingId < 1
+      || !Number.isSafeInteger(request.swingId) || request.swingId < 1
+      || !encounter.flyingVictim?.(request.victimId, request.flingId)) return false;
+
+    const actor = from === this.me ? null : this.remotes.get(from);
+    const victim = request.victimId === this.me ? null : this.remotes.get(request.victimId);
+    if ((from !== this.me && (!actor?.hasPlayerPacket || actor.state !== 'active'
+      || actor.busy || !!actor.carrying || actor.toolId !== 'net'
+      || !this.authority.holdingFor(from).bought.has('net')
+      || this.authority.holdingFor(from).carried >= 0))
+      || (from === this.me && (this.g.player.state !== 'active'
+        || this.tools?.activeId !== 'net' || !this.tools.owned.has('net')
+        || !!this.interaction?.carried))
+      || (request.victimId !== this.me && !victim?.hasPlayerPacket)) return false;
+
+    const actorPos = actor?.targetPos ?? this.g.player.position;
+    const victimPos = victim?.targetPos ?? this.g.player.position;
+    const eyeHeight = actor ? actor.height - .19 : this.g.player.eyeHeight;
+    const valid = validNetCatchGeometry(request.origin, request.aim,
+      [actorPos.x, actorPos.y, actorPos.z], eyeHeight,
+      [victimPos.x, victimPos.y, victimPos.z]);
+    if (!valid) return false;
+    const origin = new THREE.Vector3(...request.origin);
+    const torso = victimPos.clone().add(new THREE.Vector3(0, .9, 0));
+    const direction = torso.sub(origin);
+    const distance = direction.length();
+    const obstruction = this.g.physics.raycast(origin, direction.divideScalar(distance),
+      distance, QueryMask.solid, from === this.me ? this.g.player.body : undefined);
+    if (obstruction && obstruction.distance < distance - .08) return false;
+    if (!this.netCatchGuard.catch(from, request.swingId, this.g.clock.elapsed, true)) return false;
+    if (!encounter.tryNetCatch?.(request.victimId, request.flingId, from)) return false;
+    if (request.victimId === this.me) this.g.player.stopChaosFlight(request.flingId);
+    else this.transport?.send({ t: 'netCaught', flingId: request.flingId }, request.victimId);
+    if (from === this.me) this.presentNetCatch();
+    this.sendSnapshot();
+    return true;
+  }
+
+  private presentNetCatch(): void {
+    this.g.bus.emit('ui:toast', { text: 'Teammate caught!',
+      sub: 'A well-timed Catch Net swing broke the fall.', kind: 'good', ms: 2400 });
+    this.g.bus.emit('audio:sfx', { name: 'netCatch', volume: .9, pitch: 1.2 });
+  }
+
   // ---- LegendaryNet, for the King Melon -----------------------------------
   anyoneHasRopeGun(): boolean { return this.isHost && this.authority.anyoneHasRopeGun(); }
 
@@ -1621,9 +1712,27 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
         if (!deny) this.sendSnapshot();
         return;
       }
-      case 'shake':
-        this.authority.shake(from, intent.plantId ?? -1, intent.strength ?? 1.6);
+      case 'shake': {
+        const plantId = intent.plantId ?? -1;
+        const strength = intent.strength ?? 1.6;
+        this.authority.shake(from, plantId, strength);
+        const remote = this.remotes.get(from);
+        const plant = this.fruitSys.plants.get(plantId);
+        const holding = this.authority.holdingFor(from);
+        const last = this.lastShakerAgitation.get(from) ?? -Infinity;
+        const recovery = strength > 1.5 ? 0.8 : 2.3;
+        if (remote?.state === 'active' && remote.toolId === 'shaker'
+          && holding.bought.has('shaker') && holding.carried < 0
+          && plant && holding.pos.distanceTo(plant.position) <= 9.5
+          && Number.isFinite(strength) && strength > 0 && strength <= 1.75
+          && Number.isSafeInteger(rid) && rid >= 0
+          && this.g.clock.elapsed - last >= recovery && this.g.has('director')) {
+          this.lastShakerAgitation.set(from, this.g.clock.elapsed);
+          this.g.get<IslandDirector>('director').acceptAgitation(
+            `remote-shaker:${from}:${rid}`, 'tree-shaker', plant.position);
+        }
         break;
+      }
       case 'shove': {
         const f = this.fruitSys.get(fid);
         const d = intent.dir;
@@ -1720,6 +1829,11 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
         this.netCatchGuard.start(from, intent.swingId ?? -1, this.g.clock.elapsed, active);
         return;
       }
+      case 'netCatch': {
+        const ok = !!intent.catch && this.hostTryNetCatch(from, intent.catch);
+        this.transport?.send({ t: 'result', rid, kind: 'netCatch', ok }, from);
+        return;
+      }
       case 'revive':
         this.applyReviveClaim(from, String(intent.targetPeerId ?? ''), intent.holding === true);
         break;
@@ -1782,6 +1896,10 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
         outcome: m.outcome === 'blocked' || m.outcome === 'protected' || m.outcome === 'hit'
           ? m.outcome : 'whoosh',
         target, point, defeated: m.defeated === true });
+      return;
+    }
+    if (kind === 'netCatch') {
+      if (ok) this.presentNetCatch();
       return;
     }
 
@@ -1924,6 +2042,11 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     if (r.state === 'downed' && nextState === 'active') r.recoveryUntil = this.g.clock.elapsed + 2;
     r.state = nextState;
     if (r.state !== 'active' || m.tool !== 'net') this.netCatchGuard.cancel(from);
+    if (this.isHost && nextState === 'downed') {
+      (this.encounters as (EncounterSystem & {
+        abortCapture?: (victimId: string) => boolean;
+      }) | null)?.abortCapture?.(from);
+    }
     r.ragdollPose = r.state === 'ragdoll' ? parseRagdollPose(m.rp) : null;
     r.busy = m.busy === true;
     r.toolId = typeof m.tool === 'string' ? m.tool : null;
@@ -2266,6 +2389,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     // Remote avatars interpolate toward their last reported transform. At
     // 20 Hz this is smooth enough that nobody notices, and it never predicts
     // wrongly, which matters more in a game where players stand on each other.
+    const encounter = this.encounters?.snapshot();
     for (const r of this.remotes.values()) {
       r.pos.x = damp(r.pos.x, r.targetPos.x, 14, dt);
       r.pos.y = damp(r.pos.y, r.targetPos.y, 14, dt);
@@ -2274,20 +2398,42 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       while (dy > Math.PI) dy -= Math.PI * 2;
       while (dy < -Math.PI) dy += Math.PI * 2;
       r.yaw = damp(r.yaw, r.yaw + dy, 16, dt);
-      this.poseRig(r);
+      this.poseRig(r, encounter);
     }
   }
 
   /** Stand the rig up at the reported transform, with a simple walk cycle. */
-  private poseRig(r: RemoteState): void {
+  private poseRig(r: RemoteState, encounterState = this.encounters?.snapshot()): void {
     if (r.state === 'ragdoll' && r.ragdollPose) {
       r.rig.posePhysics(r.ragdollPose);
       return;
     }
+    const encounter = encounterState as (EncounterNetState & {
+      flights?: Array<{ victimId: string; flingId: number; remaining: number }>;
+    }) | undefined;
+    const jaw = encounter?.encounters?.find(state => state.kind === 'snapjaw'
+      && state.capturedVictimId === r.id);
+    if (jaw && jaw.position.every(Number.isFinite) && Number.isFinite(jaw.heading)) {
+      // Put the worker partly outside the mouth. The old centred hold hid
+      // nearly the entire body behind the voxel teeth at normal camera scale.
+      const hold = new THREE.Vector3(
+        jaw.position[0] + Math.sin(jaw.heading) * 1.4 - Math.cos(jaw.heading) * .42,
+        jaw.position[1] + .55,
+        jaw.position[2] + Math.cos(jaw.heading) * 1.4 + Math.sin(jaw.heading) * .42);
+      r.rig.poseActive({ position: hold, yaw: jaw.heading, height: r.height,
+        time: performance.now() / 1000, moving: false, down: false,
+        carrying: false, busy: true });
+      r.rig.root.rotateX(.65);
+      return;
+    }
     const t = performance.now() / 1000;
     const moving = t - r.lastMoveAt < .22;
+    const flying = encounter?.flights?.some(flight => flight.victimId === r.id
+      && flight.remaining > 0) ?? false;
     r.rig.poseActive({ position: r.pos, yaw: r.yaw, height: r.height, time: t,
-      moving, down: r.state !== 'active', carrying: !!r.carrying, busy: r.busy });
+      moving: moving && !flying, down: r.state !== 'active', carrying: !!r.carrying,
+      busy: r.busy || flying });
+    if (flying) r.rig.root.rotateX(-.55);
   }
 
   dispose(): void { this.disconnect(); }

@@ -336,6 +336,8 @@ export class PlayerController implements PhysicsOwner {
     if (this.state === 'captured') this.state = 'active';
     this.catchableFling = source === 'snapjaw-fling';
     this.activeFlingId = this.catchableFling ? flingId : 0;
+    if (this.catchableFling && Math.hypot(velocity.x, velocity.z) > .1)
+      this.yaw = Math.atan2(-velocity.x, -velocity.z);
     this.addImpulseVelocity(velocity, false, source);
     return true;
   }

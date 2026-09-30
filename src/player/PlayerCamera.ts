@@ -3,7 +3,7 @@ import { clamp, damp, lerp } from '@/core/MathUtils';
 import type { PlayerController } from './PlayerController';
 import type { PhysicsWorld } from '@/physics/PhysicsWorld';
 import { QueryMask } from '@/physics/Layers';
-import { keepSnapjawOutsideView } from './SnapjawCaptureView';
+import { keepSnapjawOutsideView, snapjawFlingViewYaw } from './SnapjawCaptureView';
 
 const _q = new THREE.Quaternion();
 const _e = new THREE.Euler(0, 0, 0, 'YXZ');
@@ -146,7 +146,10 @@ export class PlayerCamera {
     if (player.state === 'captured' && this.captureThreat)
       keepSnapjawOutsideView(_v, this.captureThreat.position, this.captureThreat.heading);
     this.camera.position.copy(_v);
-    _e.set(player.pitch + this.recoil.y + shakeY, player.yaw + this.recoil.x + shakeX, this.roll + shakeZ, 'YXZ');
+    const viewYaw = player.state === 'captured' && this.captureThreat
+      ? snapjawFlingViewYaw(this.captureThreat.heading) : player.yaw;
+    _e.set(player.pitch + this.recoil.y + shakeY, viewYaw + this.recoil.x + shakeX,
+      this.roll + shakeZ, 'YXZ');
     _q.setFromEuler(_e);
     this.camera.quaternion.copy(_q);
   }

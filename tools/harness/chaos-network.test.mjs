@@ -107,3 +107,19 @@ test('host Snapjaw launches carry the same fling identity and revision as the mo
   assert.equal(sent[0].packet.flingId, 3);
   assert.equal(sent[0].packet.encounterRevision, 81);
 });
+
+test('a remote downed packet aborts the jaw hold before a lethal bite can fling them', () => {
+  const aborted = [];
+  const net = new MultiplayerAuthority();
+  const remote = { id: 'guest', targetPos: new THREE.Vector3(), height: 1.82,
+    state: 'captured', recoveryUntil: 0, hasPlayerPacket: true };
+  net.ensureRemote = () => remote;
+  net.isHost = true;
+  net.g = { clock: { elapsed: 4 } };
+  net.encounters = { abortCapture: id => aborted.push(id) };
+  net.authority = { notePosition: () => ({ bought: new Set() }) };
+  net.nodeAck = new Map();
+  net.fruitSys = { nodeSeq: 0 };
+  net.applyPlayerPacket({ from: 'guest', x: 1, y: 0, z: 2, yaw: 0, s: 'downed' });
+  assert.deepEqual(aborted, ['guest']);
+});

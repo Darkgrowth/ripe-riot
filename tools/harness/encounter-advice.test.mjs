@@ -14,7 +14,9 @@ test('Snapjaw distinguishes bait, incoming bite and the real damage opening', ()
 });
 
 test('rescue takes priority over attacking and defeated enemies give no advice', () => {
-  assert.match(encounterAdvice(state('snapjaw', 'recover', {capturedVictimId: 'friend'}), false, true).text, /E.*free/);
+  const rescue = encounterAdvice(state('snapjaw', 'recover', {capturedVictimId: 'friend'}), false, true);
+  assert.match(rescue.text, /E.*free/);
+  assert.match(rescue.text, /Catch Net.*throw/);
   assert.equal(encounterAdvice(state('snapjaw', 'defeated', {health: 0}), false, true), null);
 });
 

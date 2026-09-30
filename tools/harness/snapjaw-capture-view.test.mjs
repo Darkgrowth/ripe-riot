@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { keepSnapjawOutsideView, SNAPJAW_CAPTURE_VIEW_DISTANCE } from '../../src/player/SnapjawCaptureView.ts';
+import { keepSnapjawOutsideView, snapjawFlingViewYaw,
+  SNAPJAW_CAPTURE_VIEW_DISTANCE } from '../../src/player/SnapjawCaptureView.ts';
 import { voxelSnapjawLowerJaw, voxelSnapjawUpperJaw, voxelSnapjawTeeth } from '../../src/enemies/VoxelSnapjawGeometry.ts';
 
-test('capture view moves out of the jaw without changing gaze or player position', () => {
+test('capture view moves out of the jaw without changing player position', () => {
   const eye = new THREE.Vector3(0.12, 1.7, 0.7);
   const playerPosition = eye.clone();
   const jaw = new THREE.Vector3(0, 0, 0);
@@ -23,6 +24,14 @@ test('capture view leaves a clear view alone and handles a centered bite', () =>
   keepSnapjawOutsideView(centered, jaw, Math.PI / 2);
   assert.ok(Math.abs(centered.x - (4 + SNAPJAW_CAPTURE_VIEW_DISTANCE)) < 1e-6);
   assert.equal(centered.z, 7);
+});
+
+test('the held camera faces Snapjaw’s aimed fling lane', () => {
+  const heading = 0.7;
+  const forward = new THREE.Vector3(0, 0, -1)
+    .applyAxisAngle(new THREE.Vector3(0, 1, 0), snapjawFlingViewYaw(heading));
+  assert.ok(forward.dot(new THREE.Vector3(Math.sin(heading), 0,
+    Math.cos(heading))) > .999);
 });
 
 test('front and side bites keep the lens outside the authored voxel jaw', () => {

@@ -589,7 +589,7 @@ export class EncounterSystem implements System {
     const distance = Math.hypot(dx, dz);
     const duration = Math.min(1.05, Math.max(.65, distance / 8));
     const velocity = new THREE.Vector3(dx / duration,
-      Math.max(3.5, Math.min(6.5, 4.6 + (landing.y - origin[1]) * .45)),
+      Math.max(8.4, Math.min(10, 8.6 + (landing.y - origin[1]) * .35)),
       dz / duration);
     if (!Number.isFinite(velocity.lengthSq()) || velocity.lengthSq() > 400) {
       this.model.finishFlight(event.victimId, event.flingId);

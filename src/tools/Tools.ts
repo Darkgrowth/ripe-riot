@@ -127,6 +127,15 @@ export class TreeShaker extends Tool {
     tagline: 'Faster than picking. Worse for the fruit.',
     cost: 380, tier: 0,
   };
+  private shakeAction = 0;
+
+  private agitate(at: THREE.Vector3): void {
+    if (!this.game.has('director')) return;
+    this.game.get<{
+      acceptAgitation(id: string, kind: 'tree-shaker', at: THREE.Vector3): boolean;
+    }>('director').acceptAgitation(
+      `local-shaker:${this.player.id}:${++this.shakeAction}`, 'tree-shaker', at);
+  }
 
   override onPrimary(down: boolean): void {
     if (!down || this.cooldown > 0) return;
@@ -139,6 +148,7 @@ export class TreeShaker extends Tool {
     }
     this.cooldown = 0.85;
     const dropped = this.ctx.fruit.shake(hit.owner.id, 1.75, p.id);
+    this.agitate(hit.point);
     this.game.playerCamera.addShake(0.03, 0.45, 26);
     this.game.bus.emit('audio:sfx', { name: 'shake', position: hit.point });
     this.game.bus.emit('tool:fired', { toolId: this.def.id, power: 1.15 });
@@ -155,11 +165,14 @@ export class TreeShaker extends Tool {
     this.cooldown = 2.4;
     const p = this.player;
     let total = 0;
+    let withinReach = false;
     for (const plant of this.ctx.fruit.plants.all()) {
       const d = plant.position.distanceTo(p.position);
       if (d > 9) continue;
+      withinReach = true;
       total += this.ctx.fruit.shake(plant.id, 1.35 * (1 - d / 11), p.id);
     }
+    if (withinReach) this.agitate(p.position);
     this.game.playerCamera.addShake(0.05, 0.7, 20);
     this.game.bus.emit('audio:sfx', { name: 'shake', volume: 1 });
     if (total > 0) {
@@ -225,6 +238,7 @@ export class CatchNet extends Tool {
   private earlyMissCandidate = false;
   private hintsLeft = 3;
   private pendingCatch = new Map<number, { name: string; speed: number }>();
+  private requestedPeerCatches = new Set<string>();
 
   /** Ground nets soften whatever lands on them. */
   private groundNets: Array<{ pos: THREE.Vector3; radius: number; until: number; mesh: THREE.Mesh }> = [];
@@ -280,6 +294,7 @@ export class CatchNet extends Tool {
     this.phaseT = 0;
     this.queued = false;
     this.earlyMissCandidate = false;
+    this.requestedPeerCatches.clear();
     this.lock = 0;
     this.flash = 0;
     if (this.ring) { this.ring.visible = false; this.ring.scale.setScalar(1); }
@@ -302,6 +317,7 @@ export class CatchNet extends Tool {
     this.swingCaught = 0;
     this.missedThisSwing = false;
     this.earlyMissCandidate = false;
+    this.requestedPeerCatches.clear();
     this.game.bus.emit('audio:sfx', { name: 'netSwing', volume: 0.5, pitch: 1 });
     this.game.bus.emit('tool:swing', { toolId: this.def.id, duration: CatchNet.SWING });
     this.game.playerCamera.addRecoil((Math.random() - 0.5) * 0.004, 0.004);
@@ -528,6 +544,23 @@ export class CatchNet extends Tool {
 
   /** Catch anything inside the hoop during the active slice of a swing. */
   private sweep(): void {
+    // A teammate's flight is visible in the same timed hoop as flying fruit.
+    // The host decides whether this request really intercepted the current
+    // fling; a local visual overlap only nominates the target once per swing.
+    if (this.phaseT >= .12 && this.phaseT <= .23 && this.game.has('net')) {
+      const net = this.game.get<{
+        flyingPeerAtHoop(hoop: THREE.Vector3, radius: number): { id: string; flingId: number } | null;
+        requestNetCatch(victimId: string, flingId: number, swingId: number,
+          origin: THREE.Vector3, aim: THREE.Vector3): boolean;
+      }>('net');
+      this.muzzle(_pos, this.catchDistance);
+      const candidate = net.flyingPeerAtHoop(_pos, this.catchRadius);
+      if (candidate && !this.requestedPeerCatches.has(`${candidate.id}:${candidate.flingId}`)) {
+        this.requestedPeerCatches.add(`${candidate.id}:${candidate.flingId}`);
+        net.requestNetCatch(candidate.id, candidate.flingId, this.swings,
+          this.player.eyePosition.clone(), this.player.lookDir(_dir).clone());
+      }
+    }
     const inter = this.ctx.interaction;
     const r2 = this.catchRadius * this.catchRadius;
     for (const f of this.ctx.fruit.fruits.values()) {

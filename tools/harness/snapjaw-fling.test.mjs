@@ -147,5 +147,6 @@ test('the host aims one finite peer launch at checked dry ground', () => {
   assert.equal(launched[0][4], model.snapshot().revision);
   const velocity = launched[0][1];
   assert.ok([velocity.x, velocity.y, velocity.z].every(Number.isFinite));
-  assert.ok(velocity.lengthSq() <= 400 && velocity.x > 0 && velocity.y > 0);
+  assert.ok(velocity.lengthSq() <= 400 && velocity.x > 0 && velocity.y >= 8.4,
+    'the launch needs a visible arc that can travel toward the checked landing');
 });

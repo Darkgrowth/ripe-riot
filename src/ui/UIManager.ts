@@ -244,12 +244,17 @@ export class UIManager implements System {
     const state = this.g.player.state;
     this.updateEncounterCue(blocked || state !== 'active');
     const v = this.g.has('vitals') ? this.g.get<PlayerVitals>('vitals') : null;
+    const snapjawHold = state === 'captured' && this.g.has('encounters')
+      ? this.g.get<EncounterSystem>('encounters').snapshot().encounters.find(
+        encounter => encounter.kind === 'snapjaw' && encounter.capturedVictimId !== null)
+      : null;
     const statePrompt = state === 'downed' && v
       ? v.mode === 'solo' ? v.soloRecoveries > 0
         ? `Evacuating in ${Math.ceil(v.bleedoutRemaining)} s`
         : `Recovering in ${Math.ceil(v.soloRecoveryRemaining)} s`
         : `Downed — teammate revive or evacuation in ${Math.ceil(v.bleedoutRemaining)} s`
-      : state === 'captured' ? '<b>Hold E</b> to pry open Snapjaw' : null;
+      : state === 'captured' ? `<b>Hold E</b> to pry free · fling in ${
+        Math.max(1, Math.ceil(snapjawHold?.captureTimeLeft ?? 2.4))} s` : null;
     this.setPrompt(blocked ? null : statePrompt ?? (state === 'active' ? this.promptCandidate?.text ?? null : null));
     const inv = this.g.get<ToolInventory>('tools');
     const showingRope = !blocked && state === 'active' && !this.g.get<InteractionSystem>('interaction').carried
