@@ -2,14 +2,15 @@ import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import type { Game, System } from '@/core/Game';
 import type { RBody, RCollider, PhysicsOwner } from '@/physics/PhysicsWorld';
-import { groups, Layer, QueryMask } from '@/physics/Layers';
+import { groups, Layer } from '@/physics/Layers';
 import { makePlayerRig, RAGDOLL_PART_NAMES, RIG_JOINTS, type PlayerRig, type RigPartName,
   type RigidPose } from './PlayerRig';
 import type { FruitSystem } from '@/fruit/FruitSystem';
 import type { RopeSystem } from '@/systems/RopeSystem';
 import type { Sunpatch } from '@/world/Sunpatch';
 import { clamp } from '@/core/MathUtils';
-import { PLAYER_RADIUS, STAND_HEIGHT } from './PlayerController';
+import { PLAYER_RADIUS } from './PlayerController';
+import { findStandingGround } from './SafeLanding';
 
 /** Ragdoll parts collide with the world but never with each other. */
 const RAGDOLL_GROUPS = groups(
@@ -300,23 +301,12 @@ export class PlayerRagdoll implements System, PhysicsOwner {
   }
 
   private standingGround(x: number, z: number): THREE.Vector3 | null {
-    const terrain = this.g.get<Sunpatch>('world').terrain;
-    const y = terrain.height(x, z);
-    if (!Number.isFinite(y) || y < 0.2) return null;
-    const hit = this.g.physics.raycast(
-      new THREE.Vector3(x, y + 3.5, z), DOWN, 7, QueryMask.groundOnly, this.g.player.body);
-    if (!hit || hit.normal.y < Math.cos(THREE.MathUtils.degToRad(45))) return null;
-    const foot = new THREE.Vector3(x, hit.point.y + 0.12, z);
-    const shape = new RAPIER.Capsule((STAND_HEIGHT - 2 * PLAYER_RADIUS) / 2, PLAYER_RADIUS + 0.02);
-    let obstructed = false;
-    this.g.physics.world.intersectionsWithShape(
-      { x, y: foot.y + STAND_HEIGHT / 2, z }, { x: 0, y: 0, z: 0, w: 1 }, shape,
-      (collider) => {
-        if (collider.handle === this.g.player.collider.handle) return true;
-        obstructed = true; return false;
-      }, undefined, QueryMask.solid,
-    );
-    return obstructed ? null : foot;
+    return findStandingGround({
+      physics: this.g.physics,
+      terrain: this.g.get<Sunpatch>('world').terrain,
+      playerBody: this.g.player.body,
+      playerCollider: this.g.player.collider,
+    }, x, z);
   }
 
   /** Prefer the final standing spot; otherwise search nearby dry, clear ground. */
@@ -512,7 +502,6 @@ export class PlayerRagdoll implements System, PhysicsOwner {
 }
 
 const UP = new THREE.Vector3(0, 1, 0);
-const DOWN = new THREE.Vector3(0, -1, 0);
 
 const TAUNTS = [
   'FLATTENED', 'DOWN YOU GO', 'OCCUPATIONAL HAZARD', 'THAT WAS AVOIDABLE',
