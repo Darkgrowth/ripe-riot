@@ -4,8 +4,10 @@
  * Reads game state for navigation and evidence only. Every action uses trusted
  * Playwright keyboard/mouse input; no debug actions, state writes or fixture.
  *
+ * After the user's play session ends, serve a frozen build on an isolated
+ * port, then set RIPE_URL and pass --allow-browser-input explicitly.
  * RIPE_URL=http://127.0.0.1:5244 node tools/harness/sunpatch-expedition-playthrough.mjs \
- *   --width 1720 --height 720 --seconds 1800 --video
+ *   --allow-browser-input --width 1720 --height 720 --seconds 1800 --video
  * Add --video for a full session WebM, then inspect screenshots and report.
  * Uses a separate replay slot through the title menu in a fresh browser context.
  * Captures during combat come from video to keep input timing reliable.
@@ -18,6 +20,8 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { fightKingVineWithMallet } from './king-vine-controls.mjs';
 
 const args = process.argv.slice(2);
+if (!args.includes('--allow-browser-input'))
+  throw new Error('Browser pointer input is disabled during active play. Run only after the user says play is over, with --allow-browser-input.');
 const option = (name, fallback) => {
   const at = args.indexOf(name);
   return at < 0 ? fallback : args[at + 1];

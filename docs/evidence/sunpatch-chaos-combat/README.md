@@ -69,3 +69,8 @@ The co-op proof now records the catch request, host decision, current flight
 IDs, swing window and geometry if the timed interception misses again. Its
 updated diagnostics have passed syntax validation but have not been run while
 the user's play session is active.
+The [full ordinary-input route](../../../tools/harness/sunpatch-expedition-playthrough.mjs)
+also requires explicit browser-input opt-in. Its earlier chaos run lost the
+page's execution context while approaching King Vine; the report does not
+establish why it navigated. Run it against a frozen isolated build for the
+remaining finale evidence after active play ends.
