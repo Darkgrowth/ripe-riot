@@ -38,6 +38,12 @@ const read = g => g.page.evaluate(() => {
     netSwings: tool?.swings ?? 0,
     netCaught: tool?.caught ?? 0,
     netMisses: tool?.misses ?? 0,
+    netPhase: tool?.phase ?? null,
+    netPhaseT: tool?.phaseT ?? 0,
+    localFlingId: game.player.catchableFlingId,
+    peerFlingIds: [...net.remotes.values()].map(peer => [peer.id, peer.flingId]),
+    catchRequests: window.__coopProof?.requests ?? [],
+    catchValidations: window.__coopProof?.validations ?? [],
     toasts: window.__coopProof?.toasts ?? [],
     synthetic: game.input.synthetic !== null,
     pointerLocked: game.input.pointerLocked };
@@ -80,10 +86,34 @@ try {
   await host.call('tool.select', 'net');
   check((await read(host)).tool === 'net', 'rescuer has Catch Net equipped');
   await host.page.evaluate(() => {
-    window.__coopProof = { toasts: [] };
-    window.__GAME.bus.on('ui:toast', payload =>
-      window.__coopProof.toasts.push({ text: payload.text,
-        at: window.__GAME.clock.elapsed }));
+    const game = window.__GAME;
+    const net = game.get('net');
+    const proof = window.__coopProof = { toasts: [], requests: [], validations: [] };
+    game.bus.on('ui:toast', payload =>
+      proof.toasts.push({ text: payload.text, at: game.clock.elapsed }));
+    const requestCatch = net.requestNetCatch.bind(net);
+    net.requestNetCatch = (...args) => {
+      proof.requests.push({ at: game.clock.elapsed, victimId: args[0],
+        flingId: args[1], swingId: args[2],
+        peerFlingId: net.remotes.get(args[0])?.flingId ?? 0 });
+      return requestCatch(...args);
+    };
+    const tryCatch = net.hostTryNetCatch.bind(net);
+    net.hostTryNetCatch = (from, request) => {
+      const peerFlingId = net.remotes.get(request.victimId)?.flingId ?? 0;
+      const victimPos = net.remotes.get(request.victimId)?.targetPos
+        ?? game.player.position;
+      const rescuerPos = net.remotes.get(from)?.targetPos ?? game.player.position;
+      const swing = net.netCatchGuard.swings.get(from);
+      const ok = tryCatch(from, request);
+      proof.validations.push({ at: game.clock.elapsed, from,
+        victimId: request.victimId, flingId: request.flingId,
+        swingId: request.swingId, peerFlingId,
+        origin: request.origin, aim: request.aim,
+        victimPos: victimPos.toArray(), rescuerPos: rescuerPos.toArray(),
+        swing: swing ? { ...swing } : null, ok });
+      return ok;
+    };
   });
   const jaw = (await read(host)).jaw.position;
   const hx = jaw[0] + 4.5, hz = jaw[2] + 3.5;
@@ -122,12 +152,18 @@ try {
     const flight = s.flights.find(f => f.victimId === guestId);
     if (flight && !sawFlight) {
       sawFlight = true;
-      log('flight-visible', { flight, rescuer: s.position, victim: (await read(guest)).position });
+      const victim = await read(guest);
+      log('flight-visible', { flight, rescuer: s.position,
+        victim: victim.position, victimFlingId: victim.localFlingId,
+        hostPeerFlingId: s.peerFlingIds.find(([id]) => id === guestId)?.[1] ?? 0 });
     }
     if (flight && !startedSwing) {
       startedSwing = true;
       await host.page.mouse.down(); await sleep(80); await host.page.mouse.up();
-      log('real-net-swing', { flightId: flight.flingId });
+      log('real-net-swing', { flightId: flight.flingId,
+        flightRemaining: flight.remaining, hostPeerFlingId:
+          s.peerFlingIds.find(([id]) => id === guestId)?.[1] ?? 0,
+        phaseBefore: s.netPhase, phaseTimeBefore: s.netPhaseT });
     }
     if (startedSwing && !s.flights.some(f => f.victimId === guestId)) break;
     await sleep(15);
@@ -143,9 +179,13 @@ try {
     && afterGuest.playerState === 'active' && afterGuest.health > 0,
   'flight ended with the victim active', { health: afterGuest.health,
     velocity: afterGuest.velocity });
+  check(afterHost.catchRequests.length > 0,
+    'net hoop nominated the flying teammate',
+    { requests: afterHost.catchRequests, validations: afterHost.catchValidations });
   check(afterHost.toasts.some(toast => toast.text === 'Teammate caught!'),
     'host confirmed the timed Catch Net interception',
     { toasts: afterHost.toasts, caught: afterHost.netCaught,
+      requests: afterHost.catchRequests, validations: afterHost.catchValidations,
       victimVelocity: afterGuest.velocity });
 } catch (error) {
   failure = String(error.stack || error);
