@@ -61,6 +61,13 @@ const read = g => g.page.evaluate(() => {
 const shot = async (g, name) => {
   await g.page.screenshot({ path: path.join(out, `${name}.png`), timeout: 15000 });
 };
+const stageAim = (g, yaw) => g.page.evaluate(yaw => {
+  const game = window.__GAME;
+  game.player.yaw = yaw; game.player.pitch = 0;
+  // Aim is part of this staged fixture. Discard the browser's pending virtual
+  // recenter; preserve the real primary press/held input and all gameplay.
+  game.input.mouseDx = 0; game.input.mouseDy = 0;
+}, yaw);
 try {
   // Both peers must advance at comparable rates. A render-suppressed victim
   // can finish the whole flight while the rendered rescuer is still on its first
@@ -169,9 +176,10 @@ try {
     };
   }, freezeCatchFrame);
   const jaw = (await read(rescuer)).jaw.position;
-  // Stand beyond bite range but close enough that the first airborne player
-  // packet crosses the visible hoop during this swing, even on slow CI frames.
-  const hx = jaw[0] + 3.8, hz = jaw[2] + 3.8;
+  // Stand beyond bite range in the throw lane. The guest intercepts farther
+  // along it because its host snapshot and player packets arrive later.
+  const rescuerOffset = guestRescuer ? 6 : 3.8;
+  const hx = jaw[0] + rescuerOffset, hz = jaw[2] + rescuerOffset;
   const vx = jaw[0] + 1.0, vz = jaw[2] + 1.0;
   const hy = await rescuer.terrainHeight(hx, hz);
   const vy = await victim.terrainHeight(vx, vz);
@@ -202,7 +210,7 @@ try {
   // most of the short flight while two WebGL clients share one browser.
   // Face the expected flight from the actual rescuer view. This is fixture
   // positioning; the catch itself remains a normal mouse swing.
-  await rescuer.look(Math.atan2(-(vx - hx), -(vz - hz)), 0);
+  await stageAim(rescuer, Math.atan2(-(vx - hx), -(vz - hz)));
   // Set the ordinary held input from the in-game countdown rather than a
   // wall-clock delay; CI and desktop software WebGL advance at different rates.
   const swingDeadline = Date.now() + 30000;
@@ -216,7 +224,7 @@ try {
   // shifting the proof fixture's yaw and pitch before the active net slice.
   // Restore the staged view after that real press; the net swing itself is
   // still caused by the browser input and must pass host validation.
-  await rescuer.look(Math.atan2(-(vx - hx), -(vz - hz)), 0);
+  await stageAim(rescuer, Math.atan2(-(vx - hx), -(vz - hz)));
   let startedSwing = true, sawFlight = false, firstFlight = null;
   const flightUntil = Date.now() + 60000;
   while (Date.now() < flightUntil) {
@@ -240,6 +248,8 @@ try {
   await rescuer.page.mouse.up();
   await sleep(300);
   const afterRescuer = await read(rescuer), afterVictim = await read(victim);
+  check(afterRescuer.isHost === !guestRescuer && afterVictim.isHost === guestRescuer,
+    'rescuer and victim retained the requested host/guest roles');
   log('after-catch-window', { rescuer: afterRescuer, victim: afterVictim });
   try {
     if (logicOnly) await rescuer.renderFrame();
