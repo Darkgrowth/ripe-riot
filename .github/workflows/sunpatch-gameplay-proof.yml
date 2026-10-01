@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        proof: [expedition, snapjaw-coop]
+        proof: [expedition, snapjaw-coop, snapjaw-guest, scenarios]
     env:
       RIPE_URL: http://127.0.0.1:5278
     steps:
@@ -51,10 +51,17 @@ jobs:
             xvfb-run -a node tools/harness/sunpatch-expedition-playthrough.mjs \
               --allow-browser-input --width 1712 --height 634 --seconds 1800 \
               --headed --lean-proof --logic-only --out capture/ci/expedition
-          else
+          elif [ '${{ matrix.proof }}' = snapjaw-coop ]; then
             node tools/harness/snapjaw-coop-proof.mjs \
-              --allow-browser-input --logic-only --no-setup-shot \
+              --allow-browser-input --logic-only --no-setup-shot --freeze-catch-frame \
               --out capture/ci/snapjaw-coop
+          elif [ '${{ matrix.proof }}' = snapjaw-guest ]; then
+            node tools/harness/snapjaw-coop-proof.mjs \
+              --allow-browser-input --logic-only --no-setup-shot --freeze-catch-frame \
+              --guest-rescuer --out capture/ci/snapjaw-guest
+          else
+            mkdir -p capture/ci/scenarios
+            npm test 2>&1 | tee capture/ci/scenarios/scenarios.log
           fi
       - name: Keep server log with proof
         if: always()

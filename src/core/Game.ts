@@ -103,7 +103,12 @@ export class Game {
     this.player.applyLook(input.lookX, input.lookY);
 
     let tPhys = 0, tFixed = 0;
+    const frameElapsed = this.clock.elapsed;
     for (let i = 0; i < steps; i++) {
+      // Clock.advance reserves the whole frame before fixed systems run.
+      // Give each substep its own simulated time so timed actions can start
+      // and become active within one slow frame instead of sharing a stamp.
+      this.clock.elapsed = frameElapsed - (steps - i - 1) * FIXED_DT;
       const a = performance.now();
       this.player.step(input, FIXED_DT);
       for (const s of this.systems) s.fixedStep?.(FIXED_DT);
@@ -116,6 +121,7 @@ export class Game {
       // the input layer latches them until this call rather than per frame.
       if (i === 0) this.input.consumeEdges();
     }
+    this.clock.elapsed = frameElapsed;
 
     const t2 = performance.now();
     for (const s of this.systems) s.frameUpdate?.(frameDt, this.clock.alpha);

@@ -17,13 +17,20 @@ export class NetCatchGuard {
     return equippedAndActive;
   }
 
-  catch(peer: string, swingId: number, hostTime: number, validTarget: boolean): boolean {
+  /** Inspect host timing without consuming the swing or trusting a client phase. */
+  timing(peer: string, swingId: number, hostTime: number): 'invalid' | 'windup' | 'active' | 'expired' {
     const swing = this.swings.get(peer);
     if (!swing?.live || swing.used || swing.highestId !== swingId
-      || !Number.isFinite(hostTime) || !validTarget) return false;
+      || !Number.isFinite(hostTime)) return 'invalid';
     const elapsed = hostTime - swing.startedAt;
-    if (elapsed < .06 || elapsed > .28) return false;
-    swing.used = true;
+    if (elapsed < 0) return 'invalid';
+    if (elapsed < .06) return 'windup';
+    return elapsed <= .28 ? 'active' : 'expired';
+  }
+
+  catch(peer: string, swingId: number, hostTime: number, validTarget: boolean): boolean {
+    if (!validTarget || this.timing(peer, swingId, hostTime) !== 'active') return false;
+    this.swings.get(peer)!.used = true;
     return true;
   }
 

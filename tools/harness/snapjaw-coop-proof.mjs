@@ -5,6 +5,8 @@ import { startServer, openGame, openSecondClient, sleep } from './driver.mjs';
 
 const args = process.argv.slice(2);
 const logicOnly = args.includes('--logic-only');
+const freezeCatchFrame = args.includes('--freeze-catch-frame');
+const guestRescuer = args.includes('--guest-rescuer');
 if (!args.includes('--allow-browser-input'))
   throw new Error('Browser pointer input is disabled during active play. Run only after the user says play is over, with --allow-browser-input.');
 if (!process.env.RIPE_URL || !/^http:\/\/127\.0\.0\.1:\d+$/.test(process.env.RIPE_URL))
@@ -21,7 +23,7 @@ const log = (kind, data = {}) => {
 const check = (condition, name, detail = {}) => {
   checks.push({ condition, name, detail }); log(condition ? 'pass' : 'fail', { name, detail });
 };
-let first, second, host, guest, failure = null;
+let first, second, rescuer, victim, failure = null;
 const server = await startServer();
 const read = g => g.page.evaluate(() => {
   const game = window.__GAME;
@@ -29,7 +31,7 @@ const read = g => g.page.evaluate(() => {
   const encounters = game.get('encounters').snapshot();
   const jaw = encounters.encounters.find(e => e.kind === 'snapjaw');
   const tool = game.get('tools').all.get('net');
-  return { me: net.me, host: net.isHost,
+  return { me: net.me, isHost: net.isHost,
     position: game.player.position.toArray(),
     yaw: game.player.yaw, pitch: game.player.pitch,
     velocity: game.player.velocity.toArray(),
@@ -52,6 +54,7 @@ const read = g => g.page.evaluate(() => {
     catchValidations: window.__coopProof?.validations ?? [],
     catchAcks: window.__coopProof?.acks ?? [],
     toasts: window.__coopProof?.toasts ?? [],
+    frozenCatch: window.__coopProof?.frozenCatch ?? null,
     synthetic: game.input.synthetic !== null,
     pointerLocked: game.input.pointerLocked };
 });
@@ -60,8 +63,8 @@ const shot = async (g, name) => {
 };
 try {
   // Both peers must advance at comparable rates. A render-suppressed victim
-  // can finish the whole flight while the rendered host is still on its first
-  // swing, leaving a stale host encounter window and an already-landed peer.
+  // can finish the whole flight while the rendered rescuer is still on its first
+  // swing, leaving a stale rescuer encounter window and an already-landed peer.
   first = await openGame({ width: 1712, height: 634, headless: true,
     quiet: true, islandActivities: false, drawFrames: !logicOnly,
     recordVideoDir: args.includes('--video') ? out : null });
@@ -71,22 +74,26 @@ try {
   const idB = await second.call('net.connect', room, 0);
   await sleep(2000);
   const aHost = (await first.state()).net.isHost;
-  host = aHost ? first : second;
-  guest = aHost ? second : first;
-  await host.page.bringToFront();
-  const hostId = aHost ? idA : idB;
-  const guestId = aHost ? idB : idA;
-  check(!!hostId && !!guestId && hostId !== guestId,
-    'two peers connected with one host', { hostId, guestId });
+  const authority = aHost ? first : second;
+  const other = aHost ? second : first;
+  rescuer = guestRescuer ? other : authority;
+  victim = guestRescuer ? authority : other;
+  await rescuer.page.bringToFront();
+  const authorityId = aHost ? idA : idB;
+  const otherId = aHost ? idB : idA;
+  const rescuerId = guestRescuer ? otherId : authorityId;
+  const victimId = guestRescuer ? authorityId : otherId;
+  check(!!rescuerId && !!victimId && rescuerId !== victimId,
+    'two peers connected with one host', { rescuerId, victimId, guestRescuer });
   const anyShell = async g => g.page.locator('.expedition-shell').isVisible();
-  for (const g of [host, guest]) if (await anyShell(g)) {
+  for (const g of [rescuer, victim]) if (await anyShell(g)) {
     const continueButton = g.page.locator('[data-expedition-action="continue"]');
     if (await continueButton.isVisible()) await continueButton.click();
   }
-  await host.call('tool.give', 'net');
-  await host.call('tool.select', 'net');
-  check((await read(host)).tool === 'net', 'rescuer has Catch Net equipped');
-  await host.page.evaluate(() => {
+  await rescuer.call('tool.give', 'net');
+  await rescuer.call('tool.select', 'net');
+  check((await read(rescuer)).tool === 'net', 'rescuer has Catch Net equipped');
+  for (const client of [rescuer, victim]) await client.page.evaluate(freezeCatchFrame => {
     const game = window.__GAME;
     const net = game.get('net');
     const proof = window.__coopProof = {
@@ -112,8 +119,19 @@ try {
       }
       return originalSweep();
     };
-    game.bus.on('ui:toast', payload =>
-      proof.toasts.push({ text: payload.text, at: game.clock.elapsed }));
+    game.bus.on('ui:toast', payload => {
+      proof.toasts.push({ text: payload.text, at: game.clock.elapsed });
+      if (freezeCatchFrame && payload.text === 'Teammate caught!') {
+        // Freeze only after the victim's stop acknowledgement produces the
+        // real success cue. Preserve that gameplay view for a single draw;
+        // GPU readback must not spend the short interception window.
+        proof.frozenCatch = { at: game.clock.elapsed,
+          position: game.player.position.toArray(),
+          yaw: game.player.yaw, pitch: game.player.pitch };
+        game.clock.paused = true;
+        game.stop();
+      }
+    });
     const requestCatch = net.requestNetCatch.bind(net);
     net.requestNetCatch = (...args) => {
       proof.requests.push({ at: game.clock.elapsed, victimId: args[0],
@@ -145,102 +163,109 @@ try {
           stopped: message.stopped });
       return handleMessage(message);
     };
-  });
-  const jaw = (await read(host)).jaw.position;
+  }, freezeCatchFrame);
+  const jaw = (await read(rescuer)).jaw.position;
   const hx = jaw[0] + 4.8, hz = jaw[2] + 4.8;
   const vx = jaw[0] + 1.0, vz = jaw[2] + 1.0;
-  const hy = await host.terrainHeight(hx, hz);
-  const vy = await guest.terrainHeight(vx, vz);
-  await host.tp(hx, hy + .15, hz);
-  await guest.tp(vx, vy + .15, vz);
-  await host.look(Math.atan2(-(vx - hx), -(vz - hz)), 0);
-  await guest.look(Math.atan2(-(jaw[0] - vx), -(jaw[2] - vz)), 0);
+  const hy = await rescuer.terrainHeight(hx, hz);
+  const vy = await victim.terrainHeight(vx, vz);
+  await rescuer.tp(hx, hy + .15, hz);
+  await victim.tp(vx, vy + .15, vz);
+  await rescuer.look(Math.atan2(-(vx - hx), -(vz - hz)), 0);
+  await victim.look(Math.atan2(-(jaw[0] - vx), -(jaw[2] - vz)), 0);
   // The first real click locks the rescuer's pointer before the bite. Its
   // opening swing has plenty of time to recover before the airborne catch.
-  await host.page.mouse.click(850, 315);
+  await rescuer.page.mouse.click(850, 315);
   await sleep(350);
-  log('capture-setup', { host: await read(host), victim: await read(guest) });
+  log('capture-setup', { rescuer: await read(rescuer), victim: await read(victim) });
   // A synchronous GPU readback stalled the shared two-client Linux renderer
   // before the jaw had even bitten. Preserve the timed input window first.
-  if (!args.includes('--no-setup-shot')) await shot(host, '01-host-setup');
+  if (!args.includes('--no-setup-shot')) await shot(rescuer, '01-rescuer-setup');
   const holdUntil = Date.now() + 30000;
   let held = null;
   while (Date.now() < holdUntil) {
-    const s = await read(host);
-    if (s.jaw.capturedVictimId === guestId) { held = s; break; }
+    const s = await read(rescuer);
+    if (s.jaw.capturedVictimId === victimId) { held = s; break; }
     await sleep(40);
   }
   if (!held) {
-    log('capture-timeout', { host: await read(host), victim: await read(guest) });
-    throw new Error('The remote player was not captured by the live jaw');
+    log('capture-timeout', { rescuer: await read(rescuer), victim: await read(victim) });
+    throw new Error('The victim was not captured by the live jaw');
   }
   check(held.jaw.captureAim?.[0] > jaw[0] + 2,
     'jaw targets the active teammate', { aim: held.jaw.captureAim, teammate: [hx, hy, hz] });
-  log('held', { host: held, victim: await read(guest) });
+  log('held', { rescuer: held, victim: await read(victim) });
   // Video records the held pose. A synchronous screenshot here can consume
   // most of the short flight while two WebGL clients share one browser.
   // Face the expected flight from the actual rescuer view. This is fixture
   // positioning; the catch itself remains a normal mouse swing.
-  await host.look(Math.atan2(-(vx - hx), -(vz - hz)), 0);
+  await rescuer.look(Math.atan2(-(vx - hx), -(vz - hz)), 0);
   // Set the ordinary held input from the in-game countdown rather than a
   // wall-clock delay; CI and desktop software WebGL advance at different rates.
   const swingDeadline = Date.now() + 30000;
   while (Date.now() < swingDeadline) {
-    const state = await read(host);
-    if (state.jaw.captureTimeLeft <= .52 || state.jaw.capturedVictimId !== guestId) break;
+    const state = await read(rescuer);
+    if (state.jaw.captureTimeLeft <= .52 || state.jaw.capturedVictimId !== victimId) break;
     await sleep(20);
   }
-  await host.page.mouse.down();
+  await rescuer.page.mouse.down();
   // Pointer-lock mouse-down can apply a virtual recenter movement on Linux,
   // shifting the proof fixture's yaw and pitch before the active net slice.
   // Restore the staged view after that real press; the net swing itself is
   // still caused by the browser input and must pass host validation.
-  await host.look(Math.atan2(-(vx - hx), -(vz - hz)), 0);
+  await rescuer.look(Math.atan2(-(vx - hx), -(vz - hz)), 0);
   let startedSwing = true, sawFlight = false, firstFlight = null;
   const flightUntil = Date.now() + 60000;
   while (Date.now() < flightUntil) {
-    const s = await read(host);
-    const flight = s.flights.find(f => f.victimId === guestId);
-    // Snapshot the host's last peer packet now. Reading the guest page before
+    const s = await read(rescuer);
+    const flight = s.flights.find(f => f.victimId === victimId);
+    // Snapshot the rescuer's last peer packet now. Reading the victim page before
     // mouse-down can spend the entire short interception window on IPC.
     if (flight && !sawFlight) {
       sawFlight = true;
       firstFlight = { observedAtWallSeconds: +((Date.now() - started) / 1000).toFixed(2),
         flight, rescuer: s.position,
-        victim: s.peerPositions.find(([id]) => id === guestId)?.[1] ?? null,
-        hostPeerFlingId: s.peerFlingIds.find(([id]) => id === guestId)?.[1] ?? 0 };
+        victim: s.peerPositions.find(([id]) => id === victimId)?.[1] ?? null,
+        peerFlingId: s.peerFlingIds.find(([id]) => id === victimId)?.[1] ?? 0 };
     }
     if (flight && firstFlight && !timeline.some(row => row.kind === 'flight-visible'))
       log('flight-visible', firstFlight);
-    if (sawFlight && !s.flights.some(f => f.victimId === guestId)) break;
+    if (s.frozenCatch) break;
+    if (sawFlight && !s.flights.some(f => f.victimId === victimId)) break;
     await sleep(15);
   }
-  await host.page.mouse.up();
+  await rescuer.page.mouse.up();
   await sleep(300);
-  const afterHost = await read(host), afterGuest = await read(guest);
-  log('after-catch-window', { host: afterHost, victim: afterGuest });
+  const afterRescuer = await read(rescuer), afterVictim = await read(victim);
+  log('after-catch-window', { rescuer: afterRescuer, victim: afterVictim });
   try {
-    if (logicOnly) await host.renderFrame();
-    await shot(host, '05-after-net-window');
+    if (logicOnly) await rescuer.renderFrame();
+    await shot(rescuer, '05-after-net-window');
   }
   catch (error) { log('capture-error', { error: String(error) }); }
-  check(sawFlight, 'host observed a numbered teammate flight');
-  check(startedSwing && afterHost.netSwings >= 2,
-    'rescuer made a real timed Catch Net swing', { swings: afterHost.netSwings });
-  check(afterHost.flights.every(f => f.victimId !== guestId)
-    && afterGuest.playerState === 'active' && afterGuest.health > 0,
-  'flight ended with the victim active', { health: afterGuest.health,
-    velocity: afterGuest.velocity });
-  check(afterHost.catchRequests.length > 0,
+  check(sawFlight || [...afterRescuer.catchValidations, ...afterVictim.catchValidations]
+    .some(v => v.ok && v.flingId > 0),
+    'rescuer observed a numbered teammate flight');
+  check(startedSwing && afterRescuer.netSwings >= 2,
+    'rescuer made a real timed Catch Net swing', { swings: afterRescuer.netSwings });
+  check(afterRescuer.flights.every(f => f.victimId !== victimId)
+    && afterVictim.playerState === 'active' && afterVictim.health > 0,
+  'flight ended with the victim active', { health: afterVictim.health,
+    velocity: afterVictim.velocity });
+  check(afterRescuer.catchRequests.length > 0,
     'net hoop nominated the flying teammate',
-    { requests: afterHost.catchRequests, validations: afterHost.catchValidations,
-      acknowledgements: afterHost.catchAcks });
-  check(afterHost.toasts.some(toast => toast.text === 'Teammate caught!'),
-    'host confirmed the timed Catch Net interception',
-    { toasts: afterHost.toasts, caught: afterHost.netCaught,
-      requests: afterHost.catchRequests, validations: afterHost.catchValidations,
-      acknowledgements: afterHost.catchAcks,
-      victimVelocity: afterGuest.velocity });
+    { requests: afterRescuer.catchRequests, validations: [...afterRescuer.catchValidations, ...afterVictim.catchValidations],
+      acknowledgements: afterRescuer.catchAcks });
+  check([...afterRescuer.catchValidations, ...afterVictim.catchValidations].some(v => v.ok)
+    && afterVictim.localFlingId === 0
+    && (guestRescuer || afterRescuer.catchAcks.some(ack => ack.stopped)),
+    'host accepted the catch and the victim confirmed its flight stopped');
+  check(afterRescuer.toasts.some(toast => toast.text === 'Teammate caught!'),
+    'rescuer confirmed the timed Catch Net interception',
+    { toasts: afterRescuer.toasts, caught: afterRescuer.netCaught,
+      requests: afterRescuer.catchRequests, validations: [...afterRescuer.catchValidations, ...afterVictim.catchValidations],
+      acknowledgements: afterRescuer.catchAcks,
+      victimVelocity: afterVictim.velocity });
 } catch (error) {
   failure = String(error.stack || error);
   log('runner-error', { failure });
@@ -253,7 +278,7 @@ try {
     try { copyFileSync(await video.path(), file); videos.push(file); } catch { /* preserve report */ }
   }
   if (server.proc) server.proc.kill();
-  const report = { passed: !failure && checks.every(c => c.condition), failure,
+  const report = { guestRescuer, logicOnly, freezeCatchFrame, passed: !failure && checks.every(c => c.condition), failure,
     checks, timeline, videos,
     errors: [...(first?.consoleErrors ?? []), ...(second?.consoleErrors ?? [])],
     viewport: [1712, 634] };

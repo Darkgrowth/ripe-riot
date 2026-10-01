@@ -229,6 +229,7 @@ export class CatchNet extends Tool {
 
   private phase: 'ready' | 'swing' | 'recover' = 'ready';
   private phaseT = 0;
+  private swingStartedAt = 0;
   private recoverFor = CatchNet.RECOVER;
   private queued = false;
   /** What this swing caught, and whether something already got past it. */
@@ -309,6 +310,7 @@ export class CatchNet extends Tool {
   private beginSwing(): void {
     this.phase = 'swing';
     this.phaseT = 0;
+    this.swingStartedAt = this.game.clock.elapsed;
     this.queued = false;
     this.swings++;
     if (this.game.has('net')) {
@@ -449,7 +451,9 @@ export class CatchNet extends Tool {
 
     // --- the swing state machine
     if (this.phase === 'swing') {
-      this.phaseT += dt;
+      // Input can begin the swing in this same fixed step. Its first dt has
+      // not elapsed yet; use the same simulated stamps as host catch timing.
+      this.phaseT = this.game.clock.elapsed - this.swingStartedAt;
       if (this.phaseT >= CatchNet.SWING) this.endSwing();
     } else if (this.phase === 'recover') {
       this.phaseT += dt;
