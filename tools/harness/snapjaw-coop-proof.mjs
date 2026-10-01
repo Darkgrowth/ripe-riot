@@ -165,7 +165,9 @@ try {
     };
   }, freezeCatchFrame);
   const jaw = (await read(rescuer)).jaw.position;
-  const hx = jaw[0] + 4.8, hz = jaw[2] + 4.8;
+  // Stand beyond bite range but close enough that the first airborne player
+  // packet crosses the visible hoop during this swing, even on slow CI frames.
+  const hx = jaw[0] + 3.8, hz = jaw[2] + 3.8;
   const vx = jaw[0] + 1.0, vz = jaw[2] + 1.0;
   const hy = await rescuer.terrainHeight(hx, hz);
   const vy = await victim.terrainHeight(vx, vz);
