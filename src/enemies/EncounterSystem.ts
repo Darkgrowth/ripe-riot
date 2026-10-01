@@ -13,6 +13,8 @@ import { HarvestSites, type HarvestSiteState } from './HarvestSites';
 import type { ChaosImpact } from './ChaosImpact';
 import type { IslandDirector } from '@/systems/IslandDirector';
 import { findSafeLanding } from '@/player/SafeLanding';
+import { FruitThreatContacts, type ThreatFruitSample } from './FruitThreatContacts';
+import { inOrchardSafeZone, ORCHARD_RUN } from '@/world/OrchardLayout';
 
 export type EncounterIntent =
   | { kind: 'hit'; origin: Point3; direction: Point3; strike: EncounterStrike; actorId: string }
@@ -57,6 +59,7 @@ export class EncounterSystem implements System {
   private sites!: HarvestSites;
   private impactEpoch = '';
   private siteActionCount = 0;
+  private readonly fruitContacts = new FruitThreatContacts();
 
   constructor(private readonly comparisonStyle: 'polygon' | 'block' | null = null,
     private readonly detailedVoxelClearing = false) {}
@@ -111,16 +114,30 @@ export class EncounterSystem implements System {
     this.explicitTargets = targets?.map(t => ({ id: t.id, position: [...t.position], protected: !!t.protected })) ?? null;
   }
 
+  /** The Orchard Run director owns warn/burst/rest timing. */
+  setHarvestAwake(awake: boolean): void {
+    if (!this.authoritative || !this.world.orchardRun) return;
+    for (const event of this.model.setHarvestAwake(awake)) this.release(event.victimId, 'rescue');
+    if (!awake) { this.clearBaitFlights(); this.syncGummedCargo(); }
+  }
+
   fixedStep(dt: number): void {
-    if (!this.authoritative) { this.clearBaitFlights(); return; }
+    if (!this.authoritative) { this.clearBaitFlights(); this.fruitContacts.clear(); return; }
     if (this.comparisonStyle && !this.g.input.pointerLocked) return;
     const grace = this.g.has('vitals')
       ? this.g.get<{ recoveryGraceRemaining: number }>('vitals').recoveryGraceRemaining : 0;
-    const targets = this.explicitTargets ?? (this.g.player.state === 'active'
+    const suppliedTargets = this.explicitTargets ?? (this.g.player.state === 'active'
       ? [{ id: 'solo', position: point(this.g.player.position), protected: grace > 0 }] : []);
+    const targets = this.world.orchardRun ? suppliedTargets.map(target => ({ ...target,
+      protected: !!target.protected || inOrchardSafeZone(target.position[0], target.position[2]),
+    })) : suppliedTargets;
     this.currentTargets = targets;
     this.model.setTargets(targets);
     if (this.suspendedForHarness) return;
+    if (this.world.orchardRun) {
+      this.syncGummedCargo();
+      this.stepFruitContacts(dt);
+    }
     this.stepBait(dt);
     for (const event of this.model.step(dt)) {
       if (event.type === 'damage') {
@@ -148,6 +165,49 @@ export class EncounterSystem implements System {
       } else {
         this.release(event.victimId, 'timeout');
       }
+    }
+  }
+
+  private stepFruitContacts(dt: number): void {
+    const fruits = this.g.get<FruitSystem>('fruit');
+    const samples: ThreatFruitSample[] = [];
+    for (const f of fruits.fruits.values()) {
+      if ((f.species !== 'boulderplum' && f.species !== 'gluefruit') || !f.body) continue;
+      // FruitSystem has already synchronised the completed physics step.
+      const v = f.body.linvel();
+      samples.push({ id: f.id, species: f.species, state: f.state, hasBody: true,
+        stuck: f.stuck, position: point(f.position), radius: f.radius,
+        velocity: [v.x, v.y, v.z] });
+    }
+    const contacts = this.fruitContacts.step(dt, samples, this.model.snapshot().encounters,
+      (from, to) => this.baitOccluded(from, to));
+    for (const contact of contacts) {
+      const f = fruits.get(contact.fruitId);
+      if (!f || f.state !== 'free' || !f.body || f.stuck) continue;
+      const hit = this.model.applyFruitContact(contact);
+      if (!hit) continue;
+      f.position.set(...contact.point); f.body.setTranslation(f.position, true);
+      if (contact.species === 'gluefruit') f.stick();
+      else {
+        const v = f.body.linvel();
+        f.body.setLinvel({ x: v.x * .35, y: Math.max(.8, v.y * .35), z: v.z * .35 }, true);
+      }
+      this.publishHit(hit, `fruit:${f.id}`);
+      this.g.bus.emit('audio:sfx', { name: contact.species === 'gluefruit' ? 'netCatch' : 'thud',
+        position: f.position.clone(), volume: .8,
+        pitch: contact.species === 'gluefruit' ? .65 : .75 });
+    }
+  }
+
+  private syncGummedCargo(): void {
+    const fruits = this.g.get<FruitSystem>('fruit');
+    for (const state of this.model.snapshot().encounters) {
+      if (state.gumFruitId == null) continue;
+      const f = fruits.get(state.gumFruitId);
+      const expired = (state.gumTimeLeft ?? 0) <= 0 || state.dormant || state.phase === 'defeated';
+      if (!expired && f?.state === 'free' && f.body && f.stuck) continue;
+      if (f?.state === 'free' && f.body && f.stuck) f.unstick();
+      this.model.releaseGlueFruit(state.gumFruitId);
     }
   }
 
@@ -377,6 +437,7 @@ export class EncounterSystem implements System {
   }
 
   harvestPrompt(fruitId: number): string | null {
+    if (this.world?.orchardRun) return null;
     const site = this.sites.atFruit(fruitId);
     if (!site || site.kind !== 'mimic') return null;
     // The nearby Puff Melon belongs to the save ledger, but picking it is not
@@ -388,6 +449,7 @@ export class EncounterSystem implements System {
 
   private guardHarvest(plantId: number, cause: string): boolean {
     if (!this.authoritative) return false;
+    if (this.world?.orchardRun) return true;
     const site = this.sites.atPlant(plantId);
     if (!site) return true;
     // Windfalls and other passive events cannot make the player's first choice.
@@ -462,7 +524,8 @@ export class EncounterSystem implements System {
     this.sites.apply(data.sites);
     this.resetModel();
     for (const s of this.sites.snapshot()) {
-      if (s.kind === 'mimic' && ['active', 'cleared'].includes(s.phase)) this.model.activate('mimic');
+      if (!this.world.orchardRun && s.kind === 'mimic' && ['active', 'cleared'].includes(s.phase))
+        this.model.activate('mimic');
       if (s.phase === 'cleared') this.model.restoreCleared([s.kind]);
       for (const id of s.consumed) this.g.get<FruitSystem>('fruit').restoreHarvestPrize(id, null);
       for (const id of s.released) if (!s.consumed.includes(id)) {
@@ -489,22 +552,27 @@ export class EncounterSystem implements System {
 
   private resetModel(): void {
     this.clearBaitFlights();
+    this.fruitContacts.clear();
     this.impactEpoch = `mimic-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
     // Compact second route: orchard ambush, jaws on the hill approach, then
     // ranged pressure on the climb toward the King Melon.
     const mimic = this.world.groundAt(-23, 22, 0);
-    const snapjaw = this.world.groundAt(-28, 11, 0);
+    const snapjaw = this.world.orchardRun ? this.world.groundAt(-29, 17, 0)
+      : this.world.groundAt(-28, 11, 0);
     const spitter = this.world.groundAt(-31, -8, 0);
     const nextRevision = this.model ? this.model.snapshot().revision + 1 : 0;
     this.model = new EncounterModel(this.comparisonStyle
       ? [{ kind: 'mimic', position: point(mimic) }]
-      : [
+      : this.world.orchardRun ? [
+        { kind: 'mimic', position: point(mimic), dormant: true, leashRadius: 18 },
+        { kind: 'snapjaw', position: point(snapjaw), dormant: true },
+      ] : [
         { kind: 'mimic', position: point(mimic), dormant: true, leashRadius: 13 },
         { kind: 'snapjaw', position: point(snapjaw) },
         { kind: 'spitter', position: point(spitter) },
       ], (x, z) => this.world.terrain.height(x, z), nextRevision,
       (from, to, radius) => this.mimicBlocked(from, to, radius),
-      (from, to) => this.projectileBlock(from, to));
+      (from, to) => this.projectileBlock(from, to), { harvestChaos: !!this.world.orchardRun });
   }
 
   /** Sweep the root mass at rail and trunk height, excluding terrain and players. */
@@ -517,6 +585,21 @@ export class EncounterSystem implements System {
     // Orchard fences have two slender rails with an open gap at mid-height.
     // Sampling only the centre let the whole creature pass through both.
     let nearest: { distance: number; collision: MimicCollision } | null = null;
+    if (this.world?.orchardRun) {
+      const fx = from[0] - ORCHARD_RUN.crate[0], fz = from[2] - ORCHARD_RUN.crate[1];
+      // Include the 1.2 m fruit-scattering radius, so a committed charge cannot
+      // stop outside the apron yet scatter already-secured loose cargo inside.
+      const safeRadius = ORCHARD_RUN.safeRadius + Math.max(1.3, radius);
+      const c = fx * fx + fz * fz - safeRadius * safeRadius;
+      const b = fx * dx + fz * dz;
+      const disc = b * b - length * length * c;
+      const fraction = c <= 0 ? 0 : disc >= 0 ? (-b - Math.sqrt(disc)) / (length * length) : -1;
+      if (fraction >= 0 && fraction <= 1) {
+        const at: Point3 = [from[0] + dx * fraction,
+          from[1] + (to[1] - from[1]) * fraction, from[2] + dz * fraction];
+        nearest = { distance: length * fraction, collision: { point: at, treePlantId: null } };
+      }
+    }
     for (const height of [0.58, 1.02]) for (const side of [-0.72, 0, 0.72]) {
       const origin = new THREE.Vector3(from[0] - uz * radius * side,
         from[1] + height, from[2] + ux * radius * side);
@@ -538,7 +621,7 @@ export class EncounterSystem implements System {
     const cropPlantId = this.sites.snapshot().find(site => site.id === 'orchard-mimic')?.plantId;
     const allowedAttached = new Set<number>();
     for (const f of fruit.fruits.values()) {
-      if (f.state === 'attached' && f.attach?.plantId !== cropPlantId)
+      if (f.state === 'attached' && (this.world?.orchardRun || f.attach?.plantId !== cropPlantId))
         allowedAttached.add(f.id);
     }
     const impact: ChaosImpact = { epoch: this.impactEpoch, id: event.id,
@@ -634,6 +717,7 @@ export class EncounterSystem implements System {
         dormant: !!s.dormant, returning: !!s.returning,
         baited: s.baited, capturedVictimId: s.capturedVictimId,
         captureTimeLeft: +s.captureTimeLeft.toFixed(3),
+        gumTimeLeft: +(s.gumTimeLeft ?? 0).toFixed(3), gumFruitId: s.gumFruitId ?? null,
       }])),
     };
   }

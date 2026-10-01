@@ -13,6 +13,7 @@ import { Rng } from '@/core/Rng';
 import { QueryMask } from '@/physics/Layers';
 import { buildVineSupports } from '@/world/VineSupports';
 import type { VisualMode } from '@/art/voxel/VisualMode';
+import { ORCHARD_RUN } from '@/world/OrchardLayout';
 
 interface Regrow { plantId: number; nodeIndex: number; species: string; readyAt: number; }
 
@@ -415,6 +416,10 @@ export class FruitSystem implements System {
 
   // ---- world population ---------------------------------------------------
   private populate(): void {
+    if ((this.world as Sunpatch & { orchardRun?: boolean }).orchardRun) {
+      this.populateOrchardRun();
+      return;
+    }
     for (const h of HABITATS) {
       const lm = this.world.at(h.landmark);
       for (const spec of h.plants) {
@@ -462,6 +467,54 @@ export class FruitSystem implements System {
     this.g.bus.emit('debug:log', {
       text: `populated: ${this.plants.count} plants, ${this.fruits.size} fruit`,
     });
+  }
+
+  /** Compact, deterministic cargo. No far-away crop population or regrowth. */
+  private populateOrchardRun(): void {
+    const cropRng = new Rng('orchard-extraction-v1');
+    const plant = (type: PlantType, species: string, x: number, z: number,
+      count: number, scale = 1, grip = .3): Plant => {
+      const p = this.plants.plant(this.g.newId(), type, this.world.groundAt(x, z, 0), cropRng, { scale });
+      this.oneTimePlants.add(p.id);
+      this.plants.updateNodes(p, 0);
+      for (let i = 0; i < Math.min(count, p.nodes.length); i++) {
+        p.nodes[i].grip = grip;
+        this.growFruitAt(p, i, species, { id: this.g.newId(), variantId: null, sizeRoll: .5 });
+      }
+      return p;
+    };
+    // Quiet pocket, deliberately worth less than the whole contract.
+    plant('appleTree', 'apple', -15, 32, 6, .9, .18);
+    plant('orangeTree', 'orange', -18, 35, 5, .95, .2);
+    const loaded = plant('appleTree', 'apple', ...ORCHARD_RUN.loadedTree, 10, 1.15, .2);
+    plant('orangeTree', 'orange', -28, 30, 6, 1.1, .2);
+    plant('melonVine', 'watermelon', -24, 20, 2, 1.1, .15);
+    const puffs = [plant('puffBush', 'puffmelon', -22, 24, 2, 1, .3),
+      plant('puffBush', 'puffmelon', -28, 23, 2, 1, .3),
+      plant('puffBush', 'puffmelon', -32, 19, 2, .9, .3)];
+    plant('gumTree', 'gluefruit', -27, 15, 5, .9, .22);
+    plant('gumTree', 'gluefruit', -31, 20, 4, .9, .22);
+    plant('boulderBush', 'boulderplum', ...ORCHARD_RUN.boulderBank, 1, 1.1, .28);
+    plant('boulderBush', 'boulderplum', -36, 27, 1, 1, .28);
+    this.harvestSites.push({ id: 'orchard-mimic', kind: 'mimic', plantId: loaded.id,
+      fruitIds: [loaded, ...puffs].flatMap(p => p.nodes.filter(n => n.fruitId >= 0).map(n => n.fruitId)),
+      position: loaded.position.toArray() as [number, number, number] });
+    // Canopy at the edge keeps the playable pocket visually distinct from sea.
+    for (let i = 0; i < 16; i++) {
+      const a = i / 16 * Math.PI * 2;
+      const x = -23 + Math.cos(a) * 27, z = 24 + Math.sin(a) * 25;
+      // Keep the crate opening and shore approach unobstructed.
+      if (x > -10 && z > 19 && z < 37) continue;
+      const p = this.plants.plant(this.g.newId(), i % 2 ? 'orangeTree' : 'appleTree',
+        this.world.groundAt(x, z, 0), cropRng, { scale: 1.2 + (i % 3) * .12 });
+      this.oneTimePlants.add(p.id);
+    }
+    this.g.debug?.addAction('orchard.layout', () => ({
+      plants: this.plants.count,
+      cargo: [...this.fruits.values()].map(f => ({ id: f.id, species: f.species,
+        value: f.value(), mass: f.mass, pos: f.position.toArray(), plant: f.attach?.plantId })),
+      totalValue: [...this.fruits.values()].reduce((n, f) => n + f.value(), 0),
+    }));
   }
 
   private populateHarvestSites(hillNest: Plant): void {
@@ -954,6 +1007,20 @@ export class FruitSystem implements System {
   remove(f: Fruit): void {
     f.despawn();
     this.fruits.delete(f.id);
+  }
+
+  /** Restore the extraction tombstones without traits, prizes or regrowth. */
+  restoreRunFruitIds(ids: number[]): void {
+    for (const id of ids) {
+      const f = this.get(id);
+      if (!f) continue;
+      const at = f.attach;
+      if (at) {
+        this.releaseAttachment(f);
+        if (this.authoritative) this.logNode(at.plantId, at.nodeIndex, null);
+      }
+      this.remove(f);
+    }
   }
 
   // ---- replication --------------------------------------------------------

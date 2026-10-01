@@ -5,6 +5,11 @@
 
 export type PeerId = string;
 
+/** Different authored populations may never share deterministic fruit IDs. */
+export function roomForMode(room: string, orchardRun: boolean): string {
+  return `${orchardRun ? 'orchard-v1' : 'sunpatch'}:${room}`;
+}
+
 export interface NetMessage {
   /** Message kind, e.g. 'hello', 'snapshot', 'intent'. */
   t: string;

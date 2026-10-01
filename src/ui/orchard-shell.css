@@ -1,0 +1,23 @@
+.orchard-shell { position: absolute; inset: 0; z-index: 45; display: grid; place-items: center; padding: 22px; overflow: auto; pointer-events: auto; background: linear-gradient(115deg, rgba(14,35,28,.88), rgba(35,47,20,.62)); }
+.orchard-shell[hidden], .orchard-controls[hidden] { display: none; }
+.orchard-card { width: min(700px, 100%); padding: clamp(24px,4vh,42px); color: #fff4d6; border: 2px solid #c6b46d; border-radius: 15px; background: rgba(26,46,30,.97); box-shadow: 0 24px 80px #0008; }
+.orchard-kicker { margin: 0 0 8px; color: #edd66e; font-weight: 800; letter-spacing: .15em; font-size: 12px; }
+.orchard-card h1 { margin: 0 0 18px; color: #f7d473; font-size: clamp(32px,4.4vh,54px); line-height: 1.05; }
+.orchard-card p { line-height: 1.45; }
+.orchard-rule { color: #d2dfbb; font-size: 14px; }
+.orchard-actions { display: grid; gap: 10px; margin-top: 22px; }
+.orchard-actions button, .orchard-secondary button { cursor: pointer; border: 1px solid #c6b46d; border-radius: 8px; padding: 13px 16px; color: #183223; background: #ecd075; font: 800 16px/1.2 var(--ui-font); text-align: left; }
+.orchard-actions button + button { background: #284532; color: #fff4d6; }
+.orchard-actions button:hover, .orchard-secondary button:hover, .orchard-card button:focus-visible { outline: 2px solid #fff5ca; outline-offset: 2px; }
+.orchard-secondary { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 16px; }
+.orchard-secondary button { background: #2e4936; color: #e9e7be; padding: 8px 11px; font-size: 13px; }
+.orchard-controls { margin-top: 16px; padding: 12px; background: #142b1c; border-radius: 7px; font-size: 13px; }
+.orchard-controls p { margin: 4px 0; }
+.orchard-status { margin: 18px 0 9px; color: #bfd2ac; font-size: 12px; }
+.orchard-build { color: #9eaf8e; font-size: 11px; }
+.orchard-results { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; margin: 20px 0; }
+.orchard-results div { padding: 14px; background: #304b32; border-radius: 8px; }
+.orchard-results span { display: block; font-size: 12px; color: #cfdbc0; }
+.orchard-results strong { display: block; margin-top: 4px; font-size: 26px; color: #f8d978; }
+.orchard-menu-open .audio-settings { z-index: 60; }
+@media (max-width: 600px) { .orchard-shell { padding: 12px; align-items: start; } .orchard-card { padding: 24px; } .orchard-results { grid-template-columns: 1fr; } }

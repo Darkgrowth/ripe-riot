@@ -49,6 +49,7 @@ export class EncounterVisual {
   private glow: THREE.MeshStandardMaterial | null = null;
   private time = 0;
   private positioned = false;
+  private readonly gum = new THREE.Group();
 
   constructor(kind: EncounterKind, scene: THREE.Scene, style: MimicStyle = 'polygon') {
     this.kind = kind;
@@ -64,6 +65,24 @@ export class EncounterVisual {
     }
     else if (this.voxelSpitter) this.buildVoxelSpitter();
     else this.buildSpitter();
+    this.gum.name = 'Gluefruit gum';
+    this.gum.visible = false;
+    if (kind !== 'spitter') {
+      this.root.add(this.gum);
+      const adhesive = material(0xb2d66c, .38, .04);
+      const gumRadius = kind === 'snapjaw' ? 1.3 : 1.12;
+      for (const y of [1.0, 1.3]) {
+        const strand = mesh(new THREE.TorusGeometry(gumRadius, .09, 5, 14), adhesive,
+          this.gum, 0, y, 0);
+        strand.rotation.x = Math.PI / 2;
+        strand.scale.y = .85;
+      }
+      for (const x of [-.55, 0, .55]) {
+        const glob = mesh(new THREE.IcosahedronGeometry(.22, 1), adhesive,
+          this.gum, x, 1.14, gumRadius * .82);
+        glob.scale.set(1.1, .72, .45);
+      }
+    }
     const ring = new THREE.RingGeometry(kind === 'snapjaw' ? 2.1 : 1.75,
       kind === 'snapjaw' ? 2.34 : 1.95, 40);
     const warning = new THREE.MeshBasicMaterial({ color: color(kind === 'spitter' ? 0xe9eb63 : 0xff4f28),
@@ -105,6 +124,8 @@ export class EncounterVisual {
     if (!this.positioned) { this.root.position.copy(target); this.positioned = true; }
     else this.root.position.lerp(target, 1 - Math.exp(-Math.max(0, dt) * 24));
     this.root.rotation.y = state.heading;
+    this.gum.visible = (state.gumTimeLeft ?? 0) > 0 && !state.dormant && state.phase !== 'defeated';
+    this.gum.scale.x = 1 + Math.sin(this.time * 4) * .018;
     const pulse = 0.5 + 0.5 * Math.sin(this.time * 18);
     const warning = state.phase === 'warn';
     const attacking = state.phase === 'attack';

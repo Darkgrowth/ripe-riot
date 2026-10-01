@@ -118,6 +118,13 @@ export class ExpeditionShell implements System {
       case 'resume':
       case 'continue-exploring': this.hasPlayed = true; this.resume(); break;
       case 'new-replay': this.navigateTo(this.save.createReplaySlot()); break;
+      case 'orchard': {
+        if (this.hasPlayed || this.save.resumed) this.save.save();
+        const url = new URL(window.location.href);
+        url.searchParams.delete('fresh'); url.searchParams.delete('saveSlot');
+        url.searchParams.set('orchardRun', '1'); window.location.assign(url.toString());
+        break;
+      }
       case 'original': this.navigateTo('auto'); break;
       case 'results': this.show('results'); break;
       case 'title': this.show('title'); break;
@@ -171,6 +178,7 @@ export class ExpeditionShell implements System {
         : `<p>${mission}</p>`}
       <div class="expedition-actions">${buttons}</div>
       <div class="expedition-secondary">
+        <button data-expedition-action="orchard">Orchard Run · harvest & haul</button>
         <button data-expedition-action="controls">Controls</button>
         <button data-expedition-action="sound">Sound settings</button>
       </div>

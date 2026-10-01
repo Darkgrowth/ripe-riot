@@ -19,8 +19,9 @@ export class DockRecovery implements System {
 
   fixedStep(dt: number): void {
     const p = this.g.player;
-    const near = [this.world.spawnPoint, this.world.shopCounter].some((at, i) =>
-      Math.hypot(p.position.x - at.x, p.position.z - at.z) < (i === 0 ? 14 : 8)
+    const orchard = this.world as Sunpatch & { orchardRun?: boolean; safeRadius?: number };
+    const near = (orchard.orchardRun ? [this.world.sellPad] : [this.world.spawnPoint, this.world.shopCounter]).some((at, i) =>
+      Math.hypot(p.position.x - at.x, p.position.z - at.z) < (orchard.orchardRun ? orchard.safeRadius ?? 6 : i === 0 ? 14 : 8)
       && Math.abs(p.position.y - at.y) < 3.5);
     if (!near || p.state !== 'active' || this.vitals.downed || this.vitals.wiped
       || Math.hypot(p.velocity.x, p.velocity.z) > .75) {

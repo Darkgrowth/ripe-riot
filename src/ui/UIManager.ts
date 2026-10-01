@@ -224,14 +224,14 @@ export class UIManager implements System {
   }
 
   private modalOpen(): boolean {
-    return ['shop', 'book', 'expeditionShell'].some(name =>
+    return ['shop', 'book', 'expeditionShell', 'orchardShell'].some(name =>
       this.g.has(name) && this.g.get<{ open: boolean }>(name).open);
   }
 
   /** Resolve after every system has offered its candidate for this frame. */
   lateUpdate(): void {
-    if (this.g.has('progress')) {
-      const objective = this.g.get<{ objective: string }>('progress').objective;
+    if (this.g.has('extraction') || this.g.has('progress')) {
+      const objective = this.g.get<{ objective: string }>(this.g.has('extraction') ? 'extraction' : 'progress').objective;
       if (this.els.objective.textContent !== objective) this.els.objective.textContent = objective;
     }
     if (this.g.has('vitals')) {

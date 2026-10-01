@@ -22,6 +22,7 @@ export interface Landmark {
  */
 export class Sunpatch implements System {
   readonly name = 'world';
+  readonly orchardRun: boolean = false;
   terrain = new Terrain();
   ocean = new Ocean();
   dressing: Dressing;

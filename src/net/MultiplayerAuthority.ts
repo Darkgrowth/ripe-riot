@@ -10,7 +10,7 @@ import type { ToolInventory } from '@/tools/ToolInventory';
 import { TETHER_RANGE, type LegendaryHarvest, type LegendaryNet, type LegendaryNetState } from '@/systems/LegendaryHarvest';
 import { HAND_OFFSET, type RopeSystem, type RopeNet, type Rope, type RopeEnd, type RopeGone } from '@/systems/RopeSystem';
 import type { Sunpatch } from '@/world/Sunpatch';
-import { BroadcastTransport, type NetMessage, type PeerId, type Transport } from './Transport';
+import { BroadcastTransport, roomForMode, type NetMessage, type PeerId, type Transport } from './Transport';
 import { FruitAuthority, DENY_TEXT, clamp01, type Deny } from './FruitAuthority';
 import { makePlayerRig, RAGDOLL_PART_NAMES, SUIT_PRESETS,
   type PlayerRig, type RigPartName, type RigidPose } from '@/player/PlayerRig';
@@ -29,12 +29,13 @@ import { validNetCatchGeometry } from './NetCatchGuard';
 import { probeMeleeSweep } from '@/enemies/MeleeSweep';
 import { QueryMask } from '@/physics/Layers';
 import { MALLET_TIMING } from '@/tools/MalletSwing';
+import type { HarvestExtraction } from '@/systems/HarvestExtraction';
 
 /** What a client is allowed to ask the host to do. */
 export type IntentKind =
   | 'detach' | 'pick' | 'throw' | 'stow' | 'drop' | 'sell'
   | 'shove' | 'shake' | 'blast' | 'spawn'
-  | 'buy' | 'settle'
+  | 'buy' | 'settle' | 'extract' | 'forfeit'
   | 'lcut'
   | 'encounter' | 'revive' | 'vineHit' | 'melee' | 'netSwingStart' | 'netCatch'
   | 'rope'
@@ -153,6 +154,7 @@ interface RemoteState {
   targetYaw: number;
   height: number;
   state: string;
+  wiped: boolean;
   flingId: number;
   busy: boolean;
   recoveryUntil: number;
@@ -433,7 +435,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       ...this.authority.stats,
     }));
     g.debug?.addAction('net.connect', (room = 'riperiot', latency = 0) => {
-      this.connect(new BroadcastTransport(room));
+      this.openRoom(room);
       if (this.transport) this.transport.latency = latency;
       return this.transport?.id ?? '';
     });
@@ -516,6 +518,14 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   }
 
   // ---- connection ---------------------------------------------------------
+  private get orchardRun(): boolean {
+    return (this.world as Sunpatch & { orchardRun?: boolean })?.orchardRun === true;
+  }
+
+  openRoom(room = 'riperiot'): void {
+    this.connect(new BroadcastTransport(roomForMode(room, this.orchardRun)));
+  }
+
   connect(transport: Transport): void {
     this.disconnect();
     this.transport = transport;
@@ -846,7 +856,8 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     const out: string[] = [];
     for (const id of this.shop?.purchased ?? []) out.push(id);
     for (const id of this.tools?.owned ?? []) {
-      if (!out.includes(id) && this.shop?.priceOf(id)) out.push(id);
+      if (!out.includes(id) && (this.shop?.priceOf(id)
+        || (this.orchardRun && (id === 'aircannon' || id === 'net')))) out.push(id);
     }
     return out.join(',');
   }
@@ -854,6 +865,8 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   /** Tell the ledger what this peer's own player is already holding. */
   private adoptLocalHoldings(): void {
     if (!this.isHost || !this.transport) return;
+    if (this.g.has('extraction'))
+      this.authority.adoptTombstones(this.g.get<HarvestExtraction>('extraction').consumedIds);
     const me = this.transport.id;
     const p = this.g.player.position;
     this.authority.notePosition(me, p.x, p.y, p.z, this.playerName);
@@ -864,7 +877,8 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     // What this player has already bought is what the ledger enforces.
     for (const id of this.shop?.purchased ?? []) this.authority.noteBought(me, id);
     for (const id of this.tools?.owned ?? []) {
-      if (this.shop?.priceOf(id)) this.authority.noteBought(me, id);
+      if (this.shop?.priceOf(id) || (this.orchardRun && (id === 'aircannon' || id === 'net')))
+        this.authority.noteBought(me, id);
     }
   }
 
@@ -1096,7 +1110,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   activityCrew(): IslandCrew[] {
     const mine: IslandCrew = { position: this.g.player.position,
       busy: this.g.player.state !== 'active' || !!this.shop?.open
-        || this.g.get<{ open: boolean }>('book').open || this.shellOpen(),
+        || (this.g.has('book') && this.g.get<{ open: boolean }>('book').open) || this.shellOpen(),
       hasNet: !!this.tools?.owned.has('net') };
     return [mine, ...[...this.remotes.values()].map(r => ({ position: r.targetPos,
       busy: r.busy || r.state !== 'active', hasNet: r.hasNet }))];
@@ -1105,7 +1119,8 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
   get me(): PeerId { return this.transport?.id ?? ''; }
 
   private shellOpen(): boolean {
-    return this.g.has('expeditionShell') && this.g.get<{ open: boolean }>('expeditionShell').open;
+    return ['expeditionShell', 'orchardShell'].some(name =>
+      this.g.has(name) && this.g.get<{ open: boolean }>(name).open);
   }
 
   requestSettlement(): void {
@@ -1206,6 +1221,31 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     for (const id of ids) this.pendingSell.add(id);
     this.send({ kind: 'sell', fruitIds: ids },
       { kind: 'sell', fruitId: -1, ids: [...ids], plantId: -1, nodeIndex: -1 });
+  }
+
+  requestExtractionFinish(): void { this.send({ kind: 'extract' }); }
+
+  /** Send the wipe pose before evacuation immediately restores this player's state. */
+  forfeitCargo(_ids?: number[]): number {
+    if (!this.orchardRun) return 0;
+    if (this.connected && !this.isHost) {
+      this.sendPlayerPacket(); this.send({ kind: 'forfeit' }); return 0;
+    }
+    const ids = [...this.interaction.basket.items.map(f => f.id),
+      ...(this.interaction.carried ? [this.interaction.carried.fruit.id] : [])];
+    return this.destroyCargo(ids, this.connected ? this.me : undefined);
+  }
+
+  private destroyCargo(ids: number[], owner?: PeerId): number {
+    let n = 0;
+    for (const id of new Set(ids)) {
+      const f = this.fruitSys.get(id);
+      if (!f || (owner && this.authority.ownerOf(id) !== owner)
+        || (f.state !== 'carried' && f.state !== 'stowed')) continue;
+      this.g.bus.emit('fruit:destroyed', { fruitId: id, species: f.species, value: f.value() });
+      this.authority.destroyed(id); this.fruitSys.remove(f); n++;
+    }
+    return n;
   }
 
   requestShove(fruitId: number, dir: THREE.Vector3): void {
@@ -1793,6 +1833,23 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     let deny: Deny | null = null;
 
     switch (intent.kind) {
+      case 'extract': {
+        const remote = this.remotes.get(from);
+        const h = this.authority.holdingFor(from);
+        if (!this.orchardRun || !this.g.has('extraction') || !remote?.hasPlayerPacket
+          || remote.state !== 'active' || h.carried >= 0 || h.basket.length) deny = 'wrong-state';
+        else if (!this.g.get<HarvestExtraction>('extraction').confirmFinish(h.pos)) deny = 'wrong-phase';
+        break;
+      }
+      case 'forfeit': {
+        const remote = this.remotes.get(from);
+        if (!this.orchardRun || !remote?.hasPlayerPacket || !remote.wiped || remote.state !== 'downed') {
+          deny = 'wrong-state'; break;
+        }
+        const h = this.authority.holdingFor(from);
+        this.destroyCargo([...h.basket, ...(h.carried >= 0 ? [h.carried] : [])], from);
+        break;
+      }
       case 'settle': {
         const remote = this.remotes.get(from);
         if (!remote || remote.state !== 'active' || remote.busy) deny = 'wrong-state';
@@ -1839,6 +1896,10 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
         break;
       }
       case 'sell': {
+        if (this.g.has?.('extraction') && this.g.get<HarvestExtraction>('extraction').finished) {
+          this.reply(from, rid, intent.kind, 'wrong-phase', { fruitId: fid, ids: [], count: 0, total: 0, values: [] });
+          return;
+        }
         const res = this.authority.sell(from, intent.fruitIds ?? []);
         deny = res.deny;
         if (deny) { this.stats.denied++; this.lastDeny = `sell:${deny}`; }
@@ -1866,6 +1927,9 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
         const holding = this.authority.holdingFor(from);
         const active = !!remote?.hasPlayerPacket && remote.state === 'active'
           && !remote.busy && !remote.carrying && holding.carried < 0;
+        const hand = this.orchardRun && active && !!plant
+          && holding.pos.distanceTo(plant.position) <= 3.4
+          && Number.isFinite(strength) && strength > 0 && strength <= .55;
         const shaker = active && remote.toolId === 'shaker'
           && holding.bought.has('shaker') && !!plant
           && holding.pos.distanceTo(plant.position) <= 9.5
@@ -1880,7 +1944,12 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
           && Number.isFinite(strength) && strength > 0
           && strength <= 2.1 * blast.chargePower
             * (1 - blastDistance / (blast.radius + 3)) + .03;
-        if (!shaker && !cannon) { deny = 'needs-tool'; break; }
+        if (!hand && !shaker && !cannon) { deny = 'needs-tool'; break; }
+        if (hand) {
+          const prior = this.remoteShakerAction.get(from);
+          if (prior && this.g.clock.elapsed - prior.time < .45) { deny = 'wrong-phase'; break; }
+          this.remoteShakerAction.set(from, { time: this.g.clock.elapsed, mode: 'single', plants: new Set([plantId]) });
+        }
         if (shaker) {
           const mode = strength > 1.4 ? 'single' : 'area';
           const prior = this.remoteShakerAction.get(from);
@@ -1952,6 +2021,11 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
           at: center, radius: intent.radius!, recharge: Math.max(0, recharge
             - (secondary ? .55 : .3 + chargePower * .35)), chargePower,
           shakenPlants: new Set(), encounterUsed: false, vineUsed: false });
+        // Fixed gluefruit bodies must become dynamic before radial physics applies.
+        for (const f of this.fruitSys?.fruits?.values() ?? []) {
+          if (f.state === 'free' && f.stuck && f.body
+            && f.position.distanceToSquared(center) <= intent.radius! * intent.radius!) f.unstick();
+        }
         this.g.physics.explode(center, intent.radius!, intent.power!, intent.upBias!);
         // Residents react to accepted remote blasts as well as local tools.
         this.g.bus.emit('tool:blast', { toolId: 'remote', point: center,
@@ -2233,9 +2307,10 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       yaw: +p.yaw.toFixed(3),
       h: +p.height.toFixed(2),
       s: p.state,
+      wiped: this.vitals?.wiped === true,
       fi: p.catchableFlingId,
       ...(ragdollPose ? { rp: ragdollPose } : {}),
-      busy: !!this.shop?.open || this.g.get<{ open: boolean }>('book').open || this.shellOpen(),
+      busy: !!this.shop?.open || (this.g.has('book') && this.g.get<{ open: boolean }>('book').open) || this.shellOpen(),
       tool: this.tools?.activeId ?? null,
       nt: this.tools?.owned.has('net') ? 1 : 0,
       c: held?.species ?? null,
@@ -2276,6 +2351,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     const nextState = String(m.s ?? 'active');
     if (r.state === 'downed' && nextState === 'active') r.recoveryUntil = this.g.clock.elapsed + 2;
     r.state = nextState;
+    r.wiped = m.wiped === true && nextState === 'downed';
     const flingId = Number(m.fi);
     r.flingId = nextState === 'active' && Number.isSafeInteger(flingId)
       && flingId > 0 ? flingId : 0;
@@ -2300,7 +2376,8 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     // something buys it nothing it has not already paid for — the money was
     // spent through `buy`, here, on whichever host was running at the time.
     for (const id of String(m.bt ?? '').split(',')) {
-      if (id && !h.bought.has(id) && this.shop?.priceOf(id)) this.authority.noteBought(from, id);
+      if (id && !h.bought.has(id) && (this.shop?.priceOf(id)
+        || (this.orchardRun && (id === 'aircannon' || id === 'net')))) this.authority.noteBought(from, id);
     }
     this.nodeAck.set(from, Number(m.ns ?? 0));
     // A fruit's carrier owns its transform while they carry it — but only
@@ -2394,6 +2471,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
       kingVine: this.kingVine?.snapshot() ?? null,
       threatsCleared: this.progress ? [...this.progress.threatsCleared] : null,
       chapter: this.progress?.chapterSnapshot() ?? null,
+      extraction: this.g.has('extraction') ? this.g.get<HarvestExtraction>('extraction').netState() : null,
       baitStunts: this.g.has('scoring') ? this.g.get<{ baitState(): number[] }>('scoring').baitState() : [],
     };
     this.transport.send(msg, to);
@@ -2516,6 +2594,8 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     if (m.kingVine) this.kingVine?.applySnapshot(m.kingVine as KingVineNetState);
     if (m.threatsCleared) this.progress?.applyHostThreats(m.threatsCleared);
     if (m.chapter) this.progress?.applyChapterState(m.chapter);
+    if (m.extraction && this.g.has('extraction'))
+      this.g.get<HarvestExtraction>('extraction').applyNet(m.extraction, this.hostId);
   }
 
   private requestResync(): void {
@@ -2536,7 +2616,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
     r = {
       id, name, suit,
       pos: new THREE.Vector3(), targetPos: new THREE.Vector3(),
-      yaw: 0, targetYaw: 0, height: 1.82, state: 'active', carrying: null,
+      yaw: 0, targetYaw: 0, height: 1.82, state: 'active', wiped: false, carrying: null,
       flingId: 0,
       busy: false, recoveryUntil: 0, hasNet: false, toolId: null,
       rig, lastSeen: performance.now(), lastMoveAt: -Infinity, hasPlayerPacket: false,

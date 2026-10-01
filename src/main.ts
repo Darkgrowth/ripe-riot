@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { Game } from '@/core/Game';
 import { Sunpatch } from '@/world/Sunpatch';
+import { OrchardClearing } from '@/world/OrchardClearing';
+import { HarvestExtraction } from '@/systems/HarvestExtraction';
+import { OrchardShell } from '@/ui/OrchardShell';
 import { FruitSystem } from '@/fruit/FruitSystem';
 import { Economy } from '@/systems/Economy';
 import { InteractionSystem } from '@/interaction/InteractionSystem';
@@ -55,6 +58,7 @@ function fail(err: unknown): void {
 async function main(): Promise<void> {
   const comparisonChoice = new URLSearchParams(window.location.search).get('mimicCompare');
   const comparison = comparisonChoice === 'A' || comparisonChoice === 'B' ? comparisonChoice : null;
+  const orchardRun = !comparison && new URLSearchParams(window.location.search).get('orchardRun') === '1';
   const visualMode = selectVisualMode(window.location.search, !!comparison);
   (window as unknown as { __RIPE_VISUAL_MODE: string }).__RIPE_VISUAL_MODE = visualMode;
   const canvas = document.getElementById('view') as HTMLCanvasElement;
@@ -62,7 +66,7 @@ async function main(): Promise<void> {
   (window as unknown as { __GAME: Game }).__GAME = game;
 
   progress(12, 'loading physics');
-  const world = new Sunpatch(!!comparison, visualMode);
+  const world = orchardRun ? new OrchardClearing(visualMode) : new Sunpatch(!!comparison, visualMode);
   // A provisional spawn; corrected once the terrain exists.
   await game.boot(canvas, new THREE.Vector3(55, 6, 64));
   const visualWarnings: string[] = [];
@@ -102,6 +106,7 @@ async function main(): Promise<void> {
     onLoseUnsecured: () => {
       const hands = game.get<InteractionSystem>('interaction');
       evacuatedCargo = hands.basket.items.length + (hands.carried ? 1 : 0);
+      if (orchardRun) { hands.forfeitUnsecured(); return; }
       hands.dropHeld(true);
       hands.tipOutBasket();
     },
@@ -113,7 +118,7 @@ async function main(): Promise<void> {
         return;
       }
       const net = game.get<MultiplayerAuthority>('net');
-      if (!net.connected) {
+      if (!net.connected && !orchardRun) {
         const kingVine = game.get<KingVine>('kingVine');
         const legendary = game.get<LegendaryHarvest>('legendary');
         if (!kingVine.subdued) kingVine.reset();
@@ -122,15 +127,15 @@ async function main(): Promise<void> {
       world.spawnPlayer(game.player);
       game.get<PlayerVitals>('vitals').restoreAtCheckpoint();
       game.bus.emit('ui:toast', {
-        text: 'Evacuated to the dock',
-        sub: `${evacuatedCargo ? `${evacuatedCargo} unsecured fruit left behind. ` : 'No cargo lost. '}Banked money and equipment kept. Health restored; your cleared fights stay cleared.`,
+        text: orchardRun ? 'Evacuated to the crate' : 'Evacuated to the dock',
+        sub: `${evacuatedCargo ? `${evacuatedCargo} unsecured fruit ${orchardRun ? 'lost' : 'left behind'}. ` : 'No cargo lost. '}Banked money and equipment kept. Health restored.`,
         kind: 'bad', ms: 6500,
       });
     },
   }));
   game.add(new EncounterSystem(comparison === 'B' ? 'block' : comparison === 'A' ? 'polygon' : null,
     visualMode === 'voxel'));
-  game.add(new KingVine({
+  if (!orchardRun) game.add(new KingVine({
     visualStyle: visualMode === 'voxel' ? 'voxel' : 'baseline',
     onDamagePlayer: (victimId, amount, source) => {
       const net = game.get<MultiplayerAuthority>('net');
@@ -149,20 +154,23 @@ async function main(): Promise<void> {
   game.add(new ImpactFX());
   game.add(new ToolInventory());
   game.add(new ViewmodelSystem(visualMode));
-  game.add(new Shop());
+  if (!orchardRun) game.add(new Shop());
   game.add(new HarvestBook());
-  game.add(new LegendaryHarvest(visualMode));
-  game.add(new Progression(!!comparison));
+  if (orchardRun) game.add(new HarvestExtraction());
+  else {
+    game.add(new LegendaryHarvest(visualMode));
+    game.add(new Progression(!!comparison));
+  }
   game.add(new IslandDirector());
   game.add(new AudioManager());
-  game.add(new IslandCharacters());
+  if (!orchardRun) game.add(new IslandCharacters());
   game.add(new MultiplayerAuthority());
   // The A/B fixture never even constructs SaveSystem: it cannot read, write,
   // or clear the player's auto slot by booting, resetting, or unloading.
-  if (!comparison) game.add(new SaveSystem());
+  if (!comparison) game.add(new SaveSystem(orchardRun ? { namespace: 'orchard-v1' } : {}));
   game.add(new UIManager(comparison));
-  if (!comparison) game.add(new ExpeditionShell(BUILD_ID));
-  game.add(new IslandEventView());
+  if (!comparison) game.add(orchardRun ? new OrchardShell(BUILD_ID) : new ExpeditionShell(BUILD_ID));
+  if (!orchardRun) game.add(new IslandEventView());
 
   progress(52, 'planting');
   await game.initSystems();
@@ -173,6 +181,11 @@ async function main(): Promise<void> {
     else net.damagePeer(victimId, amount, kind);
   };
   encounters.onDefeated = (kind, at) => {
+    if (orchardRun) {
+      game.bus.emit('ui:toast', { text: kind === 'mimic' ? 'Mimic subdued' : 'Snapjaw subdued',
+        sub: 'The harvest is the reward. Bring it to the crate.', kind: 'good', ms: 2700 });
+      return;
+    }
     if (game.get<Progression>('progress').threatsCleared.has(kind)) return;
     // Fighting always pays something. The physical fruit is a second reward
     // for a crew that secures it, never the only way to afford another try.
@@ -195,7 +208,15 @@ async function main(): Promise<void> {
     game.player.teleport(world.groundAt(-11, 24, 0.15));
     game.player.yaw = Math.atan2(12, 2);
     game.player.pitch = -0.06;
-  } else world.spawnPlayer(game.player);
+  } else {
+    world.spawnPlayer(game.player);
+    if (orchardRun) {
+      const tools = game.get<ToolInventory>('tools');
+      tools.give('aircannon'); tools.give('net');
+      tools.assignSlot(0, 'hand'); tools.assignSlot(1, 'aircannon'); tools.assignSlot(2, 'net');
+      tools.equip(0);
+    }
+  }
 
   progress(88, 'starting');
   debug.log('boot complete');

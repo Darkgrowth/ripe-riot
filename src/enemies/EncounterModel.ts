@@ -30,6 +30,19 @@ export interface EncounterState {
   pendingHeading?: number | null;
   /** Start of a charge still in progress, needed after host promotion. */
   chargeStart?: Point3 | null;
+  /** Host-owned temporary Gluefruit immobilisation, also used by guest visuals. */
+  gumTimeLeft?: number;
+  /** Physical attachment ID lets a promoted host release the same cargo. */
+  gumFruitId?: number | null;
+}
+
+export interface EncounterFruitContact {
+  fruitId: number;
+  species: 'boulderplum' | 'gluefruit';
+  kind: EncounterKind;
+  point: Point3;
+  direction: Point3;
+  speed: number;
 }
 
 export interface EncounterNetState {
@@ -99,7 +112,7 @@ export interface EncounterRelease {
   type: 'release';
   kind: 'snapjaw';
   victimId: string;
-  reason: 'timeout';
+  reason: 'timeout' | 'rest';
 }
 
 export interface EncounterFling {
@@ -134,6 +147,7 @@ const MIMIC_TREE_STAGGER = 1.05;
 const MIMIC_HIT_GRACE = 5.2;
 const SNAPJAW_HIT_GRACE = 3.2;
 const SNAPJAW_FLIGHT_WINDOW = 1.8;
+const GLUE_DURATION = 2.5;
 
 /** A world collision query shared by charge, knockback and bite checks. */
 export type ProjectileBlocked = (from: Point3, to: Point3) => number | null;
@@ -161,11 +175,14 @@ export class EncounterModel {
   private lastReleasedFlingId = 0;
   private mimicBlocked: MimicBlocked | null;
   private projectileBlocked: ProjectileBlocked | null;
+  private readonly options: { harvestChaos?: boolean };
 
   constructor(spawns: Array<{ kind: EncounterKind; position: Point3; dormant?: boolean; leashRadius?: number }>,
     groundHeight: ((x: number, z: number) => number) | null = null,
     initialRevision = 0, mimicBlocked: MimicBlocked | null = null,
-    projectileBlocked: ProjectileBlocked | null = null) {
+    projectileBlocked: ProjectileBlocked | null = null,
+    options: { harvestChaos?: boolean } = {}) {
+    this.options = options;
     this.groundHeight = groundHeight;
     this.mimicBlocked = mimicBlocked;
     this.projectileBlocked = projectileBlocked;
@@ -178,7 +195,7 @@ export class EncounterModel {
         dormant: !!spawn.dormant, returning: false, home: [...spawn.position],
         leashRadius: spawn.leashRadius ?? Infinity,
         aim: [...spawn.position], alreadyHit: new Set(), pendingHeading: null,
-        chargeStart: null,
+        chargeStart: null, gumTimeLeft: 0, gumFruitId: null,
       });
     }
   }
@@ -202,6 +219,63 @@ export class EncounterModel {
     return true;
   }
 
+  /** Local harvest pressure changes committed danger, never harvest or money state. */
+  setHarvestAwake(awake: boolean): EncounterRelease[] {
+    if (!this.options.harvestChaos) return [];
+    const releases: EncounterRelease[] = [];
+    let changed = false;
+    for (const state of this.encounters.values()) {
+      if (state.phase === 'defeated') continue;
+      if (state.dormant === !awake) continue;
+      state.dormant = !awake;
+      changed = true;
+      if (!awake) {
+        if (state.capturedVictimId !== null) {
+          releases.push({ type: 'release', kind: 'snapjaw',
+            victimId: state.capturedVictimId, reason: 'rest' });
+          this.clearCapture(state);
+        }
+        state.phase = 'idle'; state.timeLeft = 0; state.baited = false;
+        state.chargeStart = null; state.pendingHeading = null;
+        state.alreadyHit.clear(); state.returning = false;
+      }
+    }
+    if (changed) this.revision++;
+    return releases;
+  }
+
+  /** Only the host bridge supplies actual moving cargo contacts in Orchard Run. */
+  applyFruitContact(contact: EncounterFruitContact): EncounterHit | null {
+    if (!this.options.harvestChaos || !Number.isSafeInteger(contact?.fruitId)
+      || !Array.isArray(contact.point) || contact.point.length !== 3
+      || !contact.point.every(Number.isFinite) || !Array.isArray(contact.direction)
+      || contact.direction.length !== 3 || !contact.direction.every(Number.isFinite)
+      || !Number.isFinite(contact.speed)) return null;
+    const boulder = contact.species === 'boulderplum';
+    if (!boulder && contact.species !== 'gluefruit') return null;
+    if (contact.speed < (boulder ? 3 : 2)) return null;
+    const state = this.encounters.get(contact.kind);
+    if (!state || state.dormant || state.phase === 'defeated') return null;
+    if (!boulder && (state.gumTimeLeft ?? 0) > 0) return null;
+    const hit = this.applyPhysicalControl(state, contact.direction, boulder ? 1 : 0,
+      boulder ? Math.min(2.4, Math.max(.65, contact.speed * .18)) : 0,
+      boulder ? 0 : GLUE_DURATION);
+    if (!boulder) state.gumFruitId = contact.fruitId;
+    return hit;
+  }
+
+  /** Picking or peeling the physical glue frees the immobilised threat too. */
+  releaseGlueFruit(fruitId: number): void {
+    for (const state of this.encounters.values()) {
+      if (state.gumFruitId !== fruitId) continue;
+      state.gumFruitId = null; state.gumTimeLeft = 0;
+      if (!state.dormant && state.phase !== 'defeated') {
+        state.phase = 'recover'; state.timeLeft = Math.max(1, state.timeLeft);
+      }
+      this.revision++;
+    }
+  }
+
   restoreCleared(kinds: Iterable<EncounterKind>): void {
     for (const kind of kinds) {
       const state = this.encounters.get(kind);
@@ -210,6 +284,7 @@ export class EncounterModel {
       state.dormant = false; state.returning = false; state.baited = false;
       state.capturedVictimId = null; state.captureTimeLeft = 0; state.captureAim = null;
       state.pendingHeading = null; state.chargeStart = null;
+      state.gumTimeLeft = 0; state.gumFruitId = null;
       if (kind === 'spitter') this.projectiles = [];
       if (kind === 'mimic') this.mimicGrace.clear();
       if (kind === 'snapjaw') { this.snapjawGrace.clear(); this.flights.clear(); }
@@ -250,6 +325,13 @@ export class EncounterModel {
     }
     this.stepProjectiles(dt, events);
     for (const state of this.encounters.values()) {
+      if ((state.gumTimeLeft ?? 0) > 0) {
+        state.gumTimeLeft = Math.max(0, state.gumTimeLeft! - dt);
+        if (state.gumTimeLeft === 0 && !state.dormant && state.phase !== 'defeated') {
+          state.phase = 'recover'; state.timeLeft = 1;
+        }
+        continue;
+      }
       if (state.kind === 'snapjaw' && state.capturedVictimId !== null) {
         state.captureTimeLeft = Math.max(0, state.captureTimeLeft - dt);
         if (state.captureTimeLeft === 0) {
@@ -374,7 +456,8 @@ export class EncounterModel {
   /** A thrown fruit near the rooted jaws can draw their next snap away. */
   offerBait(position: Point3): boolean {
     const state = this.encounters.get('snapjaw');
-    if (!state || state.baited || (state.phase !== 'idle' && state.phase !== 'warn') || !position.every(Number.isFinite)
+    if (!state || state.dormant || (state.gumTimeLeft ?? 0) > 0 || state.baited
+      || (state.phase !== 'idle' && state.phase !== 'warn') || !position.every(Number.isFinite)
       || distanceXZ(position, state.position) > 5.5) return false;
     this.beginWarning(state, position, true);
     this.revision++;
@@ -496,7 +579,8 @@ export class EncounterModel {
     if (!origin.every(Number.isFinite) || !direction.every(Number.isFinite)) return null;
     const length = Math.hypot(...direction);
     if (length < 0.001) return null;
-    const candidate = this.rayEnemy(origin, direction, length, strike, true);
+    const physicalAir = this.options.harvestChaos && strike === 'air';
+    const candidate = this.rayEnemy(origin, direction, length, strike, !physicalAir);
     const projectile = strike === 'air' ? this.rayProjectile(origin, direction, length) : null;
     if (projectile && (!candidate || projectile.along < candidate.along)) {
       const seed = projectile.state;
@@ -514,7 +598,46 @@ export class EncounterModel {
         deflectedProjectileId: projectile.state.id };
     }
     if (!candidate) return null;
+    if (physicalAir) {
+      const toward: Point3 = direction.map(v => v / length) as Point3;
+      const contact: Point3 = origin.map((v, i) => v + toward[i] * candidate.along) as Point3;
+      if (this.projectileBlocked?.(origin, contact) != null) return null;
+      const key = `${candidate.state.kind}:${attackerId ?? ''}`;
+      if (this.elapsed - (this.lastStrikeAt.get(key) ?? -Infinity) < .42) return null;
+      this.lastStrikeAt.set(key, this.elapsed);
+      const hit = this.applyPhysicalControl(candidate.state, toward, 0, 2, 0);
+      hit.attackerId = attackerId;
+      return hit;
+    }
     return this.applyHit(candidate.state, strike, attackerId, origin, true);
+  }
+
+  private applyPhysicalControl(state: InternalState, direction: Point3,
+    damage: number, distance: number, gumDuration: number): EncounterHit {
+    const mimicImpact = state.kind === 'mimic' && state.phase === 'attack'
+      ? this.finishMimicCharge(state, state.position, null) : undefined;
+    const releasedVictimId = state.capturedVictimId ?? undefined;
+    if (releasedVictimId !== undefined) this.clearCapture(state);
+    state.health = Math.max(0, state.health - damage);
+    const horizontal = Math.hypot(direction[0], direction[2]);
+    if (distance > 0 && horizontal > 1e-6) {
+      const next: Point3 = [state.position[0] + direction[0] / horizontal * distance,
+        state.position[1], state.position[2] + direction[2] / horizontal * distance];
+      if (this.groundHeight) next[1] = this.groundHeight(next[0], next[2]);
+      if (!this.mimicBlocked?.(state.position, next, MIMIC_RADIUS)) state.position = next;
+      state.pendingHeading = Math.atan2(direction[0], direction[2]);
+      state.heading = state.pendingHeading;
+    }
+    state.gumTimeLeft = Math.max(state.gumTimeLeft ?? 0, gumDuration);
+    state.phase = state.health === 0 ? 'defeated'
+      : state.kind === 'mimic' && gumDuration === 0 ? 'stagger' : 'recover';
+    state.timeLeft = state.health === 0 ? 0 : Math.max(gumDuration, 1.1);
+    state.baited = false; state.returning = false;
+    if (state.health === 0) state.gumTimeLeft = 0;
+    this.revision++;
+    return { kind: state.kind, damage, defeated: state.health === 0,
+      ...(releasedVictimId !== undefined ? { releasedVictimId } : {}),
+      ...(mimicImpact ? { mimicImpact } : {}) };
   }
 
   private applyHit(state: InternalState, strike: EncounterStrike, attackerId: string | undefined,
@@ -575,6 +698,8 @@ export class EncounterModel {
         dormant: !!s.dormant, returning: !!s.returning,
         pendingHeading: s.pendingHeading ?? null,
         chargeStart: s.chargeStart ? [...s.chargeStart] : null,
+        gumTimeLeft: s.gumTimeLeft ?? 0,
+        gumFruitId: s.gumFruitId ?? null,
       })),
       projectiles: this.projectiles.map(p => ({ id: p.id, position: [...p.position],
         velocity: [...p.velocity], timeLeft: p.timeLeft,
@@ -614,6 +739,10 @@ export class EncounterModel {
         && Number.isFinite(incoming.pendingHeading) ? incoming.pendingHeading : null;
       state.chargeStart = incoming.chargeStart?.length === 3
         && incoming.chargeStart.every(Number.isFinite) ? [...incoming.chargeStart] : null;
+      state.gumTimeLeft = Number.isFinite(incoming.gumTimeLeft)
+        ? Math.max(0, Math.min(GLUE_DURATION, incoming.gumTimeLeft!)) : 0;
+      state.gumFruitId = Number.isSafeInteger(incoming.gumFruitId) && incoming.gumFruitId! >= 0
+        ? incoming.gumFruitId! : null;
     }
     this.projectiles = Array.isArray(snapshot.projectiles)
       ? snapshot.projectiles.filter(p => Number.isFinite(p.id)

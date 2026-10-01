@@ -323,6 +323,7 @@ test('player packets send the local catchable flight identity', () => {
   net.transport = { send: packet => sent.push(packet) };
   net.g = { player: { position: new THREE.Vector3(), yaw: 0,
     height: 1.82, state: 'active', catchableFlingId: 2 },
+    has: name => name === 'book',
     get: () => ({ open: false }) };
   net.interaction = { carried: null };
   net.tools = { activeId: 'hand', owned: new Set() };

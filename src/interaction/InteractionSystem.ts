@@ -68,7 +68,7 @@ export class InteractionSystem implements System {
 
   /** What the player is currently looking at, if anything. */
   target: Fruit | null = null;
-  targetKind: 'fruit' | 'sell' | 'shop' | 'shake' | 'shove' | 'spiky' | null = null;
+  targetKind: 'fruit' | 'sell' | 'shop' | 'shake' | 'shove' | 'spiky' | 'finish' | null = null;
   /** Game time of the last "it will not let go" toast, so it does not spam. */
   private stuckToastAt = -9;
   /** Times the local player has been pricked, for the harness. */
@@ -423,8 +423,17 @@ export class InteractionSystem implements System {
       this.targetKind = 'sell';
       const n = this.basket.items.length + (this.carried ? 1 : 0);
       const value = this.basketValue() + (this.carried ? this.carried.fruit.value() : 0);
-      this.promptText = `<b>E</b> Sell ${n} fruit — <b>$${value}</b>`;
+      const bank = (this.world as Sunpatch & { orchardRun?: boolean }).orchardRun;
+      this.promptText = `<b>E</b> ${bank ? 'Bank' : 'Sell'} ${n} fruit — <b>$${value}</b>`;
       return;
+    }
+    if (this.nearSellPad && this.g.has('extraction')) {
+      const run = this.g.get<{ finished: boolean; banked: number }>('extraction');
+      if (!run.finished) {
+        this.targetKind = 'finish';
+        this.promptText = `<b>E</b> Finish run — <b>$${run.banked}</b> secured · or keep harvesting`;
+        return;
+      }
     }
 
     // Big fruit needs a wider reach: standing far enough back to see a 1.7 m
@@ -471,6 +480,9 @@ export class InteractionSystem implements System {
   }
 
   private updateSellPad(dt: number): void {
+    if (this.g.has('extraction') && this.g.get<{ finished: boolean }>('extraction').finished) {
+      this.padFruit.clear(); return;
+    }
     const pad = this.world.sellPad;
     const r = this.world.sellRadius;
     const p = this.g.player.position;
@@ -578,6 +590,8 @@ export class InteractionSystem implements System {
 
   // ---- actions ------------------------------------------------------------
   tryInteract(): boolean {
+    if (this.targetKind === 'finish' && this.g.has('extraction'))
+      return this.g.get<{ finish(): boolean }>('extraction').finish();
     if (this.targetKind === 'sell') {
       const r = this.sellAll();
       return r.count > 0 || !!r.requested;
@@ -835,6 +849,23 @@ export class InteractionSystem implements System {
     return items.length;
   }
 
+  /** Evacuation loses only cargo owned by this player; banked produce is safe. */
+  forfeitUnsecured(): number {
+    const items = [...this.basket.items, ...(this.carried ? [this.carried.fruit] : [])];
+    if (!items.length) return 0;
+    this.net?.forfeitCargo();
+    this.carried = null;
+    this.basket.items.length = 0;
+    this.basket.massCarried = 0;
+    if (this.fruitSys.authoritative) for (const f of items) {
+      if (f.state === 'gone') continue;
+      this.fruitSys.releaseAttachment(f);
+      this.fruitSys.remove(f);
+      this.g.bus.emit('fruit:destroyed', { fruitId: f.id, species: f.species, value: 0 });
+    }
+    return items.length;
+  }
+
   /**
    * Where a released fruit starts: where it was DRAWN, not the ideal hand
    * point. Now that heavy fruit trails the hands by up to a third of a metre,
@@ -910,6 +941,8 @@ export class InteractionSystem implements System {
    * frame early buys nothing worth the risk of paying twice.
    */
   sellAll(): { count: number; total: number; requested?: boolean } {
+    if (this.g.has('extraction') && this.g.get<{ finished: boolean }>('extraction').finished)
+      return { count: 0, total: 0 };
     if (this.sellCooldown > 0) return { count: 0, total: 0 };
     const batch: Fruit[] = [...this.basket.items];
     if (this.carried) batch.push(this.carried.fruit);

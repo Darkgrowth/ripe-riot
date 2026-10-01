@@ -2,9 +2,10 @@ import type { Game, System } from '@/core/Game';
 
 const SAVE_VERSION = 1;
 const KEY_PREFIX = 'riperiot.save.';
-const ACTIVE_SLOT_KEY = 'riperiot.save.activeSlot';
 
 export interface SaveSessionOptions {
+  /** Separate game modes must not share the expedition's active slot or blobs. */
+  namespace?: string;
   slot?: string;
   loadOnBoot?: boolean;
   autoPersist?: boolean;
@@ -49,6 +50,11 @@ export class SaveSystem implements System {
 
   constructor(private readonly options: SaveSessionOptions = {}) {}
 
+  private get keyPrefix(): string {
+    return this.options.namespace ? `riperiot.${this.options.namespace}.save.` : KEY_PREFIX;
+  }
+  private get activeSlotKey(): string { return this.keyPrefix + 'activeSlot'; }
+
   init(g: Game): void {
     this.g = g;
     // Pick up where the last session left off. Saves were written for months
@@ -59,7 +65,7 @@ export class SaveSystem implements System {
     const fresh = params.has('fresh');
     const querySlot = params.get('saveSlot');
     let active: string | null = null;
-    try { active = localStorage.getItem(ACTIVE_SLOT_KEY); } catch { /* private mode */ }
+    try { active = localStorage.getItem(this.activeSlotKey); } catch { /* private mode */ }
     this.slot = this.options.slot ?? (validSessionSlot(querySlot) ? querySlot
       : validSessionSlot(active) ? active : 'auto');
     this.enabled = this.options.autoPersist ?? !fresh;
@@ -94,13 +100,13 @@ export class SaveSystem implements System {
   }
 
   exists(slot = this.slot): boolean {
-    try { return localStorage.getItem(KEY_PREFIX + slot) !== null; } catch { return false; }
+    try { return localStorage.getItem(this.keyPrefix + slot) !== null; } catch { return false; }
   }
 
   /** Remember the next page's slot; this running page keeps saving its own. */
   activateSlot(slot: string): boolean {
     if (!validSessionSlot(slot)) return false;
-    try { localStorage.setItem(ACTIVE_SLOT_KEY, slot); return true; } catch { return false; }
+    try { localStorage.setItem(this.activeSlotKey, slot); return true; } catch { return false; }
   }
 
   /** Every deliberate replay gets its own slot, leaving earlier runs intact. */
@@ -117,7 +123,7 @@ export class SaveSystem implements System {
       version: SAVE_VERSION,
       savedAt: Date.now(),
       playtime: this.playtime,
-      island: 'sunpatch',
+      island: this.options.namespace ?? 'sunpatch',
       systems: {},
     };
     for (const [name, sys] of this.participants()) {
@@ -125,7 +131,7 @@ export class SaveSystem implements System {
       catch (e) { console.warn(`save: ${name} failed`, e); }
     }
     try {
-      localStorage.setItem(KEY_PREFIX + slot, JSON.stringify(blob));
+      localStorage.setItem(this.keyPrefix + slot, JSON.stringify(blob));
     } catch (e) {
       console.warn('save: storage unavailable', e);
       return false;
@@ -137,7 +143,7 @@ export class SaveSystem implements System {
 
   peek(slot = this.slot): { version: number; savedAt: number; playtime: number } | null {
     try {
-      const raw = localStorage.getItem(KEY_PREFIX + slot);
+      const raw = localStorage.getItem(this.keyPrefix + slot);
       if (!raw) return null;
       const blob = JSON.parse(raw) as SaveBlob;
       return { version: blob.version, savedAt: blob.savedAt, playtime: blob.playtime };
@@ -147,7 +153,7 @@ export class SaveSystem implements System {
   load(slot = this.slot): boolean {
     let blob: SaveBlob;
     try {
-      const raw = localStorage.getItem(KEY_PREFIX + slot);
+      const raw = localStorage.getItem(this.keyPrefix + slot);
       if (!raw) return false;
       blob = JSON.parse(raw) as SaveBlob;
     } catch { return false; }
@@ -171,7 +177,7 @@ export class SaveSystem implements System {
   }
 
   clear(slot = this.slot): boolean {
-    try { localStorage.removeItem(KEY_PREFIX + slot); return true; } catch { return false; }
+    try { localStorage.removeItem(this.keyPrefix + slot); return true; } catch { return false; }
   }
 
   /** Wipe progression in memory without touching storage. */

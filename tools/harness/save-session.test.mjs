@@ -113,3 +113,22 @@ test('closing a first-visit title does not create a fake Continue save', () => {
   f.listeners.get('beforeunload')();
   assert.equal(f.data.has('riperiot.save.auto'), true);
 });
+
+test('orchard storage and replay selection cannot read or overwrite the expedition namespace', () => {
+  const f = fixture();
+  f.data.set('riperiot.save.auto', JSON.stringify({ version: 1, savedAt: 1, playtime: 20,
+    systems: { economy: { money: 9500 } } }));
+  f.data.set('riperiot.save.activeSlot', 'replay-expedition-existing');
+  const orchard = new SaveSystem({ namespace: 'orchard-v1' }); orchard.init(f.g);
+  assert.equal(orchard.resumed, false);
+  assert.equal(orchard.slot, 'auto');
+  assert.equal(f.system.value, 0);
+  f.system.value = 125;
+  orchard.save();
+  const replay = orchard.createReplaySlot(); orchard.activateSlot(replay);
+  assert.equal(f.data.get('riperiot.save.activeSlot'), 'replay-expedition-existing');
+  assert.equal(JSON.parse(f.data.get('riperiot.save.auto')).systems.economy.money, 9500);
+  assert.equal(JSON.parse(f.data.get('riperiot.orchard-v1.save.auto')).systems.economy.money, 125);
+  const reload = new SaveSystem({ namespace: 'orchard-v1' }); reload.init(f.g);
+  assert.equal(reload.slot, replay);
+});

@@ -5,6 +5,8 @@ import type { FruitSystem } from '@/fruit/FruitSystem';
 import type { Sunpatch } from '@/world/Sunpatch';
 import type { Economy } from './Economy';
 import type { RopeSystem } from './RopeSystem';
+import type { EncounterSystem } from '@/enemies/EncounterSystem';
+import { inOrchardSafeZone } from '@/world/OrchardLayout';
 
 export type IslandEventKind = 'windfall' | 'coconuts' | 'order';
 export type IslandEventPhase = 'idle' | 'warning' | 'active' | 'result';
@@ -23,6 +25,7 @@ export interface IslandDirectorState {
   event: IslandEventState; sequence: number; cooldown: number; last: IslandEventKind | null;
   firstPick: boolean; firstSale: boolean; introDone: boolean; introDelay: number; orders: number;
   agitation: HarvestAgitationState;
+  orchard?: { warningRemaining: number; quietRemaining: number; awake: boolean };
 }
 export interface IslandCrew { position: THREE.Vector3; busy: boolean; hasNet: boolean; }
 
@@ -54,6 +57,13 @@ export class IslandDirector implements System {
   private tickCue = -1;
   private rustleTimer = 0;
   private returning = false;
+  private orchardWarning = 0;
+  private orchardQuiet = 0;
+  private orchardAwake = false;
+
+  private get orchardRun(): boolean {
+    return !!(this.world as Sunpatch & { orchardRun?: boolean })?.orchardRun;
+  }
 
   init(g: Game): void {
     this.g = g; this.fruit = g.get('fruit'); this.world = g.get('world');
@@ -63,7 +73,8 @@ export class IslandDirector implements System {
       const fruit = this.fruit.get(p.fruitId);
       if (fruit?.species === 'vinebomb') {
         this.acceptAgitation(`vine-release:${p.fruitId}`, 'vine-release', fruit.position);
-      } else if (fruit && (fruit.variant || ['puffmelon', 'watermelon'].includes(fruit.species))) {
+      } else if (fruit && (fruit.variant || ['puffmelon', 'watermelon',
+        ...(this.orchardRun ? ['gluefruit', 'boulderplum'] : [])].includes(fruit.species))) {
         this.acceptAgitation(`rare-fruit:${p.fruitId}`, 'rare-fruit', fruit.position);
       }
     });
@@ -73,6 +84,10 @@ export class IslandDirector implements System {
       this.noteGather(p.fruitId);
     });
     g.bus.on('fruit:stowed', p => { if (this.authoritative) this.noteGather(p.fruitId); });
+    g.bus.on('plant:shaken', p => {
+      if (this.orchardRun && p.strength > .3) this.acceptAgitation(
+        `trunk:${p.plantId}:${g.clock.elapsed}`, 'tree-shaker', p.position);
+    });
     g.bus.on('fruit:claimed', p => {
       if (!this.authoritative) return;
       this.state.firstPick = true;
@@ -107,8 +122,60 @@ export class IslandDirector implements System {
   get authoritative(): boolean { return this.fruit.authoritative; }
   getPresentation(): IslandEventState { return this.state.event; }
   getAgitationPresentation(): HarvestAgitationState { return this.state.agitation; }
+  /** Greed wakes this clearing; time without new disturbance lets it settle. */
+  private acceptOrchardAgitation(actionId: string, kind: HarvestAgitationKind, at: THREE.Vector3): boolean {
+    if (!this.authoritative || !this.automatic || !Object.hasOwn(AGITATION_WEIGHTS, kind)
+      || !actionId || actionId.length > 128 || !at || ![at.x, at.y, at.z].every(Number.isFinite)
+      || inOrchardSafeZone(at.x, at.z)
+      || Math.hypot(at.x + 23, at.z - 24) > 28) return false;
+    const a = this.state.agitation;
+    if (a.acceptedIds.includes(actionId)) return false;
+    a.acceptedIds.push(actionId);
+    if (a.acceptedIds.length > 64) a.acceptedIds.shift();
+    a.at = [at.x, at.y, at.z];
+    a.pressure = Math.min(9, a.pressure + AGITATION_WEIGHTS[kind]);
+    this.orchardQuiet = 30;
+    if (!this.orchardAwake && this.orchardWarning === 0 && a.pressure >= 3) {
+      this.orchardWarning = 2.2;
+      this.g.bus.emit('audio:sfx', { name: 'rustle', position: at, volume: .8 });
+      this.g.bus.emit('ui:toast', { text: 'The orchard is stirring',
+        sub: 'Something heard that harvest.', ms: 2200 });
+    }
+    a.warning = this.orchardWarning > 0;
+    return true;
+  }
+
+  private stepOrchard(dt: number): void {
+    if (!this.authoritative) return;
+    const a = this.state.agitation;
+    if (this.g.has('extraction') && this.g.get<{ finished: boolean }>('extraction').finished) {
+      if (this.orchardAwake || this.orchardWarning > 0)
+        this.g.get<EncounterSystem>('encounters').setHarvestAwake(false);
+      this.orchardAwake = false; this.orchardWarning = 0; this.orchardQuiet = 0;
+      a.pressure = 0; a.warning = false; return;
+    }
+    a.pressure = Math.max(0, a.pressure - .3 * dt);
+    this.orchardQuiet = Math.max(0, this.orchardQuiet - dt);
+    if (this.orchardWarning > 0) {
+      this.orchardWarning = Math.max(0, this.orchardWarning - dt);
+      if (this.orchardWarning === 0) {
+        this.orchardAwake = true;
+        this.g.get<EncounterSystem>('encounters').setHarvestAwake(true);
+        this.g.bus.emit('audio:sfx', { name: 'thud', position: new THREE.Vector3(...a.at), volume: .8 });
+      }
+    }
+    if (this.orchardAwake && this.orchardQuiet === 0) {
+      this.orchardAwake = false;
+      this.g.get<EncounterSystem>('encounters').setHarvestAwake(false);
+      a.pressure = 0;
+      this.g.bus.emit('ui:toast', { text: 'The orchard settles',
+        sub: 'Recover the haul, or risk another harvest.', ms: 2300 });
+    }
+    a.warning = this.orchardWarning > 0;
+  }
   /** Called only after the host has accepted a valuable or violent harvest action. */
   acceptAgitation(actionId: string, kind: HarvestAgitationKind, at: THREE.Vector3): boolean {
+    if (this.orchardRun) return this.acceptOrchardAgitation(actionId, kind, at);
     if (!this.authoritative || !this.automatic || this.finalBeat() || this.protectedSequence()
       || this.state.cooldown > 0 || (this.state.event.phase !== 'idle'
         && this.state.event.kind !== 'order') || !Object.hasOwn(AGITATION_WEIGHTS, kind)
@@ -146,6 +213,7 @@ export class IslandDirector implements System {
       hasNet: this.g.get<{ owned: Set<string> }>('tools').owned.has('net') }];
   }
   private protectedSequence(): boolean {
+    if (!this.g.has('legendary')) return false;
     const l = this.g.get<{ phase: string; tethers: unknown[] }>('legendary');
     return ['detach', 'drop', 'recover'].includes(l.phase)
       || (l.phase === 'tether' && l.tethers.length > 0);
@@ -165,6 +233,7 @@ export class IslandDirector implements System {
   }
 
   start(kind: IslandEventKind, force = false, focus?: THREE.Vector3): boolean {
+    if (this.orchardRun) return false;
     if (!this.authoritative || !['windfall', 'coconuts', 'order'].includes(kind)
       || this.state.event.phase !== 'idle' || this.protectedSequence() || this.finalBeat()) return false;
     const crew = this.crew().filter(c => !c.busy);
@@ -229,6 +298,7 @@ export class IslandDirector implements System {
     this.present();
   }
   fixedStep(dt: number): void {
+    if (this.orchardRun) { this.stepOrchard(dt); return; }
     if (!this.authoritative) return;
     const finalBeat = this.finalBeat();
     this.returning = this.chapterState() === 'return';
@@ -345,11 +415,17 @@ export class IslandDirector implements System {
       : e.phase === 'result' ? (e.result === 'success' ? 'eventSuccess' : e.result === 'missed' ? 'eventFail' : '') : '';
     if (name) this.g.bus.emit('audio:sfx', { name, volume: 0.6 });
   }
-  netState(): IslandDirectorState { return JSON.parse(JSON.stringify(this.state)) as IslandDirectorState; }
+  netState(): IslandDirectorState {
+    const result = JSON.parse(JSON.stringify(this.state)) as IslandDirectorState;
+    if (this.orchardRun) result.orchard = { warningRemaining: this.orchardWarning,
+      quietRemaining: this.orchardQuiet, awake: this.orchardAwake };
+    return result;
+  }
   applyNet(state: IslandDirectorState): void {
     if (!state?.event || !Number.isFinite(state.sequence)) return;
     this.state = JSON.parse(JSON.stringify(state)) as IslandDirectorState;
     this.state.agitation = this.normalizedAgitation(state.agitation);
+    if (this.orchardRun) this.restoreOrchard(state.orchard);
     this.present();
   }
   private normalizedAgitation(s?: Partial<HarvestAgitationState>): HarvestAgitationState {
@@ -364,7 +440,8 @@ export class IslandDirector implements System {
   serialize(): Omit<IslandDirectorState, 'event'> {
     const { event: _event, ...s } = this.state;
     return { ...s, cooldown: Math.max(30, s.cooldown),
-      agitation: this.normalizedAgitation(s.agitation) };
+      agitation: this.normalizedAgitation(s.agitation),
+      ...(this.orchardRun ? { orchard: { warningRemaining: 0, quietRemaining: 0, awake: false } } : {}) };
   }
   deserialize(s: Partial<IslandDirectorState>): void {
     this.state = { event: blank(), sequence: s.sequence ?? 0, cooldown: Math.max(30, s.cooldown ?? 30),
@@ -372,5 +449,17 @@ export class IslandDirector implements System {
       introDone: s.introDone ?? false, introDelay: 12, orders: s.orders ?? 0,
       agitation: this.normalizedAgitation(s.agitation) };
     this.cue = ''; this.automatic = true;
+    if (this.orchardRun) {
+      this.restoreOrchard({ warningRemaining: 0, quietRemaining: 0, awake: false });
+      this.g.get<EncounterSystem>('encounters').setHarvestAwake(false);
+    }
+  }
+
+  private restoreOrchard(raw?: IslandDirectorState['orchard']): void {
+    this.orchardWarning = Number.isFinite(raw?.warningRemaining)
+      ? Math.max(0, Math.min(2.2, raw!.warningRemaining)) : 0;
+    this.orchardQuiet = Number.isFinite(raw?.quietRemaining)
+      ? Math.max(0, Math.min(30, raw!.quietRemaining)) : 0;
+    this.orchardAwake = raw?.awake === true;
   }
 }
