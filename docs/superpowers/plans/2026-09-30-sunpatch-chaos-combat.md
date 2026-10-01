@@ -10,6 +10,23 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-30-sunpatch-chaos-combat-design.md`
 
+## Delivery checkpoint: 1 October 2026
+
+The implementation and integrated proof are delivered on
+`codex/sunpatch-chaos-combat`. The original steps below remain the authored
+plan; use [the final evidence](../../evidence/sunpatch-chaos-combat/README.md)
+and its condensed report for current status before repeating work.
+
+- 410 browser-free tests and the production build passed.
+- Remote run `36904955417` passed all four jobs: 26-beat ordinary-input
+  expedition with settlement/reload/deduplication, both actual host/guest net
+  catch roles, and 20/20 browser scenarios.
+- Gameplay-scale orchard, solo hold/fling and acknowledged co-op catch
+  captures were inspected and saved. Human feel and final art approval remain
+  separate; the evidence records the two visual polish notes.
+- Local Playwright/CUA stayed off while the user played Warcraft. Browser
+  proofs ran on isolated Linux hosts with no access to the Windows cursor.
+
 ## Global Constraints
 
 - Preserve the bright rounded voxel direction, current mallet timing, starter tools, $110 Air Cannon, optional ropes, banked money, safe dock, saved settlement, and existing enemy roster.

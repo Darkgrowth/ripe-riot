@@ -1,0 +1,144 @@
+{
+  "purpose": "Durable, condensed proof; full runner artifacts expire after 14 days.",
+  "expedition": {
+    "runUrl": "https://github.com/Darkgrowth/ripe-riot/actions/runs/36904955417",
+    "commit": "4f6753e5109c8ccd3284722bbb81b86b13817348",
+    "durationSeconds": 438.55,
+    "viewport": [
+      1712,
+      634
+    ],
+    "beats": {
+      "title": true,
+      "dock": true,
+      "cropWarning": true,
+      "cropActivated": true,
+      "warning": true,
+      "mimicDefeated": true,
+      "physicalPrize": true,
+      "carriedPrize": true,
+      "reachedRealPad": true,
+      "soldWithE": true,
+      "browsedWithE": true,
+      "boughtCannon": true,
+      "firedCannon": true,
+      "snapjawDefeated": true,
+      "snapjawHarvested": true,
+      "spitterDefeated": true,
+      "plumReleased": true,
+      "kingVineSubdued": true,
+      "fourVinesCutWithE": true,
+      "physicalDrop": true,
+      "extracted": true,
+      "returnedToDock": true,
+      "settledWithE": true,
+      "resultsVisible": true,
+      "reloadPreservedSettlement": true,
+      "noRepeatPayout": true
+    },
+    "failure": null,
+    "errors": [],
+    "earnedMoney": 9883,
+    "afterReloadMoney": 9883,
+    "chapter": "settled"
+  },
+  "clockAndDeliveryPass": {
+    "commit": "f7f0e4d334382ecf00e9ce24276ac5e16aca4bd7",
+    "offlineTests": 410,
+    "offlinePassed": true,
+    "buildPassed": true,
+    "browserScenarios": 20,
+    "browserScenariosPassed": true,
+    "runUrl": "https://github.com/Darkgrowth/ripe-riot/actions/runs/36902554188",
+    "latestHarnessCommit": "4f6753e5109c8ccd3284722bbb81b86b13817348",
+    "latestScenarioRun": "https://github.com/Darkgrowth/ripe-riot/actions/runs/36904955417"
+  },
+  "limits": [
+    "Remote expedition suppresses GPU draws after boot; this is gameplay and save proof, not continuous rendering or performance acceptance.",
+    "Title Continue can use a DOM fallback; gameplay movement/actions use browser input.",
+    "Dedicated co-op proof stages initial player positions, equipment and aim; the swing uses real mouse input and host validation.",
+    "Human pacing, comedic impact, and physical-device feel are unverified."
+  ],
+  "hostCatch": {
+    "runUrl": "https://github.com/Darkgrowth/ripe-riot/actions/runs/36904955417",
+    "commit": "4f6753e5109c8ccd3284722bbb81b86b13817348",
+    "passed": true,
+    "checks": {
+      "two peers connected with one host": true,
+      "rescuer has Catch Net equipped": true,
+      "jaw targets the active teammate": true,
+      "rescuer and victim retained the requested host/guest roles": true,
+      "rescuer observed a numbered teammate flight": true,
+      "rescuer made a real timed Catch Net swing": true,
+      "flight ended with the victim active": true,
+      "net hoop nominated the flying teammate": true,
+      "host accepted the catch and the victim confirmed its flight stopped": true,
+      "rescuer confirmed the timed Catch Net interception": true
+    },
+    "flingId": 1,
+    "swingId": 2,
+    "hostActiveElapsed": 0.06666666666666643,
+    "rescuerIsHost": true,
+    "victimIsHost": false,
+    "victimActive": true,
+    "victimHealth": 62,
+    "victimFlingCleared": true,
+    "stopAcknowledgements": [
+      {
+        "catchId": 1,
+        "flingId": 1,
+        "stopped": true
+      }
+    ],
+    "successToast": true,
+    "capture": "2026-10-01-snapjaw-net-catch.png",
+    "captureInspected": true,
+    "consoleMessages": [
+      "warning: [.WebGL-0x3d1c00163c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5278/?fresh=1)",
+      "warning: [.WebGL-0x3d1c00163c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5278/?fresh=1)",
+      "warning: [.WebGL-0x3d1c00163c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5278/?fresh=1)",
+      "warning: [.WebGL-0x3d1c00161a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5278/?fresh=1)"
+    ]
+  },
+  "guestCatch": {
+    "runUrl": "https://github.com/Darkgrowth/ripe-riot/actions/runs/36904955417",
+    "commit": "4f6753e5109c8ccd3284722bbb81b86b13817348",
+    "passed": true,
+    "checks": {
+      "two peers connected with one host": true,
+      "rescuer has Catch Net equipped": true,
+      "jaw targets the active teammate": true,
+      "rescuer and victim retained the requested host/guest roles": true,
+      "rescuer observed a numbered teammate flight": true,
+      "rescuer made a real timed Catch Net swing": true,
+      "flight ended with the victim active": true,
+      "net hoop nominated the flying teammate": true,
+      "host accepted the catch and the victim confirmed its flight stopped": true,
+      "rescuer confirmed the timed Catch Net interception": true
+    },
+    "flingId": 1,
+    "swingId": 3,
+    "hostActiveElapsed": 0.14999999999999147,
+    "rescuerIsHost": false,
+    "victimIsHost": true,
+    "victimActive": true,
+    "victimHealth": 62,
+    "victimFlingCleared": true,
+    "stopAcknowledgements": [],
+    "successToast": true,
+    "capture": "2026-10-01-snapjaw-guest-net-catch.png",
+    "captureInspected": true,
+    "consoleMessages": [
+      "warning: [.WebGL-0x227c0015fc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5278/?fresh=1)",
+      "warning: [.WebGL-0x227c0015fc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5278/?fresh=1)",
+      "warning: [.WebGL-0x227c0015fc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5278/?fresh=1)",
+      "warning: [.WebGL-0x227c0015fc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5278/?fresh=1)"
+    ]
+  },
+  "finalRemoteJobs": {
+    "expedition": "success",
+    "hostCatch": "success",
+    "guestCatch": "success",
+    "scenarios": "success"
+  }
+}
