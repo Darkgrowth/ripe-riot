@@ -497,8 +497,8 @@ async function coopBank() {
   // Room connection is fixture setup. No fruit, position, aim, ledger, money,
   // tool selection or gameplay interaction is changed through debug actions.
   const id = Date.now().toString(36);
-  const first = await makeClient('coop-A', `orchard-proof-A-${id}`);
-  const second = await makeClient('coop-B', `orchard-proof-B-${id}`);
+  const first = await makeClient('coop-A', `replay-orchard-proof-A-${id}`);
+  const second = await makeClient('coop-B', `replay-orchard-proof-B-${id}`);
   await play(first); await play(second);
   const room = `orchard-proof-${id}`;
   await first.page.evaluate(room => window.__RIPE.call('net.connect', room, 0), room);
@@ -538,7 +538,7 @@ async function coopBank() {
 }
 
 try {
-  const c = await makeClient('solo', `orchard-proof-${Date.now().toString(36)}`);
+  const c = await makeClient('solo', `replay-orchard-proof-${Date.now().toString(36)}`);
   await ordinaryRun(c);
   if (withCoop) await coopBank();
 } catch (e) {
