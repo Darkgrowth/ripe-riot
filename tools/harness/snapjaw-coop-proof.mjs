@@ -1,4 +1,5 @@
-/** Two-client visual fixture: physical Snapjaw throw, real Catch Net swing. */
+/** Two-client fixture: physical Snapjaw throw and real Catch Net swing,
+ * with fixture-assisted fixed aim during the timed capture/catch sequence. */
 import { mkdirSync, writeFileSync, copyFileSync } from 'node:fs';
 import path from 'node:path';
 import { startServer, openGame, openSecondClient, sleep } from './driver.mjs';
@@ -31,7 +32,8 @@ const read = g => g.page.evaluate(() => {
   const encounters = game.get('encounters').snapshot();
   const jaw = encounters.encounters.find(e => e.kind === 'snapjaw');
   const tool = game.get('tools').all.get('net');
-  return { me: net.me, isHost: net.isHost,
+  return { me: net.me, isHost: net.isHost, wallMs: Date.now(),
+    at: game.clock.elapsed, tick: game.clock.tick, grounded: game.player.grounded,
     position: game.player.position.toArray(),
     yaw: game.player.yaw, pitch: game.player.pitch,
     velocity: game.player.velocity.toArray(),
@@ -53,6 +55,14 @@ const read = g => g.page.evaluate(() => {
     catchRequests: window.__coopProof?.requests ?? [],
     catchValidations: window.__coopProof?.validations ?? [],
     catchAcks: window.__coopProof?.acks ?? [],
+    catchEligibility: window.__coopProof?.eligibility ?? [],
+    swingStarts: window.__coopProof?.swingStarts ?? [],
+    flightStarts: window.__coopProof?.flightStarts ?? [],
+    launches: window.__coopProof?.launches ?? [],
+    landings: window.__coopProof?.landings ?? [],
+    flightStops: window.__coopProof?.flightStops ?? [],
+    diagnosticStart: window.__coopProof?.started ?? null,
+    fixtureAim: window.__coopProof?.fixtureAim ?? null,
     toasts: window.__coopProof?.toasts ?? [],
     frozenCatch: window.__coopProof?.frozenCatch ?? null,
     synthetic: game.input.synthetic !== null,
@@ -61,13 +71,38 @@ const read = g => g.page.evaluate(() => {
 const shot = async (g, name) => {
   await g.page.screenshot({ path: path.join(out, `${name}.png`), timeout: 15000 });
 };
-const stageAim = (g, yaw) => g.page.evaluate(yaw => {
+const stageAim = (g, yaw, pin = false) => g.page.evaluate(({ yaw, pin }) => {
   const game = window.__GAME;
+  const proof = window.__coopProof;
+  if (pin && !proof.restoreFixtureAim) {
+    const originalLook = game.player.applyLook;
+    const aim = proof.fixtureAim = { label: 'fixture-assisted fixed aim', yaw, pitch: 0,
+      active: true, startedWallMs: Date.now(), startedAt: game.clock.elapsed,
+      expiresWallMs: Date.now() + 90000, lookEvents: [] };
+    const restore = () => {
+      if (!aim.active) return;
+      aim.active = false; aim.endedWallMs = Date.now(); aim.endedAt = game.clock.elapsed;
+      if (game.player.applyLook === pinnedLook) game.player.applyLook = originalLook;
+    };
+    const pinnedLook = function(dx, dy) {
+      const result = originalLook.call(this, dx, dy);
+      if (Date.now() >= aim.expiresWallMs) { restore(); return result; }
+      if (aim.active) {
+        if ((dx || dy) && aim.lookEvents.length < 20) aim.lookEvents.push({
+          wallMs: Date.now(), at: game.clock.elapsed, dx, dy,
+          resultingYaw: this.yaw, resultingPitch: this.pitch });
+        this.yaw = aim.yaw; this.pitch = aim.pitch;
+      }
+      return result;
+    };
+    game.player.applyLook = pinnedLook;
+    proof.restoreFixtureAim = restore;
+  }
   game.player.yaw = yaw; game.player.pitch = 0;
   // Aim is part of this staged fixture. Discard the browser's pending virtual
   // recenter; preserve the real primary press/held input and all gameplay.
   game.input.mouseDx = 0; game.input.mouseDy = 0;
-}, yaw);
+}, { yaw, pin });
 try {
   // Both peers must advance at comparable rates. A render-suppressed victim
   // can finish the whole flight while the rendered rescuer is still on its first
@@ -109,6 +144,95 @@ try {
     const net = game.get('net');
     const proof = window.__coopProof = {
       toasts: [], requests: [], validations: [], acks: [], samples: [],
+      eligibility: [], swingStarts: [], flightStarts: [], launches: [], landings: [], flightStops: [],
+    };
+    const stamp = () => ({ wallMs: Date.now(), at: game.clock.elapsed, tick: game.clock.tick });
+    const localPose = () => ({ position: game.player.position.toArray(),
+      velocity: game.player.velocity.toArray(), state: game.player.state,
+      grounded: game.player.grounded, localFlingId: game.player.catchableFlingId });
+    proof.started = { ...stamp(), me: net.me, isHost: net.isHost, ...localPose() };
+    const observeFlights = source => {
+      for (const flight of game.get('encounters').snapshot().flights ?? []) {
+        if (proof.flightStarts.some(f => f.victimId === flight.victimId && f.flingId === flight.flingId)) continue;
+        proof.flightStarts.push({ ...stamp(), source, ...flight });
+      }
+    };
+    const catchInputs = (from, request) => {
+      const actor = net.remotes.get(from), peer = net.remotes.get(request.victimId);
+      const localVictim = request.victimId === net.me;
+      const victimPos = localVictim ? game.player.position : peer?.targetPos;
+      const actorPos = from === net.me ? game.player.position : actor?.targetPos;
+      const eyeHeight = from === net.me ? game.player.eyeHeight : actor?.height - .19;
+      const flight = game.get('encounters').snapshot().flights?.find(f => f.victimId === request.victimId);
+      const first = proof.flightStarts.find(f => f.victimId === request.victimId && f.flingId === request.flingId);
+      const swing = net.netCatchGuard.swings.get(from);
+      const holding = net.authority.allHoldings().find(h => h.peer === from);
+      const origin = request.origin, aim = request.aim;
+      const finite = v => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite);
+      let geometry = null;
+      if (actorPos && victimPos && finite(origin) && finite(aim)) {
+        const aimNorm = Math.hypot(...aim);
+        const hoop = aimNorm > 0 ? origin.map((v, i) => v + aim[i] / aimNorm * 2.8) : null;
+        geometry = { aimNorm, eyeHeight,
+          originXZOffset: Math.hypot(origin[0] - actorPos.x, origin[2] - actorPos.z),
+          originHeightError: origin[1] - actorPos.y - eyeHeight,
+          actorVictimXZ: Math.hypot(victimPos.x - actorPos.x, victimPos.z - actorPos.z),
+          hoop, hoopTorsoDistance: hoop ? Math.hypot(victimPos.x - hoop[0],
+            victimPos.y + .9 - hoop[1], victimPos.z - hoop[2]) : null };
+      }
+      return { ...stamp(), from, victimId: request.victimId, flingId: request.flingId,
+        swingId: request.swingId, origin: Array.isArray(origin) ? [...origin] : origin,
+        aim: Array.isArray(aim) ? [...aim] : aim, localVictim,
+        actualVictimFlingId: localVictim ? game.player.catchableFlingId : peer?.flingId ?? 0,
+        localFlingId: game.player.catchableFlingId, peerFlingId: peer?.flingId ?? null,
+        victimGrounded: localVictim ? game.player.grounded : null,
+        victimState: localVictim ? game.player.state : peer?.state ?? null,
+        victimHasPlayerPacket: localVictim || !!peer?.hasPlayerPacket,
+        victimPos: victimPos?.toArray() ?? null, rescuerPos: actorPos?.toArray() ?? null,
+        victimGroundHeight: victimPos ? game.get('world').terrain.height(victimPos.x, victimPos.z) : null,
+        liveFlight: flight ? { ...flight } : null,
+        firstFlightObservation: first ? { ...first } : null,
+        pendingVictimCatch: net.pendingNetCatches.has(request.victimId),
+        swing: swing ? { ...swing } : null,
+        swingElapsed: swing ? game.clock.elapsed - swing.startedAt : null,
+        swingTiming: net.netCatchGuard.timing(from, request.swingId, game.clock.elapsed),
+        actor: from === net.me ? { state: game.player.state, toolId: game.get('tools').activeId,
+          ownsNet: game.get('tools').owned.has('net'), carrying: !!game.get('interaction').carried }
+          : actor ? { hasPlayerPacket: actor.hasPlayerPacket, state: actor.state, busy: actor.busy,
+            carrying: !!actor.carrying, toolId: actor.toolId, height: actor.height,
+            ownsNet: holding?.bought.has('net') ?? false, ledgerCarried: holding?.carried ?? null } : null,
+        encounterTargets: game.get('encounters').currentTargets.filter(t => t.id === from
+          || t.id === request.victimId).map(t => ({ ...t, position: [...t.position] })), geometry };
+    };
+    const launch = game.player.applyChaosLaunch.bind(game.player);
+    game.player.applyChaosLaunch = (...args) => {
+      const before = { ...stamp(), ...localPose() };
+      const ok = launch(...args);
+      observeFlights('local-launch');
+      proof.launches.push({ source: args[1], flingId: args[2] ?? 0,
+        launchVelocity: args[0].toArray(), before, after: { ...stamp(), ...localPose() }, ok });
+      return ok;
+    };
+    const land = game.player.onLand.bind(game.player);
+    game.player.onLand = (...args) => {
+      const before = { ...stamp(), ...localPose() };
+      const result = land(...args);
+      if (before.localFlingId > 0) proof.landings.push({ before, after: { ...stamp(), ...localPose() } });
+      return result;
+    };
+    const stopFlight = game.player.stopChaosFlight.bind(game.player);
+    game.player.stopChaosFlight = (...args) => {
+      const before = { ...stamp(), ...localPose() };
+      const ok = stopFlight(...args);
+      proof.flightStops.push({ requestedFlingId: args[0] ?? 0, before, after: { ...stamp(), ...localPose() }, ok });
+      return ok;
+    };
+    const startSwing = net.netCatchGuard.start.bind(net.netCatchGuard);
+    net.netCatchGuard.start = (...args) => {
+      const ok = startSwing(...args);
+      proof.swingStarts.push({ ...stamp(), peer: args[0], swingId: args[1],
+        hostTime: args[2], equippedAndActive: args[3], ok });
+      return ok;
     };
     const tool = game.get('tools').all.get('net');
     const originalSweep = tool.sweep.bind(tool);
@@ -119,7 +243,7 @@ try {
         const eye = game.player.eyePosition.clone();
         const aim = game.player.lookDir(new game.player.position.constructor()).clone();
         const target = eye.addScaledVector(aim, tool.catchDistance);
-        proof.samples.push({ at: game.clock.elapsed,
+        proof.samples.push({ ...stamp(),
           phaseT: tool.phaseT, hoop: tool.hoop.toArray(), target: target.toArray(),
           yaw: game.player.yaw, pitch: game.player.pitch,
           victim: victim?.targetPos.toArray(), flingId: victim?.flingId,
@@ -131,12 +255,12 @@ try {
       return originalSweep();
     };
     game.bus.on('ui:toast', payload => {
-      proof.toasts.push({ text: payload.text, at: game.clock.elapsed });
+      proof.toasts.push({ text: payload.text, ...stamp() });
       if (freezeCatchFrame && payload.text === 'Teammate caught!') {
         // Freeze only after the victim's stop acknowledgement produces the
         // real success cue. Preserve that gameplay view for a single draw;
         // GPU readback must not spend the short interception window.
-        proof.frozenCatch = { at: game.clock.elapsed,
+        proof.frozenCatch = { ...stamp(),
           position: game.player.position.toArray(),
           yaw: game.player.yaw, pitch: game.player.pitch };
         game.clock.paused = true;
@@ -145,34 +269,34 @@ try {
     });
     const requestCatch = net.requestNetCatch.bind(net);
     net.requestNetCatch = (...args) => {
-      proof.requests.push({ at: game.clock.elapsed, victimId: args[0],
+      proof.requests.push({ ...stamp(), victimId: args[0],
         flingId: args[1], swingId: args[2],
         peerFlingId: net.remotes.get(args[0])?.flingId ?? 0 });
       return requestCatch(...args);
     };
+    const eligibility = net.validNetCatchRequest.bind(net);
+    net.validNetCatchRequest = (from, request) => {
+      const before = catchInputs(from, request);
+      const ok = eligibility(from, request);
+      proof.eligibility.push({ ...before, ok });
+      return ok;
+    };
     const tryCatch = net.hostTryNetCatch.bind(net);
     net.hostTryNetCatch = (from, request) => {
-      const peerFlingId = net.remotes.get(request.victimId)?.flingId ?? 0;
-      const victimPos = net.remotes.get(request.victimId)?.targetPos
-        ?? game.player.position;
-      const rescuerPos = net.remotes.get(from)?.targetPos ?? game.player.position;
-      const swing = net.netCatchGuard.swings.get(from);
+      const before = catchInputs(from, request);
       const ok = tryCatch(from, request);
-      proof.validations.push({ at: game.clock.elapsed, from,
-        victimId: request.victimId, flingId: request.flingId,
-        swingId: request.swingId, peerFlingId,
-        origin: request.origin, aim: request.aim,
-        victimPos: victimPos.toArray(), rescuerPos: rescuerPos.toArray(),
-        swing: swing ? { ...swing } : null, ok });
+      proof.validations.push({ ...before, ok, after: { ...stamp(), ...localPose() } });
       return ok;
     };
     const handleMessage = net.onMessage.bind(net);
     net.onMessage = message => {
       if (message.t === 'netCatchAck')
-        proof.acks.push({ at: game.clock.elapsed, from: message.from,
+        proof.acks.push({ ...stamp(), from: message.from,
           catchId: message.catchId, flingId: message.flingId,
           stopped: message.stopped });
-      return handleMessage(message);
+      const result = handleMessage(message);
+      if (message.t === 'snapshot' || message.t === 'chaosLaunch') observeFlights(`message:${message.t}`);
+      return result;
     };
   }, freezeCatchFrame);
   const jaw = (await read(rescuer)).jaw.position;
@@ -210,7 +334,9 @@ try {
   // most of the short flight while two WebGL clients share one browser.
   // Face the expected flight from the actual rescuer view. This is fixture
   // positioning; the catch itself remains a normal mouse swing.
-  await stageAim(rescuer, Math.atan2(-(vx - hx), -(vz - hz)));
+  await stageAim(rescuer, Math.atan2(-(vx - hx), -(vz - hz)), true);
+  log('fixture-assisted-aim', { yaw: Math.atan2(-(vx - hx), -(vz - hz)), pitch: 0,
+    label: 'Fixed staged aim; real primary press/held input, sweep and host guard remain active.' });
   // Set the ordinary held input from the in-game countdown rather than a
   // wall-clock delay; CI and desktop software WebGL advance at different rates.
   const swingDeadline = Date.now() + 30000;
@@ -260,7 +386,7 @@ try {
     .some(v => v.ok && v.flingId > 0),
     'rescuer observed a numbered teammate flight');
   check(startedSwing && afterRescuer.netSwings >= 2,
-    'rescuer made a real timed Catch Net swing', { swings: afterRescuer.netSwings });
+    'rescuer made a real timed Catch Net swing with fixture-assisted aim', { swings: afterRescuer.netSwings });
   check(afterRescuer.flights.every(f => f.victimId !== victimId)
     && afterVictim.playerState === 'active' && afterVictim.health > 0,
   'flight ended with the victim active', { health: afterVictim.health,
@@ -283,6 +409,8 @@ try {
   failure = String(error.stack || error);
   log('runner-error', { failure });
 } finally {
+  for (const client of [rescuer, victim]) if (client)
+    await client.page.evaluate(() => window.__coopProof?.restoreFixtureAim?.()).catch(() => {});
   const videos = [];
   const aVideo = first?.page.video(), bVideo = second?.page.video();
   if (first) await first.close().catch(() => {});
@@ -291,7 +419,9 @@ try {
     try { copyFileSync(await video.path(), file); videos.push(file); } catch { /* preserve report */ }
   }
   if (server.proc) server.proc.kill();
-  const report = { guestRescuer, logicOnly, freezeCatchFrame, passed: !failure && checks.every(c => c.condition), failure,
+  const report = { guestRescuer, logicOnly, freezeCatchFrame,
+    aimProof: 'fixture-assisted fixed aim; ordinary aim is not established by this fixture',
+    passed: !failure && checks.every(c => c.condition), failure,
     checks, timeline, videos,
     errors: [...(first?.consoleErrors ?? []), ...(second?.consoleErrors ?? [])],
     viewport: [1712, 634] };
