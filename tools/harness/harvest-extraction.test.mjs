@@ -78,3 +78,19 @@ test('run time stops in solo menus and after explicit extraction', () => {
   g.clock.paused = false; extraction.finish(); extraction.frameUpdate(10);
   assert.equal(extraction.elapsed, 10);
 });
+
+test('a new connection accepts the same host baseline after solo banking, then rejects stale packets', () => {
+  const host = fixture(), guest = fixture(false);
+  host.sale(1, 20);
+  guest.extraction.applyNet(host.extraction.netState(), 'host-H');
+  guest.net.authoritative = true; guest.sale(2, 25);
+  assert.equal(guest.extraction.banked, 45);
+  guest.net.authoritative = false;
+  guest.extraction.beginNetSession();
+  assert.equal(guest.extraction.applyNet(host.extraction.netState(), 'host-H'), true);
+  assert.equal(guest.extraction.banked, 20);
+  const stale = host.extraction.netState();
+  host.sale(3, 40); guest.extraction.applyNet(host.extraction.netState(), 'host-H');
+  assert.equal(guest.extraction.applyNet(stale, 'host-H'), false);
+  assert.equal(guest.extraction.banked, 60);
+});

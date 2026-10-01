@@ -48,6 +48,32 @@ test('accepted violent harvest warns before waking, duplicates do not extend a b
   assert.equal(f.director.start('order', true), false, 'no unrelated timed money orders');
 });
 
+test('guest plants rustle throughout the host warning after pressure decays, then stop at wake and rest', () => {
+  const host = directorFixture(), guest = directorFixture();
+  guest.director.fruit.authoritative = false;
+  const plant = { position: host.at.clone(), shake: 0 };
+  guest.director.fruit.plants = { all: () => [plant] };
+  host.director.acceptAgitation('shake:1', 'tree-shaker', host.at);
+  host.step(1 / 60);
+  assert.ok(host.director.netState().agitation.pressure < 3, 'ordinary decay starts before the first snapshot');
+  guest.director.applyNet(host.director.netState());
+  guest.director.fixedStep(1 / 60);
+  guest.director.frameUpdate(1 / 60);
+  assert.ok(plant.shake >= .24, 'the guest gets the same plant warning as the host');
+  assert.ok(guest.events.some(e => e.name === 'audio:sfx' && e.data.name === 'rustle'));
+  assert.deepEqual(guest.awake, [], 'the guest cannot wake the authoritative threats');
+
+  host.step(2.3);
+  guest.director.applyNet(host.director.netState());
+  plant.shake = 0;
+  guest.director.frameUpdate(1 / 60);
+  assert.equal(plant.shake, 0, 'the warning ends when the host wakes the threats');
+  host.step(28);
+  guest.director.applyNet(host.director.netState());
+  assert.equal(guest.director.getAgitationPresentation().warning, false);
+  assert.equal(guest.director.netState().orchard.awake, false);
+});
+
 test('crate disturbance and guest requests cannot wake the grove', () => {
   const f = directorFixture();
   assert.equal(f.director.acceptAgitation('safe', 'tree-shaker', new THREE.Vector3(-7, 8, 27)), false);

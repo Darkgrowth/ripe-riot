@@ -220,6 +220,8 @@ export class FruitSystem implements System {
   private nodeLog: NodeChange[] = [];
   /** Latest change per node — everything a late joiner needs, bounded by node count. */
   private nodeDelta = new Map<string, NodeChange>();
+  /** The seeded population is the baseline for every host's delta manifest. */
+  private seedNodes = new Map<string, NodeChange>();
   /** Fruit a node change freed that no snapshot has yet placed or dropped. */
   freedByLog = new Set<number>();
   /** Rare-variant multiplier of the habitat each plant was planted in. */
@@ -249,6 +251,12 @@ export class FruitSystem implements System {
     Fruit.context = this.ctx;
     this.plants.setWind(this.wind.clone().normalize(), 0.1);
     this.populate();
+    for (const plant of this.plants.all()) for (let i = 0; i < plant.nodes.length; i++) {
+      const f = this.get(plant.nodes[i].fruitId);
+      this.seedNodes.set(`${plant.id}:${i}`, { seq: 0, plantId: plant.id, nodeIndex: i,
+        fruitId: f?.id ?? -1, species: f?.species ?? '', variant: f?.variant?.id ?? null,
+        sizeRoll: f?.sizeRoll ?? 0 });
+    }
     const vineOrigins = [...this.plants.all()].filter(p => p.type === 'vinebombVine').map(p => p.position);
     this.disposeVineSupports = buildVineSupports(vineOrigins, this.world.terrain, g.physics, g.renderer.scene);
     this.registerDebug();
@@ -889,6 +897,14 @@ export class FruitSystem implements System {
     // would make every later change from the host look already applied.
     this.nodeLog.length = 0;
     this.nodeDelta.clear();
+    // A manifest is relative to the seed, not our previous solo/save state.
+    // Restore unchanged host nodes too, including fruit removed by a local
+    // extraction save before joining a different crew. Host deltas then free
+    // whatever its following snapshot owns, places or removes.
+    const changedNodes = new Set(changes.map(c => `${c.plantId}:${c.nodeIndex}`));
+    for (const [key, seed] of this.seedNodes) {
+      if (!changedNodes.has(key)) this.applyNode(seed);
+    }
     for (const c of changes) {
       this.applyNode(c);
       this.recordNode(c);

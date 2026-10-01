@@ -172,23 +172,19 @@ async function read(c) {
 }
 
 async function selectorClick(c, selector) {
-  const b = await c.page.evaluate(selector => {
-    const e = document.querySelector(selector);
-    if (!(e instanceof HTMLElement) || e.hidden || getComputedStyle(e).display === 'none')
-      throw new Error(`Missing visible button ${selector}`);
-    const r = e.getBoundingClientRect();
-    if (!r.width || !r.height) throw new Error(`Zero-size button ${selector}`);
-    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
-  }, selector);
-  await c.page.mouse.click(b.x, b.y); await sleep(150);
+  // Locator click waits for the visible button to be stable and hittable.
+  // It still sends trusted mouse input; no page-side click or state mutation.
+  await c.page.locator(selector).click({ timeout: 15000 }); await sleep(150);
 }
 
 async function play(c) {
   await c.page.bringToFront();
   const s = await read(c);
-  if (s.shell.visible) {
+  for (let attempt = 0; attempt < 3 && (await read(c)).shell.visible; attempt++) {
     const resume = await c.page.locator('[data-orchard-action="resume"]').isVisible();
+    log('front-door-click', { client: c.label, attempt, action: resume ? 'resume' : 'play' });
     await selectorClick(c, `[data-orchard-action="${resume ? 'resume' : 'play'}"]`);
+    await sleep(350);
   }
   await c.page.waitForFunction(() => document.querySelector('.orchard-shell')?.hidden,
     null, { timeout: 15000 });

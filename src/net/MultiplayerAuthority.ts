@@ -528,6 +528,7 @@ export class MultiplayerAuthority implements System, NetGate, LegendaryNet, Rope
 
   connect(transport: Transport): void {
     this.disconnect();
+    if (this.g.has('extraction')) this.g.get<HarvestExtraction>('extraction').beginNetSession();
     this.transport = transport;
     this.connected = true;
     if (this.vitals) this.vitals.mode = 'coop';

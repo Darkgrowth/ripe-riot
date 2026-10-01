@@ -425,7 +425,11 @@ export class IslandDirector implements System {
     if (!state?.event || !Number.isFinite(state.sequence)) return;
     this.state = JSON.parse(JSON.stringify(state)) as IslandDirectorState;
     this.state.agitation = this.normalizedAgitation(state.agitation);
-    if (this.orchardRun) this.restoreOrchard(state.orchard);
+    if (this.orchardRun) {
+      this.restoreOrchard(state.orchard);
+      // Orchard warnings last for their full timer while harvest pressure decays.
+      this.state.agitation.warning = this.orchardWarning > 0;
+    }
     this.present();
   }
   private normalizedAgitation(s?: Partial<HarvestAgitationState>): HarvestAgitationState {

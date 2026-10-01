@@ -604,7 +604,9 @@ export class InteractionSystem implements System {
       this.g.bus.emit('audio:sfx', { name: 'rustle', position: this.g.player.position.clone() });
       // A client's shake is a request; "nothing budged" is not ours to say.
       if (dropped === 0 && this.fruitSys.authoritative) {
-        this.g.bus.emit('ui:toast', { text: 'Nothing budged', sub: 'You need a proper shaker', ms: 1600 });
+        this.g.bus.emit('ui:toast', this.world.orchardRun
+          ? { text: 'The tree holds on', sub: 'Pick low fruit, or use the mallet or Air Cannon. The grove heard you.', ms: 2400 }
+          : { text: 'Nothing budged', sub: 'You need a proper shaker', ms: 1600 });
       }
       return dropped > 0;
     }

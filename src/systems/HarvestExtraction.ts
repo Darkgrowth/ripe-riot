@@ -134,6 +134,8 @@ export class HarvestExtraction implements System {
       soldIds: [...this.secured.keys()], cargo: { ...this.cargo },
       secured: [...this.secured], lost: [...this.lost], elapsed: this.elapsed, finished: this.finished };
   }
+  /** A reconnect can replace solo progress even when the same peer still hosts. */
+  beginNetSession(): void { this.netSource = ''; }
   applyNet(raw: unknown, source = ''): boolean {
     const s = validatedState(raw);
     const changedSource = !!source && source !== this.netSource;
