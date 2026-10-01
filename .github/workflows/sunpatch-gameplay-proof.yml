@@ -24,7 +24,8 @@ jobs:
       matrix:
         # Harness-only fixes can reuse the unchanged source's expedition/rescue
         # evidence. Source changes use the full matrix.
-        proof: ${{ fromJSON(startsWith(github.event.head_commit.message, 'test: orchard proof') && '["orchard-extraction","orchard-coop"]' || '["expedition","snapjaw-coop","snapjaw-guest","orchard-extraction","orchard-coop","scenarios"]') }}
+        proof: >-
+          ${{ fromJSON(startsWith(github.event.head_commit.message, 'test: orchard proof') && '["orchard-extraction","orchard-coop"]' || '["expedition","snapjaw-coop","snapjaw-guest","orchard-extraction","orchard-coop","scenarios"]') }}
     env:
       RIPE_URL: http://127.0.0.1:5278
     steps:
