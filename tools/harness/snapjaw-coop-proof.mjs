@@ -93,6 +93,10 @@ try {
   await rescuer.call('tool.give', 'net');
   await rescuer.call('tool.select', 'net');
   check((await read(rescuer)).tool === 'net', 'rescuer has Catch Net equipped');
+  // Lock and finish the opening swing at the safe dock. Pointer setup and a
+  // read of the other page must not consume the short jaw/flight sequence.
+  await rescuer.page.mouse.click(850, 315);
+  await sleep(800);
   for (const client of [rescuer, victim]) await client.page.evaluate(freezeCatchFrame => {
     const game = window.__GAME;
     const net = game.get('net');
@@ -175,11 +179,8 @@ try {
   await victim.tp(vx, vy + .15, vz);
   await rescuer.look(Math.atan2(-(vx - hx), -(vz - hz)), 0);
   await victim.look(Math.atan2(-(jaw[0] - vx), -(jaw[2] - vz)), 0);
-  // The first real click locks the rescuer's pointer before the bite. Its
-  // opening swing has plenty of time to recover before the airborne catch.
-  await rescuer.page.mouse.click(850, 315);
-  await sleep(350);
-  log('capture-setup', { rescuer: await read(rescuer), victim: await read(victim) });
+  log('capture-setup', { rescuer: await read(rescuer), victimId,
+    victimPosition: [vx, vy + .15, vz] });
   // A synchronous GPU readback stalled the shared two-client Linux renderer
   // before the jaw had even bitten. Preserve the timed input window first.
   if (!args.includes('--no-setup-shot')) await shot(rescuer, '01-rescuer-setup');
@@ -196,7 +197,7 @@ try {
   }
   check(held.jaw.captureAim?.[0] > jaw[0] + 2,
     'jaw targets the active teammate', { aim: held.jaw.captureAim, teammate: [hx, hy, hz] });
-  log('held', { rescuer: held, victim: await read(victim) });
+  log('held', { rescuer: held, victimId });
   // Video records the held pose. A synchronous screenshot here can consume
   // most of the short flight while two WebGL clients share one browser.
   // Face the expected flight from the actual rescuer view. This is fixture
