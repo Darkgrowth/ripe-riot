@@ -1,0 +1,4611 @@
+{
+  "url": "http://127.0.0.1:5278/?orchardRun=1",
+  "viewport": [
+    1712,
+    634
+  ],
+  "maxSeconds": 1800,
+  "durationSeconds": 134.16,
+  "platform": "linux",
+  "remoteLinuxOnly": true,
+  "logicOnly": true,
+  "proofLimits": "Real ordinary input and physics; GPU draws only for normal-camera captures. No continuous render/performance acceptance.",
+  "capturesFreezeOnlyForReadback": true,
+  "ordinaryResult": {
+    "input": "trusted keyboard/mouse only",
+    "authoredIds": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10,
+      11,
+      12,
+      13,
+      14,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      34,
+      36,
+      37,
+      39,
+      40,
+      42,
+      43,
+      45,
+      46,
+      47,
+      48,
+      50,
+      51,
+      52,
+      53,
+      55,
+      57
+    ],
+    "bankTransactions": [
+      {
+        "ids": [
+          5
+        ],
+        "before": 0,
+        "after": 19,
+        "walletBefore": 0,
+        "walletAfter": 19,
+        "secured": [
+          [
+            5,
+            19
+          ]
+        ]
+      },
+      {
+        "ids": [
+          55
+        ],
+        "before": 19,
+        "after": 345,
+        "walletBefore": 19,
+        "walletAfter": 345,
+        "secured": [
+          [
+            55,
+            326
+          ]
+        ]
+      },
+      {
+        "ids": [
+          57
+        ],
+        "before": 345,
+        "after": 671,
+        "walletBefore": 345,
+        "walletAfter": 671,
+        "secured": [
+          [
+            57,
+            326
+          ]
+        ]
+      }
+    ],
+    "settled": {
+      "banked": 671,
+      "secured": [
+        [
+          5,
+          19
+        ],
+        [
+          55,
+          326
+        ],
+        [
+          57,
+          326
+        ]
+      ],
+      "lost": [],
+      "money": 671
+    },
+    "events": [
+      {
+        "name": "ui:toast",
+        "gameSeconds": 3.7666666666666613,
+        "payload": {
+          "text": "Apple",
+          "sub": "The one everybody starts with. Nobody respects it.",
+          "kind": "gold",
+          "ms": 4000
+        }
+      },
+      {
+        "name": "fruit:detached",
+        "gameSeconds": 3.7666666666666613,
+        "payload": {
+          "fruitId": 5,
+          "species": "apple",
+          "cause": "hand",
+          "playerId": 1
+        }
+      },
+      {
+        "name": "fruit:grabbed",
+        "gameSeconds": 3.7666666666666613,
+        "payload": {
+          "fruitId": 5,
+          "species": "apple",
+          "mass": 1.1,
+          "heavy": false
+        }
+      },
+      {
+        "name": "fruit:sold",
+        "gameSeconds": 11.683333333333495,
+        "payload": {
+          "fruitId": 5,
+          "species": "apple",
+          "value": 19,
+          "quality": "Perfect",
+          "mass": 1.1
+        }
+      },
+      {
+        "name": "money:changed",
+        "gameSeconds": 11.683333333333495,
+        "payload": {
+          "money": 19,
+          "delta": 19,
+          "reason": "sale"
+        }
+      },
+      {
+        "name": "ui:toast",
+        "gameSeconds": 11.683333333333495,
+        "payload": {
+          "text": "Sold 1 — $19",
+          "sub": "Perfect · 1.1 kg",
+          "kind": "gold",
+          "ms": 2600
+        }
+      },
+      {
+        "name": "ui:toast",
+        "gameSeconds": 22.18333333333336,
+        "payload": {
+          "text": "The orchard is stirring",
+          "sub": "Something heard that harvest.",
+          "ms": 2200
+        }
+      },
+      {
+        "name": "plant:shaken",
+        "gameSeconds": 22.18333333333336,
+        "payload": {
+          "plantId": 15,
+          "position": {
+            "x": -23,
+            "y": 7.439347688791054,
+            "z": 27
+          },
+          "height": 6.06625,
+          "strength": 0.55
+        }
+      },
+      {
+        "name": "fruit:detached",
+        "gameSeconds": 22.18333333333336,
+        "payload": {
+          "fruitId": 16,
+          "species": "apple",
+          "cause": "shake",
+          "playerId": 1
+        }
+      },
+      {
+        "name": "fruit:detached",
+        "gameSeconds": 22.18333333333336,
+        "payload": {
+          "fruitId": 17,
+          "species": "apple",
+          "cause": "shake",
+          "playerId": 1
+        }
+      },
+      {
+        "name": "fruit:detached",
+        "gameSeconds": 22.18333333333336,
+        "payload": {
+          "fruitId": 18,
+          "species": "apple",
+          "cause": "shake",
+          "playerId": 1
+        }
+      },
+      {
+        "name": "fruit:detached",
+        "gameSeconds": 22.18333333333336,
+        "payload": {
+          "fruitId": 19,
+          "species": "apple",
+          "cause": "shake",
+          "playerId": 1
+        }
+      },
+      {
+        "name": "ui:toast",
+        "gameSeconds": 22.18333333333336,
+        "payload": {
+          "text": "CHAIN REACTION",
+          "sub": "Five at once. Nobody meant that.",
+          "kind": "gold",
+          "ms": 3400
+        }
+      },
+      {
+        "name": "fruit:detached",
+        "gameSeconds": 22.18333333333336,
+        "payload": {
+          "fruitId": 20,
+          "species": "apple",
+          "cause": "shake",
+          "playerId": 1
+        }
+      },
+      {
+        "name": "fruit:detached",
+        "gameSeconds": 22.18333333333336,
+        "payload": {
+          "fruitId": 21,
+          "species": "apple",
+          "cause": "shake",
+          "playerId": 1
+        }
+      },
+      {
+        "name": "fruit:detached",
+        "gameSeconds": 22.18333333333336,
+        "payload": {
+          "fruitId": 22,
+          "species": "apple",
+          "cause": "shake",
+          "playerId": 1
+        }
+      },
+      {
+        "name": "fruit:detached",
+        "gameSeconds": 22.18333333333336,
+        "payload": {
+          "fruitId": 23,
+          "species": "apple",
+          "cause": "shake",
+          "playerId": 1
+        }
+      },
+      {
+        "name": "fruit:detached",
+        "gameSeconds": 22.18333333333336,
+        "payload": {
+          "fruitId": 24,
+          "species": "apple",
+          "cause": "shake",
+          "playerId": 1
+        }
+      },
+      {
+        "name": "fruit:detached",
+        "gameSeconds": 22.18333333333336,
+        "payload": {
+          "fruitId": 25,
+          "species": "apple",
+          "cause": "shake",
+          "playerId": 1
+        }
+      },
+      {
+        "name": "plant:shaken",
+        "gameSeconds": 22.400000000000013,
+        "payload": {
+          "plantId": 15,
+          "position": {
+            "x": -23,
+            "y": 7.439347688791054,
+            "z": 27
+          },
+          "height": 6.06625,
+          "strength": 0.55
+        }
+      },
+      {
+        "name": "ui:toast",
+        "gameSeconds": 22.400000000000013,
+        "payload": {
+          "text": "The tree holds on",
+          "sub": "Pick low fruit, or use the mallet or Air Cannon. The grove heard you.",
+          "ms": 2400
+        }
+      },
+      {
+        "name": "plant:shaken",
+        "gameSeconds": 22.616666666666667,
+        "payload": {
+          "plantId": 15,
+          "position": {
+            "x": -23,
+            "y": 7.439347688791054,
+            "z": 27
+          },
+          "height": 6.06625,
+          "strength": 0.55
+        }
+      },
+      {
+        "name": "ui:toast",
+        "gameSeconds": 22.616666666666667,
+        "payload": {
+          "text": "The tree holds on",
+          "sub": "Pick low fruit, or use the mallet or Air Cannon. The grove heard you.",
+          "ms": 2400
+        }
+      },
+      {
+        "name": "plant:shaken",
+        "gameSeconds": 22.816666666666656,
+        "payload": {
+          "plantId": 15,
+          "position": {
+            "x": -23,
+            "y": 7.439347688791054,
+            "z": 27
+          },
+          "height": 6.06625,
+          "strength": 0.55
+        }
+      },
+      {
+        "name": "ui:toast",
+        "gameSeconds": 22.816666666666656,
+        "payload": {
+          "text": "The tree holds on",
+          "sub": "Pick low fruit, or use the mallet or Air Cannon. The grove heard you.",
+          "ms": 2400
+        }
+      },
+      {
+        "name": "plant:shaken",
+        "gameSeconds": 23.03333333333331,
+        "payload": {
+          "plantId": 15,
+          "position": {
+            "x": -23,
+            "y": 7.439347688791054,
+            "z": 27
+          },
+          "height": 6.06625,
+          "strength": 0.55
+        }
+      },
+      {
+        "name": "ui:toast",
+        "gameSeconds": 23.03333333333331,
+        "payload": {
+          "text": "The tree holds on",
+          "sub": "Pick low fruit, or use the mallet or Air Cannon. The grove heard you.",
+          "ms": 2400
+        }
+      },
+      {
+        "name": "plant:shaken",
+        "gameSeconds": 23.249999999999964,
+        "payload": {
+          "plantId": 15,
+          "position": {
+            "x": -23,
+            "y": 7.439347688791054,
+            "z": 27
+          },
+          "height": 6.06625,
+          "strength": 0.55
+        }
+      },
+      {
+        "name": "ui:toast",
+        "gameSeconds": 23.249999999999964,
+        "payload": {
+          "text": "The tree holds on",
+          "sub": "Pick low fruit, or use the mallet or Air Cannon. The grove heard you.",
+          "ms": 2400
+        }
+      },
+      {
+        "name": "plant:shaken",
+        "gameSeconds": 23.46666666666662,
+        "payload": {
+          "plantId": 15,
+          "position": {
+            "x": -23,
+            "y": 7.439347688791054,
+            "z": 27
+          },
+          "height": 6.06625,
+          "strength": 0.55
+        }
+      },
+      {
+        "name": "ui:toast",
+        "gameSeconds": 23.46666666666662,
+        "payload": {
+          "text": "The tree holds on",
+          "sub": "Pick low fruit, or use the mallet or Air Cannon. The grove heard you.",
+          "ms": 2400
+        }
+      },
+      {
+        "name": "plant:shaken",
+        "gameSeconds": 23.666666666666607,
+        "payload": {
+          "plantId": 15,
+          "position": {
+            "x": -23,
+            "y": 7.439347688791054,
+            "z": 27
+          },
+          "height": 6.06625,
+          "strength": 0.55
+        }
+      },
+      {
+        "name": "ui:toast",
+        "gameSeconds": 23.666666666666607,
+        "payload": {
+          "text": "The tree holds on",
+          "sub": "Pick low fruit, or use the mallet or Air Cannon. The grove heard you.",
+          "ms": 2400
+        }
+      },
+      {
+        "name": "encounter:attack",
+        "gameSeconds": 25.499999999999837,
+        "payload": {
+          "kind": "mimic",
+          "victimId": "solo",
+          "damage": 28
+        }
+      },
+      {
+        "name": "ui:toast",
+        "gameSeconds": 25.499999999999837,
+        "payload": {
+          "text": "Puff Melon",
+          "sub": "The only fruit that harvests YOU.",
+          "kind": "gold",
+          "ms": 4000
+        }
+      },
+      {
+        "name": "fruit:detached",
+        "gameSeconds": 25.499999999999837,
+        "payload": {
+          "fruitId": 36,
+          "species": "puffmelon",
+          "cause": "chaos-impact",
+          "playerId": -1
+        }
+      },
+      {
+        "name": "fruit:detached",
+        "gameSeconds": 25.499999999999837,
+        "payload": {
+          "fruitId": 37,
+          "species": "puffmelon",
+          "cause": "chaos-impact",
+          "playerId": -1
+        }
+      },
+      {
+        "name": "tool:swing",
+        "gameSeconds": 27.499999999999723,
+        "payload": {
+          "toolId": "hand",
+          "duration": 0.44,
+          "swingId": 1
+        }
+      },
+      {
+        "name": "tool:swing",
+        "gameSeconds": 28.51666666666633,
+        "payload": {
+          "toolId": "hand",
+          "duration": 0.44,
+          "swingId": 2
+        }
+      },
+      {
+        "name": "tool:swing",
+        "gameSeconds": 29.433333333332946,
+        "payload": {
+          "toolId": "hand",
+          "duration": 0.44,
+          "swingId": 3
+        }
+      },
+      {
+        "name": "ui:toast",
+        "gameSeconds": 29.599999999999604,
+        "payload": {
+          "text": "Mimic subdued",
+          "sub": "The harvest is the reward. Bring it to the crate.",
+          "kind": "good",
+          "ms": 2700
+        }
+      },
+      {
+        "name": "encounter:defeated",
+        "gameSeconds": 29.599999999999604,
+        "payload": {
+          "kind": "mimic",
+          "position": {
+            "x": -22.5439692042473,
+            "y": 7.439628767460211,
+            "z": 22.625636195991103
+          },
+          "actorId": "solo"
+        }
+      },
+      {
+        "name": "ui:toast",
+        "gameSeconds": 33.41666666666605,
+        "payload": {
+          "text": "Boulder Plum",
+          "sub": "Dense enough to have its own weather.",
+          "kind": "gold",
+          "ms": 4000
+        }
+      },
+      {
+        "name": "ui:toast",
+        "gameSeconds": 33.41666666666605,
+        "payload": {
+          "text": "DISCOVERY TIER 1",
+          "sub": "New equipment available at the shed",
+          "kind": "gold",
+          "ms": 4200
+        }
+      },
+      {
+        "name": "fruit:detached",
+        "gameSeconds": 33.41666666666605,
+        "payload": {
+          "fruitId": 55,
+          "species": "boulderplum",
+          "cause": "hand",
+          "playerId": 1
+        }
+      },
+      {
+        "name": "fruit:grabbed",
+        "gameSeconds": 33.41666666666605,
+        "payload": {
+          "fruitId": 55,
+          "species": "boulderplum",
+          "mass": 48,
+          "heavy": true
+        }
+      },
+      {
+        "name": "ui:toast",
+        "gameSeconds": 33.41666666666605,
+        "payload": {
+          "text": "Boulder Plum — 48.0 kg",
+          "sub": "Too big for the basket. Both hands.",
+          "ms": 2400
+        }
+      },
+      {
+        "name": "fruit:sold",
+        "gameSeconds": 48.399999999998535,
+        "payload": {
+          "fruitId": 55,
+          "species": "boulderplum",
+          "value": 326,
+          "quality": "Perfect",
+          "mass": 48
+        }
+      },
+      {
+        "name": "money:changed",
+        "gameSeconds": 48.399999999998535,
+        "payload": {
+          "money": 345,
+          "delta": 326,
+          "reason": "sale"
+        }
+      },
+      {
+        "name": "ui:toast",
+        "gameSeconds": 48.399999999998535,
+        "payload": {
+          "text": "Sold 1 — $326",
+          "sub": "Perfect · 48 kg",
+          "kind": "gold",
+          "ms": 2600
+        }
+      },
+      {
+        "name": "ui:toast",
+        "gameSeconds": 48.91666666666517,
+        "payload": {
+          "text": "Resting at the dock",
+          "sub": "Catch your breath here to recover health.",
+          "kind": "good",
+          "ms": 2600
+        }
+      },
+      {
+        "name": "fruit:detached",
+        "gameSeconds": 57.433333333331355,
+        "payload": {
+          "fruitId": 57,
+          "species": "boulderplum",
+          "cause": "hand",
+          "playerId": 1
+        }
+      },
+      {
+        "name": "fruit:grabbed",
+        "gameSeconds": 57.433333333331355,
+        "payload": {
+          "fruitId": 57,
+          "species": "boulderplum",
+          "mass": 48,
+          "heavy": true
+        }
+      },
+      {
+        "name": "ui:toast",
+        "gameSeconds": 57.433333333331355,
+        "payload": {
+          "text": "Boulder Plum — 48.0 kg",
+          "sub": "Too big for the basket. Both hands.",
+          "ms": 2400
+        }
+      },
+      {
+        "name": "ui:toast",
+        "gameSeconds": 71.03333333333059,
+        "payload": {
+          "text": "$500 secured",
+          "sub": "Keep harvesting, or return to the crate and finish your run.",
+          "kind": "gold",
+          "ms": 5000
+        }
+      },
+      {
+        "name": "fruit:sold",
+        "gameSeconds": 71.03333333333059,
+        "payload": {
+          "fruitId": 57,
+          "species": "boulderplum",
+          "value": 326,
+          "quality": "Perfect",
+          "mass": 48
+        }
+      },
+      {
+        "name": "money:changed",
+        "gameSeconds": 71.03333333333059,
+        "payload": {
+          "money": 671,
+          "delta": 326,
+          "reason": "sale"
+        }
+      },
+      {
+        "name": "ui:toast",
+        "gameSeconds": 71.03333333333059,
+        "payload": {
+          "text": "Sold 1 — $326",
+          "sub": "Perfect · 48 kg",
+          "kind": "gold",
+          "ms": 2600
+        }
+      }
+    ],
+    "final": {
+      "extraction": {
+        "version": 1,
+        "revision": 4,
+        "banked": 671,
+        "soldIds": [
+          5,
+          55,
+          57
+        ],
+        "cargo": {
+          "apple": 1,
+          "boulderplum": 2
+        },
+        "secured": [
+          [
+            5,
+            19
+          ],
+          [
+            55,
+            326
+          ],
+          [
+            57,
+            326
+          ]
+        ],
+        "lost": [],
+        "elapsed": 71.24700000000306,
+        "finished": true,
+        "target": 500,
+        "targetReached": true,
+        "fruitCount": 3
+      },
+      "money": 671,
+      "save": {
+        "slot": "replay-orchard-proof-muq21yk1",
+        "playtime": 71.3,
+        "lastSaved": 0,
+        "has": true,
+        "enabled": true,
+        "resumed": true
+      }
+    }
+  },
+  "coopResult": {
+    "setup": "debug room-connect fixture only",
+    "gameplay": "trusted guest keyboard/mouse",
+    "fruitId": 5,
+    "host": {
+      "version": 1,
+      "revision": 2,
+      "banked": 19,
+      "soldIds": [
+        5
+      ],
+      "cargo": {
+        "apple": 1
+      },
+      "secured": [
+        [
+          5,
+          19
+        ]
+      ],
+      "lost": [],
+      "elapsed": 13.599599999999953,
+      "finished": true,
+      "target": 500,
+      "targetReached": false,
+      "fruitCount": 1
+    },
+    "guest": {
+      "version": 1,
+      "revision": 2,
+      "banked": 19,
+      "soldIds": [
+        5
+      ],
+      "cargo": {
+        "apple": 1
+      },
+      "secured": [
+        [
+          5,
+          19
+        ]
+      ],
+      "lost": [],
+      "elapsed": 13.599599999999953,
+      "finished": true,
+      "target": 500,
+      "targetReached": false,
+      "fruitCount": 1
+    },
+    "guestTransactions": [
+      {
+        "ids": [
+          5
+        ],
+        "before": 0,
+        "after": 19,
+        "walletBefore": 0,
+        "walletAfter": 19,
+        "secured": [
+          [
+            5,
+            19
+          ]
+        ]
+      }
+    ]
+  },
+  "captures": [
+    {
+      "name": "00-clearing",
+      "client": "solo",
+      "pos": [
+        -3.0000095305589696,
+        7.441239044032345,
+        30.999990520282864
+      ],
+      "yaw": 1.2803963267948966,
+      "pitch": -0.07239999999999999,
+      "gameSeconds": 0.766666666666667,
+      "extraction": {
+        "version": 1,
+        "revision": 0,
+        "banked": 0,
+        "soldIds": [],
+        "cargo": {},
+        "secured": [],
+        "lost": [],
+        "elapsed": 0.6166999999999999,
+        "finished": false,
+        "target": 500,
+        "targetReached": false,
+        "fruitCount": 0
+      },
+      "camera": "ordinary first-person",
+      "frozenOnlyForReadback": true
+    },
+    {
+      "name": "01-partial-bank",
+      "client": "solo",
+      "pos": [
+        -7.10994190377792,
+        7.5436678159182105,
+        29.10643866024378
+      ],
+      "yaw": -0.05280367320510493,
+      "pitch": -0.29900000000000004,
+      "gameSeconds": 12.033333333333513,
+      "extraction": {
+        "version": 1,
+        "revision": 1,
+        "banked": 19,
+        "soldIds": [
+          5
+        ],
+        "cargo": {
+          "apple": 1
+        },
+        "secured": [
+          [
+            5,
+            19
+          ]
+        ],
+        "lost": [],
+        "elapsed": 11.899499999999973,
+        "finished": false,
+        "target": 500,
+        "targetReached": false,
+        "fruitCount": 1
+      },
+      "camera": "ordinary first-person",
+      "frozenOnlyForReadback": true
+    },
+    {
+      "name": "02-harvest-chaos",
+      "client": "solo",
+      "pos": [
+        -20.646212515759608,
+        7.4372728556702,
+        27.09116512376013
+      ],
+      "yaw": 0.4333963267948948,
+      "pitch": -0.09219999999999998,
+      "gameSeconds": 24.86666666666654,
+      "extraction": {
+        "version": 1,
+        "revision": 1,
+        "banked": 19,
+        "soldIds": [
+          5
+        ],
+        "cargo": {
+          "apple": 1
+        },
+        "secured": [
+          [
+            5,
+            19
+          ]
+        ],
+        "lost": [],
+        "elapsed": 24.732299999999693,
+        "finished": false,
+        "target": 500,
+        "targetReached": false,
+        "fruitCount": 1
+      },
+      "camera": "ordinary first-person",
+      "frozenOnlyForReadback": true,
+      "encounters": {
+        "revision": 1468,
+        "encounters": [
+          {
+            "kind": "mimic",
+            "position": [
+              -23,
+              7.447660481169376,
+              22
+            ],
+            "heading": 0.43305442609942674,
+            "phase": "warn",
+            "timeLeft": 0.7499999999999999,
+            "health": 3,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0,
+            "captureAim": null,
+            "dormant": false,
+            "returning": false,
+            "pendingHeading": null,
+            "chargeStart": null,
+            "gumTimeLeft": 0,
+            "gumFruitId": null
+          },
+          {
+            "kind": "snapjaw",
+            "position": [
+              -29,
+              7.537268130918263,
+              17
+            ],
+            "heading": 0,
+            "phase": "idle",
+            "timeLeft": 0,
+            "health": 2,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0,
+            "captureAim": null,
+            "dormant": false,
+            "returning": false,
+            "pendingHeading": null,
+            "chargeStart": null,
+            "gumTimeLeft": 0,
+            "gumFruitId": null
+          }
+        ],
+        "projectiles": [],
+        "nextMimicImpactId": 1,
+        "mimicGrace": [],
+        "nextFlingId": 1,
+        "flights": [],
+        "snapjawGrace": []
+      },
+      "agitation": {
+        "pressure": 8.759999999999962,
+        "warning": false,
+        "at": [
+          -23,
+          7.439347688791054,
+          27
+        ],
+        "acceptedIds": [
+          "trunk:15:22.18333333333336",
+          "trunk:15:22.400000000000013",
+          "trunk:15:22.616666666666667",
+          "trunk:15:22.816666666666656",
+          "trunk:15:23.03333333333331",
+          "trunk:15:23.249999999999964",
+          "trunk:15:23.46666666666662",
+          "trunk:15:23.666666666666607"
+        ]
+      },
+      "looseFruit": 10
+    },
+    {
+      "name": "03-mimic-subdued-no-cash",
+      "client": "solo",
+      "pos": [
+        -22.034299356771164,
+        7.449878573266416,
+        24.196586440133828
+      ],
+      "yaw": 0.3123963267948948,
+      "pitch": -0.31660000000000005,
+      "gameSeconds": 30.2333333333329,
+      "extraction": {
+        "version": 1,
+        "revision": 1,
+        "banked": 19,
+        "soldIds": [
+          5
+        ],
+        "cargo": {
+          "apple": 1
+        },
+        "secured": [
+          [
+            5,
+            19
+          ]
+        ],
+        "lost": [],
+        "elapsed": 30.098699999999504,
+        "finished": false,
+        "target": 500,
+        "targetReached": false,
+        "fruitCount": 1
+      },
+      "camera": "ordinary first-person",
+      "frozenOnlyForReadback": true
+    },
+    {
+      "name": "04-secured-cargo",
+      "client": "solo",
+      "pos": [
+        -7.279328662679255,
+        7.431023415403237,
+        29.445020123683335
+      ],
+      "yaw": -0.11438898038468981,
+      "pitch": -0.2132000000000001,
+      "gameSeconds": 48.73333333333185,
+      "extraction": {
+        "version": 1,
+        "revision": 2,
+        "banked": 345,
+        "soldIds": [
+          5,
+          55
+        ],
+        "cargo": {
+          "apple": 1,
+          "boulderplum": 1
+        },
+        "secured": [
+          [
+            5,
+            19
+          ],
+          [
+            55,
+            326
+          ]
+        ],
+        "lost": [],
+        "elapsed": 48.59800000000047,
+        "finished": false,
+        "target": 500,
+        "targetReached": false,
+        "fruitCount": 2
+      },
+      "camera": "ordinary first-person",
+      "frozenOnlyForReadback": true
+    },
+    {
+      "name": "04-secured-cargo",
+      "client": "solo",
+      "pos": [
+        -7.274166071611804,
+        7.431184466581966,
+        29.447621983752633
+      ],
+      "yaw": -0.10997428756427441,
+      "pitch": -0.2132000000000002,
+      "gameSeconds": 71.3666666666639,
+      "extraction": {
+        "version": 1,
+        "revision": 3,
+        "banked": 671,
+        "soldIds": [
+          5,
+          55,
+          57
+        ],
+        "cargo": {
+          "apple": 1,
+          "boulderplum": 2
+        },
+        "secured": [
+          [
+            5,
+            19
+          ],
+          [
+            55,
+            326
+          ],
+          [
+            57,
+            326
+          ]
+        ],
+        "lost": [],
+        "elapsed": 71.23030000000306,
+        "finished": false,
+        "target": 500,
+        "targetReached": true,
+        "fruitCount": 3
+      },
+      "camera": "ordinary first-person",
+      "frozenOnlyForReadback": true
+    },
+    {
+      "name": "05-results",
+      "client": "solo",
+      "pos": [
+        -7.274166452104781,
+        7.431084120714571,
+        29.447621516611328
+      ],
+      "yaw": -0.10997428756427441,
+      "pitch": -0.2132000000000002,
+      "gameSeconds": 71.39999999999723,
+      "extraction": {
+        "version": 1,
+        "revision": 4,
+        "banked": 671,
+        "soldIds": [
+          5,
+          55,
+          57
+        ],
+        "cargo": {
+          "apple": 1,
+          "boulderplum": 2
+        },
+        "secured": [
+          [
+            5,
+            19
+          ],
+          [
+            55,
+            326
+          ],
+          [
+            57,
+            326
+          ]
+        ],
+        "lost": [],
+        "elapsed": 71.24700000000306,
+        "finished": true,
+        "target": 500,
+        "targetReached": true,
+        "fruitCount": 3
+      },
+      "camera": "ordinary first-person",
+      "frozenOnlyForReadback": true
+    },
+    {
+      "name": "06-results-reloaded",
+      "client": "solo",
+      "pos": [
+        -3,
+        7.560804820916319,
+        31
+      ],
+      "yaw": 1.5707963267948966,
+      "pitch": -0.09,
+      "gameSeconds": 0,
+      "extraction": {
+        "version": 1,
+        "revision": 4,
+        "banked": 671,
+        "soldIds": [
+          5,
+          55,
+          57
+        ],
+        "cargo": {
+          "apple": 1,
+          "boulderplum": 2
+        },
+        "secured": [
+          [
+            5,
+            19
+          ],
+          [
+            55,
+            326
+          ],
+          [
+            57,
+            326
+          ]
+        ],
+        "lost": [],
+        "elapsed": 71.24700000000306,
+        "finished": true,
+        "target": 500,
+        "targetReached": true,
+        "fruitCount": 3
+      },
+      "camera": "ordinary first-person",
+      "frozenOnlyForReadback": true
+    },
+    {
+      "name": "07-coop-guest-cargo",
+      "client": "coop-A",
+      "pos": [
+        -7.129572812883832,
+        7.468944516518407,
+        29.27534174558152
+      ],
+      "yaw": -0.05720367320510489,
+      "pitch": -0.24619999999999997,
+      "gameSeconds": 13.266666666666906,
+      "extraction": {
+        "version": 1,
+        "revision": 1,
+        "banked": 19,
+        "soldIds": [
+          5
+        ],
+        "cargo": {
+          "apple": 1
+        },
+        "secured": [
+          [
+            5,
+            19
+          ]
+        ],
+        "lost": [],
+        "elapsed": 13.149599999999962,
+        "finished": false,
+        "target": 500,
+        "targetReached": false,
+        "fruitCount": 1
+      },
+      "camera": "ordinary first-person",
+      "frozenOnlyForReadback": true,
+      "fixtureSetup": "room connect only",
+      "ordinaryGameplay": "authored pick, walk, bank",
+      "hostExtraction": {
+        "version": 1,
+        "revision": 1,
+        "banked": 19,
+        "soldIds": [
+          5
+        ],
+        "cargo": {
+          "apple": 1
+        },
+        "secured": [
+          [
+            5,
+            19
+          ]
+        ],
+        "lost": [],
+        "elapsed": 13.199599999999961,
+        "finished": false,
+        "target": 500,
+        "targetReached": false,
+        "fruitCount": 1
+      }
+    }
+  ],
+  "checks": [
+    {
+      "pass": true,
+      "name": "fresh Orchard Run title is visible",
+      "detail": {}
+    },
+    {
+      "pass": true,
+      "name": "fresh run starts near extraction crate with empty ledger",
+      "detail": {}
+    },
+    {
+      "pass": true,
+      "name": "ordinary E picks real quiet-pocket fruit",
+      "detail": {}
+    },
+    {
+      "pass": true,
+      "name": "only authored cargo is carried",
+      "detail": {
+        "client": "solo",
+        "ids": [
+          5
+        ]
+      }
+    },
+    {
+      "pass": true,
+      "name": "ordinary E banks physical carried cargo",
+      "detail": {
+        "client": "solo",
+        "ids": [
+          5
+        ],
+        "before": 0,
+        "after": 19,
+        "walletBefore": 0,
+        "walletAfter": 19,
+        "secured": [
+          [
+            5,
+            19
+          ]
+        ]
+      }
+    },
+    {
+      "pass": true,
+      "name": "ordinary walk and E secure a partial haul",
+      "detail": {}
+    },
+    {
+      "pass": true,
+      "name": "partial bank is kept and harvesting can continue before $500",
+      "detail": {
+        "extraction": {
+          "version": 1,
+          "revision": 1,
+          "banked": 19,
+          "soldIds": [
+            5
+          ],
+          "cargo": {
+            "apple": 1
+          },
+          "secured": [
+            [
+              5,
+              19
+            ]
+          ],
+          "lost": [],
+          "elapsed": 11.91619999999997,
+          "finished": false,
+          "target": 500,
+          "targetReached": false,
+          "fruitCount": 1
+        }
+      }
+    },
+    {
+      "pass": true,
+      "name": "ordinary walking reaches loaded tree",
+      "detail": {}
+    },
+    {
+      "pass": true,
+      "name": "loaded tree shakes using ordinary E",
+      "detail": {}
+    },
+    {
+      "pass": true,
+      "name": "harvesting wakes Mimic through the director",
+      "detail": {
+        "agitation": {
+          "pressure": 8.759999999999962,
+          "warning": false,
+          "at": [
+            -23,
+            7.439347688791054,
+            27
+          ],
+          "acceptedIds": [
+            "trunk:15:22.18333333333336",
+            "trunk:15:22.400000000000013",
+            "trunk:15:22.616666666666667",
+            "trunk:15:22.816666666666656",
+            "trunk:15:23.03333333333331",
+            "trunk:15:23.249999999999964",
+            "trunk:15:23.46666666666662",
+            "trunk:15:23.666666666666607"
+          ]
+        },
+        "mimic": {
+          "kind": "mimic",
+          "position": [
+            -23,
+            7.447660481169376,
+            22
+          ],
+          "heading": 0.43305442609942674,
+          "phase": "warn",
+          "timeLeft": 0.7499999999999999,
+          "health": 3,
+          "baited": false,
+          "capturedVictimId": null,
+          "captureTimeLeft": 0,
+          "captureAim": null,
+          "dormant": false,
+          "returning": false,
+          "pendingHeading": null,
+          "chargeStart": null,
+          "gumTimeLeft": 0,
+          "gumFruitId": null
+        }
+      }
+    },
+    {
+      "pass": true,
+      "name": "real Picking Mallet subdues Mimic",
+      "detail": {
+        "swings": 3
+      }
+    },
+    {
+      "pass": true,
+      "name": "enemy defeat gives neither wallet money nor extracted cargo",
+      "detail": {
+        "bankedBefore": 19,
+        "bankedAfter": 19,
+        "walletBefore": 19,
+        "walletAfter": 19
+      }
+    },
+    {
+      "pass": true,
+      "name": "only authored cargo is carried",
+      "detail": {
+        "client": "solo",
+        "ids": [
+          55
+        ]
+      }
+    },
+    {
+      "pass": true,
+      "name": "ordinary E banks physical carried cargo",
+      "detail": {
+        "client": "solo",
+        "ids": [
+          55
+        ],
+        "before": 19,
+        "after": 345,
+        "walletBefore": 19,
+        "walletAfter": 345,
+        "secured": [
+          [
+            55,
+            326
+          ]
+        ]
+      }
+    },
+    {
+      "pass": true,
+      "name": "cargo haul reaches extraction crate",
+      "detail": {}
+    },
+    {
+      "pass": true,
+      "name": "only authored cargo is carried",
+      "detail": {
+        "client": "solo",
+        "ids": [
+          57
+        ]
+      }
+    },
+    {
+      "pass": true,
+      "name": "ordinary E banks physical carried cargo",
+      "detail": {
+        "client": "solo",
+        "ids": [
+          57
+        ],
+        "before": 345,
+        "after": 671,
+        "walletBefore": 345,
+        "walletAfter": 671,
+        "secured": [
+          [
+            57,
+            326
+          ]
+        ]
+      }
+    },
+    {
+      "pass": true,
+      "name": "cargo haul reaches extraction crate",
+      "detail": {}
+    },
+    {
+      "pass": true,
+      "name": "authored physical cargo reaches the $500 target",
+      "detail": {
+        "extraction": {
+          "version": 1,
+          "revision": 3,
+          "banked": 671,
+          "soldIds": [
+            5,
+            55,
+            57
+          ],
+          "cargo": {
+            "apple": 1,
+            "boulderplum": 2
+          },
+          "secured": [
+            [
+              5,
+              19
+            ],
+            [
+              55,
+              326
+            ],
+            [
+              57,
+              326
+            ]
+          ],
+          "lost": [],
+          "elapsed": 71.24700000000306,
+          "finished": false,
+          "target": 500,
+          "targetReached": true,
+          "fruitCount": 3
+        }
+      }
+    },
+    {
+      "pass": true,
+      "name": "reaching $500 does not force departure",
+      "detail": {}
+    },
+    {
+      "pass": true,
+      "name": "banked crew is empty-handed at the crate",
+      "detail": {}
+    },
+    {
+      "pass": true,
+      "name": "empty-handed E at crate opens actual run results",
+      "detail": {
+        "extraction": {
+          "version": 1,
+          "revision": 4,
+          "banked": 671,
+          "soldIds": [
+            5,
+            55,
+            57
+          ],
+          "cargo": {
+            "apple": 1,
+            "boulderplum": 2
+          },
+          "secured": [
+            [
+              5,
+              19
+            ],
+            [
+              55,
+              326
+            ],
+            [
+              57,
+              326
+            ]
+          ],
+          "lost": [],
+          "elapsed": 71.24700000000306,
+          "finished": true,
+          "target": 500,
+          "targetReached": true,
+          "fruitCount": 3
+        },
+        "shell": {
+          "visible": true,
+          "text": "\n      RIPE RIOT · HARVEST & HAULHAUL SECURED\n      Your produce is banked. You met the $500 target.\n        Secured cargo$671\n        Fruit banked3\n        Run time1:11\n      New orchard run\n      \n        Sunpatch expedition\n      WASD Move · Mouse Look · Space Jump · Shift Sprint\n        1 Mallet & hands · 2 Air Cannon · 3 Catch Net · E Pick / shake / bank / finish\n        LMB Use tool or throw held fruit · RMB Stow held fruit / cannon hop / lay net · Esc Pause\n      Your run is saved separately from Sunpatch.\n      4afa199",
+          "mode": "results"
+        }
+      }
+    },
+    {
+      "pass": true,
+      "name": "explicit finish writes the isolated Orchard save",
+      "detail": {
+        "save": {
+          "slot": "replay-orchard-proof-muq21yk1",
+          "playtime": 71.3,
+          "lastSaved": 71.2,
+          "has": true,
+          "enabled": true,
+          "resumed": false
+        }
+      }
+    },
+    {
+      "pass": true,
+      "name": "reload preserves actual banked value, money and finished results",
+      "detail": {
+        "settled": {
+          "banked": 671,
+          "secured": [
+            [
+              5,
+              19
+            ],
+            [
+              55,
+              326
+            ],
+            [
+              57,
+              326
+            ]
+          ],
+          "lost": [],
+          "money": 671
+        },
+        "extraction": {
+          "version": 1,
+          "revision": 4,
+          "banked": 671,
+          "soldIds": [
+            5,
+            55,
+            57
+          ],
+          "cargo": {
+            "apple": 1,
+            "boulderplum": 2
+          },
+          "secured": [
+            [
+              5,
+              19
+            ],
+            [
+              55,
+              326
+            ],
+            [
+              57,
+              326
+            ]
+          ],
+          "lost": [],
+          "elapsed": 71.24700000000306,
+          "finished": true,
+          "target": 500,
+          "targetReached": true,
+          "fruitCount": 3
+        },
+        "money": 671,
+        "save": {
+          "slot": "replay-orchard-proof-muq21yk1",
+          "playtime": 71.3,
+          "lastSaved": 0,
+          "has": true,
+          "enabled": true,
+          "resumed": true
+        }
+      }
+    },
+    {
+      "pass": true,
+      "name": "reload does not resurrect sold authored cargo",
+      "detail": {
+        "securedIds": [
+          5,
+          55,
+          57
+        ]
+      }
+    },
+    {
+      "pass": true,
+      "name": "reloaded results and repeated E do not duplicate payout",
+      "detail": {}
+    },
+    {
+      "pass": true,
+      "name": "staged Orchard co-op setup connects one host and one guest",
+      "detail": {
+        "a": {
+          "connected": true,
+          "isHost": false,
+          "me": "nya0vi6e",
+          "authoritative": false,
+          "remotes": [
+            "7k0ldlh1"
+          ]
+        },
+        "b": {
+          "connected": true,
+          "isHost": true,
+          "me": "7k0ldlh1",
+          "authoritative": true,
+          "remotes": [
+            "nya0vi6e"
+          ]
+        }
+      }
+    },
+    {
+      "pass": true,
+      "name": "guest ordinarily picks authored fruit after room setup",
+      "detail": {}
+    },
+    {
+      "pass": true,
+      "name": "only authored cargo is carried",
+      "detail": {
+        "client": "coop-A",
+        "ids": [
+          5
+        ]
+      }
+    },
+    {
+      "pass": true,
+      "name": "ordinary E banks physical carried cargo",
+      "detail": {
+        "client": "coop-A",
+        "ids": [
+          5
+        ],
+        "before": 0,
+        "after": 19,
+        "walletBefore": 0,
+        "walletAfter": 19,
+        "secured": [
+          [
+            5,
+            19
+          ]
+        ]
+      }
+    },
+    {
+      "pass": true,
+      "name": "guest ordinarily hauls and banks authored fruit",
+      "detail": {}
+    },
+    {
+      "pass": true,
+      "name": "one host-accepted guest sale appears once in both crew ledgers",
+      "detail": {
+        "fruitId": 5,
+        "host": {
+          "version": 1,
+          "revision": 1,
+          "banked": 19,
+          "soldIds": [
+            5
+          ],
+          "cargo": {
+            "apple": 1
+          },
+          "secured": [
+            [
+              5,
+              19
+            ]
+          ],
+          "lost": [],
+          "elapsed": 13.199599999999961,
+          "finished": false,
+          "target": 500,
+          "targetReached": false,
+          "fruitCount": 1
+        },
+        "guest": {
+          "version": 1,
+          "revision": 1,
+          "banked": 19,
+          "soldIds": [
+            5
+          ],
+          "cargo": {
+            "apple": 1
+          },
+          "secured": [
+            [
+              5,
+              19
+            ]
+          ],
+          "lost": [],
+          "elapsed": 13.149599999999962,
+          "finished": false,
+          "target": 500,
+          "targetReached": false,
+          "fruitCount": 1
+        }
+      }
+    },
+    {
+      "pass": true,
+      "name": "repeated empty-handed guest E cannot count the sale twice",
+      "detail": {}
+    }
+  ],
+  "failure": null,
+  "errors": [],
+  "warnings": [
+    "solo: WebGL: CONTEXT_LOST_WEBGL: loseContext: context lost",
+    "solo: [.WebGL-0x2ffc00187e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "solo: [.WebGL-0x2ffc00187e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "solo: [.WebGL-0x2ffc00187e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "solo: [.WebGL-0x2ffc00187e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+  ],
+  "final": {
+    "pos": [
+      -3,
+      7.560804820916319,
+      31
+    ],
+    "eye": [
+      -3,
+      9.19080482091632,
+      31
+    ],
+    "yaw": 1.5707963267948966,
+    "pitch": -0.09,
+    "playerState": "active",
+    "health": 100,
+    "downed": false,
+    "synthetic": false,
+    "locked": false,
+    "sensitivity": 0.0022,
+    "invertY": false,
+    "gameSeconds": 0,
+    "orchardRun": true,
+    "visualMode": "voxel",
+    "spawn": [
+      -3,
+      7.560804820916319,
+      31
+    ],
+    "crate": [
+      -7,
+      7.528194420368917,
+      27
+    ],
+    "safeRadius": 6,
+    "sellRadius": 1.9,
+    "carried": null,
+    "heavy": false,
+    "basket": [],
+    "basketCapacity": 9,
+    "targetKind": null,
+    "targetId": null,
+    "targetPlantId": -1,
+    "prompt": null,
+    "nearCrate": false,
+    "money": 671,
+    "activeTool": "hand",
+    "cannonFires": 0,
+    "extraction": {
+      "version": 1,
+      "revision": 4,
+      "banked": 671,
+      "soldIds": [
+        5,
+        55,
+        57
+      ],
+      "cargo": {
+        "apple": 1,
+        "boulderplum": 2
+      },
+      "secured": [
+        [
+          5,
+          19
+        ],
+        [
+          55,
+          326
+        ],
+        [
+          57,
+          326
+        ]
+      ],
+      "lost": [],
+      "elapsed": 71.24700000000306,
+      "finished": true,
+      "target": 500,
+      "targetReached": true,
+      "fruitCount": 3
+    },
+    "encounters": {
+      "revision": 3,
+      "encounters": [
+        {
+          "kind": "mimic",
+          "position": [
+            -23,
+            7.447660481169376,
+            22
+          ],
+          "heading": 0,
+          "phase": "defeated",
+          "timeLeft": 0,
+          "health": 0,
+          "baited": false,
+          "capturedVictimId": null,
+          "captureTimeLeft": 0,
+          "captureAim": null,
+          "dormant": false,
+          "returning": false,
+          "pendingHeading": null,
+          "chargeStart": null,
+          "gumTimeLeft": 0,
+          "gumFruitId": null
+        },
+        {
+          "kind": "snapjaw",
+          "position": [
+            -29,
+            7.537268130918263,
+            17
+          ],
+          "heading": 0,
+          "phase": "idle",
+          "timeLeft": 0,
+          "health": 2,
+          "baited": false,
+          "capturedVictimId": null,
+          "captureTimeLeft": 0,
+          "captureAim": null,
+          "dormant": true,
+          "returning": false,
+          "pendingHeading": null,
+          "chargeStart": null,
+          "gumTimeLeft": 0,
+          "gumFruitId": null
+        }
+      ],
+      "projectiles": [],
+      "nextMimicImpactId": 1,
+      "mimicGrace": [],
+      "nextFlingId": 1,
+      "flights": [],
+      "snapjawGrace": []
+    },
+    "agitation": {
+      "pressure": 0,
+      "warning": false,
+      "at": [
+        -35.98579613613618,
+        10.33733916485898,
+        27.01804461739077
+      ],
+      "acceptedIds": [
+        "trunk:15:22.18333333333336",
+        "trunk:15:22.400000000000013",
+        "trunk:15:22.616666666666667",
+        "trunk:15:22.816666666666656",
+        "trunk:15:23.03333333333331",
+        "trunk:15:23.249999999999964",
+        "trunk:15:23.46666666666662",
+        "trunk:15:23.666666666666607",
+        "rare-fruit:55",
+        "rare-fruit:57"
+      ]
+    },
+    "fruit": [
+      {
+        "id": 3,
+        "species": "apple",
+        "pos": [
+          -14.61752329204405,
+          10.529616813763298,
+          30.965362343185483
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17,
+        "diameter": 0.34,
+        "mass": 1.1,
+        "value": 19,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 2
+      },
+      {
+        "id": 4,
+        "species": "apple",
+        "pos": [
+          -13.954681629662524,
+          10.682866879086822,
+          31.777436061313722
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17,
+        "diameter": 0.34,
+        "mass": 1.1,
+        "value": 19,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 2
+      },
+      {
+        "id": 6,
+        "species": "apple",
+        "pos": [
+          -16.109286379801183,
+          9.797500260000941,
+          31.520557702359387
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17,
+        "diameter": 0.34,
+        "mass": 1.1,
+        "value": 19,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 2
+      },
+      {
+        "id": 7,
+        "species": "apple",
+        "pos": [
+          -17.178320684083264,
+          9.749256650281415,
+          31.52320212268999
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17,
+        "diameter": 0.34,
+        "mass": 1.1,
+        "value": 19,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 2
+      },
+      {
+        "id": 8,
+        "species": "apple",
+        "pos": [
+          -16.895389808873695,
+          10.002727879129909,
+          31.205627301886995
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.17,
+        "diameter": 0.34,
+        "mass": 1.1,
+        "value": 19,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 2
+      },
+      {
+        "id": 10,
+        "species": "orange",
+        "pos": [
+          -18.965235306396544,
+          10.053148637677719,
+          35.5644519339937
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16,
+        "diameter": 0.32,
+        "mass": 1,
+        "value": 23,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 9
+      },
+      {
+        "id": 11,
+        "species": "orange",
+        "pos": [
+          -16.890279022409317,
+          10.184979311936866,
+          34.54482043268086
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16,
+        "diameter": 0.32,
+        "mass": 1,
+        "value": 23,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 9
+      },
+      {
+        "id": 12,
+        "species": "orange",
+        "pos": [
+          -16.50609157686149,
+          9.7618872866314,
+          35.07694145760483
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16,
+        "diameter": 0.32,
+        "mass": 1,
+        "value": 23,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 9
+      },
+      {
+        "id": 13,
+        "species": "orange",
+        "pos": [
+          -17.344476823536954,
+          9.791089598720774,
+          36.64711564487411
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16,
+        "diameter": 0.32,
+        "mass": 1,
+        "value": 23,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 9
+      },
+      {
+        "id": 14,
+        "species": "orange",
+        "pos": [
+          -17.193600923415257,
+          9.792911231645736,
+          34.703850614156785
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16,
+        "diameter": 0.32,
+        "mass": 1,
+        "value": 23,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 9
+      },
+      {
+        "id": 16,
+        "species": "apple",
+        "pos": [
+          -17.525300979614258,
+          7.5701680183410645,
+          24.51041030883789
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.17,
+        "diameter": 0.34,
+        "mass": 1.1,
+        "value": 19,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": null
+      },
+      {
+        "id": 17,
+        "species": "apple",
+        "pos": [
+          -15.736266136169434,
+          7.584482192993164,
+          18.21772575378418
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.17,
+        "diameter": 0.34,
+        "mass": 1.1,
+        "value": 19,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": null
+      },
+      {
+        "id": 18,
+        "species": "apple",
+        "pos": [
+          -11.486526489257812,
+          7.571396350860596,
+          30.518627166748047
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.17,
+        "diameter": 0.34,
+        "mass": 1.1,
+        "value": 19,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": null
+      },
+      {
+        "id": 19,
+        "species": "apple",
+        "pos": [
+          -16.64914894104004,
+          7.571955680847168,
+          27.36385726928711
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.17,
+        "diameter": 0.34,
+        "mass": 1.1,
+        "value": 19,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": null
+      },
+      {
+        "id": 20,
+        "species": "apple",
+        "pos": [
+          -17.76811408996582,
+          7.570581912994385,
+          24.74836540222168
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.17,
+        "diameter": 0.34,
+        "mass": 1.1,
+        "value": 19,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": null
+      },
+      {
+        "id": 21,
+        "species": "apple",
+        "pos": [
+          -17.409934997558594,
+          7.570307731628418,
+          25.80059051513672
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.17,
+        "diameter": 0.34,
+        "mass": 1.1,
+        "value": 19,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": null
+      },
+      {
+        "id": 22,
+        "species": "apple",
+        "pos": [
+          -17.679027557373047,
+          7.5706586837768555,
+          26.145034790039062
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.17,
+        "diameter": 0.34,
+        "mass": 1.1,
+        "value": 19,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": null
+      },
+      {
+        "id": 23,
+        "species": "apple",
+        "pos": [
+          -14.576066017150879,
+          7.581558704376221,
+          33.519859313964844
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.17,
+        "diameter": 0.34,
+        "mass": 1.1,
+        "value": 19,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": null
+      },
+      {
+        "id": 24,
+        "species": "apple",
+        "pos": [
+          -14.948283195495605,
+          7.578783988952637,
+          32.41518020629883
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.17,
+        "diameter": 0.34,
+        "mass": 1.1,
+        "value": 19,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": null
+      },
+      {
+        "id": 25,
+        "species": "apple",
+        "pos": [
+          -17.53206443786621,
+          7.571529388427734,
+          27.513126373291016
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.17,
+        "diameter": 0.34,
+        "mass": 1.1,
+        "value": 19,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": null
+      },
+      {
+        "id": 27,
+        "species": "orange",
+        "pos": [
+          -26.468738398407865,
+          11.448062171073111,
+          29.867970719657997
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16,
+        "diameter": 0.32,
+        "mass": 1,
+        "value": 23,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 26
+      },
+      {
+        "id": 28,
+        "species": "orange",
+        "pos": [
+          -27.460233932425847,
+          11.363494161239895,
+          28.848533127397754
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16,
+        "diameter": 0.32,
+        "mass": 1,
+        "value": 23,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 26
+      },
+      {
+        "id": 29,
+        "species": "orange",
+        "pos": [
+          -28.40882285967713,
+          10.590401905943244,
+          32.10822451027224
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16,
+        "diameter": 0.32,
+        "mass": 1,
+        "value": 23,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 26
+      },
+      {
+        "id": 30,
+        "species": "orange",
+        "pos": [
+          -27.05133835151103,
+          10.604803759621412,
+          29.718462812974508
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16,
+        "diameter": 0.32,
+        "mass": 1,
+        "value": 23,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 26
+      },
+      {
+        "id": 31,
+        "species": "orange",
+        "pos": [
+          -26.73660833109562,
+          10.845579276286742,
+          28.994847931691723
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16,
+        "diameter": 0.32,
+        "mass": 1,
+        "value": 23,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 26
+      },
+      {
+        "id": 32,
+        "species": "orange",
+        "pos": [
+          -26.380161394728965,
+          10.543025630789078,
+          30.908323766646454
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.16,
+        "diameter": 0.32,
+        "mass": 1,
+        "value": 23,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 26
+      },
+      {
+        "id": 34,
+        "species": "watermelon",
+        "pos": [
+          -23.985576220897546,
+          7.7923678356246215,
+          20.015185367294958
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.4,
+        "diameter": 0.8,
+        "mass": 22,
+        "value": 163,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 33
+      },
+      {
+        "id": 36,
+        "species": "puffmelon",
+        "pos": [
+          3.385327100753784,
+          8.2230224609375,
+          40.16999435424805
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.28,
+        "diameter": 0.56,
+        "mass": 1.9,
+        "value": 202,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": null
+      },
+      {
+        "id": 37,
+        "species": "puffmelon",
+        "pos": [
+          6.2177324295043945,
+          7.506261825561523,
+          40.944435119628906
+        ],
+        "state": "free",
+        "speed": 0,
+        "radius": 0.28,
+        "diameter": 0.56,
+        "mass": 1.9,
+        "value": 202,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": null
+      },
+      {
+        "id": 39,
+        "species": "puffmelon",
+        "pos": [
+          -28.163085066664546,
+          8.749913161047969,
+          22.48665808870482
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.28,
+        "diameter": 0.56,
+        "mass": 1.9,
+        "value": 202,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 38
+      },
+      {
+        "id": 40,
+        "species": "puffmelon",
+        "pos": [
+          -28.35433902260139,
+          8.760333930752005,
+          23.385105146223946
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.28,
+        "diameter": 0.56,
+        "mass": 1.9,
+        "value": 202,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 38
+      },
+      {
+        "id": 42,
+        "species": "puffmelon",
+        "pos": [
+          -32.3402763047064,
+          9.050586352447162,
+          19.329167035859125
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.28,
+        "diameter": 0.56,
+        "mass": 1.9,
+        "value": 202,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 41
+      },
+      {
+        "id": 43,
+        "species": "puffmelon",
+        "pos": [
+          -31.530412012427657,
+          9.120602139878526,
+          19.187908564047397
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.28,
+        "diameter": 0.56,
+        "mass": 1.9,
+        "value": 202,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 41
+      },
+      {
+        "id": 45,
+        "species": "gluefruit",
+        "pos": [
+          -26.43148037847818,
+          8.21808203628642,
+          15.096248845326114
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15,
+        "diameter": 0.3,
+        "mass": 1.4,
+        "value": 90,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 44
+      },
+      {
+        "id": 46,
+        "species": "gluefruit",
+        "pos": [
+          -26.90186549964887,
+          8.284627869213269,
+          14.447489981138444
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15,
+        "diameter": 0.3,
+        "mass": 1.4,
+        "value": 90,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 44
+      },
+      {
+        "id": 47,
+        "species": "gluefruit",
+        "pos": [
+          -27.55881366322943,
+          8.18690893713268,
+          15.080807573672685
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15,
+        "diameter": 0.3,
+        "mass": 1.4,
+        "value": 90,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 44
+      },
+      {
+        "id": 48,
+        "species": "gluefruit",
+        "pos": [
+          -27.294663856218566,
+          8.082636340608742,
+          15.490295020386567
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15,
+        "diameter": 0.3,
+        "mass": 1.4,
+        "value": 90,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 44
+      },
+      {
+        "id": 50,
+        "species": "gluefruit",
+        "pos": [
+          -30.959792255119943,
+          8.811113861217363,
+          19.424968336696402
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15,
+        "diameter": 0.3,
+        "mass": 1.4,
+        "value": 90,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 49
+      },
+      {
+        "id": 51,
+        "species": "gluefruit",
+        "pos": [
+          -31.573552761398314,
+          8.804098183185411,
+          19.95479143462268
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15,
+        "diameter": 0.3,
+        "mass": 1.4,
+        "value": 90,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 49
+      },
+      {
+        "id": 52,
+        "species": "gluefruit",
+        "pos": [
+          -31.323286746116562,
+          8.853051515927818,
+          20.464392480776233
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15,
+        "diameter": 0.3,
+        "mass": 1.4,
+        "value": 90,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 49
+      },
+      {
+        "id": 53,
+        "species": "gluefruit",
+        "pos": [
+          -30.455595830901427,
+          8.938309030313032,
+          20.130415951122334
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.15,
+        "diameter": 0.3,
+        "mass": 1.4,
+        "value": 90,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 49
+      }
+    ],
+    "plants": [
+      {
+        "id": 2,
+        "pos": [
+          -15,
+          7.408466081579101,
+          32
+        ],
+        "type": "appleTree"
+      },
+      {
+        "id": 9,
+        "pos": [
+          -18,
+          7.431309365021379,
+          35
+        ],
+        "type": "orangeTree"
+      },
+      {
+        "id": 15,
+        "pos": [
+          -23,
+          7.439347688791054,
+          27
+        ],
+        "type": "appleTree"
+      },
+      {
+        "id": 26,
+        "pos": [
+          -28,
+          7.61820872981272,
+          30
+        ],
+        "type": "orangeTree"
+      },
+      {
+        "id": 33,
+        "pos": [
+          -24,
+          7.467472657251704,
+          20
+        ],
+        "type": "melonVine"
+      },
+      {
+        "id": 35,
+        "pos": [
+          -22,
+          7.429270215351143,
+          24
+        ],
+        "type": "puffBush"
+      },
+      {
+        "id": 38,
+        "pos": [
+          -28,
+          7.748883293330708,
+          23
+        ],
+        "type": "puffBush"
+      },
+      {
+        "id": 41,
+        "pos": [
+          -32,
+          8.060391463045256,
+          19
+        ],
+        "type": "puffBush"
+      },
+      {
+        "id": 44,
+        "pos": [
+          -27,
+          7.4678531547035725,
+          15
+        ],
+        "type": "gumTree"
+      },
+      {
+        "id": 49,
+        "pos": [
+          -31,
+          8.07888711973979,
+          20
+        ],
+        "type": "gumTree"
+      },
+      {
+        "id": 54,
+        "pos": [
+          -34,
+          9.834021627278672,
+          25
+        ],
+        "type": "boulderBush"
+      },
+      {
+        "id": 56,
+        "pos": [
+          -36,
+          9.584956964001613,
+          27
+        ],
+        "type": "boulderBush"
+      },
+      {
+        "id": 58,
+        "pos": [
+          -3.9081169079632154,
+          7.4324407038314515,
+          41.67766952966369
+        ],
+        "type": "appleTree"
+      },
+      {
+        "id": 59,
+        "pos": [
+          -12.667547326142575,
+          7.409652330338537,
+          47.09698831278217
+        ],
+        "type": "orangeTree"
+      },
+      {
+        "id": 60,
+        "pos": [
+          -23,
+          7.437899854879706,
+          49
+        ],
+        "type": "appleTree"
+      },
+      {
+        "id": 61,
+        "pos": [
+          -33.332452673857425,
+          7.430346611236904,
+          47.09698831278217
+        ],
+        "type": "orangeTree"
+      },
+      {
+        "id": 62,
+        "pos": [
+          -42.09188309203678,
+          7.444771931086803,
+          41.67766952966369
+        ],
+        "type": "appleTree"
+      },
+      {
+        "id": 63,
+        "pos": [
+          -47.944747377804745,
+          7.433285855772928,
+          33.56708580912725
+        ],
+        "type": "orangeTree"
+      },
+      {
+        "id": 64,
+        "pos": [
+          -50,
+          7.41238139401857,
+          24.000000000000004
+        ],
+        "type": "appleTree"
+      },
+      {
+        "id": 65,
+        "pos": [
+          -47.944747377804745,
+          7.403351577778007,
+          14.432914190872758
+        ],
+        "type": "orangeTree"
+      },
+      {
+        "id": 66,
+        "pos": [
+          -42.09188309203679,
+          7.419288790622929,
+          6.322330470336315
+        ],
+        "type": "appleTree"
+      },
+      {
+        "id": 67,
+        "pos": [
+          -33.33245267385744,
+          7.460453362115523,
+          0.9030116872178375
+        ],
+        "type": "orangeTree"
+      },
+      {
+        "id": 68,
+        "pos": [
+          -23.000000000000004,
+          7.4409191401626655,
+          -1
+        ],
+        "type": "appleTree"
+      },
+      {
+        "id": 69,
+        "pos": [
+          -12.66754732614257,
+          7.436729792623134,
+          0.903011687217834
+        ],
+        "type": "orangeTree"
+      },
+      {
+        "id": 70,
+        "pos": [
+          -3.9081169079632225,
+          7.432894667378454,
+          6.322330470336308
+        ],
+        "type": "appleTree"
+      },
+      {
+        "id": 71,
+        "pos": [
+          1.9447473778047346,
+          7.445867708157974,
+          14.43291419087274
+        ],
+        "type": "orangeTree"
+      }
+    ],
+    "net": {
+      "connected": false,
+      "isHost": true,
+      "me": "",
+      "authoritative": true,
+      "remotes": []
+    },
+    "save": {
+      "slot": "replay-orchard-proof-muq21yk1",
+      "playtime": 71.3,
+      "lastSaved": 0,
+      "has": true,
+      "enabled": true,
+      "resumed": true
+    },
+    "shell": {
+      "visible": true,
+      "text": "\n      RIPE RIOT · HARVEST & HAULHAUL SECURED\n      Your produce is banked. You met the $500 target.\n        Secured cargo$671\n        Fruit banked3\n        Run time1:11\n      New orchard run\n      \n        Sunpatch expedition\n      WASD Move · Mouse Look · Space Jump · Shift Sprint\n        1 Mallet & hands · 2 Air Cannon · 3 Catch Net · E Pick / shake / bank / finish\n        LMB Use tool or throw held fruit · RMB Stow held fruit / cannon hop / lay net · Esc Pause\n      Your run is saved separately from Sunpatch.\n      4afa199",
+      "mode": "results"
+    },
+    "events": [],
+    "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+  },
+  "timeline": [
+    {
+      "wallSeconds": 7.81,
+      "stage": "boot",
+      "kind": "boot",
+      "client": "solo",
+      "fresh": true,
+      "mode": true,
+      "extraction": {
+        "version": 1,
+        "revision": 0,
+        "banked": 0,
+        "soldIds": [],
+        "cargo": {},
+        "secured": [],
+        "lost": [],
+        "elapsed": 0,
+        "finished": false,
+        "target": 500,
+        "targetReached": false,
+        "fruitCount": 0
+      },
+      "save": {
+        "slot": "replay-orchard-proof-muq21yk1",
+        "playtime": 0,
+        "lastSaved": 0,
+        "has": false,
+        "enabled": true,
+        "resumed": false
+      },
+      "shell": {
+        "visible": true,
+        "text": "\n      RIPE RIOT · HARVEST & HAULORCHARD RUN\n      Get $500 of produce into the crate. Shake a loaded tree, redirect a rolling plum, survive the trouble you stir up — then bring the haul home.\n           Bank small hauls whenever you want. Reach $500 and keep going, or finish at the crate with empty hands.\n      Begin harvesting\n           New run · separate save\n      Open local co-opControls\n        Sunpatch expedition\n      WASD Move · Mouse Look · Space Jump · Shift Sprint\n        1 Mallet & hands · 2 Air Cannon · 3 Catch Net · E Pick / shake / bank / finish\n        LMB Use tool or throw held fruit · RMB Stow held fruit / cannon hop / lay net · Esc Pause\n      Unsecured cargo is lost on evacuation. Banked cargo stays safe.\n      4afa199",
+        "mode": "title"
+      },
+      "authoredCount": 44,
+      "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+    },
+    {
+      "wallSeconds": 7.83,
+      "stage": "ordinary-front-door",
+      "kind": "pass",
+      "name": "fresh Orchard Run title is visible",
+      "detail": {}
+    },
+    {
+      "wallSeconds": 7.89,
+      "stage": "ordinary-front-door",
+      "kind": "front-door-click",
+      "client": "solo",
+      "attempt": 0,
+      "action": "play"
+    },
+    {
+      "wallSeconds": 9.01,
+      "stage": "ordinary-front-door",
+      "kind": "pass",
+      "name": "fresh run starts near extraction crate with empty ledger",
+      "detail": {}
+    },
+    {
+      "wallSeconds": 10.71,
+      "stage": "ordinary-front-door",
+      "kind": "capture",
+      "name": "00-clearing",
+      "client": "solo",
+      "pos": [
+        -3.0000095305589696,
+        7.441239044032345,
+        30.999990520282864
+      ]
+    },
+    {
+      "wallSeconds": 10.73,
+      "stage": "ordinary-front-door",
+      "kind": "waypoint",
+      "client": "solo",
+      "point": [
+        -12.806824825708583,
+        0,
+        31.418773879628908
+      ],
+      "radius": 0.65
+    },
+    {
+      "wallSeconds": 13.95,
+      "stage": "ordinary-front-door",
+      "kind": "ordinary-pick",
+      "client": "solo",
+      "id": 5,
+      "species": "apple",
+      "source": "attached",
+      "carried": 5,
+      "basket": [],
+      "pos": [
+        -12.372747469304146,
+        7.425216553112778,
+        31.433197408106096
+      ]
+    },
+    {
+      "wallSeconds": 13.95,
+      "stage": "ordinary-front-door",
+      "kind": "pass",
+      "name": "ordinary E picks real quiet-pocket fruit",
+      "detail": {}
+    },
+    {
+      "wallSeconds": 13.96,
+      "stage": "solo-haul-bank",
+      "kind": "pass",
+      "name": "only authored cargo is carried",
+      "detail": {
+        "client": "solo",
+        "ids": [
+          5
+        ]
+      }
+    },
+    {
+      "wallSeconds": 13.96,
+      "stage": "solo-haul-bank",
+      "kind": "waypoint",
+      "client": "solo",
+      "point": [
+        -7,
+        0,
+        30.1
+      ],
+      "radius": 1.1
+    },
+    {
+      "wallSeconds": 16.99,
+      "stage": "solo-haul-bank",
+      "kind": "ordinary-obstacle-recovery",
+      "client": "solo",
+      "pos": [
+        -10.79103470481194,
+        7.424580933366341,
+        30.097740488269203
+      ],
+      "point": [
+        -7,
+        0,
+        30.1
+      ],
+      "stuck": 3
+    },
+    {
+      "wallSeconds": 18.85,
+      "stage": "solo-haul-bank",
+      "kind": "ordinary-obstacle-recovery",
+      "client": "solo",
+      "pos": [
+        -9.468862793713543,
+        7.427436046049165,
+        28.71818219206734
+      ],
+      "point": [
+        -7,
+        0,
+        30.1
+      ],
+      "stuck": 3
+    },
+    {
+      "wallSeconds": 20.52,
+      "stage": "solo-haul-bank",
+      "kind": "waypoint",
+      "client": "solo",
+      "point": [
+        -7,
+        0,
+        29.5
+      ],
+      "radius": 0.45
+    },
+    {
+      "wallSeconds": 22,
+      "stage": "solo-haul-bank",
+      "kind": "event",
+      "client": "solo",
+      "event": {
+        "name": "fruit:sold",
+        "gameSeconds": 11.683333333333495,
+        "payload": {
+          "fruitId": 5,
+          "species": "apple",
+          "value": 19,
+          "quality": "Perfect",
+          "mass": 1.1
+        }
+      }
+    },
+    {
+      "wallSeconds": 22,
+      "stage": "solo-haul-bank",
+      "kind": "pass",
+      "name": "ordinary E banks physical carried cargo",
+      "detail": {
+        "client": "solo",
+        "ids": [
+          5
+        ],
+        "before": 0,
+        "after": 19,
+        "walletBefore": 0,
+        "walletAfter": 19,
+        "secured": [
+          [
+            5,
+            19
+          ]
+        ]
+      }
+    },
+    {
+      "wallSeconds": 23.25,
+      "stage": "solo-haul-bank",
+      "kind": "capture",
+      "name": "01-partial-bank",
+      "client": "solo",
+      "pos": [
+        -7.10994190377792,
+        7.5436678159182105,
+        29.10643866024378
+      ]
+    },
+    {
+      "wallSeconds": 23.25,
+      "stage": "solo-haul-bank",
+      "kind": "pass",
+      "name": "ordinary walk and E secure a partial haul",
+      "detail": {}
+    },
+    {
+      "wallSeconds": 23.26,
+      "stage": "solo-haul-bank",
+      "kind": "pass",
+      "name": "partial bank is kept and harvesting can continue before $500",
+      "detail": {
+        "extraction": {
+          "version": 1,
+          "revision": 1,
+          "banked": 19,
+          "soldIds": [
+            5
+          ],
+          "cargo": {
+            "apple": 1
+          },
+          "secured": [
+            [
+              5,
+              19
+            ]
+          ],
+          "lost": [],
+          "elapsed": 11.91619999999997,
+          "finished": false,
+          "target": 500,
+          "targetReached": false,
+          "fruitCount": 1
+        }
+      }
+    },
+    {
+      "wallSeconds": 23.27,
+      "stage": "ordinary-harvest-escalation",
+      "kind": "waypoint",
+      "client": "solo",
+      "point": [
+        -20.9,
+        0,
+        27
+      ],
+      "radius": 0.5
+    },
+    {
+      "wallSeconds": 25.57,
+      "stage": "ordinary-harvest-escalation",
+      "kind": "ordinary-obstacle-recovery",
+      "client": "solo",
+      "pos": [
+        -8.554903918547012,
+        7.548149566467172,
+        28.068933998121956
+      ],
+      "point": [
+        -20.9,
+        0,
+        27
+      ],
+      "stuck": 3
+    },
+    {
+      "wallSeconds": 29.26,
+      "stage": "ordinary-harvest-escalation",
+      "kind": "ordinary-obstacle-recovery",
+      "client": "solo",
+      "pos": [
+        -9.164973596384508,
+        7.427865219575507,
+        29.401093212377493
+      ],
+      "point": [
+        -20.9,
+        0,
+        27
+      ],
+      "stuck": 3
+    },
+    {
+      "wallSeconds": 33.17,
+      "stage": "ordinary-harvest-escalation",
+      "kind": "pass",
+      "name": "ordinary walking reaches loaded tree",
+      "detail": {}
+    },
+    {
+      "wallSeconds": 35.06,
+      "stage": "ordinary-harvest-escalation",
+      "kind": "pass",
+      "name": "loaded tree shakes using ordinary E",
+      "detail": {}
+    },
+    {
+      "wallSeconds": 35.67,
+      "stage": "ordinary-harvest-escalation",
+      "kind": "pass",
+      "name": "harvesting wakes Mimic through the director",
+      "detail": {
+        "agitation": {
+          "pressure": 8.759999999999962,
+          "warning": false,
+          "at": [
+            -23,
+            7.439347688791054,
+            27
+          ],
+          "acceptedIds": [
+            "trunk:15:22.18333333333336",
+            "trunk:15:22.400000000000013",
+            "trunk:15:22.616666666666667",
+            "trunk:15:22.816666666666656",
+            "trunk:15:23.03333333333331",
+            "trunk:15:23.249999999999964",
+            "trunk:15:23.46666666666662",
+            "trunk:15:23.666666666666607"
+          ]
+        },
+        "mimic": {
+          "kind": "mimic",
+          "position": [
+            -23,
+            7.447660481169376,
+            22
+          ],
+          "heading": 0.43305442609942674,
+          "phase": "warn",
+          "timeLeft": 0.7499999999999999,
+          "health": 3,
+          "baited": false,
+          "capturedVictimId": null,
+          "captureTimeLeft": 0,
+          "captureAim": null,
+          "dormant": false,
+          "returning": false,
+          "pendingHeading": null,
+          "chargeStart": null,
+          "gumTimeLeft": 0,
+          "gumFruitId": null
+        }
+      }
+    },
+    {
+      "wallSeconds": 37.33,
+      "stage": "ordinary-harvest-escalation",
+      "kind": "capture",
+      "name": "02-harvest-chaos",
+      "client": "solo",
+      "pos": [
+        -20.646212515759608,
+        7.4372728556702,
+        27.09116512376013
+      ],
+      "encounters": {
+        "revision": 1468,
+        "encounters": [
+          {
+            "kind": "mimic",
+            "position": [
+              -23,
+              7.447660481169376,
+              22
+            ],
+            "heading": 0.43305442609942674,
+            "phase": "warn",
+            "timeLeft": 0.7499999999999999,
+            "health": 3,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0,
+            "captureAim": null,
+            "dormant": false,
+            "returning": false,
+            "pendingHeading": null,
+            "chargeStart": null,
+            "gumTimeLeft": 0,
+            "gumFruitId": null
+          },
+          {
+            "kind": "snapjaw",
+            "position": [
+              -29,
+              7.537268130918263,
+              17
+            ],
+            "heading": 0,
+            "phase": "idle",
+            "timeLeft": 0,
+            "health": 2,
+            "baited": false,
+            "capturedVictimId": null,
+            "captureTimeLeft": 0,
+            "captureAim": null,
+            "dormant": false,
+            "returning": false,
+            "pendingHeading": null,
+            "chargeStart": null,
+            "gumTimeLeft": 0,
+            "gumFruitId": null
+          }
+        ],
+        "projectiles": [],
+        "nextMimicImpactId": 1,
+        "mimicGrace": [],
+        "nextFlingId": 1,
+        "flights": [],
+        "snapjawGrace": []
+      },
+      "agitation": {
+        "pressure": 8.759999999999962,
+        "warning": false,
+        "at": [
+          -23,
+          7.439347688791054,
+          27
+        ],
+        "acceptedIds": [
+          "trunk:15:22.18333333333336",
+          "trunk:15:22.400000000000013",
+          "trunk:15:22.616666666666667",
+          "trunk:15:22.816666666666656",
+          "trunk:15:23.03333333333331",
+          "trunk:15:23.249999999999964",
+          "trunk:15:23.46666666666662",
+          "trunk:15:23.666666666666607"
+        ]
+      },
+      "looseFruit": 10
+    },
+    {
+      "wallSeconds": 37.55,
+      "stage": "ordinary-mallet-subdue",
+      "kind": "waypoint",
+      "client": "solo",
+      "point": [
+        -22.034804243407873,
+        0,
+        24.087677453884233
+      ],
+      "radius": 0.4
+    },
+    {
+      "wallSeconds": 40.75,
+      "stage": "ordinary-mallet-subdue",
+      "kind": "ordinary-mallet-swing",
+      "swings": 1,
+      "health": 2
+    },
+    {
+      "wallSeconds": 41.77,
+      "stage": "ordinary-mallet-subdue",
+      "kind": "ordinary-mallet-swing",
+      "swings": 2,
+      "health": 1
+    },
+    {
+      "wallSeconds": 42.69,
+      "stage": "ordinary-mallet-subdue",
+      "kind": "event",
+      "client": "solo",
+      "event": {
+        "name": "encounter:defeated",
+        "gameSeconds": 29.599999999999604,
+        "payload": {
+          "kind": "mimic",
+          "position": {
+            "x": -22.5439692042473,
+            "y": 7.439628767460211,
+            "z": 22.625636195991103
+          },
+          "actorId": "solo"
+        }
+      }
+    },
+    {
+      "wallSeconds": 42.69,
+      "stage": "ordinary-mallet-subdue",
+      "kind": "ordinary-mallet-swing",
+      "swings": 3,
+      "health": 0
+    },
+    {
+      "wallSeconds": 42.7,
+      "stage": "ordinary-mallet-subdue",
+      "kind": "pass",
+      "name": "real Picking Mallet subdues Mimic",
+      "detail": {
+        "swings": 3
+      }
+    },
+    {
+      "wallSeconds": 42.7,
+      "stage": "ordinary-mallet-subdue",
+      "kind": "pass",
+      "name": "enemy defeat gives neither wallet money nor extracted cargo",
+      "detail": {
+        "bankedBefore": 19,
+        "bankedAfter": 19,
+        "walletBefore": 19,
+        "walletAfter": 19
+      }
+    },
+    {
+      "wallSeconds": 44.14,
+      "stage": "ordinary-mallet-subdue",
+      "kind": "capture",
+      "name": "03-mimic-subdued-no-cash",
+      "client": "solo",
+      "pos": [
+        -22.034299356771164,
+        7.449878573266416,
+        24.196586440133828
+      ]
+    },
+    {
+      "wallSeconds": 44.15,
+      "stage": "ordinary-cargo-target",
+      "kind": "authored-cargo-choice",
+      "candidate": {
+        "id": 55,
+        "species": "boulderplum",
+        "pos": [
+          -33.95960102444033,
+          10.659957781970457,
+          25.050763296299266
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.25,
+        "diameter": 0.5,
+        "mass": 48,
+        "value": 326,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 54
+      }
+    },
+    {
+      "wallSeconds": 44.16,
+      "stage": "ordinary-cargo-target",
+      "kind": "waypoint",
+      "client": "solo",
+      "point": [
+        -32.61285260452683,
+        0,
+        24.954403312845752
+      ],
+      "radius": 0.65
+    },
+    {
+      "wallSeconds": 47.52,
+      "stage": "ordinary-cargo-target",
+      "kind": "ordinary-pick",
+      "client": "solo",
+      "id": 55,
+      "species": "boulderplum",
+      "source": "attached",
+      "carried": 55,
+      "basket": [],
+      "pos": [
+        -32.40791178848384,
+        9.356658121998136,
+        24.949543081786807
+      ]
+    },
+    {
+      "wallSeconds": 47.54,
+      "stage": "solo-haul-bank",
+      "kind": "pass",
+      "name": "only authored cargo is carried",
+      "detail": {
+        "client": "solo",
+        "ids": [
+          55
+        ]
+      }
+    },
+    {
+      "wallSeconds": 47.54,
+      "stage": "solo-haul-bank",
+      "kind": "waypoint",
+      "client": "solo",
+      "point": [
+        -7,
+        0,
+        30.1
+      ],
+      "radius": 1.1
+    },
+    {
+      "wallSeconds": 56.85,
+      "stage": "solo-haul-bank",
+      "kind": "ordinary-obstacle-recovery",
+      "client": "solo",
+      "pos": [
+        -10.83510050879027,
+        7.424544121822029,
+        29.899585142402238
+      ],
+      "point": [
+        -7,
+        0,
+        30.1
+      ],
+      "stuck": 3
+    },
+    {
+      "wallSeconds": 59.64,
+      "stage": "solo-haul-bank",
+      "kind": "ordinary-obstacle-recovery",
+      "client": "solo",
+      "pos": [
+        -9.469453919394393,
+        7.427432201009273,
+        28.719137678434006
+      ],
+      "point": [
+        -7,
+        0,
+        30.1
+      ],
+      "stuck": 3
+    },
+    {
+      "wallSeconds": 61.28,
+      "stage": "solo-haul-bank",
+      "kind": "waypoint",
+      "client": "solo",
+      "point": [
+        -7,
+        0,
+        29.5
+      ],
+      "radius": 0.45
+    },
+    {
+      "wallSeconds": 62.64,
+      "stage": "solo-haul-bank",
+      "kind": "event",
+      "client": "solo",
+      "event": {
+        "name": "fruit:sold",
+        "gameSeconds": 48.399999999998535,
+        "payload": {
+          "fruitId": 55,
+          "species": "boulderplum",
+          "value": 326,
+          "quality": "Perfect",
+          "mass": 48
+        }
+      }
+    },
+    {
+      "wallSeconds": 62.64,
+      "stage": "solo-haul-bank",
+      "kind": "pass",
+      "name": "ordinary E banks physical carried cargo",
+      "detail": {
+        "client": "solo",
+        "ids": [
+          55
+        ],
+        "before": 19,
+        "after": 345,
+        "walletBefore": 19,
+        "walletAfter": 345,
+        "secured": [
+          [
+            55,
+            326
+          ]
+        ]
+      }
+    },
+    {
+      "wallSeconds": 63.89,
+      "stage": "solo-haul-bank",
+      "kind": "capture",
+      "name": "04-secured-cargo",
+      "client": "solo",
+      "pos": [
+        -7.279328662679255,
+        7.431023415403237,
+        29.445020123683335
+      ]
+    },
+    {
+      "wallSeconds": 63.89,
+      "stage": "solo-haul-bank",
+      "kind": "pass",
+      "name": "cargo haul reaches extraction crate",
+      "detail": {}
+    },
+    {
+      "wallSeconds": 63.9,
+      "stage": "solo-haul-bank",
+      "kind": "authored-cargo-choice",
+      "candidate": {
+        "id": 57,
+        "species": "boulderplum",
+        "pos": [
+          -36.00185138923631,
+          10.341209509064873,
+          26.97659183265966
+        ],
+        "state": "attached",
+        "speed": 0,
+        "radius": 0.25,
+        "diameter": 0.5,
+        "mass": 48,
+        "value": 326,
+        "stuckHands": 0,
+        "inflate": 1,
+        "plant": 56
+      }
+    },
+    {
+      "wallSeconds": 63.9,
+      "stage": "solo-haul-bank",
+      "kind": "waypoint",
+      "client": "solo",
+      "point": [
+        -34.657001020483285,
+        0,
+        27.0922324143429
+      ],
+      "radius": 0.65
+    },
+    {
+      "wallSeconds": 65.75,
+      "stage": "solo-haul-bank",
+      "kind": "ordinary-obstacle-recovery",
+      "client": "solo",
+      "pos": [
+        -9.165019152090743,
+        7.427955842958729,
+        29.40109732248254
+      ],
+      "point": [
+        -34.657001020483285,
+        0,
+        27.0922324143429
+      ],
+      "stuck": 3
+    },
+    {
+      "wallSeconds": 72.77,
+      "stage": "solo-haul-bank",
+      "kind": "ordinary-pick",
+      "client": "solo",
+      "id": 57,
+      "species": "boulderplum",
+      "source": "attached",
+      "carried": 57,
+      "basket": [],
+      "pos": [
+        -34.525994886927286,
+        9.582503487417673,
+        27.11831119998282
+      ]
+    },
+    {
+      "wallSeconds": 72.78,
+      "stage": "solo-haul-bank",
+      "kind": "pass",
+      "name": "only authored cargo is carried",
+      "detail": {
+        "client": "solo",
+        "ids": [
+          57
+        ]
+      }
+    },
+    {
+      "wallSeconds": 72.78,
+      "stage": "solo-haul-bank",
+      "kind": "waypoint",
+      "client": "solo",
+      "point": [
+        -7,
+        0,
+        30.1
+      ],
+      "radius": 1.1
+    },
+    {
+      "wallSeconds": 80.7,
+      "stage": "solo-haul-bank",
+      "kind": "ordinary-obstacle-recovery",
+      "client": "solo",
+      "pos": [
+        -10.83503318954525,
+        7.424454749394895,
+        29.91157269843234
+      ],
+      "point": [
+        -7,
+        0,
+        30.1
+      ],
+      "stuck": 3
+    },
+    {
+      "wallSeconds": 83.49,
+      "stage": "solo-haul-bank",
+      "kind": "ordinary-obstacle-recovery",
+      "client": "solo",
+      "pos": [
+        -9.469222196864278,
+        7.427447609439026,
+        28.719067623759095
+      ],
+      "point": [
+        -7,
+        0,
+        30.1
+      ],
+      "stuck": 3
+    },
+    {
+      "wallSeconds": 85.14,
+      "stage": "solo-haul-bank",
+      "kind": "waypoint",
+      "client": "solo",
+      "point": [
+        -7,
+        0,
+        29.5
+      ],
+      "radius": 0.45
+    },
+    {
+      "wallSeconds": 86.51,
+      "stage": "solo-haul-bank",
+      "kind": "event",
+      "client": "solo",
+      "event": {
+        "name": "fruit:sold",
+        "gameSeconds": 71.03333333333059,
+        "payload": {
+          "fruitId": 57,
+          "species": "boulderplum",
+          "value": 326,
+          "quality": "Perfect",
+          "mass": 48
+        }
+      }
+    },
+    {
+      "wallSeconds": 86.51,
+      "stage": "solo-haul-bank",
+      "kind": "pass",
+      "name": "ordinary E banks physical carried cargo",
+      "detail": {
+        "client": "solo",
+        "ids": [
+          57
+        ],
+        "before": 345,
+        "after": 671,
+        "walletBefore": 345,
+        "walletAfter": 671,
+        "secured": [
+          [
+            57,
+            326
+          ]
+        ]
+      }
+    },
+    {
+      "wallSeconds": 87.75,
+      "stage": "solo-haul-bank",
+      "kind": "capture",
+      "name": "04-secured-cargo",
+      "client": "solo",
+      "pos": [
+        -7.274166071611804,
+        7.431184466581966,
+        29.447621983752633
+      ]
+    },
+    {
+      "wallSeconds": 87.75,
+      "stage": "solo-haul-bank",
+      "kind": "pass",
+      "name": "cargo haul reaches extraction crate",
+      "detail": {}
+    },
+    {
+      "wallSeconds": 87.76,
+      "stage": "solo-haul-bank",
+      "kind": "pass",
+      "name": "authored physical cargo reaches the $500 target",
+      "detail": {
+        "extraction": {
+          "version": 1,
+          "revision": 3,
+          "banked": 671,
+          "soldIds": [
+            5,
+            55,
+            57
+          ],
+          "cargo": {
+            "apple": 1,
+            "boulderplum": 2
+          },
+          "secured": [
+            [
+              5,
+              19
+            ],
+            [
+              55,
+              326
+            ],
+            [
+              57,
+              326
+            ]
+          ],
+          "lost": [],
+          "elapsed": 71.24700000000306,
+          "finished": false,
+          "target": 500,
+          "targetReached": true,
+          "fruitCount": 3
+        }
+      }
+    },
+    {
+      "wallSeconds": 87.76,
+      "stage": "solo-haul-bank",
+      "kind": "pass",
+      "name": "reaching $500 does not force departure",
+      "detail": {}
+    },
+    {
+      "wallSeconds": 87.76,
+      "stage": "solo-haul-bank",
+      "kind": "pass",
+      "name": "banked crew is empty-handed at the crate",
+      "detail": {}
+    },
+    {
+      "wallSeconds": 88.47,
+      "stage": "ordinary-finish",
+      "kind": "pass",
+      "name": "empty-handed E at crate opens actual run results",
+      "detail": {
+        "extraction": {
+          "version": 1,
+          "revision": 4,
+          "banked": 671,
+          "soldIds": [
+            5,
+            55,
+            57
+          ],
+          "cargo": {
+            "apple": 1,
+            "boulderplum": 2
+          },
+          "secured": [
+            [
+              5,
+              19
+            ],
+            [
+              55,
+              326
+            ],
+            [
+              57,
+              326
+            ]
+          ],
+          "lost": [],
+          "elapsed": 71.24700000000306,
+          "finished": true,
+          "target": 500,
+          "targetReached": true,
+          "fruitCount": 3
+        },
+        "shell": {
+          "visible": true,
+          "text": "\n      RIPE RIOT · HARVEST & HAULHAUL SECURED\n      Your produce is banked. You met the $500 target.\n        Secured cargo$671\n        Fruit banked3\n        Run time1:11\n      New orchard run\n      \n        Sunpatch expedition\n      WASD Move · Mouse Look · Space Jump · Shift Sprint\n        1 Mallet & hands · 2 Air Cannon · 3 Catch Net · E Pick / shake / bank / finish\n        LMB Use tool or throw held fruit · RMB Stow held fruit / cannon hop / lay net · Esc Pause\n      Your run is saved separately from Sunpatch.\n      4afa199",
+          "mode": "results"
+        }
+      }
+    },
+    {
+      "wallSeconds": 89.67,
+      "stage": "ordinary-finish",
+      "kind": "capture",
+      "name": "05-results",
+      "client": "solo",
+      "pos": [
+        -7.274166452104781,
+        7.431084120714571,
+        29.447621516611328
+      ]
+    },
+    {
+      "wallSeconds": 89.67,
+      "stage": "ordinary-finish",
+      "kind": "pass",
+      "name": "explicit finish writes the isolated Orchard save",
+      "detail": {
+        "save": {
+          "slot": "replay-orchard-proof-muq21yk1",
+          "playtime": 71.3,
+          "lastSaved": 71.2,
+          "has": true,
+          "enabled": true,
+          "resumed": false
+        }
+      }
+    },
+    {
+      "wallSeconds": 97.66,
+      "stage": "ordinary-reload",
+      "kind": "boot",
+      "client": "solo",
+      "fresh": false,
+      "mode": true,
+      "extraction": {
+        "version": 1,
+        "revision": 4,
+        "banked": 671,
+        "soldIds": [
+          5,
+          55,
+          57
+        ],
+        "cargo": {
+          "apple": 1,
+          "boulderplum": 2
+        },
+        "secured": [
+          [
+            5,
+            19
+          ],
+          [
+            55,
+            326
+          ],
+          [
+            57,
+            326
+          ]
+        ],
+        "lost": [],
+        "elapsed": 71.24700000000306,
+        "finished": true,
+        "target": 500,
+        "targetReached": true,
+        "fruitCount": 3
+      },
+      "save": {
+        "slot": "replay-orchard-proof-muq21yk1",
+        "playtime": 71.3,
+        "lastSaved": 0,
+        "has": true,
+        "enabled": true,
+        "resumed": true
+      },
+      "shell": {
+        "visible": true,
+        "text": "\n      RIPE RIOT · HARVEST & HAULHAUL SECURED\n      Your produce is banked. You met the $500 target.\n        Secured cargo$671\n        Fruit banked3\n        Run time1:11\n      New orchard run\n      \n        Sunpatch expedition\n      WASD Move · Mouse Look · Space Jump · Shift Sprint\n        1 Mallet & hands · 2 Air Cannon · 3 Catch Net · E Pick / shake / bank / finish\n        LMB Use tool or throw held fruit · RMB Stow held fruit / cannon hop / lay net · Esc Pause\n      Your run is saved separately from Sunpatch.\n      4afa199",
+        "mode": "results"
+      },
+      "authoredCount": 44,
+      "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+    },
+    {
+      "wallSeconds": 97.68,
+      "stage": "ordinary-reload",
+      "kind": "pass",
+      "name": "reload preserves actual banked value, money and finished results",
+      "detail": {
+        "settled": {
+          "banked": 671,
+          "secured": [
+            [
+              5,
+              19
+            ],
+            [
+              55,
+              326
+            ],
+            [
+              57,
+              326
+            ]
+          ],
+          "lost": [],
+          "money": 671
+        },
+        "extraction": {
+          "version": 1,
+          "revision": 4,
+          "banked": 671,
+          "soldIds": [
+            5,
+            55,
+            57
+          ],
+          "cargo": {
+            "apple": 1,
+            "boulderplum": 2
+          },
+          "secured": [
+            [
+              5,
+              19
+            ],
+            [
+              55,
+              326
+            ],
+            [
+              57,
+              326
+            ]
+          ],
+          "lost": [],
+          "elapsed": 71.24700000000306,
+          "finished": true,
+          "target": 500,
+          "targetReached": true,
+          "fruitCount": 3
+        },
+        "money": 671,
+        "save": {
+          "slot": "replay-orchard-proof-muq21yk1",
+          "playtime": 71.3,
+          "lastSaved": 0,
+          "has": true,
+          "enabled": true,
+          "resumed": true
+        }
+      }
+    },
+    {
+      "wallSeconds": 97.68,
+      "stage": "ordinary-reload",
+      "kind": "pass",
+      "name": "reload does not resurrect sold authored cargo",
+      "detail": {
+        "securedIds": [
+          5,
+          55,
+          57
+        ]
+      }
+    },
+    {
+      "wallSeconds": 98.89,
+      "stage": "ordinary-reload",
+      "kind": "pass",
+      "name": "reloaded results and repeated E do not duplicate payout",
+      "detail": {}
+    },
+    {
+      "wallSeconds": 100.54,
+      "stage": "ordinary-reload",
+      "kind": "capture",
+      "name": "06-results-reloaded",
+      "client": "solo",
+      "pos": [
+        -3,
+        7.560804820916319,
+        31
+      ]
+    },
+    {
+      "wallSeconds": 108.71,
+      "stage": "staged-room-ordinary-guest-bank",
+      "kind": "boot",
+      "client": "coop-A",
+      "fresh": true,
+      "mode": true,
+      "extraction": {
+        "version": 1,
+        "revision": 0,
+        "banked": 0,
+        "soldIds": [],
+        "cargo": {},
+        "secured": [],
+        "lost": [],
+        "elapsed": 0,
+        "finished": false,
+        "target": 500,
+        "targetReached": false,
+        "fruitCount": 0
+      },
+      "save": {
+        "slot": "replay-orchard-proof-A-muq243gx",
+        "playtime": 0,
+        "lastSaved": 0,
+        "has": false,
+        "enabled": true,
+        "resumed": false
+      },
+      "shell": {
+        "visible": true,
+        "text": "\n      RIPE RIOT · HARVEST & HAULORCHARD RUN\n      Get $500 of produce into the crate. Shake a loaded tree, redirect a rolling plum, survive the trouble you stir up — then bring the haul home.\n           Bank small hauls whenever you want. Reach $500 and keep going, or finish at the crate with empty hands.\n      Begin harvesting\n           New run · separate save\n      Open local co-opControls\n        Sunpatch expedition\n      WASD Move · Mouse Look · Space Jump · Shift Sprint\n        1 Mallet & hands · 2 Air Cannon · 3 Catch Net · E Pick / shake / bank / finish\n        LMB Use tool or throw held fruit · RMB Stow held fruit / cannon hop / lay net · Esc Pause\n      Unsecured cargo is lost on evacuation. Banked cargo stays safe.\n      4afa199",
+        "mode": "title"
+      },
+      "authoredCount": 44,
+      "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+    },
+    {
+      "wallSeconds": 116.83,
+      "stage": "staged-room-ordinary-guest-bank",
+      "kind": "boot",
+      "client": "coop-B",
+      "fresh": true,
+      "mode": true,
+      "extraction": {
+        "version": 1,
+        "revision": 0,
+        "banked": 0,
+        "soldIds": [],
+        "cargo": {},
+        "secured": [],
+        "lost": [],
+        "elapsed": 0,
+        "finished": false,
+        "target": 500,
+        "targetReached": false,
+        "fruitCount": 0
+      },
+      "save": {
+        "slot": "replay-orchard-proof-B-muq243gx",
+        "playtime": 0,
+        "lastSaved": 0,
+        "has": false,
+        "enabled": true,
+        "resumed": false
+      },
+      "shell": {
+        "visible": true,
+        "text": "\n      RIPE RIOT · HARVEST & HAULORCHARD RUN\n      Get $500 of produce into the crate. Shake a loaded tree, redirect a rolling plum, survive the trouble you stir up — then bring the haul home.\n           Bank small hauls whenever you want. Reach $500 and keep going, or finish at the crate with empty hands.\n      Begin harvesting\n           New run · separate save\n      Open local co-opControls\n        Sunpatch expedition\n      WASD Move · Mouse Look · Space Jump · Shift Sprint\n        1 Mallet & hands · 2 Air Cannon · 3 Catch Net · E Pick / shake / bank / finish\n        LMB Use tool or throw held fruit · RMB Stow held fruit / cannon hop / lay net · Esc Pause\n      Unsecured cargo is lost on evacuation. Banked cargo stays safe.\n      4afa199",
+        "mode": "title"
+      },
+      "authoredCount": 44,
+      "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+    },
+    {
+      "wallSeconds": 116.9,
+      "stage": "staged-room-ordinary-guest-bank",
+      "kind": "front-door-click",
+      "client": "coop-A",
+      "attempt": 0,
+      "action": "play"
+    },
+    {
+      "wallSeconds": 117.8,
+      "stage": "staged-room-ordinary-guest-bank",
+      "kind": "front-door-click",
+      "client": "coop-B",
+      "attempt": 0,
+      "action": "play"
+    },
+    {
+      "wallSeconds": 120.37,
+      "stage": "staged-room-ordinary-guest-bank",
+      "kind": "pass",
+      "name": "staged Orchard co-op setup connects one host and one guest",
+      "detail": {
+        "a": {
+          "connected": true,
+          "isHost": false,
+          "me": "nya0vi6e",
+          "authoritative": false,
+          "remotes": [
+            "7k0ldlh1"
+          ]
+        },
+        "b": {
+          "connected": true,
+          "isHost": true,
+          "me": "7k0ldlh1",
+          "authoritative": true,
+          "remotes": [
+            "nya0vi6e"
+          ]
+        }
+      }
+    },
+    {
+      "wallSeconds": 120.52,
+      "stage": "staged-room-ordinary-guest-bank",
+      "kind": "waypoint",
+      "client": "coop-A",
+      "point": [
+        -12.81183773865374,
+        0,
+        31.40834323297877
+      ],
+      "radius": 0.65
+    },
+    {
+      "wallSeconds": 123.49,
+      "stage": "staged-room-ordinary-guest-bank",
+      "kind": "ordinary-pick",
+      "client": "coop-A",
+      "id": 5,
+      "species": "apple",
+      "source": "attached",
+      "carried": 5,
+      "basket": [],
+      "pos": [
+        -12.24768365682361,
+        7.42529057091126,
+        31.43837636434383
+      ]
+    },
+    {
+      "wallSeconds": 123.49,
+      "stage": "staged-room-ordinary-guest-bank",
+      "kind": "pass",
+      "name": "guest ordinarily picks authored fruit after room setup",
+      "detail": {}
+    },
+    {
+      "wallSeconds": 123.5,
+      "stage": "coop-A-haul-bank",
+      "kind": "pass",
+      "name": "only authored cargo is carried",
+      "detail": {
+        "client": "coop-A",
+        "ids": [
+          5
+        ]
+      }
+    },
+    {
+      "wallSeconds": 123.5,
+      "stage": "coop-A-haul-bank",
+      "kind": "waypoint",
+      "client": "coop-A",
+      "point": [
+        -7,
+        0,
+        30.1
+      ],
+      "radius": 1.1
+    },
+    {
+      "wallSeconds": 126.5,
+      "stage": "coop-A-haul-bank",
+      "kind": "ordinary-obstacle-recovery",
+      "client": "coop-A",
+      "pos": [
+        -10.790830331662127,
+        7.424579984202781,
+        30.10191854650666
+      ],
+      "point": [
+        -7,
+        0,
+        30.1
+      ],
+      "stuck": 3
+    },
+    {
+      "wallSeconds": 128.35,
+      "stage": "coop-A-haul-bank",
+      "kind": "ordinary-obstacle-recovery",
+      "client": "coop-A",
+      "pos": [
+        -9.469547114522548,
+        7.427447763655239,
+        28.71918154827296
+      ],
+      "point": [
+        -7,
+        0,
+        30.1
+      ],
+      "stuck": 3
+    },
+    {
+      "wallSeconds": 129.97,
+      "stage": "coop-A-haul-bank",
+      "kind": "waypoint",
+      "client": "coop-A",
+      "point": [
+        -7,
+        0,
+        29.5
+      ],
+      "radius": 0.45
+    },
+    {
+      "wallSeconds": 131.45,
+      "stage": "coop-A-haul-bank",
+      "kind": "event",
+      "client": "coop-A",
+      "event": {
+        "name": "fruit:sold",
+        "gameSeconds": 12.750000000000213,
+        "payload": {
+          "fruitId": 5,
+          "species": "apple",
+          "value": 19,
+          "quality": "Perfect",
+          "mass": 1.1
+        }
+      }
+    },
+    {
+      "wallSeconds": 131.45,
+      "stage": "coop-A-haul-bank",
+      "kind": "pass",
+      "name": "ordinary E banks physical carried cargo",
+      "detail": {
+        "client": "coop-A",
+        "ids": [
+          5
+        ],
+        "before": 0,
+        "after": 19,
+        "walletBefore": 0,
+        "walletAfter": 19,
+        "secured": [
+          [
+            5,
+            19
+          ]
+        ]
+      }
+    },
+    {
+      "wallSeconds": 131.45,
+      "stage": "coop-A-haul-bank",
+      "kind": "pass",
+      "name": "guest ordinarily hauls and banks authored fruit",
+      "detail": {}
+    },
+    {
+      "wallSeconds": 131.61,
+      "stage": "coop-A-haul-bank",
+      "kind": "event",
+      "client": "coop-B",
+      "event": {
+        "name": "fruit:sold",
+        "gameSeconds": 12.83333333333355,
+        "payload": {
+          "fruitId": 5,
+          "species": "apple",
+          "value": 19,
+          "quality": "Perfect",
+          "mass": 1.1
+        }
+      }
+    },
+    {
+      "wallSeconds": 131.62,
+      "stage": "coop-A-haul-bank",
+      "kind": "pass",
+      "name": "one host-accepted guest sale appears once in both crew ledgers",
+      "detail": {
+        "fruitId": 5,
+        "host": {
+          "version": 1,
+          "revision": 1,
+          "banked": 19,
+          "soldIds": [
+            5
+          ],
+          "cargo": {
+            "apple": 1
+          },
+          "secured": [
+            [
+              5,
+              19
+            ]
+          ],
+          "lost": [],
+          "elapsed": 13.199599999999961,
+          "finished": false,
+          "target": 500,
+          "targetReached": false,
+          "fruitCount": 1
+        },
+        "guest": {
+          "version": 1,
+          "revision": 1,
+          "banked": 19,
+          "soldIds": [
+            5
+          ],
+          "cargo": {
+            "apple": 1
+          },
+          "secured": [
+            [
+              5,
+              19
+            ]
+          ],
+          "lost": [],
+          "elapsed": 13.149599999999962,
+          "finished": false,
+          "target": 500,
+          "targetReached": false,
+          "fruitCount": 1
+        }
+      }
+    },
+    {
+      "wallSeconds": 133.31,
+      "stage": "coop-A-haul-bank",
+      "kind": "capture",
+      "name": "07-coop-guest-cargo",
+      "client": "coop-A",
+      "pos": [
+        -7.129572812883832,
+        7.468944516518407,
+        29.27534174558152
+      ],
+      "fixtureSetup": "room connect only",
+      "ordinaryGameplay": "authored pick, walk, bank",
+      "hostExtraction": {
+        "version": 1,
+        "revision": 1,
+        "banked": 19,
+        "soldIds": [
+          5
+        ],
+        "cargo": {
+          "apple": 1
+        },
+        "secured": [
+          [
+            5,
+            19
+          ]
+        ],
+        "lost": [],
+        "elapsed": 13.199599999999961,
+        "finished": false,
+        "target": 500,
+        "targetReached": false,
+        "fruitCount": 1
+      }
+    },
+    {
+      "wallSeconds": 134.03,
+      "stage": "coop-A-haul-bank",
+      "kind": "pass",
+      "name": "repeated empty-handed guest E cannot count the sale twice",
+      "detail": {}
+    }
+  ]
+}

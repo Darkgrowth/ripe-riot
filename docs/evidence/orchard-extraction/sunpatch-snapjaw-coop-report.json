@@ -1,0 +1,1631 @@
+{
+  "guestRescuer": false,
+  "logicOnly": true,
+  "freezeCatchFrame": true,
+  "headed": true,
+  "aimProof": "fixture-assisted fixed aim; ordinary aim is not established by this fixture",
+  "passed": true,
+  "failure": null,
+  "checks": [
+    {
+      "condition": true,
+      "name": "two peers connected with one host",
+      "detail": {
+        "rescuerId": "7dy7hl5n",
+        "victimId": "w11nmq6z",
+        "guestRescuer": false
+      }
+    },
+    {
+      "condition": true,
+      "name": "rescuer has Catch Net equipped",
+      "detail": {}
+    },
+    {
+      "condition": true,
+      "name": "jaw targets the active teammate",
+      "detail": {
+        "aim": [
+          -24.2000015125431,
+          7.520099132116593,
+          14.8
+        ],
+        "teammate": [
+          -24.2,
+          7.5,
+          14.8
+        ]
+      }
+    },
+    {
+      "condition": true,
+      "name": "rescuer and victim retained the requested host/guest roles",
+      "detail": {}
+    },
+    {
+      "condition": true,
+      "name": "rescuer observed a numbered teammate flight",
+      "detail": {}
+    },
+    {
+      "condition": true,
+      "name": "rescuer made a real timed Catch Net swing with fixture-assisted aim",
+      "detail": {
+        "swings": 3
+      }
+    },
+    {
+      "condition": true,
+      "name": "flight ended with the victim active",
+      "detail": {
+        "health": 62,
+        "velocity": [
+          0.6329297871152402,
+          -7.196666666666668,
+          0.63293003904523
+        ]
+      }
+    },
+    {
+      "condition": true,
+      "name": "net hoop nominated the flying teammate",
+      "detail": {
+        "requests": [
+          {
+            "wallMs": 1790940657121,
+            "at": 7.11666666666665,
+            "tick": 427,
+            "victimId": "w11nmq6z",
+            "flingId": 1,
+            "swingId": 3,
+            "peerFlingId": 1
+          }
+        ],
+        "validations": [
+          {
+            "wallMs": 1790940657121,
+            "at": 7.11666666666665,
+            "tick": 427,
+            "from": "7dy7hl5n",
+            "victimId": "w11nmq6z",
+            "flingId": 1,
+            "swingId": 3,
+            "origin": [
+              -24.200003345150662,
+              9.150095935482824,
+              14.8
+            ],
+            "aim": [
+              -0.7071067811865475,
+              0,
+              -0.7071067811865476
+            ],
+            "localVictim": false,
+            "actualVictimFlingId": 1,
+            "localFlingId": 0,
+            "peerFlingId": 1,
+            "victimGrounded": null,
+            "victimState": "active",
+            "victimHasPlayerPacket": true,
+            "victimPos": [
+              -25.52,
+              8.99,
+              13.48
+            ],
+            "rescuerPos": [
+              -24.200003345150662,
+              7.520095935482823,
+              14.8
+            ],
+            "victimGroundHeight": 7.5,
+            "liveFlight": {
+              "victimId": "w11nmq6z",
+              "flingId": 1,
+              "remaining": 1.5166666666666677
+            },
+            "firstFlightObservation": null,
+            "pendingVictimCatch": false,
+            "swing": {
+              "highestId": 3,
+              "startedAt": 7.049999999999984,
+              "live": true,
+              "used": false
+            },
+            "swingElapsed": 0.06666666666666643,
+            "swingTiming": "active",
+            "actor": {
+              "state": "active",
+              "toolId": "net",
+              "ownsNet": true,
+              "carrying": false
+            },
+            "encounterTargets": [
+              {
+                "id": "7dy7hl5n",
+                "position": [
+                  -24.200003345150662,
+                  7.5200995941981095,
+                  14.8
+                ],
+                "protected": false
+              },
+              {
+                "id": "w11nmq6z",
+                "position": [
+                  -25.79,
+                  8.84,
+                  13.21
+                ],
+                "protected": false
+              }
+            ],
+            "geometry": {
+              "aimNorm": 1,
+              "eyeHeight": 1.6300000000000001,
+              "originXZOffset": 0,
+              "originHeightError": 6.661338147750939e-16,
+              "actorVictimXZ": 1.8667595369552663,
+              "hoop": [
+                -26.179902332472995,
+                9.150095935482824,
+                12.820101012677668
+              ],
+              "hoopTorsoDistance": 1.1909642255590125
+            },
+            "ok": true,
+            "after": {
+              "wallMs": 1790940657122,
+              "at": 7.11666666666665,
+              "tick": 427,
+              "position": [
+                -24.200003345150662,
+                7.520095935482823,
+                14.8
+              ],
+              "velocity": [
+                0,
+                0,
+                0
+              ],
+              "state": "active",
+              "grounded": true,
+              "localFlingId": 0
+            }
+          }
+        ],
+        "acknowledgements": [
+          {
+            "wallMs": 1790940657125,
+            "at": 7.11666666666665,
+            "tick": 427,
+            "from": "w11nmq6z",
+            "catchId": 1,
+            "flingId": 1,
+            "stopped": true
+          }
+        ]
+      }
+    },
+    {
+      "condition": true,
+      "name": "host accepted the catch and the victim confirmed its flight stopped",
+      "detail": {}
+    },
+    {
+      "condition": true,
+      "name": "rescuer confirmed the timed Catch Net interception",
+      "detail": {
+        "toasts": [
+          {
+            "text": "Teammate caught!",
+            "wallMs": 1790940657125,
+            "at": 7.11666666666665,
+            "tick": 427
+          }
+        ],
+        "caught": 0,
+        "requests": [
+          {
+            "wallMs": 1790940657121,
+            "at": 7.11666666666665,
+            "tick": 427,
+            "victimId": "w11nmq6z",
+            "flingId": 1,
+            "swingId": 3,
+            "peerFlingId": 1
+          }
+        ],
+        "validations": [
+          {
+            "wallMs": 1790940657121,
+            "at": 7.11666666666665,
+            "tick": 427,
+            "from": "7dy7hl5n",
+            "victimId": "w11nmq6z",
+            "flingId": 1,
+            "swingId": 3,
+            "origin": [
+              -24.200003345150662,
+              9.150095935482824,
+              14.8
+            ],
+            "aim": [
+              -0.7071067811865475,
+              0,
+              -0.7071067811865476
+            ],
+            "localVictim": false,
+            "actualVictimFlingId": 1,
+            "localFlingId": 0,
+            "peerFlingId": 1,
+            "victimGrounded": null,
+            "victimState": "active",
+            "victimHasPlayerPacket": true,
+            "victimPos": [
+              -25.52,
+              8.99,
+              13.48
+            ],
+            "rescuerPos": [
+              -24.200003345150662,
+              7.520095935482823,
+              14.8
+            ],
+            "victimGroundHeight": 7.5,
+            "liveFlight": {
+              "victimId": "w11nmq6z",
+              "flingId": 1,
+              "remaining": 1.5166666666666677
+            },
+            "firstFlightObservation": null,
+            "pendingVictimCatch": false,
+            "swing": {
+              "highestId": 3,
+              "startedAt": 7.049999999999984,
+              "live": true,
+              "used": false
+            },
+            "swingElapsed": 0.06666666666666643,
+            "swingTiming": "active",
+            "actor": {
+              "state": "active",
+              "toolId": "net",
+              "ownsNet": true,
+              "carrying": false
+            },
+            "encounterTargets": [
+              {
+                "id": "7dy7hl5n",
+                "position": [
+                  -24.200003345150662,
+                  7.5200995941981095,
+                  14.8
+                ],
+                "protected": false
+              },
+              {
+                "id": "w11nmq6z",
+                "position": [
+                  -25.79,
+                  8.84,
+                  13.21
+                ],
+                "protected": false
+              }
+            ],
+            "geometry": {
+              "aimNorm": 1,
+              "eyeHeight": 1.6300000000000001,
+              "originXZOffset": 0,
+              "originHeightError": 6.661338147750939e-16,
+              "actorVictimXZ": 1.8667595369552663,
+              "hoop": [
+                -26.179902332472995,
+                9.150095935482824,
+                12.820101012677668
+              ],
+              "hoopTorsoDistance": 1.1909642255590125
+            },
+            "ok": true,
+            "after": {
+              "wallMs": 1790940657122,
+              "at": 7.11666666666665,
+              "tick": 427,
+              "position": [
+                -24.200003345150662,
+                7.520095935482823,
+                14.8
+              ],
+              "velocity": [
+                0,
+                0,
+                0
+              ],
+              "state": "active",
+              "grounded": true,
+              "localFlingId": 0
+            }
+          }
+        ],
+        "acknowledgements": [
+          {
+            "wallMs": 1790940657125,
+            "at": 7.11666666666665,
+            "tick": 427,
+            "from": "w11nmq6z",
+            "catchId": 1,
+            "flingId": 1,
+            "stopped": true
+          }
+        ],
+        "victimVelocity": [
+          0.6329297871152402,
+          -7.196666666666668,
+          0.63293003904523
+        ]
+      }
+    }
+  ],
+  "timeline": [
+    {
+      "wallSeconds": 34.44,
+      "kind": "pass",
+      "name": "two peers connected with one host",
+      "detail": {
+        "rescuerId": "7dy7hl5n",
+        "victimId": "w11nmq6z",
+        "guestRescuer": false
+      }
+    },
+    {
+      "wallSeconds": 34.49,
+      "kind": "pass",
+      "name": "rescuer has Catch Net equipped",
+      "detail": {}
+    },
+    {
+      "wallSeconds": 35.39,
+      "kind": "capture-setup",
+      "rescuer": {
+        "me": "7dy7hl5n",
+        "isHost": true,
+        "wallMs": 1790940653663,
+        "at": 3.6499999999999955,
+        "tick": 219,
+        "grounded": true,
+        "position": [
+          -24.2,
+          7.650000072810508,
+          14.8
+        ],
+        "yaw": 0.7853981633974483,
+        "pitch": 0,
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "playerState": "active",
+        "health": 100,
+        "jaw": {
+          "kind": "snapjaw",
+          "position": [
+            -28,
+            7.5,
+            11
+          ],
+          "heading": 0,
+          "phase": "idle",
+          "timeLeft": 0,
+          "health": 2,
+          "baited": false,
+          "capturedVictimId": null,
+          "captureTimeLeft": 0,
+          "captureAim": null,
+          "dormant": false,
+          "returning": false,
+          "pendingHeading": null,
+          "chargeStart": null,
+          "gumTimeLeft": 0,
+          "gumFruitId": null
+        },
+        "flights": [],
+        "tool": "net",
+        "netSwings": 1,
+        "netCaught": 0,
+        "netMisses": 0,
+        "netPhase": "recover",
+        "netPhaseT": 0.09999999999999999,
+        "netHoop": [
+          -26.496042489408424,
+          8.898333476017974,
+          13.311859162708096
+        ],
+        "samples": [],
+        "localFlingId": 0,
+        "peerFlingIds": [
+          [
+            "w11nmq6z",
+            0
+          ]
+        ],
+        "peerPositions": [
+          [
+            "w11nmq6z",
+            [
+              -27,
+              7.65,
+              12
+            ]
+          ]
+        ],
+        "catchRequests": [],
+        "catchValidations": [],
+        "catchAcks": [],
+        "catchEligibility": [],
+        "swingStarts": [],
+        "flightStarts": [],
+        "launches": [],
+        "landings": [],
+        "flightStops": [],
+        "diagnosticStart": {
+          "wallMs": 1790940653630,
+          "at": 3.6166666666666623,
+          "tick": 217,
+          "me": "7dy7hl5n",
+          "isHost": true,
+          "position": [
+            71.50000449926463,
+            2.350835007615009,
+            71.49999657971124
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "state": "active",
+          "grounded": true,
+          "localFlingId": 0
+        },
+        "fixtureAim": null,
+        "toasts": [],
+        "frozenCatch": null,
+        "synthetic": false,
+        "pointerLocked": true
+      },
+      "victimId": "w11nmq6z",
+      "victimPosition": [
+        -27,
+        7.65,
+        12
+      ]
+    },
+    {
+      "wallSeconds": 36.18,
+      "kind": "pass",
+      "name": "jaw targets the active teammate",
+      "detail": {
+        "aim": [
+          -24.2000015125431,
+          7.520099132116593,
+          14.8
+        ],
+        "teammate": [
+          -24.2,
+          7.5,
+          14.8
+        ]
+      }
+    },
+    {
+      "wallSeconds": 36.18,
+      "kind": "held",
+      "rescuer": {
+        "me": "7dy7hl5n",
+        "isHost": true,
+        "wallMs": 1790940654458,
+        "at": 4.449999999999993,
+        "tick": 267,
+        "grounded": true,
+        "position": [
+          -24.200001648483674,
+          7.520096219405241,
+          14.8
+        ],
+        "yaw": 0.7853981633974483,
+        "pitch": 0,
+        "velocity": [
+          -0.00021484370998223478,
+          0,
+          0
+        ],
+        "playerState": "active",
+        "health": 100,
+        "jaw": {
+          "kind": "snapjaw",
+          "position": [
+            -28,
+            7.5,
+            11
+          ],
+          "heading": 0.7853979643785797,
+          "phase": "attack",
+          "timeLeft": 0.30333333333333334,
+          "health": 2,
+          "baited": false,
+          "capturedVictimId": "w11nmq6z",
+          "captureTimeLeft": 2.3666666666666667,
+          "captureAim": [
+            -24.2000015125431,
+            7.520099132116593,
+            14.8
+          ],
+          "dormant": false,
+          "returning": false,
+          "pendingHeading": null,
+          "chargeStart": null,
+          "gumTimeLeft": 0,
+          "gumFruitId": null
+        },
+        "flights": [],
+        "tool": "net",
+        "netSwings": 1,
+        "netCaught": 0,
+        "netMisses": 0,
+        "netPhase": "ready",
+        "netPhaseT": 0,
+        "netHoop": [
+          -25.932413254955133,
+          9.05009647757258,
+          12.572613542382754
+        ],
+        "samples": [],
+        "localFlingId": 0,
+        "peerFlingIds": [
+          [
+            "w11nmq6z",
+            0
+          ]
+        ],
+        "peerPositions": [
+          [
+            "w11nmq6z",
+            [
+              -27,
+              7.52,
+              12
+            ]
+          ]
+        ],
+        "catchRequests": [],
+        "catchValidations": [],
+        "catchAcks": [],
+        "catchEligibility": [],
+        "swingStarts": [],
+        "flightStarts": [],
+        "launches": [],
+        "landings": [],
+        "flightStops": [],
+        "diagnosticStart": {
+          "wallMs": 1790940653630,
+          "at": 3.6166666666666623,
+          "tick": 217,
+          "me": "7dy7hl5n",
+          "isHost": true,
+          "position": [
+            71.50000449926463,
+            2.350835007615009,
+            71.49999657971124
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "state": "active",
+          "grounded": true,
+          "localFlingId": 0
+        },
+        "fixtureAim": null,
+        "toasts": [],
+        "frozenCatch": null,
+        "synthetic": false,
+        "pointerLocked": true
+      },
+      "victimId": "w11nmq6z"
+    },
+    {
+      "wallSeconds": 36.18,
+      "kind": "fixture-assisted-aim",
+      "yaw": 0.7853981633974483,
+      "pitch": 0,
+      "label": "Fixed staged aim; real primary press/held input, sweep and host guard remain active."
+    },
+    {
+      "wallSeconds": 38.58,
+      "kind": "flight-visible",
+      "observedAtWallSeconds": 38.58,
+      "flight": {
+        "victimId": "w11nmq6z",
+        "flingId": 1,
+        "remaining": 1.7833333333333334
+      },
+      "rescuer": [
+        -24.200003161821613,
+        7.520100044405263,
+        14.8
+      ],
+      "victim": [
+        -27,
+        7.52,
+        12
+      ],
+      "peerFlingId": 0
+    },
+    {
+      "wallSeconds": 39.17,
+      "kind": "pass",
+      "name": "rescuer and victim retained the requested host/guest roles",
+      "detail": {}
+    },
+    {
+      "wallSeconds": 39.17,
+      "kind": "after-catch-window",
+      "rescuer": {
+        "me": "7dy7hl5n",
+        "isHost": true,
+        "wallMs": 1790940657442,
+        "at": 7.11666666666665,
+        "tick": 427,
+        "grounded": true,
+        "position": [
+          -24.200003345150662,
+          7.520095935482823,
+          14.8
+        ],
+        "yaw": 0.7853981633974483,
+        "pitch": 0,
+        "velocity": [
+          0,
+          0,
+          0
+        ],
+        "playerState": "active",
+        "health": 100,
+        "jaw": {
+          "kind": "snapjaw",
+          "position": [
+            -28,
+            7.5,
+            11
+          ],
+          "heading": 0.7853979643785797,
+          "phase": "recover",
+          "timeLeft": 1.3000000000000012,
+          "health": 2,
+          "baited": false,
+          "capturedVictimId": null,
+          "captureTimeLeft": 0,
+          "captureAim": null,
+          "dormant": false,
+          "returning": false,
+          "pendingHeading": null,
+          "chargeStart": null,
+          "gumTimeLeft": 0,
+          "gumFruitId": null
+        },
+        "flights": [],
+        "tool": "net",
+        "netSwings": 3,
+        "netCaught": 0,
+        "netMisses": 0,
+        "netPhase": "swing",
+        "netPhaseT": 0.06666666666666643,
+        "netHoop": [
+          -25.568573475340145,
+          9.374951388426865,
+          12.20882353461335
+        ],
+        "samples": [
+          {
+            "wallMs": 1790940657121,
+            "at": 7.11666666666665,
+            "tick": 427,
+            "phaseT": 0.06666666666666643,
+            "hoop": [
+              -25.568573475340145,
+              9.374951388426865,
+              12.20882353461335
+            ],
+            "target": [
+              -26.179902332472995,
+              9.150095935482824,
+              12.820101012677668
+            ],
+            "yaw": 0.7853981633974483,
+            "pitch": 0,
+            "victim": [
+              -25.52,
+              8.99,
+              13.48
+            ],
+            "flingId": 1,
+            "flightRemaining": 1.5166666666666677,
+            "distance": 1.1909642255590125
+          }
+        ],
+        "localFlingId": 0,
+        "peerFlingIds": [
+          [
+            "w11nmq6z",
+            0
+          ]
+        ],
+        "peerPositions": [
+          [
+            "w11nmq6z",
+            [
+              -25.24,
+              8.24,
+              13.76
+            ]
+          ]
+        ],
+        "catchRequests": [
+          {
+            "wallMs": 1790940657121,
+            "at": 7.11666666666665,
+            "tick": 427,
+            "victimId": "w11nmq6z",
+            "flingId": 1,
+            "swingId": 3,
+            "peerFlingId": 1
+          }
+        ],
+        "catchValidations": [
+          {
+            "wallMs": 1790940657121,
+            "at": 7.11666666666665,
+            "tick": 427,
+            "from": "7dy7hl5n",
+            "victimId": "w11nmq6z",
+            "flingId": 1,
+            "swingId": 3,
+            "origin": [
+              -24.200003345150662,
+              9.150095935482824,
+              14.8
+            ],
+            "aim": [
+              -0.7071067811865475,
+              0,
+              -0.7071067811865476
+            ],
+            "localVictim": false,
+            "actualVictimFlingId": 1,
+            "localFlingId": 0,
+            "peerFlingId": 1,
+            "victimGrounded": null,
+            "victimState": "active",
+            "victimHasPlayerPacket": true,
+            "victimPos": [
+              -25.52,
+              8.99,
+              13.48
+            ],
+            "rescuerPos": [
+              -24.200003345150662,
+              7.520095935482823,
+              14.8
+            ],
+            "victimGroundHeight": 7.5,
+            "liveFlight": {
+              "victimId": "w11nmq6z",
+              "flingId": 1,
+              "remaining": 1.5166666666666677
+            },
+            "firstFlightObservation": null,
+            "pendingVictimCatch": false,
+            "swing": {
+              "highestId": 3,
+              "startedAt": 7.049999999999984,
+              "live": true,
+              "used": false
+            },
+            "swingElapsed": 0.06666666666666643,
+            "swingTiming": "active",
+            "actor": {
+              "state": "active",
+              "toolId": "net",
+              "ownsNet": true,
+              "carrying": false
+            },
+            "encounterTargets": [
+              {
+                "id": "7dy7hl5n",
+                "position": [
+                  -24.200003345150662,
+                  7.5200995941981095,
+                  14.8
+                ],
+                "protected": false
+              },
+              {
+                "id": "w11nmq6z",
+                "position": [
+                  -25.79,
+                  8.84,
+                  13.21
+                ],
+                "protected": false
+              }
+            ],
+            "geometry": {
+              "aimNorm": 1,
+              "eyeHeight": 1.6300000000000001,
+              "originXZOffset": 0,
+              "originHeightError": 6.661338147750939e-16,
+              "actorVictimXZ": 1.8667595369552663,
+              "hoop": [
+                -26.179902332472995,
+                9.150095935482824,
+                12.820101012677668
+              ],
+              "hoopTorsoDistance": 1.1909642255590125
+            },
+            "ok": true,
+            "after": {
+              "wallMs": 1790940657122,
+              "at": 7.11666666666665,
+              "tick": 427,
+              "position": [
+                -24.200003345150662,
+                7.520095935482823,
+                14.8
+              ],
+              "velocity": [
+                0,
+                0,
+                0
+              ],
+              "state": "active",
+              "grounded": true,
+              "localFlingId": 0
+            }
+          }
+        ],
+        "catchAcks": [
+          {
+            "wallMs": 1790940657125,
+            "at": 7.11666666666665,
+            "tick": 427,
+            "from": "w11nmq6z",
+            "catchId": 1,
+            "flingId": 1,
+            "stopped": true
+          }
+        ],
+        "catchEligibility": [
+          {
+            "wallMs": 1790940657122,
+            "at": 7.11666666666665,
+            "tick": 427,
+            "from": "7dy7hl5n",
+            "victimId": "w11nmq6z",
+            "flingId": 1,
+            "swingId": 3,
+            "origin": [
+              -24.200003345150662,
+              9.150095935482824,
+              14.8
+            ],
+            "aim": [
+              -0.7071067811865475,
+              0,
+              -0.7071067811865476
+            ],
+            "localVictim": false,
+            "actualVictimFlingId": 1,
+            "localFlingId": 0,
+            "peerFlingId": 1,
+            "victimGrounded": null,
+            "victimState": "active",
+            "victimHasPlayerPacket": true,
+            "victimPos": [
+              -25.52,
+              8.99,
+              13.48
+            ],
+            "rescuerPos": [
+              -24.200003345150662,
+              7.520095935482823,
+              14.8
+            ],
+            "victimGroundHeight": 7.5,
+            "liveFlight": {
+              "victimId": "w11nmq6z",
+              "flingId": 1,
+              "remaining": 1.5166666666666677
+            },
+            "firstFlightObservation": null,
+            "pendingVictimCatch": false,
+            "swing": {
+              "highestId": 3,
+              "startedAt": 7.049999999999984,
+              "live": true,
+              "used": false
+            },
+            "swingElapsed": 0.06666666666666643,
+            "swingTiming": "active",
+            "actor": {
+              "state": "active",
+              "toolId": "net",
+              "ownsNet": true,
+              "carrying": false
+            },
+            "encounterTargets": [
+              {
+                "id": "7dy7hl5n",
+                "position": [
+                  -24.200003345150662,
+                  7.5200995941981095,
+                  14.8
+                ],
+                "protected": false
+              },
+              {
+                "id": "w11nmq6z",
+                "position": [
+                  -25.79,
+                  8.84,
+                  13.21
+                ],
+                "protected": false
+              }
+            ],
+            "geometry": {
+              "aimNorm": 1,
+              "eyeHeight": 1.6300000000000001,
+              "originXZOffset": 0,
+              "originHeightError": 6.661338147750939e-16,
+              "actorVictimXZ": 1.8667595369552663,
+              "hoop": [
+                -26.179902332472995,
+                9.150095935482824,
+                12.820101012677668
+              ],
+              "hoopTorsoDistance": 1.1909642255590125
+            },
+            "ok": true
+          }
+        ],
+        "swingStarts": [
+          {
+            "wallMs": 1790940656337,
+            "at": 6.33333333333332,
+            "tick": 380,
+            "peer": "7dy7hl5n",
+            "swingId": 2,
+            "hostTime": 6.33333333333332,
+            "equippedAndActive": true,
+            "ok": true
+          },
+          {
+            "wallMs": 1790940657054,
+            "at": 7.049999999999984,
+            "tick": 423,
+            "peer": "7dy7hl5n",
+            "swingId": 3,
+            "hostTime": 7.049999999999984,
+            "equippedAndActive": true,
+            "ok": true
+          }
+        ],
+        "flightStarts": [],
+        "launches": [],
+        "landings": [],
+        "flightStops": [],
+        "diagnosticStart": {
+          "wallMs": 1790940653630,
+          "at": 3.6166666666666623,
+          "tick": 217,
+          "me": "7dy7hl5n",
+          "isHost": true,
+          "position": [
+            71.50000449926463,
+            2.350835007615009,
+            71.49999657971124
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "state": "active",
+          "grounded": true,
+          "localFlingId": 0
+        },
+        "fixtureAim": {
+          "label": "fixture-assisted fixed aim",
+          "yaw": 0.7853981633974483,
+          "pitch": 0,
+          "active": true,
+          "startedWallMs": 1790940654462,
+          "startedAt": 4.449999999999993,
+          "expiresWallMs": 1790940744462,
+          "lookEvents": []
+        },
+        "toasts": [
+          {
+            "text": "Teammate caught!",
+            "wallMs": 1790940657125,
+            "at": 7.11666666666665,
+            "tick": 427
+          }
+        ],
+        "frozenCatch": {
+          "wallMs": 1790940657125,
+          "at": 7.11666666666665,
+          "tick": 427,
+          "position": [
+            -24.200003345150662,
+            7.520095935482823,
+            14.8
+          ],
+          "yaw": 0.7853981633974483,
+          "pitch": 0
+        },
+        "synthetic": false,
+        "pointerLocked": true
+      },
+      "victim": {
+        "me": "w11nmq6z",
+        "isHost": false,
+        "wallMs": 1790940657446,
+        "at": 13.383333333333578,
+        "tick": 803,
+        "grounded": false,
+        "position": [
+          -25.232594894100025,
+          8.124082996057405,
+          13.767404727081939
+        ],
+        "yaw": -2.3561946892112133,
+        "pitch": 0,
+        "velocity": [
+          0.6329297871152402,
+          -7.196666666666668,
+          0.63293003904523
+        ],
+        "playerState": "active",
+        "health": 62,
+        "jaw": {
+          "kind": "snapjaw",
+          "position": [
+            -28,
+            7.5,
+            11
+          ],
+          "heading": 0.7853979643785797,
+          "phase": "recover",
+          "timeLeft": 1.3000000000000012,
+          "health": 2,
+          "baited": false,
+          "capturedVictimId": null,
+          "captureTimeLeft": 0,
+          "captureAim": null,
+          "dormant": false,
+          "returning": false,
+          "pendingHeading": null,
+          "chargeStart": null,
+          "gumTimeLeft": 0,
+          "gumFruitId": null
+        },
+        "flights": [],
+        "tool": "hand",
+        "netSwings": 0,
+        "netCaught": 0,
+        "netMisses": 0,
+        "netPhase": "ready",
+        "netPhaseT": 0,
+        "netHoop": [
+          0,
+          0,
+          0
+        ],
+        "samples": [],
+        "localFlingId": 0,
+        "peerFlingIds": [
+          [
+            "7dy7hl5n",
+            0
+          ]
+        ],
+        "peerPositions": [
+          [
+            "7dy7hl5n",
+            [
+              -24.2,
+              7.52,
+              14.8
+            ]
+          ]
+        ],
+        "catchRequests": [],
+        "catchValidations": [],
+        "catchAcks": [],
+        "catchEligibility": [],
+        "swingStarts": [],
+        "flightStarts": [
+          {
+            "wallMs": 1790940656874,
+            "at": 12.83333333333355,
+            "tick": 770,
+            "source": "message:snapshot",
+            "victimId": "w11nmq6z",
+            "flingId": 1,
+            "remaining": 1.7666666666666668
+          }
+        ],
+        "launches": [
+          {
+            "source": "snapjaw-fling",
+            "flingId": 1,
+            "launchVelocity": [
+              5.656853123671536,
+              8.642,
+              5.656855375313001
+            ],
+            "before": {
+              "wallMs": 1790940656840,
+              "at": 12.800000000000216,
+              "tick": 768,
+              "position": [
+                -26.999998530227735,
+                7.520099664352893,
+                12.00000038966833
+              ],
+              "velocity": [
+                0,
+                0,
+                0
+              ],
+              "state": "active",
+              "grounded": true,
+              "localFlingId": 0
+            },
+            "after": {
+              "wallMs": 1790940656841,
+              "at": 12.800000000000216,
+              "tick": 768,
+              "position": [
+                -26.999998530227735,
+                7.520099664352893,
+                12.00000038966833
+              ],
+              "velocity": [
+                5.656853123671536,
+                8.642,
+                5.656855375313001
+              ],
+              "state": "active",
+              "grounded": false,
+              "localFlingId": 1
+            },
+            "ok": true
+          }
+        ],
+        "landings": [],
+        "flightStops": [
+          {
+            "requestedFlingId": 1,
+            "before": {
+              "wallMs": 1790940657123,
+              "at": 13.083333333333563,
+              "tick": 785,
+              "position": [
+                -25.42573976315935,
+                9.033666337154864,
+                13.574259782585486
+              ],
+              "velocity": [
+                5.467753035260578,
+                2.40866666666667,
+                5.467755211633055
+              ],
+              "state": "active",
+              "grounded": false,
+              "localFlingId": 1
+            },
+            "after": {
+              "wallMs": 1790940657123,
+              "at": 13.083333333333563,
+              "tick": 785,
+              "position": [
+                -25.42573976315935,
+                9.033666337154864,
+                13.574259782585486
+              ],
+              "velocity": [
+                0.6561303642312692,
+                1.2,
+                0.6561306253959666
+              ],
+              "state": "active",
+              "grounded": false,
+              "localFlingId": 0
+            },
+            "ok": true
+          }
+        ],
+        "diagnosticStart": {
+          "wallMs": 1790940653637,
+          "at": 9.58333333333339,
+          "tick": 575,
+          "me": "w11nmq6z",
+          "isHost": false,
+          "position": [
+            71.50000449926463,
+            2.3508348477331165,
+            71.49999657971124
+          ],
+          "velocity": [
+            0,
+            0,
+            0
+          ],
+          "state": "active",
+          "grounded": true,
+          "localFlingId": 0
+        },
+        "fixtureAim": null,
+        "toasts": [],
+        "frozenCatch": null,
+        "synthetic": false,
+        "pointerLocked": false
+      }
+    },
+    {
+      "wallSeconds": 43.06,
+      "kind": "pass",
+      "name": "rescuer observed a numbered teammate flight",
+      "detail": {}
+    },
+    {
+      "wallSeconds": 43.06,
+      "kind": "pass",
+      "name": "rescuer made a real timed Catch Net swing with fixture-assisted aim",
+      "detail": {
+        "swings": 3
+      }
+    },
+    {
+      "wallSeconds": 43.06,
+      "kind": "pass",
+      "name": "flight ended with the victim active",
+      "detail": {
+        "health": 62,
+        "velocity": [
+          0.6329297871152402,
+          -7.196666666666668,
+          0.63293003904523
+        ]
+      }
+    },
+    {
+      "wallSeconds": 43.06,
+      "kind": "pass",
+      "name": "net hoop nominated the flying teammate",
+      "detail": {
+        "requests": [
+          {
+            "wallMs": 1790940657121,
+            "at": 7.11666666666665,
+            "tick": 427,
+            "victimId": "w11nmq6z",
+            "flingId": 1,
+            "swingId": 3,
+            "peerFlingId": 1
+          }
+        ],
+        "validations": [
+          {
+            "wallMs": 1790940657121,
+            "at": 7.11666666666665,
+            "tick": 427,
+            "from": "7dy7hl5n",
+            "victimId": "w11nmq6z",
+            "flingId": 1,
+            "swingId": 3,
+            "origin": [
+              -24.200003345150662,
+              9.150095935482824,
+              14.8
+            ],
+            "aim": [
+              -0.7071067811865475,
+              0,
+              -0.7071067811865476
+            ],
+            "localVictim": false,
+            "actualVictimFlingId": 1,
+            "localFlingId": 0,
+            "peerFlingId": 1,
+            "victimGrounded": null,
+            "victimState": "active",
+            "victimHasPlayerPacket": true,
+            "victimPos": [
+              -25.52,
+              8.99,
+              13.48
+            ],
+            "rescuerPos": [
+              -24.200003345150662,
+              7.520095935482823,
+              14.8
+            ],
+            "victimGroundHeight": 7.5,
+            "liveFlight": {
+              "victimId": "w11nmq6z",
+              "flingId": 1,
+              "remaining": 1.5166666666666677
+            },
+            "firstFlightObservation": null,
+            "pendingVictimCatch": false,
+            "swing": {
+              "highestId": 3,
+              "startedAt": 7.049999999999984,
+              "live": true,
+              "used": false
+            },
+            "swingElapsed": 0.06666666666666643,
+            "swingTiming": "active",
+            "actor": {
+              "state": "active",
+              "toolId": "net",
+              "ownsNet": true,
+              "carrying": false
+            },
+            "encounterTargets": [
+              {
+                "id": "7dy7hl5n",
+                "position": [
+                  -24.200003345150662,
+                  7.5200995941981095,
+                  14.8
+                ],
+                "protected": false
+              },
+              {
+                "id": "w11nmq6z",
+                "position": [
+                  -25.79,
+                  8.84,
+                  13.21
+                ],
+                "protected": false
+              }
+            ],
+            "geometry": {
+              "aimNorm": 1,
+              "eyeHeight": 1.6300000000000001,
+              "originXZOffset": 0,
+              "originHeightError": 6.661338147750939e-16,
+              "actorVictimXZ": 1.8667595369552663,
+              "hoop": [
+                -26.179902332472995,
+                9.150095935482824,
+                12.820101012677668
+              ],
+              "hoopTorsoDistance": 1.1909642255590125
+            },
+            "ok": true,
+            "after": {
+              "wallMs": 1790940657122,
+              "at": 7.11666666666665,
+              "tick": 427,
+              "position": [
+                -24.200003345150662,
+                7.520095935482823,
+                14.8
+              ],
+              "velocity": [
+                0,
+                0,
+                0
+              ],
+              "state": "active",
+              "grounded": true,
+              "localFlingId": 0
+            }
+          }
+        ],
+        "acknowledgements": [
+          {
+            "wallMs": 1790940657125,
+            "at": 7.11666666666665,
+            "tick": 427,
+            "from": "w11nmq6z",
+            "catchId": 1,
+            "flingId": 1,
+            "stopped": true
+          }
+        ]
+      }
+    },
+    {
+      "wallSeconds": 43.06,
+      "kind": "pass",
+      "name": "host accepted the catch and the victim confirmed its flight stopped",
+      "detail": {}
+    },
+    {
+      "wallSeconds": 43.06,
+      "kind": "pass",
+      "name": "rescuer confirmed the timed Catch Net interception",
+      "detail": {
+        "toasts": [
+          {
+            "text": "Teammate caught!",
+            "wallMs": 1790940657125,
+            "at": 7.11666666666665,
+            "tick": 427
+          }
+        ],
+        "caught": 0,
+        "requests": [
+          {
+            "wallMs": 1790940657121,
+            "at": 7.11666666666665,
+            "tick": 427,
+            "victimId": "w11nmq6z",
+            "flingId": 1,
+            "swingId": 3,
+            "peerFlingId": 1
+          }
+        ],
+        "validations": [
+          {
+            "wallMs": 1790940657121,
+            "at": 7.11666666666665,
+            "tick": 427,
+            "from": "7dy7hl5n",
+            "victimId": "w11nmq6z",
+            "flingId": 1,
+            "swingId": 3,
+            "origin": [
+              -24.200003345150662,
+              9.150095935482824,
+              14.8
+            ],
+            "aim": [
+              -0.7071067811865475,
+              0,
+              -0.7071067811865476
+            ],
+            "localVictim": false,
+            "actualVictimFlingId": 1,
+            "localFlingId": 0,
+            "peerFlingId": 1,
+            "victimGrounded": null,
+            "victimState": "active",
+            "victimHasPlayerPacket": true,
+            "victimPos": [
+              -25.52,
+              8.99,
+              13.48
+            ],
+            "rescuerPos": [
+              -24.200003345150662,
+              7.520095935482823,
+              14.8
+            ],
+            "victimGroundHeight": 7.5,
+            "liveFlight": {
+              "victimId": "w11nmq6z",
+              "flingId": 1,
+              "remaining": 1.5166666666666677
+            },
+            "firstFlightObservation": null,
+            "pendingVictimCatch": false,
+            "swing": {
+              "highestId": 3,
+              "startedAt": 7.049999999999984,
+              "live": true,
+              "used": false
+            },
+            "swingElapsed": 0.06666666666666643,
+            "swingTiming": "active",
+            "actor": {
+              "state": "active",
+              "toolId": "net",
+              "ownsNet": true,
+              "carrying": false
+            },
+            "encounterTargets": [
+              {
+                "id": "7dy7hl5n",
+                "position": [
+                  -24.200003345150662,
+                  7.5200995941981095,
+                  14.8
+                ],
+                "protected": false
+              },
+              {
+                "id": "w11nmq6z",
+                "position": [
+                  -25.79,
+                  8.84,
+                  13.21
+                ],
+                "protected": false
+              }
+            ],
+            "geometry": {
+              "aimNorm": 1,
+              "eyeHeight": 1.6300000000000001,
+              "originXZOffset": 0,
+              "originHeightError": 6.661338147750939e-16,
+              "actorVictimXZ": 1.8667595369552663,
+              "hoop": [
+                -26.179902332472995,
+                9.150095935482824,
+                12.820101012677668
+              ],
+              "hoopTorsoDistance": 1.1909642255590125
+            },
+            "ok": true,
+            "after": {
+              "wallMs": 1790940657122,
+              "at": 7.11666666666665,
+              "tick": 427,
+              "position": [
+                -24.200003345150662,
+                7.520095935482823,
+                14.8
+              ],
+              "velocity": [
+                0,
+                0,
+                0
+              ],
+              "state": "active",
+              "grounded": true,
+              "localFlingId": 0
+            }
+          }
+        ],
+        "acknowledgements": [
+          {
+            "wallMs": 1790940657125,
+            "at": 7.11666666666665,
+            "tick": 427,
+            "from": "w11nmq6z",
+            "catchId": 1,
+            "flingId": 1,
+            "stopped": true
+          }
+        ],
+        "victimVelocity": [
+          0.6329297871152402,
+          -7.196666666666668,
+          0.63293003904523
+        ]
+      }
+    }
+  ],
+  "videos": [],
+  "errors": [
+    "warning: WebGL: CONTEXT_LOST_WEBGL: loseContext: context lost (http://127.0.0.1:5278/?fresh=1)",
+    "warning: [.WebGL-0x1cfc0015f200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5278/?fresh=1)",
+    "warning: [.WebGL-0x1cfc0015aa00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5278/?fresh=1)",
+    "warning: [.WebGL-0x1cfc0015aa00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (http://127.0.0.1:5278/?fresh=1)",
+    "warning: [.WebGL-0x1cfc0015aa00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat) (http://127.0.0.1:5278/?fresh=1)"
+  ],
+  "viewport": [
+    1712,
+    634
+  ]
+}
