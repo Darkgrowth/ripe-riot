@@ -61,12 +61,12 @@ jobs:
               --allow-browser-input --width 1712 --height 634 --seconds 1800 \
               --headed --lean-proof --logic-only --out capture/ci/expedition
           elif [ '${{ matrix.proof }}' = snapjaw-coop ]; then
-            node tools/harness/snapjaw-coop-proof.mjs \
-              --allow-browser-input --logic-only --no-setup-shot --freeze-catch-frame \
+            xvfb-run -a node tools/harness/snapjaw-coop-proof.mjs \
+              --allow-browser-input --headed --logic-only --no-setup-shot --freeze-catch-frame \
               --out capture/ci/snapjaw-coop
           elif [ '${{ matrix.proof }}' = snapjaw-guest ]; then
-            node tools/harness/snapjaw-coop-proof.mjs \
-              --allow-browser-input --logic-only --no-setup-shot --freeze-catch-frame \
+            xvfb-run -a node tools/harness/snapjaw-coop-proof.mjs \
+              --allow-browser-input --headed --logic-only --no-setup-shot --freeze-catch-frame \
               --guest-rescuer --out capture/ci/snapjaw-guest
           else
             mkdir -p capture/ci/scenarios

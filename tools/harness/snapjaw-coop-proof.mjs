@@ -8,6 +8,10 @@ const args = process.argv.slice(2);
 const logicOnly = args.includes('--logic-only');
 const freezeCatchFrame = args.includes('--freeze-catch-frame');
 const guestRescuer = args.includes('--guest-rescuer');
+const headed = args.includes('--headed');
+if (headed && (process.platform !== 'linux' || !process.env.DISPLAY
+  || !(process.env.GITHUB_ACTIONS === 'true' || process.env.RIPE_REMOTE_LINUX_PROOF === '1')))
+  throw new Error('Headed rescue QA is restricted to an isolated remote Linux runner with Xvfb.');
 if (!args.includes('--allow-browser-input'))
   throw new Error('Browser pointer input is disabled during active play. Run only after the user says play is over, with --allow-browser-input.');
 if (!process.env.RIPE_URL || !/^http:\/\/127\.0\.0\.1:\d+$/.test(process.env.RIPE_URL))
@@ -107,7 +111,7 @@ try {
   // Both peers must advance at comparable rates. A render-suppressed victim
   // can finish the whole flight while the rendered rescuer is still on its first
   // swing, leaving a stale rescuer encounter window and an already-landed peer.
-  first = await openGame({ width: 1712, height: 634, headless: true,
+  first = await openGame({ width: 1712, height: 634, headless: !headed, frameRateLimit: headed,
     quiet: true, islandActivities: false, drawFrames: !logicOnly,
     recordVideoDir: args.includes('--video') ? out : null });
   second = await openSecondClient(first, { drawFrames: !logicOnly });
@@ -419,7 +423,7 @@ try {
     try { copyFileSync(await video.path(), file); videos.push(file); } catch { /* preserve report */ }
   }
   if (server.proc) server.proc.kill();
-  const report = { guestRescuer, logicOnly, freezeCatchFrame,
+  const report = { guestRescuer, logicOnly, freezeCatchFrame, headed,
     aimProof: 'fixture-assisted fixed aim; ordinary aim is not established by this fixture',
     passed: !failure && checks.every(c => c.condition), failure,
     checks, timeline, videos,

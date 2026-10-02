@@ -74,7 +74,7 @@ export async function startServer() {
 }
 
 export async function openGame({ width = 1280, height = 720, headless = true, quiet = false,
-  islandActivities = true, drawFrames = true, recordVideoDir = null } = {}) {
+  islandActivities = true, drawFrames = true, recordVideoDir = null, frameRateLimit = false } = {}) {
   // Opt-in hardware review on the desktop. Playwright's headless shell uses
   // SwiftShader here; full Chromium with D3D11 was verified on the RTX 4070 Ti.
   // Keep the historical default for reproducible software-rendered checks.
@@ -85,7 +85,7 @@ export async function openGame({ width = 1280, height = 720, headless = true, qu
     // Measured: forcing ANGLE backends is either 50x slower (explicit
     // swiftshader) or renders black (gl-egl). Chromium's own default picks
     // SwANGLE and works. Leave the GL selection alone.
-    args: ['--disable-dev-shm-usage', '--disable-frame-rate-limit',
+    args: ['--disable-dev-shm-usage', ...(frameRateLimit ? [] : ['--disable-frame-rate-limit']),
       '--disable-background-timer-throttling', '--disable-renderer-backgrounding',
       '--disable-backgrounding-occluded-windows',
       ...(hardware ? ['--enable-gpu', '--ignore-gpu-blocklist',
